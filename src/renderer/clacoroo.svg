@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 14 16" shape-rendering="crispEdges" role="img" aria-label="CLACOROO mascotte">
+  <title>CLACOROO — la mascotte della Control Room</title>
+
+  <!-- LED tip (Anthropic green — "online / sotto controllo") -->
+  <rect x="6" y="0" width="2" height="1" fill="#788c5d"/>
+
+  <!-- Antenna stalk -->
+  <rect x="6" y="1" width="2" height="2" fill="#141413"/>
+
+  <!-- Body fill (Claude orange #d97757) -->
+  <g fill="#d97757">
+    <rect x="4" y="3" width="6" height="1"/>
+    <rect x="2" y="4" width="10" height="1"/>
+    <rect x="1" y="5" width="12" height="6"/>
+    <rect x="2" y="11" width="10" height="1"/>
+    <!-- 4 legs -->
+    <rect x="1"  y="12" width="2" height="3"/>
+    <rect x="4"  y="12" width="2" height="3"/>
+    <rect x="8"  y="12" width="2" height="3"/>
+    <rect x="11" y="12" width="2" height="3"/>
+  </g>
+
+  <!-- Outline (deep terracotta #9a4d35) -->
+  <g fill="#9a4d35">
+    <rect x="2"  y="3"  width="2" height="1"/>
+    <rect x="10" y="3"  width="2" height="1"/>
+    <rect x="1"  y="4"  width="1" height="1"/>
+    <rect x="12" y="4"  width="1" height="1"/>
+    <rect x="0"  y="5"  width="1" height="6"/>
+    <rect x="13" y="5"  width="1" height="6"/>
+    <rect x="1"  y="11" width="1" height="1"/>
+    <rect x="12" y="11" width="1" height="1"/>
+    <!-- feet shadow -->
+    <rect x="1"  y="15" width="2" height="1"/>
+    <rect x="4"  y="15" width="2" height="1"/>
+    <rect x="8"  y="15" width="2" height="1"/>
+    <rect x="11" y="15" width="2" height="1"/>
+  </g>
+
+  <!-- Eyes (Claude dark #141413) -->
+  <g fill="#141413">
+    <rect x="3" y="6" width="2" height="2"/>
+    <rect x="9" y="6" width="2" height="2"/>
+  </g>
+
+  <!-- Eye glints (cream highlight #faf9f5) -->
+  <g fill="#faf9f5">
+    <rect x="4"  y="6" width="1" height="1"/>
+    <rect x="10" y="6" width="1" height="1"/>
+  </g>
+
+  <!-- Mouth -->
+  <rect x="6" y="10" width="2" height="1" fill="#9a4d35"/>
+</svg>
