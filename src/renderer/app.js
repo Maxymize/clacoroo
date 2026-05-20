@@ -93,6 +93,8 @@ function processData() {
       author:      cache.author      || '',
       skills:      cache.skills      || [],
       agents:      cache.agents      || [],
+      skillHealth: cache.skillHealth || {},
+      agentHealth: cache.agentHealth || {},
       hasMcp:      cache.hasMcp      || false,
       hasHooks:    cache.hasHooks    || false,
       blocked:     blocked.has(fullId),
@@ -199,6 +201,13 @@ function renderDashboard() {
 
   const wrap = el('div');
 
+  // Health summary (idea #3): count skill+agent con status err/warn
+  let healthErr = 0, healthWarn = 0;
+  state.plugins.forEach(p => {
+    Object.values(p.skillHealth).forEach(h => { if (h.status === 'err') healthErr++; else if (h.status === 'warn') healthWarn++; });
+    Object.values(p.agentHealth).forEach(h => { if (h.status === 'err') healthErr++; else if (h.status === 'warn') healthWarn++; });
+  });
+
   const kpiGrid = el('div', 'kpi-grid');
   const kpis = [
     { num: active.length,      label: 'Plugin attivi',     color: '#788c5d' },  // Anthropic green
@@ -208,6 +217,9 @@ function renderDashboard() {
     { num: allAgents.length,   label: 'Agent totali',      color: '#f97316' },
     { num: totalTokens > 0 ? (Math.round(totalTokens / 100) / 10) + 'K' : '—',
       label: 'Token always-on',  color: '#6a9bcc' },                            // Anthropic blue
+    { num: healthErr + healthWarn,
+      label: healthErr ? 'Health issues' : (healthWarn ? 'Warning' : 'Health'),
+      color: healthErr ? '#ef4444' : (healthWarn ? '#f59e0b' : '#788c5d') },
   ];
   kpis.forEach(k => {
     const card = el('div', 'kpi-card');
@@ -659,7 +671,7 @@ function renderMarketplaces() {
 /* ── SKILLS ───────────────────────────────────────────────────────────── */
 function renderSkills() {
   const all = state.plugins.flatMap(p =>
-    p.skills.map(s => ({ name: s, plugin: p.id, mkt: p.mkt, blocked: p.blocked }))
+    p.skills.map(s => ({ name: s, plugin: p.id, mkt: p.mkt, blocked: p.blocked, health: p.skillHealth[s] }))
   ).sort((a, b) => a.name.localeCompare(b.name));
 
   renderListSection(all, 'skills', item => {
@@ -670,6 +682,7 @@ function renderSkills() {
     chip.appendChild(dot);
     chip.appendChild(el('span', 'skill-chip-name', item.name));
     chip.appendChild(el('span', 'skill-chip-plugin', item.plugin));
+    appendHealthBadge(chip, item.health);
     return chip;
   }, item => item.name + ' ' + item.plugin + ' ' + item.mkt, 'Cerca skill…', 'skill-grid');
 }
@@ -677,7 +690,7 @@ function renderSkills() {
 /* ── AGENTS ───────────────────────────────────────────────────────────── */
 function renderAgents() {
   const all = state.plugins.flatMap(p =>
-    p.agents.map(a => ({ name: a, plugin: p.id, mkt: p.mkt }))
+    p.agents.map(a => ({ name: a, plugin: p.id, mkt: p.mkt, health: p.agentHealth[a] }))
   ).sort((a, b) => a.name.localeCompare(b.name));
 
   renderListSection(all, 'agents', item => {
@@ -688,8 +701,17 @@ function renderAgents() {
     chip.appendChild(dot);
     chip.appendChild(el('span', 'skill-chip-name', item.name));
     chip.appendChild(el('span', 'skill-chip-plugin', item.plugin));
+    appendHealthBadge(chip, item.health);
     return chip;
   }, item => item.name + ' ' + item.plugin + ' ' + item.mkt, 'Cerca agent…', 'skill-grid');
+}
+
+/* ── HEALTH BADGE (idea #3) ───────────────────────────────────────────── */
+function appendHealthBadge(chip, health) {
+  if (!health || health.status === 'ok') return;
+  const badge = el('span', 'health-badge h-' + health.status, health.status === 'err' ? '⚠' : '!');
+  badge.title = (health.issues || []).join(' · ');
+  chip.appendChild(badge);
 }
 
 function renderListSection(items, key, buildChip, searchFn, gridCls) {

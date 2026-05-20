@@ -619,6 +619,19 @@ body {
   word-break: break-all; max-width: 340px; text-align: right;
 }
 
+/* ── HEALTH BADGE (idea #3) ───────────────────────────────────────────── */
+.health-badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 16px; height: 16px;
+  font-size: 11px; font-weight: 700;
+  border-radius: 50%;
+  flex-shrink: 0;
+  cursor: help;
+  margin-left: 4px;
+}
+.health-badge.h-err  { background: rgba(239,68,68,.22);  color: var(--red); }
+.health-badge.h-warn { background: rgba(245,158,11,.22); color: var(--yellow); }
+
 /* ── ONBOARDING TOUR (idea #7) ────────────────────────────────────────── */
 .tour-overlay {
   position: fixed; inset: 0;

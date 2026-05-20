@@ -5,6 +5,7 @@ const path = require('path');
 const fs   = require('fs');
 const os   = require('os');
 const { execFile, execFileSync } = require('child_process');
+const { checkMarkdownHealth } = require('./lib/markdown');
 
 /* ── CONFIG PATHS ──────────────────────────────────────────────────────── */
 
@@ -161,6 +162,16 @@ function scanCache() {
             .map(f => f.replace(/\.md$/, ''))
         : [];
 
+      // Health check (idea #3): scan SKILL.md / agent.md frontmatter
+      const skillHealth = {};
+      skills.forEach(s => {
+        skillHealth[s] = checkMarkdownHealth(path.join(skillsDir, s, 'SKILL.md'));
+      });
+      const agentHealth = {};
+      agents.forEach(a => {
+        agentHealth[a] = checkMarkdownHealth(path.join(agentsDir, a + '.md'));
+      });
+
       const key = `${pluginName}@${mkt}`;
       details[key] = {
         name:        meta.name        || pluginName,
@@ -170,6 +181,8 @@ function scanCache() {
         path:        root,
         skills,
         agents,
+        skillHealth,
+        agentHealth,
         hasMcp:   mcpPaths.some(p => fs.existsSync(p)),
         hasHooks: fs.existsSync(hooksDir) && fs.readdirSync(hooksDir).length > 0,
       };
