@@ -619,6 +619,127 @@ body {
   word-break: break-all; max-width: 340px; text-align: right;
 }
 
+/* ── MARKDOWN MODAL (idea #1) ─────────────────────────────────────────── */
+.skill-chip.clickable { cursor: pointer; transition: border-color .15s, transform .12s; }
+.skill-chip.clickable:hover { border-color: var(--accent2); transform: translateY(-1px); }
+
+.md-overlay {
+  position: fixed; inset: 0;
+  background: rgba(20,20,19,.78);
+  backdrop-filter: blur(8px);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 99998;
+  animation: tourFade .2s ease;
+  padding: 32px;
+}
+.md-modal {
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: 14px;
+  width: 100%;
+  max-width: 820px;
+  max-height: 90vh;
+  display: flex; flex-direction: column;
+  box-shadow: 0 20px 60px rgba(0,0,0,.55);
+  overflow: hidden;
+}
+.md-header {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
+  flex-shrink: 0;
+}
+.md-title {
+  display: flex; align-items: center; gap: 10px;
+  font-family: "SF Mono", "Fira Code", monospace;
+  font-size: 14px; font-weight: 700;
+  color: var(--text);
+}
+.md-kind-badge {
+  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 10px; font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  padding: 3px 8px;
+  border-radius: 99px;
+}
+.md-kind-skill { background: var(--accent-soft); color: var(--accent2); }
+.md-kind-agent { background: rgba(249,115,22,.18); color: #fdba74; }
+.md-close {
+  background: transparent; border: none; cursor: pointer;
+  color: var(--text-muted);
+  font-size: 22px; line-height: 1;
+  padding: 4px 10px;
+  border-radius: 6px;
+  transition: background .15s;
+  font-family: inherit;
+}
+.md-close:hover { background: var(--surface2); color: var(--text); }
+
+.md-content {
+  padding: 28px 36px;
+  overflow-y: auto;
+  flex: 1;
+  color: var(--text);
+  line-height: 1.65;
+  font-size: 14px;
+}
+.md-content h1, .md-content h2, .md-content h3,
+.md-content h4, .md-content h5, .md-content h6 {
+  color: var(--accent2);
+  margin-top: 24px; margin-bottom: 10px;
+  font-weight: 700;
+}
+.md-content h1 { font-size: 22px; }
+.md-content h2 { font-size: 18px; }
+.md-content h3 { font-size: 16px; }
+.md-content h4, .md-content h5, .md-content h6 { font-size: 14px; }
+.md-content h1:first-child, .md-content h2:first-child { margin-top: 0; }
+.md-content p { margin-bottom: 12px; }
+.md-content ul { padding-left: 22px; margin-bottom: 12px; }
+.md-content li { margin-bottom: 4px; }
+.md-content code {
+  font-family: "SF Mono", "Fira Code", monospace;
+  font-size: 12.5px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  padding: 1px 6px;
+  border-radius: 4px;
+  color: var(--accent2);
+}
+.md-content pre {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 14px 16px;
+  overflow-x: auto;
+  margin: 12px 0;
+}
+.md-content pre code {
+  background: transparent;
+  border: none;
+  padding: 0;
+  color: var(--text);
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+.md-content a {
+  color: var(--accent);
+  text-decoration: none;
+  border-bottom: 1px dashed var(--accent-soft);
+}
+.md-content a:hover { color: var(--accent2); border-bottom-style: solid; }
+.md-content hr {
+  border: none;
+  height: 1px;
+  background: var(--border);
+  margin: 20px 0;
+}
+.md-content strong { color: var(--text); font-weight: 700; }
+.md-content em     { color: var(--text); font-style: italic; }
+
 /* ── HEALTH BADGE (idea #3) ───────────────────────────────────────────── */
 .health-badge {
   display: inline-flex; align-items: center; justify-content: center;

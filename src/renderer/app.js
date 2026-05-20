@@ -671,11 +671,11 @@ function renderMarketplaces() {
 /* ── SKILLS ───────────────────────────────────────────────────────────── */
 function renderSkills() {
   const all = state.plugins.flatMap(p =>
-    p.skills.map(s => ({ name: s, plugin: p.id, mkt: p.mkt, blocked: p.blocked, health: p.skillHealth[s] }))
+    p.skills.map(s => ({ name: s, plugin: p.id, mkt: p.mkt, blocked: p.blocked, health: p.skillHealth[s], fullId: p.fullId }))
   ).sort((a, b) => a.name.localeCompare(b.name));
 
   renderListSection(all, 'skills', item => {
-    const chip = el('div', 'skill-chip' + (item.blocked ? ' blocked' : ''));
+    const chip = el('div', 'skill-chip clickable' + (item.blocked ? ' blocked' : ''));
     chip.style.borderLeftColor = mktColor(item.mkt);
     const dot = el('span');
     dot.style.cssText = 'width:6px;height:6px;border-radius:50%;flex-shrink:0;background:' + mktColor(item.mkt);
@@ -683,6 +683,7 @@ function renderSkills() {
     chip.appendChild(el('span', 'skill-chip-name', item.name));
     chip.appendChild(el('span', 'skill-chip-plugin', item.plugin));
     appendHealthBadge(chip, item.health);
+    chip.addEventListener('click', () => openMarkdownPreview(item.fullId, 'skill', item.name));
     return chip;
   }, item => item.name + ' ' + item.plugin + ' ' + item.mkt, 'Cerca skill…', 'skill-grid');
 }
@@ -690,11 +691,11 @@ function renderSkills() {
 /* ── AGENTS ───────────────────────────────────────────────────────────── */
 function renderAgents() {
   const all = state.plugins.flatMap(p =>
-    p.agents.map(a => ({ name: a, plugin: p.id, mkt: p.mkt, health: p.agentHealth[a] }))
+    p.agents.map(a => ({ name: a, plugin: p.id, mkt: p.mkt, health: p.agentHealth[a], fullId: p.fullId }))
   ).sort((a, b) => a.name.localeCompare(b.name));
 
   renderListSection(all, 'agents', item => {
-    const chip = el('div', 'skill-chip');
+    const chip = el('div', 'skill-chip clickable');
     chip.style.borderLeftColor = mktColor(item.mkt);
     const dot = el('span');
     dot.style.cssText = 'width:6px;height:6px;border-radius:50%;flex-shrink:0;background:#f97316';
@@ -702,6 +703,7 @@ function renderAgents() {
     chip.appendChild(el('span', 'skill-chip-name', item.name));
     chip.appendChild(el('span', 'skill-chip-plugin', item.plugin));
     appendHealthBadge(chip, item.health);
+    chip.addEventListener('click', () => openMarkdownPreview(item.fullId, 'agent', item.name));
     return chip;
   }, item => item.name + ' ' + item.plugin + ' ' + item.mkt, 'Cerca agent…', 'skill-grid');
 }
@@ -712,6 +714,133 @@ function appendHealthBadge(chip, health) {
   const badge = el('span', 'health-badge h-' + health.status, health.status === 'err' ? '⚠' : '!');
   badge.title = (health.issues || []).join(' · ');
   chip.appendChild(badge);
+}
+
+/* ── MARKDOWN PREVIEW (idea #1) ───────────────────────────────────────── */
+async function openMarkdownPreview(fullId, kind, name) {
+  const r = await window.claudeAPI.readMarkdownFile(fullId, kind, name);
+  if (!r.success) { toast('Errore lettura ' + kind + ': ' + r.error, 'error'); return; }
+  showMarkdownModal(name, kind, r.content);
+}
+
+function inlineNodes(text) {
+  const nodes = [];
+  let i = 0;
+  let buf = '';
+  function flush() { if (buf) { nodes.push(document.createTextNode(buf)); buf = ''; } }
+  while (i < text.length) {
+    const rest = text.slice(i);
+    let m = rest.match(/^`([^`]+)`/);
+    if (m) { flush(); const c = document.createElement('code'); c.textContent = m[1]; nodes.push(c); i += m[0].length; continue; }
+    m = rest.match(/^\*\*([^*]+)\*\*/);
+    if (m) { flush(); const s = document.createElement('strong'); s.textContent = m[1]; nodes.push(s); i += m[0].length; continue; }
+    m = rest.match(/^\*([^*\s][^*]*?)\*/);
+    if (m) { flush(); const e = document.createElement('em'); e.textContent = m[1]; nodes.push(e); i += m[0].length; continue; }
+    m = rest.match(/^\[([^\]]+)\]\(([^)]+)\)/);
+    if (m) {
+      flush();
+      const a = document.createElement('a');
+      const url = m[2];
+      a.textContent = m[1];
+      if (/^(https?:|mailto:)/.test(url)) {
+        a.href = url;
+        a.addEventListener('click', e => { e.preventDefault(); window.claudeAPI.openExternal(url); });
+      }
+      nodes.push(a); i += m[0].length; continue;
+    }
+    buf += text[i];
+    i++;
+  }
+  flush();
+  return nodes;
+}
+
+function renderMarkdownToContainer(container, content) {
+  const body = content.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, '');
+  const lines = body.split(/\r?\n/);
+  let inCode = false, codeBuf = [];
+  let listEl = null;
+  let paraBuf = [];
+
+  function flushPara() {
+    if (paraBuf.length) {
+      const p = el('p');
+      inlineNodes(paraBuf.join(' ')).forEach(n => p.appendChild(n));
+      container.appendChild(p);
+      paraBuf = [];
+    }
+  }
+
+  for (const line of lines) {
+    if (line.trim().startsWith('```')) {
+      flushPara(); listEl = null;
+      if (inCode) {
+        const pre = el('pre'); const code = el('code', null, codeBuf.join('\n'));
+        pre.appendChild(code); container.appendChild(pre);
+        codeBuf = []; inCode = false;
+      } else inCode = true;
+      continue;
+    }
+    if (inCode) { codeBuf.push(line); continue; }
+    if (/^\s*$/.test(line)) { flushPara(); listEl = null; continue; }
+    if (/^---+\s*$/.test(line)) { flushPara(); listEl = null; container.appendChild(el('hr')); continue; }
+    let m;
+    if ((m = line.match(/^(#{1,6})\s+(.+)$/))) {
+      flushPara(); listEl = null;
+      const h = el('h' + m[1].length);
+      inlineNodes(m[2]).forEach(n => h.appendChild(n));
+      container.appendChild(h);
+      continue;
+    }
+    if ((m = line.match(/^\s*[-*]\s+(.+)$/))) {
+      flushPara();
+      if (!listEl) { listEl = el('ul'); container.appendChild(listEl); }
+      const li = el('li');
+      inlineNodes(m[1]).forEach(n => li.appendChild(n));
+      listEl.appendChild(li);
+      continue;
+    }
+    listEl = null;
+    paraBuf.push(line);
+  }
+  flushPara();
+  if (inCode) { const pre = el('pre'); pre.appendChild(el('code', null, codeBuf.join('\n'))); container.appendChild(pre); }
+}
+
+function showMarkdownModal(name, kind, content) {
+  if (document.querySelector('.md-overlay')) return;
+  const overlay = el('div', 'md-overlay');
+  const modal   = el('div', 'md-modal');
+  modal.setAttribute('role', 'dialog');
+  modal.setAttribute('aria-modal', 'true');
+
+  const header = el('div', 'md-header');
+  const title  = el('div', 'md-title');
+  const kindBadge = el('span', 'md-kind-badge md-kind-' + kind, kind);
+  title.appendChild(kindBadge);
+  title.appendChild(document.createTextNode(' ' + name));
+  const closeBtn = el('button', 'md-close', '×');
+  closeBtn.setAttribute('aria-label', 'Chiudi');
+  header.appendChild(title);
+  header.appendChild(closeBtn);
+
+  const contentEl = el('div', 'md-content');
+  renderMarkdownToContainer(contentEl, content);
+
+  function onKey(e) { if (e.key === 'Escape') close(); }
+  function close() {
+    document.removeEventListener('keydown', onKey);
+    overlay.remove();
+  }
+  closeBtn.addEventListener('click', close);
+  overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+  document.addEventListener('keydown', onKey);
+
+  modal.appendChild(header);
+  modal.appendChild(contentEl);
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
+  closeBtn.focus();
 }
 
 function renderListSection(items, key, buildChip, searchFn, gridCls) {
@@ -943,7 +1072,7 @@ function renderSettings() {
 
   const g3 = group('Informazioni');
   row(g3, 'Nome app', null, 'CLACOROO');
-  row(g3, 'Versione', null, '1.0.04');
+  row(g3, 'Versione', null, '1.0.05');
   row(g3, 'Piattaforma', null, d.platform);
 
   setContent(wrap);

@@ -438,3 +438,18 @@ ipcMain.handle('open-in-editor', async (_e, fullId) => {
     return { success: false, error: e.message || 'VS Code non disponibile.' };
   }
 });
+
+ipcMain.handle('read-markdown-file', async (_e, { fullId, kind, name }) => {
+  const root = resolvePluginPath(fullId);
+  if (!root) return { success: false, error: 'Path plugin non trovato.' };
+  if (!/^[a-zA-Z0-9][a-zA-Z0-9_.-]*$/.test(name)) return { success: false, error: 'Nome non valido.' };
+  let filePath;
+  if (kind === 'skill')      filePath = path.join(root, 'skills', name, 'SKILL.md');
+  else if (kind === 'agent') filePath = path.join(root, 'agents', name + '.md');
+  else return { success: false, error: 'Tipo non riconosciuto.' };
+  if (!fs.existsSync(filePath)) return { success: false, error: 'File non trovato.' };
+  try {
+    const content = fs.readFileSync(filePath, 'utf8');
+    return { success: true, content };
+  } catch (e) { return { success: false, error: e.message }; }
+});

@@ -11,6 +11,7 @@ contextBridge.exposeInMainWorld('claudeAPI', {
   setClaudeBin:       (p)                 => ipcRenderer.invoke('set-claude-bin',     p),
   openPluginPath:     (fullId)            => ipcRenderer.invoke('open-plugin-path',   fullId),
   openInEditor:       (fullId)            => ipcRenderer.invoke('open-in-editor',     fullId),
+  readMarkdownFile:   (fullId, kind, name) => ipcRenderer.invoke('read-markdown-file', { fullId, kind, name }),
   getActivityLog:     ()                  => ipcRenderer.invoke('get-activity-log'),
   clearActivityLog:   ()                  => ipcRenderer.invoke('clear-activity-log'),
   pickDirectory:      ()                  => ipcRenderer.invoke('pick-directory'),

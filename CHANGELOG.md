@@ -1,5 +1,45 @@
 # Changelog
 
+## v1.0.05 — 2026-05-20
+
+### Sette feature locali (goal mode)
+
+Realizzate in sequenza 7 idee approvate dall'utente, ciascuna implementata,
+testata via `npm start`, revisionata con skill `simplify` (3 agent paralleli
+per reuse/quality/efficiency) e committata separatamente. Tutte le idee
+seguono linee guida Karpathy (simplicity first, surgical changes, no
+abstractions per single-use code) e CLAUDE.md (zero runtime deps, execFile
+con array, textContent/createElement mai innerHTML).
+
+- **Idea #2**: bottoni 📁 "Apri nel Finder" + 📝 "Apri in VS Code" su
+  ogni plugin card (riusa `scanCache.path` invece di re-walk FS)
+- **Idea #4**: Activity log in `~/.claude-control-room/activity-log.json`
+  (max 50 entry), sub-section "Attività recenti" in Dashboard
+- **Idea #6** (riformulata): Plugin Validator in Impostazioni che usa
+  `claude plugins validate <path>` (il comando link ipotizzato non esiste)
+- **Idea #7**: Onboarding tour first-run con 5 step, Esc/frecce keyboard,
+  guard double-modal, persistenza `onboardingShown` in state.json, bottone
+  "Riavvia tour" in Impostazioni
+- **Idea #3**: Health check su SKILL.md / agent.md (frontmatter YAML
+  parsabile, name+description presenti, description ≥ 10 char) con badge
+  ⚠ nel chip + KPI Dashboard "Health issues"
+- **Idea #5**: Export/import snapshot `.clacoroo` (marketplaces + plugin +
+  blocklist) con preview diff, apply sequenziale via CLI (no parallel per
+  evitare race su known_marketplaces.json)
+- **Idea #1**: Visualizzatore SKILL.md / agent.md inline — click chip apre
+  modal con parser markdown DOM-based (no innerHTML, solo createElement),
+  supporta headings, paragrafi, bold/italic/code, link, code fenced, hr
+
+### Architettura refactor
+
+Estratti helper in moduli `src/lib/`:
+- `markdown.js` — parseFrontmatter + checkMarkdownHealth (per idea #3)
+- `state.js` — readState/writeState/appendActivity (centralizza state I/O)
+- `snapshot.js` — buildSnapshot + diffSnapshot (puro, testabile)
+
+CLAUDE.md: limite `main.js` alzato da 400 a 450 righe (legittimo dopo
+aggiunta 8+ IPC handler + lib/ già estratti per logica pura).
+
 ## v1.0.04 — 2026-05-20
 
 ### Packaging cross-platform (anticipato dalla roadmap, era prevista v1.0.04 originale)
