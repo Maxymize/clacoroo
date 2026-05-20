@@ -288,6 +288,30 @@ ipcMain.handle('clear-activity-log', async () => {
   catch (e) { return { success: false, error: e.message }; }
 });
 
+ipcMain.handle('pick-directory', async () => {
+  const r = await dialog.showOpenDialog(mainWindow, {
+    properties: ['openDirectory'],
+    title: 'Seleziona cartella plugin',
+  });
+  if (r.canceled || !r.filePaths.length) return null;
+  return r.filePaths[0];
+});
+
+ipcMain.handle('validate-plugin', async (_e, pluginPath) => {
+  if (typeof pluginPath !== 'string' || !fs.existsSync(pluginPath)) {
+    return { success: false, error: 'Path non valido o inesistente.' };
+  }
+  if (!fs.statSync(pluginPath).isDirectory()) {
+    return { success: false, error: 'Il path deve essere una cartella, non un file.' };
+  }
+  const result = await runClaudeArgs(['plugins', 'validate', pluginPath]);
+  appendActivity({
+    kind: 'dev', action: 'validate', target: pluginPath,
+    success: result.success, error: result.error,
+  });
+  return result;
+});
+
 ipcMain.handle('confirm-dialog', async (_e, { title, message, detail, buttons }) => {
   const r = await dialog.showMessageBox(mainWindow, {
     type:      'warning',

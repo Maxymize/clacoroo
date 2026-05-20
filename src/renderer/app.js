@@ -805,6 +805,52 @@ function renderSettings() {
   row(g2, 'Skill totali', null, String(state.plugins.reduce((s, p) => s + p.skills.length, 0)));
   row(g2, 'Agent totali', null, String(state.plugins.reduce((s, p) => s + p.agents.length, 0)));
 
+  // Sviluppo plugin (idea #6 riformulata)
+  const g4 = group('Sviluppo plugin');
+  const devRow = el('div', 'settings-row');
+  const devLeft = el('div');
+  devLeft.appendChild(el('div', 'settings-row-label', 'Plugin Validator'));
+  devLeft.appendChild(el('div', 'settings-row-desc', 'Valida plugin.json e marketplace.json di un plugin locale prima di pubblicarlo'));
+  devRow.appendChild(devLeft);
+
+  const devWrap = el('div');
+  devWrap.style.cssText = 'display:flex;flex-direction:column;gap:8px;align-items:flex-end;min-width:340px;';
+  const pathRow = el('div');
+  pathRow.style.cssText = 'display:flex;gap:6px;align-items:center;';
+  const pathInp = el('input', 'search-input');
+  pathInp.style.cssText = 'width:240px;font-family:"SF Mono",monospace;';
+  pathInp.setAttribute('placeholder', '/path/to/local/plugin');
+  pathInp.setAttribute('type', 'text');
+  const browseBtn = el('button', 'btn btn-sm btn-ghost', '📂 Sfoglia');
+  const validateBtn = el('button', 'btn btn-sm btn-primary', 'Valida');
+  const outputEl = el('pre', 'dev-validate-output');
+  outputEl.style.display = 'none';
+
+  browseBtn.addEventListener('click', async () => {
+    const p = await window.claudeAPI.pickDirectory();
+    if (p) pathInp.value = p;
+  });
+  validateBtn.addEventListener('click', async () => {
+    const p = pathInp.value.trim();
+    if (!p) { toast('Specifica un path', 'warn'); return; }
+    validateBtn.disabled = true;
+    validateBtn.textContent = '…';
+    const r = await window.claudeAPI.validatePlugin(p);
+    validateBtn.disabled = false;
+    validateBtn.textContent = 'Valida';
+    outputEl.textContent = r.success ? (r.output || '✓ Manifest valido') : ('✗ ' + r.error);
+    outputEl.className = 'dev-validate-output ' + (r.success ? 'ok' : 'err');
+    outputEl.style.display = 'block';
+  });
+
+  pathRow.appendChild(pathInp);
+  pathRow.appendChild(browseBtn);
+  pathRow.appendChild(validateBtn);
+  devWrap.appendChild(pathRow);
+  devWrap.appendChild(outputEl);
+  devRow.appendChild(devWrap);
+  g4.appendChild(devRow);
+
   const g3 = group('Informazioni');
   row(g3, 'Nome app', null, 'CLACOROO');
   row(g3, 'Versione', null, '1.0.04');

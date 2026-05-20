@@ -13,6 +13,8 @@ contextBridge.exposeInMainWorld('claudeAPI', {
   openInEditor:       (fullId)            => ipcRenderer.invoke('open-in-editor',     fullId),
   getActivityLog:     ()                  => ipcRenderer.invoke('get-activity-log'),
   clearActivityLog:   ()                  => ipcRenderer.invoke('clear-activity-log'),
+  pickDirectory:      ()                  => ipcRenderer.invoke('pick-directory'),
+  validatePlugin:     (p)                 => ipcRenderer.invoke('validate-plugin',    p),
 
   onConfigChanged: (cb) => {
     const handler = () => cb();

@@ -619,6 +619,25 @@ body {
   word-break: break-all; max-width: 340px; text-align: right;
 }
 
+/* ── DEV VALIDATE (idea #6) ───────────────────────────────────────────── */
+.dev-validate-output {
+  width: 100%;
+  max-width: 480px;
+  font-family: "SF Mono", "Fira Code", monospace;
+  font-size: 11px;
+  line-height: 1.5;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  max-height: 240px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+.dev-validate-output.ok  { border-color: rgba(34,197,94,.4);  color: #b6e8c1; }
+.dev-validate-output.err { border-color: rgba(239,68,68,.4); color: #f7a8a8; }
+
 /* ── ACTIVITY LIST (idea #4) ──────────────────────────────────────────── */
 .activity-list {
   display: flex; flex-direction: column;
