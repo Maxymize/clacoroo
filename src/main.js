@@ -6,6 +6,11 @@ const fs   = require('fs');
 const os   = require('os');
 const { execFile, execFileSync } = require('child_process');
 const { checkMarkdownHealth } = require('./lib/markdown');
+const { buildSnapshot, diffSnapshot } = require('./lib/snapshot');
+const {
+  readState, writeState,
+  readActivityLog, appendActivity, clearActivityLog,
+} = require('./lib/state');
 
 /* ── CONFIG PATHS ──────────────────────────────────────────────────────── */
 
@@ -76,38 +81,6 @@ function runClaudeArgs(args) {
   });
 }
 
-/* ── STATE & ACTIVITY LOG ──────────────────────────────────────────────── */
-
-const STATE_DIR     = path.join(os.homedir(), '.claude-control-room');
-const ACTIVITY_LOG  = path.join(STATE_DIR, 'activity-log.json');
-const STATE_FILE    = path.join(STATE_DIR, 'state.json');
-const ACTIVITY_MAX  = 50;
-
-function ensureStateDir() {
-  if (!fs.existsSync(STATE_DIR)) fs.mkdirSync(STATE_DIR, { recursive: true });
-}
-
-function readState() {
-  return safeReadJson(STATE_FILE, {});
-}
-
-function writeState(patch) {
-  try {
-    ensureStateDir();
-    const current = readState();
-    fs.writeFileSync(STATE_FILE, JSON.stringify({ ...current, ...patch }, null, 2), 'utf8');
-    return true;
-  } catch { return false; }
-}
-
-function appendActivity(entry) {
-  try {
-    ensureStateDir();
-    const log = safeReadJson(ACTIVITY_LOG, []);
-    log.unshift({ timestamp: Date.now(), ...entry });
-    fs.writeFileSync(ACTIVITY_LOG, JSON.stringify(log.slice(0, ACTIVITY_MAX), null, 2), 'utf8');
-  } catch { /* fail silently — activity log is non-critical */ }
-}
 
 /* ── DATA READING ──────────────────────────────────────────────────────── */
 
@@ -308,18 +281,89 @@ ipcMain.handle('marketplace-action', async (_e, { action, name, source }) => {
   return result;
 });
 
-ipcMain.handle('get-activity-log', async () => safeReadJson(ACTIVITY_LOG, []));
-
-ipcMain.handle('clear-activity-log', async () => {
-  try { fs.unlinkSync(ACTIVITY_LOG); return { success: true }; }
-  catch (e) { return { success: false, error: e.message }; }
-});
+ipcMain.handle('get-activity-log', async () => readActivityLog());
+ipcMain.handle('clear-activity-log', async () => clearActivityLog());
 
 ipcMain.handle('get-state', async () => readState());
 
 ipcMain.handle('set-state', async (_e, patch) => {
   if (typeof patch !== 'object' || patch === null) return { success: false, error: 'Patch non valido.' };
   return { success: writeState(patch) };
+});
+
+/* ── SNAPSHOT EXPORT / IMPORT (idea #5) ───────────────────────────────── */
+
+function currentSnapshot() {
+  return buildSnapshot({
+    installedRaw: safeReadJson(INSTALLED,    { version: 2, plugins: {} }),
+    blocklist:    safeReadJson(BLOCKLIST,    { plugins: [] }),
+    marketplaces: safeReadJson(MARKETPLACES, {}),
+    fromVersion:  app.getVersion(),
+  });
+}
+
+ipcMain.handle('export-snapshot', async () => {
+  const r = await dialog.showSaveDialog(mainWindow, {
+    title: 'Esporta snapshot CLACOROO',
+    defaultPath: 'clacoroo-' + new Date().toISOString().slice(0, 10) + '.clacoroo',
+    filters: [{ name: 'CLACOROO snapshot', extensions: ['clacoroo', 'json'] }],
+  });
+  if (r.canceled || !r.filePath) return { success: false, error: 'Annullato' };
+  try {
+    fs.writeFileSync(r.filePath, JSON.stringify(currentSnapshot(), null, 2), 'utf8');
+    return { success: true, path: r.filePath };
+  } catch (e) { return { success: false, error: e.message }; }
+});
+
+ipcMain.handle('import-snapshot', async () => {
+  const r = await dialog.showOpenDialog(mainWindow, {
+    title: 'Importa snapshot CLACOROO',
+    properties: ['openFile'],
+    filters: [{ name: 'CLACOROO snapshot', extensions: ['clacoroo', 'json'] }],
+  });
+  if (r.canceled || !r.filePaths.length) return { success: false, error: 'Annullato' };
+  const snap = safeReadJson(r.filePaths[0], null);
+  if (!snap || snap.format !== 'clacoroo-snapshot') {
+    return { success: false, error: 'File non riconosciuto come snapshot CLACOROO.' };
+  }
+  if (snap.version !== 1) {
+    return { success: false, error: 'Versione snapshot non supportata: ' + snap.version };
+  }
+  return { success: true, preview: { ...diffSnapshot(currentSnapshot(), snap), snap } };
+});
+
+ipcMain.handle('apply-snapshot', async (_e, { mktToAdd, pluginsToInstall, snap }) => {
+  const log = [];
+  for (const [id, cfg] of (mktToAdd || [])) {
+    if (!validMarketplaceName(id)) {
+      log.push({ kind: 'marketplace', id, success: false, error: 'Nome marketplace non valido' });
+      continue;
+    }
+    const src = extractRepoPath(cfg?.source) || cfg?.source?.url;
+    if (!src) { log.push({ kind: 'marketplace', id, success: false, error: 'source mancante' }); continue; }
+    const r = await runClaudeArgs(['plugins', 'marketplace', 'add', src]);
+    log.push({ kind: 'marketplace', id, ...r });
+  }
+  for (const pluginId of (pluginsToInstall || [])) {
+    if (!validPluginId(pluginId)) {
+      log.push({ kind: 'plugin', id: pluginId, success: false, error: 'ID non valido' });
+      continue;
+    }
+    const r = await runClaudeArgs(['plugins', 'install', pluginId]);
+    log.push({ kind: 'plugin', id: pluginId, ...r });
+  }
+  // Apply blocklist from snapshot — disable plugins that were disabled at export time
+  for (const blockedId of (snap?.blocklist || [])) {
+    if (!validPluginId(blockedId)) continue;
+    const r = await runClaudeArgs(['plugins', 'disable', blockedId]);
+    log.push({ kind: 'plugin', id: blockedId, action: 'disable', ...r });
+  }
+  appendActivity({
+    kind: 'snapshot', action: 'apply',
+    target: 'mkt:' + (mktToAdd?.length || 0) + '/plugins:' + (pluginsToInstall?.length || 0) + '/blocked:' + (snap?.blocklist?.length || 0),
+    success: log.every(l => l.success), error: log.filter(l => !l.success).map(l => l.id).join(',') || undefined,
+  });
+  return { success: log.every(l => l.success), log };
 });
 
 ipcMain.handle('pick-directory', async () => {

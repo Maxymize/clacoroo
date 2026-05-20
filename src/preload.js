@@ -17,6 +17,9 @@ contextBridge.exposeInMainWorld('claudeAPI', {
   validatePlugin:     (p)                 => ipcRenderer.invoke('validate-plugin',    p),
   getState:           ()                  => ipcRenderer.invoke('get-state'),
   setState:           (patch)             => ipcRenderer.invoke('set-state',          patch),
+  exportSnapshot:     ()                  => ipcRenderer.invoke('export-snapshot'),
+  importSnapshot:     ()                  => ipcRenderer.invoke('import-snapshot'),
+  applySnapshot:      (preview)           => ipcRenderer.invoke('apply-snapshot',     preview),
 
   onConfigChanged: (cb) => {
     const handler = () => cb();

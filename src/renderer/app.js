@@ -876,6 +876,57 @@ function renderSettings() {
   devRow.appendChild(devWrap);
   g4.appendChild(devRow);
 
+  // Backup snapshot (idea #5)
+  const g6 = group('Backup snapshot');
+  const snapRow = el('div', 'settings-row');
+  const snapLeft = el('div');
+  snapLeft.appendChild(el('div', 'settings-row-label', 'Snapshot configurazione'));
+  snapLeft.appendChild(el('div', 'settings-row-desc', 'Esporta o importa un file .clacoroo (marketplaces + plugin + blocklist). Utile per backup o migrazione su altro Mac.'));
+  snapRow.appendChild(snapLeft);
+  const snapBtns = el('div');
+  snapBtns.style.cssText = 'display:flex;gap:6px;';
+  const exportBtn = el('button', 'btn btn-sm btn-ghost', '⤓ Esporta');
+  exportBtn.addEventListener('click', async () => {
+    const r = await window.claudeAPI.exportSnapshot();
+    if (r.success) toast('Snapshot esportato in ' + r.path, 'success');
+    else if (r.error !== 'Annullato') toast('Errore export: ' + r.error, 'error');
+  });
+  const importBtn = el('button', 'btn btn-sm btn-primary', '⤒ Importa');
+  importBtn.addEventListener('click', async () => {
+    const r = await window.claudeAPI.importSnapshot();
+    if (!r.success) {
+      if (r.error !== 'Annullato') toast('Errore import: ' + r.error, 'error');
+      return;
+    }
+    const { mktToAdd, pluginsToInstall } = r.preview;
+    if (!mktToAdd.length && !pluginsToInstall.length) {
+      toast('Snapshot già allineato — niente da applicare', 'info');
+      return;
+    }
+    const choice = await window.claudeAPI.confirmDialog({
+      title:   'Applica snapshot',
+      message: 'Applicare le seguenti azioni?',
+      detail:  '+ ' + mktToAdd.length + ' marketplace\n+ ' + pluginsToInstall.length + ' plugin\n\nL\'operazione può richiedere alcuni minuti.',
+      buttons: ['Annulla', 'Applica'],
+    });
+    if (choice !== 1) return;
+    importBtn.disabled = true;
+    importBtn.textContent = 'Applicazione…';
+    const a = await window.claudeAPI.applySnapshot(r.preview);
+    importBtn.disabled = false;
+    importBtn.textContent = '⤒ Importa';
+    if (a.success) toast('Snapshot applicato (' + a.log.length + ' azioni)', 'success');
+    else {
+      const failed = a.log.filter(l => !l.success).length;
+      toast(failed + ' azioni fallite, vedi Attività recenti', 'warn');
+    }
+    await loadData();
+  });
+  snapBtns.appendChild(exportBtn);
+  snapBtns.appendChild(importBtn);
+  snapRow.appendChild(snapBtns);
+  g6.appendChild(snapRow);
+
   // Onboarding (idea #7)
   const g5 = group('Onboarding');
   const tourRow = el('div', 'settings-row');
