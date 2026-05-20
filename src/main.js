@@ -75,14 +75,28 @@ function runClaudeArgs(args) {
   });
 }
 
-/* ── ACTIVITY LOG ──────────────────────────────────────────────────────── */
+/* ── STATE & ACTIVITY LOG ──────────────────────────────────────────────── */
 
 const STATE_DIR     = path.join(os.homedir(), '.claude-control-room');
 const ACTIVITY_LOG  = path.join(STATE_DIR, 'activity-log.json');
+const STATE_FILE    = path.join(STATE_DIR, 'state.json');
 const ACTIVITY_MAX  = 50;
 
 function ensureStateDir() {
   if (!fs.existsSync(STATE_DIR)) fs.mkdirSync(STATE_DIR, { recursive: true });
+}
+
+function readState() {
+  return safeReadJson(STATE_FILE, {});
+}
+
+function writeState(patch) {
+  try {
+    ensureStateDir();
+    const current = readState();
+    fs.writeFileSync(STATE_FILE, JSON.stringify({ ...current, ...patch }, null, 2), 'utf8');
+    return true;
+  } catch { return false; }
 }
 
 function appendActivity(entry) {
@@ -286,6 +300,13 @@ ipcMain.handle('get-activity-log', async () => safeReadJson(ACTIVITY_LOG, []));
 ipcMain.handle('clear-activity-log', async () => {
   try { fs.unlinkSync(ACTIVITY_LOG); return { success: true }; }
   catch (e) { return { success: false, error: e.message }; }
+});
+
+ipcMain.handle('get-state', async () => readState());
+
+ipcMain.handle('set-state', async (_e, patch) => {
+  if (typeof patch !== 'object' || patch === null) return { success: false, error: 'Patch non valido.' };
+  return { success: writeState(patch) };
 });
 
 ipcMain.handle('pick-directory', async () => {

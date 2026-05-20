@@ -47,6 +47,9 @@ async function init() {
     toast('Configurazione aggiornata — ricarico…', 'info');
     loadData();
   });
+  // First-run onboarding (idea #7)
+  const appState = await window.claudeAPI.getState();
+  if (!appState.onboardingShown) showOnboardingTour();
 }
 
 /* ── DATA ─────────────────────────────────────────────────────────────── */
@@ -851,12 +854,112 @@ function renderSettings() {
   devRow.appendChild(devWrap);
   g4.appendChild(devRow);
 
+  // Onboarding (idea #7)
+  const g5 = group('Onboarding');
+  const tourRow = el('div', 'settings-row');
+  const tourLeft = el('div');
+  tourLeft.appendChild(el('div', 'settings-row-label', 'Tour di benvenuto'));
+  tourLeft.appendChild(el('div', 'settings-row-desc', '5 step rapidi che spiegano le sezioni e le funzioni principali'));
+  tourRow.appendChild(tourLeft);
+  const restartBtn = el('button', 'btn btn-sm btn-primary', 'Riavvia tour');
+  restartBtn.addEventListener('click', () => {
+    showOnboardingTour();
+  });
+  tourRow.appendChild(restartBtn);
+  g5.appendChild(tourRow);
+
   const g3 = group('Informazioni');
   row(g3, 'Nome app', null, 'CLACOROO');
   row(g3, 'Versione', null, '1.0.04');
   row(g3, 'Piattaforma', null, d.platform);
 
   setContent(wrap);
+}
+
+/* ── ONBOARDING TOUR (idea #7) ────────────────────────────────────────── */
+const TOUR_STEPS = [
+  {
+    title: 'Benvenuto in CLACOROO',
+    body: 'Il pannello visuale per gestire plugin, marketplace, skill e agent del tuo Claude Code. Niente più comandi CLI da ricordare. Ti faccio un giro rapido in 5 step.',
+  },
+  {
+    title: 'Sidebar',
+    body: 'A sinistra trovi 6 sezioni: Dashboard (panoramica), Plugin (gestisci attivi/disattivi), Marketplace (sorgenti dei plugin), Skill e Agent (cataloghi), Impostazioni. Clicca per spostarti.',
+  },
+  {
+    title: 'Plugin',
+    body: 'Ogni plugin ha una card con toggle attiva/disattiva, bottone Aggiorna, Rimuovi, e i nuovi bottoni 📁 (apri nel Finder) e 📝 (apri in VS Code). Filtri e ricerca in alto.',
+  },
+  {
+    title: 'Auto-refresh',
+    body: "L'UI si aggiorna sola quando i file di config di Claude Code cambiano. Le operazioni eseguite qui finiscono in 'Attività recenti' nella Dashboard.",
+  },
+  {
+    title: 'Pronto!',
+    body: 'Esplora liberamente. Puoi rivedere questo tour da Impostazioni → Onboarding → Riavvia tour. Buon lavoro!',
+  },
+];
+
+function showOnboardingTour() {
+  if (document.querySelector('.tour-overlay')) return;  // guard double-modal
+
+  let stepIdx = 0;
+  const overlay = el('div', 'tour-overlay');
+  const modal   = el('div', 'tour-modal');
+  modal.setAttribute('role', 'dialog');
+  modal.setAttribute('aria-modal', 'true');
+  modal.setAttribute('aria-labelledby', 'tour-title-el');
+  const mascot  = el('img', 'tour-mascot');
+  mascot.src = 'clacoroo.svg';
+  mascot.alt = '';
+  mascot.setAttribute('aria-hidden', 'true');
+  const title   = el('h2', 'tour-title');
+  title.id = 'tour-title-el';
+  const body    = el('p', 'tour-body');
+  const counter = el('div', 'tour-counter');
+  const actions = el('div', 'tour-actions');
+  const skipBtn = el('button', 'btn btn-sm btn-ghost', 'Salta');
+  const backBtn = el('button', 'btn btn-sm btn-ghost', 'Indietro');
+  const nextBtn = el('button', 'btn btn-sm btn-primary', 'Avanti');
+
+  function onKey(e) {
+    if (e.key === 'Escape') close();
+    else if (e.key === 'ArrowRight') nextBtn.click();
+    else if (e.key === 'ArrowLeft')  backBtn.click();
+  }
+  function close() {
+    window.claudeAPI.setState({ onboardingShown: true });
+    document.removeEventListener('keydown', onKey);
+    overlay.remove();
+  }
+  function renderStep() {
+    const s = TOUR_STEPS[stepIdx];
+    title.textContent = s.title;
+    body.textContent  = s.body;
+    counter.textContent = (stepIdx + 1) + ' / ' + TOUR_STEPS.length;
+    backBtn.disabled = stepIdx === 0;
+    nextBtn.textContent = stepIdx === TOUR_STEPS.length - 1 ? 'Inizia' : 'Avanti';
+    nextBtn.focus();
+  }
+  skipBtn.addEventListener('click', close);
+  backBtn.addEventListener('click', () => { if (stepIdx > 0) { stepIdx--; renderStep(); } });
+  nextBtn.addEventListener('click', () => {
+    if (stepIdx < TOUR_STEPS.length - 1) { stepIdx++; renderStep(); }
+    else close();
+  });
+  document.addEventListener('keydown', onKey);
+
+  actions.appendChild(skipBtn);
+  actions.appendChild(backBtn);
+  actions.appendChild(nextBtn);
+  modal.appendChild(mascot);
+  modal.appendChild(title);
+  modal.appendChild(body);
+  modal.appendChild(counter);
+  modal.appendChild(actions);
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
+  renderStep();
 }
 
 /* ── STATUS ───────────────────────────────────────────────────────────── */

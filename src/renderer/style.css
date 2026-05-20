@@ -619,6 +619,56 @@ body {
   word-break: break-all; max-width: 340px; text-align: right;
 }
 
+/* ── ONBOARDING TOUR (idea #7) ────────────────────────────────────────── */
+.tour-overlay {
+  position: fixed; inset: 0;
+  background: rgba(20,20,19,.78);
+  backdrop-filter: blur(10px);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 99999;
+  animation: tourFade .25s ease;
+}
+@keyframes tourFade { from { opacity: 0; } to { opacity: 1; } }
+
+.tour-modal {
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: 14px;
+  padding: 32px 40px;
+  max-width: 460px;
+  width: 90%;
+  box-shadow: 0 20px 60px rgba(0,0,0,.5);
+  text-align: center;
+}
+.tour-mascot {
+  width: 72px; height: 72px;
+  display: block; margin: 0 auto 16px;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  animation: mascotBob 1.4s ease-in-out infinite;
+}
+.tour-title {
+  font-size: 20px; font-weight: 800;
+  color: var(--accent);
+  margin-bottom: 10px;
+  letter-spacing: .02em;
+}
+.tour-body {
+  font-size: 13.5px; color: var(--text);
+  line-height: 1.6;
+  margin-bottom: 16px;
+}
+.tour-counter {
+  font-size: 11px;
+  color: var(--text-muted);
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  margin-bottom: 18px;
+}
+.tour-actions {
+  display: flex; gap: 8px; justify-content: center;
+}
+
 /* ── DEV VALIDATE (idea #6) ───────────────────────────────────────────── */
 .dev-validate-output {
   width: 100%;

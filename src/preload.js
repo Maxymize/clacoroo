@@ -15,6 +15,8 @@ contextBridge.exposeInMainWorld('claudeAPI', {
   clearActivityLog:   ()                  => ipcRenderer.invoke('clear-activity-log'),
   pickDirectory:      ()                  => ipcRenderer.invoke('pick-directory'),
   validatePlugin:     (p)                 => ipcRenderer.invoke('validate-plugin',    p),
+  getState:           ()                  => ipcRenderer.invoke('get-state'),
+  setState:           (patch)             => ipcRenderer.invoke('set-state',          patch),
 
   onConfigChanged: (cb) => {
     const handler = () => cb();
