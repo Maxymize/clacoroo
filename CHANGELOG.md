@@ -1,5 +1,33 @@
 # Changelog
 
+## v1.0.04 — 2026-05-20
+
+### Packaging cross-platform (anticipato dalla roadmap, era prevista v1.0.04 originale)
+
+**Asset icone**
+- `assets/icon-source.svg` — wrapper SVG quadrato (1024×1024) con mascotte centrata su background squircle Claude Dark `#141413`
+- `assets/icon.icns` — 109KB, iconset Apple compliant (10 dimensioni 16→1024 + @2x)
+- `assets/icon.png` — 1024×1024 per Linux + fallback Windows
+- Pipeline generazione: `qlmanage` (SVG → PNG 1024) → `sips` (resize multi-size) → `iconutil -c icns`
+
+**electron-builder config estesa**
+- **macOS**: target `.dmg` + `.zip` per arm64+x64, `hardenedRuntime: true`, `gatekeeperAssess: false`, entitlements `build/entitlements.mac.plist`, `darkModeSupport: true`, DMG con window 540×380 + drag-to-Applications layout
+- **Windows**: NSIS `oneClick: false` con scelta cartella + portable target, icon, `requestedExecutionLevel: 'asInvoker'`
+- **Linux**: AppImage + .deb + .rpm, desktop entry con category Development/Utility
+- File `build/entitlements.mac.plist` con entitlements minime Electron (allow-jit, disable-library-validation, inherit per child process `claude` CLI)
+- ASAR archive abilitato + exclude di `docs/`, `*.md`, test files dal package
+
+**Script npm**
+- `npm run build` → `electron-builder --mac` (default per uso locale Mac)
+- `npm run build:mac/win/linux` per build mirati
+- `npm run dist` → `-mwl` (tutte le piattaforme, richiede toolchain)
+
+### Skipped (rimandato a v1.0.05+)
+- Code signing macOS (Apple Developer ID $99/anno)
+- Notarization Apple
+- Windows code signing
+- Full auto-update via `electron-updater`
+
 ## v1.0.02 — 2026-05-19
 
 ### Rebrand → CLACOROO + brand identity Claude-inspired

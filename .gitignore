@@ -4,9 +4,8 @@ npm-debug.log
 yarn-error.log
 *.log
 
-# Build output
+# Build output (electron-builder usa 'build/' come buildResources, NON output)
 dist/
-build/
 out/
 release/
 *.dmg

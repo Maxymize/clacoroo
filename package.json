@@ -1,6 +1,6 @@
 {
   "name": "clacoroo",
-  "version": "1.0.02",
+  "version": "1.0.04",
   "description": "CLACOROO — Claude Code Control Room: pannello visuale per plugin, marketplace, skill e agent",
   "main": "src/main.js",
   "author": {
@@ -14,34 +14,87 @@
     "url": "https://github.com/Maxymize/clacoroo.git"
   },
   "scripts": {
-    "start": "electron .",
+    "start": "unset ELECTRON_RUN_AS_NODE; electron .",
     "build": "electron-builder --mac",
-    "dist": "electron-builder"
+    "build:mac": "electron-builder --mac",
+    "build:win": "electron-builder --win",
+    "build:linux": "electron-builder --linux",
+    "dist": "electron-builder -mwl"
   },
   "build": {
     "appId": "com.maxymize.clacoroo",
     "productName": "CLACOROO",
     "copyright": "Copyright © 2026 Maximilian Giurastante",
     "directories": {
-      "output": "dist"
+      "output": "dist",
+      "buildResources": "build"
     },
     "files": [
       "src/**/*",
-      "assets/**/*"
+      "package.json",
+      "!**/*.{md,map,test.js}",
+      "!**/{__tests__,test,tests,docs,.github}"
     ],
+    "asar": true,
+    "compression": "normal",
     "mac": {
       "category": "public.app-category.developer-tools",
-      "target": [{ "target": "dmg", "arch": ["arm64", "x64"] }],
+      "target": [
+        { "target": "dmg", "arch": ["arm64", "x64"] },
+        { "target": "zip", "arch": ["arm64", "x64"] }
+      ],
       "icon": "assets/icon.icns",
-      "darkModeSupport": true
+      "darkModeSupport": true,
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist",
+      "extendInfo": {
+        "NSHumanReadableCopyright": "Copyright © 2026 Maximilian Giurastante",
+        "LSUIElement": false
+      },
+      "identity": null
+    },
+    "dmg": {
+      "title": "${productName} ${version}",
+      "artifactName": "${productName}-${version}-${arch}.${ext}",
+      "window": { "width": 540, "height": 380 },
+      "contents": [
+        { "x": 140, "y": 200, "type": "file" },
+        { "x": 400, "y": 200, "type": "link", "path": "/Applications" }
+      ]
     },
     "win": {
-      "target": "nsis",
-      "icon": "assets/icon.ico"
+      "target": [
+        { "target": "nsis",     "arch": ["x64", "arm64"] },
+        { "target": "portable", "arch": ["x64"] }
+      ],
+      "icon": "assets/icon.png",
+      "requestedExecutionLevel": "asInvoker"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "CLACOROO"
     },
     "linux": {
-      "target": "AppImage",
-      "icon": "assets/icon.png"
+      "target": ["AppImage", "deb", "rpm"],
+      "icon": "assets/icon.png",
+      "category": "Development",
+      "synopsis": "Claude Code Control Room",
+      "description": "Pannello visuale per gestire plugin, marketplace, skill e agent di Claude Code",
+      "maintainer": "Maximilian Giurastante <info@maxymizebusiness.com>",
+      "desktop": {
+        "entry": {
+          "Name": "CLACOROO",
+          "Comment": "Claude Code Control Room",
+          "Categories": "Development;Utility;",
+          "StartupWMClass": "CLACOROO"
+        }
+      }
     }
   },
   "devDependencies": {
