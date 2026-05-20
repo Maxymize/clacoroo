@@ -9,6 +9,8 @@ contextBridge.exposeInMainWorld('claudeAPI', {
   confirmDialog:      (opts)              => ipcRenderer.invoke('confirm-dialog',     opts),
   openExternal:       (url)               => ipcRenderer.invoke('open-external',      url),
   setClaudeBin:       (p)                 => ipcRenderer.invoke('set-claude-bin',     p),
+  openPluginPath:     (fullId)            => ipcRenderer.invoke('open-plugin-path',   fullId),
+  openInEditor:       (fullId)            => ipcRenderer.invoke('open-in-editor',     fullId),
 
   onConfigChanged: (cb) => {
     const handler = () => cb();

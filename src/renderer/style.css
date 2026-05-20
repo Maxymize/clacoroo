@@ -256,6 +256,7 @@ body {
 .btn-sm { padding: 4px 10px; font-size: 11px; }
 .btn-icon { padding: 6px; gap: 0; }
 .btn-icon svg { width: 14px; height: 14px; }
+.btn-icon-text { padding: 4px 8px; font-size: 14px; line-height: 1; }
 
 /* SPINNER in button */
 .btn .spinner-sm {

@@ -82,9 +82,14 @@ function safeReadJson(filePath, fallback) {
   catch { return fallback; }
 }
 
+let LAST_CACHE = {};
+
 function scanCache() {
   const details = {};
-  if (!fs.existsSync(CACHE_DIR)) return details;
+  if (!fs.existsSync(CACHE_DIR)) {
+    LAST_CACHE = details;
+    return details;
+  }
 
   for (const mkt of fs.readdirSync(CACHE_DIR)) {
     const mktPath = path.join(CACHE_DIR, mkt);
@@ -129,6 +134,7 @@ function scanCache() {
         description: meta.description || '',
         version:     meta.version     || ver,
         author:      meta.author      || '',
+        path:        root,
         skills,
         agents,
         hasMcp:   mcpPaths.some(p => fs.existsSync(p)),
@@ -136,6 +142,7 @@ function scanCache() {
       };
     }
   }
+  LAST_CACHE = details;
   return details;
 }
 
@@ -265,4 +272,30 @@ ipcMain.handle('set-claude-bin', async (_e, binPath) => {
   if (!fs.existsSync(binPath)) return { success: false, error: 'File non trovato.' };
   CLAUDE_BIN = binPath;
   return { success: true };
+});
+
+/* ── PLUGIN PATH RESOLUTION ────────────────────────────────────────────── */
+
+function resolvePluginPath(fullId) {
+  if (!validPluginId(fullId)) return null;
+  return LAST_CACHE[fullId]?.path || null;
+}
+
+ipcMain.handle('open-plugin-path', async (_e, fullId) => {
+  const p = resolvePluginPath(fullId);
+  if (!p) return { success: false, error: 'Path plugin non trovato.' };
+  const err = await shell.openPath(p);
+  if (err) return { success: false, error: err };
+  return { success: true };
+});
+
+ipcMain.handle('open-in-editor', async (_e, fullId) => {
+  const p = resolvePluginPath(fullId);
+  if (!p) return { success: false, error: 'Path plugin non trovato.' };
+  try {
+    await shell.openExternal('vscode://file' + encodeURI(p));
+    return { success: true };
+  } catch (e) {
+    return { success: false, error: e.message || 'VS Code non disponibile.' };
+  }
 });

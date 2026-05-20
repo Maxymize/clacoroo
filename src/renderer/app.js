@@ -428,6 +428,25 @@ function buildPluginCard(p) {
   // Action buttons
   const actions = el('div', 'pc-actions');
 
+  // Apri nel Finder (idea #2)
+  const finderBtn = el('button', 'btn btn-sm btn-ghost btn-icon-text', '📁');
+  finderBtn.title = 'Apri sorgente nel Finder';
+  finderBtn.addEventListener('click', async () => {
+    const r = await window.claudeAPI.openPluginPath(p.fullId);
+    if (!r.success) toast('Errore apertura Finder: ' + r.error, 'error');
+  });
+
+  // Apri in VS Code (idea #2)
+  const codeBtn = el('button', 'btn btn-sm btn-ghost btn-icon-text', '📝');
+  codeBtn.title = 'Apri sorgente in VS Code';
+  codeBtn.addEventListener('click', async () => {
+    const r = await window.claudeAPI.openInEditor(p.fullId);
+    if (!r.success) toast('Errore apertura VS Code: ' + r.error, 'error');
+  });
+
+  actions.appendChild(finderBtn);
+  actions.appendChild(codeBtn);
+
   const updateBtn = el('button', 'btn btn-sm btn-ghost', 'Aggiorna');
   updateBtn.addEventListener('click', async () => {
     updateBtn.disabled = true;
