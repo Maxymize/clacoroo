@@ -75,6 +75,25 @@ function runClaudeArgs(args) {
   });
 }
 
+/* ── ACTIVITY LOG ──────────────────────────────────────────────────────── */
+
+const STATE_DIR     = path.join(os.homedir(), '.claude-control-room');
+const ACTIVITY_LOG  = path.join(STATE_DIR, 'activity-log.json');
+const ACTIVITY_MAX  = 50;
+
+function ensureStateDir() {
+  if (!fs.existsSync(STATE_DIR)) fs.mkdirSync(STATE_DIR, { recursive: true });
+}
+
+function appendActivity(entry) {
+  try {
+    ensureStateDir();
+    const log = safeReadJson(ACTIVITY_LOG, []);
+    log.unshift({ timestamp: Date.now(), ...entry });
+    fs.writeFileSync(ACTIVITY_LOG, JSON.stringify(log.slice(0, ACTIVITY_MAX), null, 2), 'utf8');
+  } catch { /* fail silently — activity log is non-critical */ }
+}
+
 /* ── DATA READING ──────────────────────────────────────────────────────── */
 
 function safeReadJson(filePath, fallback) {
@@ -240,15 +259,33 @@ ipcMain.handle('get-data', async () => {
 
 ipcMain.handle('plugin-action', async (_e, { action, pluginId }) => {
   if (!validPluginId(pluginId)) return { success: false, error: 'ID plugin non valido.' };
-  return runClaudeArgs(['plugins', action, pluginId]);
+  const result = await runClaudeArgs(['plugins', action, pluginId]);
+  appendActivity({
+    kind: 'plugin', action, target: pluginId,
+    success: result.success, error: result.error,
+  });
+  return result;
 });
 
 ipcMain.handle('marketplace-action', async (_e, { action, name, source }) => {
   if (!validMarketplaceName(name)) return { success: false, error: 'Nome marketplace non valido.' };
-  if (action === 'remove') return runClaudeArgs(['plugins', 'marketplace', 'remove', name]);
-  if (action === 'update') return runClaudeArgs(['plugins', 'marketplace', 'update', name]);
-  if (action === 'add' && source) return runClaudeArgs(['plugins', 'marketplace', 'add', source]);
-  return { success: false, error: 'Azione o parametri non validi.' };
+  let result;
+  if (action === 'remove')      result = await runClaudeArgs(['plugins', 'marketplace', 'remove', name]);
+  else if (action === 'update') result = await runClaudeArgs(['plugins', 'marketplace', 'update', name]);
+  else if (action === 'add' && source) result = await runClaudeArgs(['plugins', 'marketplace', 'add', source]);
+  else return { success: false, error: 'Azione o parametri non validi.' };
+  appendActivity({
+    kind: 'marketplace', action, target: name,
+    success: result.success, error: result.error,
+  });
+  return result;
+});
+
+ipcMain.handle('get-activity-log', async () => safeReadJson(ACTIVITY_LOG, []));
+
+ipcMain.handle('clear-activity-log', async () => {
+  try { fs.unlinkSync(ACTIVITY_LOG); return { success: true }; }
+  catch (e) { return { success: false, error: e.message }; }
 });
 
 ipcMain.handle('confirm-dialog', async (_e, { title, message, detail, buttons }) => {

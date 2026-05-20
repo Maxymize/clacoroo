@@ -169,8 +169,25 @@ function setContent(node) {
   area.appendChild(node);
 }
 
+/* ── UTILS: TIME ──────────────────────────────────────────────────────── */
+function relativeTime(ts) {
+  const diff = Date.now() - ts;
+  const s = Math.floor(diff / 1000);
+  if (s < 60)     return s + 's fa';
+  const m = Math.floor(s / 60);
+  if (m < 60)     return m + 'm fa';
+  const h = Math.floor(m / 60);
+  if (h < 24)     return h + 'h fa';
+  const d = Math.floor(h / 24);
+  if (d < 30)     return d + 'g fa';
+  return new Date(ts).toLocaleDateString('it-IT');
+}
+
 /* ── DASHBOARD ────────────────────────────────────────────────────────── */
+let dashboardRenderToken = 0;
+
 function renderDashboard() {
+  const renderToken = ++dashboardRenderToken;
   const active   = state.plugins.filter(p => !p.blocked);
   const disabled = state.plugins.filter(p => p.blocked);
   const allSkills = state.plugins.flatMap(p => p.skills.map(s => ({ skill: s, plugin: p.fullId })));
@@ -219,7 +236,39 @@ function renderDashboard() {
   });
   wrap.appendChild(mktGrid);
 
+  // Attività recenti (idea #4)
+  const actTitle = el('div', 'list-section-title', 'Attività recenti');
+  wrap.appendChild(actTitle);
+  const actContainer = el('div', 'activity-list');
+  wrap.appendChild(actContainer);
+  renderActivityList(actContainer, 8, renderToken);
+
   setContent(wrap);
+}
+
+async function renderActivityList(container, limit, token) {
+  container.textContent = '';
+  const log = await window.claudeAPI.getActivityLog();
+  if (token !== dashboardRenderToken) return;  // stale render, container già sostituito
+  if (!log.length) {
+    container.appendChild(el('div', 'activity-empty', 'Nessuna attività registrata. Le operazioni che farai qui appariranno in questo elenco.'));
+    return;
+  }
+  log.slice(0, limit).forEach(entry => {
+    const row = el('div', 'activity-row' + (entry.success ? ' ok' : ' err'));
+    const icon = el('span', 'activity-icon', entry.success ? '✓' : '✗');
+    const main = el('div', 'activity-main');
+    const action = el('span', 'activity-action', entry.kind + ' ' + entry.action);
+    const target = el('span', 'activity-target', entry.target);
+    main.appendChild(action); main.appendChild(target);
+    if (!entry.success && entry.error) {
+      const err = el('div', 'activity-error', entry.error.slice(0, 100));
+      main.appendChild(err);
+    }
+    const time = el('span', 'activity-time', relativeTime(entry.timestamp));
+    row.appendChild(icon); row.appendChild(main); row.appendChild(time);
+    container.appendChild(row);
+  });
 }
 
 /* ── PLUGINS ──────────────────────────────────────────────────────────── */

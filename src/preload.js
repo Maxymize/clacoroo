@@ -11,6 +11,8 @@ contextBridge.exposeInMainWorld('claudeAPI', {
   setClaudeBin:       (p)                 => ipcRenderer.invoke('set-claude-bin',     p),
   openPluginPath:     (fullId)            => ipcRenderer.invoke('open-plugin-path',   fullId),
   openInEditor:       (fullId)            => ipcRenderer.invoke('open-in-editor',     fullId),
+  getActivityLog:     ()                  => ipcRenderer.invoke('get-activity-log'),
+  clearActivityLog:   ()                  => ipcRenderer.invoke('clear-activity-log'),
 
   onConfigChanged: (cb) => {
     const handler = () => cb();
