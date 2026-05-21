@@ -1,5 +1,54 @@
 # Changelog
 
+## v1.0.09 — 2026-05-21
+
+### Soft auto-update (notifica via GitHub Releases, no Apple Developer ID)
+
+CLACOROO ora controlla automaticamente la presenza di nuove versioni
+interrogando l'API GitHub Releases del repo `Maxymize/clacoroo`. Quando
+ne viene rilevata una più recente, appare un banner sticky sotto la topbar
+con tre azioni: **Apri pagina download**, **Ricorda più tardi**, **Salta
+questa versione**.
+
+**Architettura**
+- `src/lib/updater.js` (NEW): `fetchJson()` con `node:https` (no deps esterne,
+  timeout 8s), `parseVersion()` + `isNewerVersion()` semver compare numerico
+  per-segmento (gestisce correttamente `1.0.10 > 1.0.9`), `checkLatestRelease()`
+  che ritorna `{ available, latest, current, url, publishedAt, notes }`
+- `main.js` handler IPC `check-updates`:
+  - `force: false` (auto) → rispetta cooldown 1h tra check e flag
+    `updateCheckDisabled` nello state
+  - `force: true` (manuale da Impostazioni) → bypassa cooldown
+  - Persiste `lastUpdateCheck` (timestamp) + `lastUpdateResult` (cache) in
+    `~/.claude-control-room/state.json`
+- `preload.js`: metodo `checkUpdates(force)` esposto
+
+**UI**
+- Banner topbar sticky con palette accent CLACOROO, dot pulsante, tre bottoni
+- Comparato solo se versione remota != `skippedVersion` salvata in state
+- "Ricorda più tardi" chiude il banner per la sessione corrente (riappare
+  al prossimo avvio)
+- "Salta questa versione" salva `skippedVersion` → niente più banner per
+  quella versione specifica
+- "Apri pagina download" apre la release URL via `shell.openExternal` (no
+  download/install in-app — richiederebbe code signing macOS)
+
+**Sezione Impostazioni "Aggiornamenti"**
+- Riga "Controlla aggiornamenti" con timestamp ultimo check + bottone manuale
+- Riga "Controllo automatico" con toggle ON/OFF (default ON, cooldown 1h
+  tra check automatici per non spammare l'API)
+
+**Frequenza**
+- All'avvio dell'app (rispetta cooldown 1h se app riavviata troppo presto)
+- Ogni 24h se l'app rimane aperta (`setInterval` nel renderer)
+
+**Caveat repo privato**
+- L'API GitHub Releases ritorna 404 per repo privati senza auth
+- Per attivare il flow completo: rendere `Maxymize/clacoroo` pubblico
+  oppure creare una release pubblica con `gh release create v1.0.10 ...`
+- Codice già pronto: appena il repo diventa pubblico + c'è una release
+  più recente di `app.getVersion()`, il banner appare automaticamente
+
 ## v1.0.08 — 2026-05-21
 
 ### Mascotte ridisegnata + brand subtitle + icona app rigenerata

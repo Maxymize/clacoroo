@@ -35,6 +35,7 @@ const {
   readActivityLog, appendActivity, clearActivityLog,
 } = require('./lib/state');
 const { buildAppMenu, setupAboutPanel } = require('./lib/menu');
+const { checkLatestRelease } = require('./lib/updater');
 
 /* ── CONFIG PATHS ──────────────────────────────────────────────────────── */
 
@@ -371,6 +372,28 @@ ipcMain.handle('get-state', async () => readState());
 ipcMain.handle('set-state', async (_e, patch) => {
   if (typeof patch !== 'object' || patch === null) return { success: false, error: 'Patch non valido.' };
   return { success: writeState(patch) };
+});
+
+// v1.0.09 — Soft auto-update: cooldown 1h su success, 10min su failure (retry più rapido)
+const UPDATE_COOLDOWN_OK_MS   = 60 * 60 * 1000;
+const UPDATE_COOLDOWN_FAIL_MS = 10 * 60 * 1000;
+ipcMain.handle('check-updates', async (_e, { force } = {}) => {
+  const st = readState();
+  if (!force && st.updateCheckDisabled) return { ok: true, skipped: true, reason: 'disabled' };
+  const lastTs = st.lastUpdateCheck || 0;
+  const lastFailTs = st.lastUpdateFailedAt || 0;
+  const since = Date.now() - Math.max(lastTs, lastFailTs);
+  const cooldown = lastFailTs > lastTs ? UPDATE_COOLDOWN_FAIL_MS : UPDATE_COOLDOWN_OK_MS;
+  if (!force && since < cooldown) {
+    return { ok: true, skipped: true, reason: 'cooldown', cached: st.lastUpdateResult || null };
+  }
+  const result = await checkLatestRelease(app.getVersion());
+  if (result.ok) {
+    writeState({ lastUpdateCheck: Date.now(), lastUpdateResult: result, lastUpdateFailedAt: 0 });
+  } else {
+    writeState({ lastUpdateFailedAt: Date.now() });
+  }
+  return result;
 });
 
 // B4 — Notifiche native (mostrate solo se l'app non è in focus)

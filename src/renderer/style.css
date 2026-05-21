@@ -297,6 +297,41 @@ body {
   -webkit-app-region: no-drag;
 }
 
+/* ── UPDATE BANNER (v1.0.09) ──────────────────────────────────────────── */
+.update-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 24px;
+  background: var(--accent-soft);
+  border-bottom: 1px solid var(--accent);
+  border-top: 1px solid var(--accent);
+  flex-shrink: 0;
+}
+.update-banner-text {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 13px;
+  color: var(--text);
+}
+.update-banner-text strong { color: var(--accent); }
+.update-banner-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  flex-shrink: 0;
+  box-shadow: 0 0 8px var(--accent);
+  animation: updatePulse 2s ease-in-out infinite;
+}
+@keyframes updatePulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: .4; }
+}
+.update-banner-actions {
+  display: flex; gap: 8px;
+  flex-shrink: 0;
+}
+
 /* ── CONTENT AREA ─────────────────────────────────────────────────────── */
 .content-area {
   flex: 1;

@@ -47,16 +47,37 @@ async function init() {
     toast('Configurazione aggiornata — ricarico…', 'info');
     loadData();
   });
-  // B2 — Native menu → switch section via IPC (Cmd+1..6, Cmd+,)
   window.claudeAPI.onSwitchSection(name => switchToSection(name));
-  // B2 — Cmd+R refresh dal menu nativo
   window.claudeAPI.onForceRefresh(() => loadData());
-  // First-run onboarding (idea #7)
   const appState = await window.claudeAPI.getState();
   if (appState.lastSection && appState.lastSection !== 'dashboard') {
     switchToSection(appState.lastSection);
   }
   if (!appState.onboardingShown) showOnboardingTour();
+  // v1.0.09 — Soft auto-update: check all'avvio + ogni 24h se app rimane aperta
+  scheduleUpdateCheck();
+}
+
+function scheduleUpdateCheck() {
+  runUpdateCheck(false);
+  setInterval(() => runUpdateCheck(false), 24 * 60 * 60 * 1000);
+}
+
+async function runUpdateCheck(force) {
+  const r = await window.claudeAPI.checkUpdates(force);
+  if (!r) return;
+  // Skipped per cooldown: usa risultato cached se disponibile
+  const info = r.skipped ? r.cached : r;
+  if (!info || !info.ok || !info.available) {
+    if (force) {
+      if (r.ok === false) toast('Errore controllo aggiornamenti: ' + r.error, 'error');
+      else toast('Sei già sulla versione più recente ✓', 'success');
+    }
+    return;
+  }
+  const appState = await window.claudeAPI.getState();
+  if (appState.skippedVersion === info.latest) return;
+  renderUpdateBanner(info);
 }
 
 function switchToSection(name) {
@@ -1036,6 +1057,55 @@ function renderSettings() {
   devRow.appendChild(devWrap);
   g4.appendChild(devRow);
 
+  // Aggiornamenti (v1.0.09 — soft auto-update)
+  const gUpd = group('Aggiornamenti');
+  (async () => {
+    const st = await window.claudeAPI.getState();
+    const last = st.lastUpdateCheck
+      ? new Date(st.lastUpdateCheck).toLocaleString('it-IT')
+      : 'mai';
+    const cachedInfo = st.lastUpdateResult;
+
+    const rowCheck = el('div', 'settings-row');
+    const ckLeft = el('div');
+    ckLeft.appendChild(el('div', 'settings-row-label', 'Controlla aggiornamenti'));
+    const desc = cachedInfo?.available && cachedInfo.latest
+      ? 'Nuova versione disponibile: v' + cachedInfo.latest + ' · Ultimo controllo: ' + last
+      : 'Ultimo controllo: ' + last;
+    ckLeft.appendChild(el('div', 'settings-row-desc', desc));
+    rowCheck.appendChild(ckLeft);
+    const ckBtn = el('button', 'btn btn-sm btn-primary', 'Controlla adesso');
+    ckBtn.addEventListener('click', async () => {
+      ckBtn.disabled = true;
+      ckBtn.textContent = '…';
+      await runUpdateCheck(true);
+      ckBtn.disabled = false;
+      ckBtn.textContent = 'Controlla adesso';
+      renderSettings();  // refresh timestamp
+    });
+    rowCheck.appendChild(ckBtn);
+    gUpd.appendChild(rowCheck);
+
+    const rowAuto = el('div', 'settings-row');
+    const auLeft = el('div');
+    auLeft.appendChild(el('div', 'settings-row-label', 'Controllo automatico'));
+    auLeft.appendChild(el('div', 'settings-row-desc', "All'avvio dell'app + ogni 24 ore (con cooldown 1h)"));
+    rowAuto.appendChild(auLeft);
+    const togWrap = el('label', 'toggle');
+    const togInp = el('input');
+    togInp.type = 'checkbox';
+    togInp.checked = !st.updateCheckDisabled;
+    const togTrack = el('span', 'toggle-track');
+    const togThumb = el('span', 'toggle-thumb');
+    togWrap.appendChild(togInp); togWrap.appendChild(togTrack); togWrap.appendChild(togThumb);
+    togInp.addEventListener('change', async () => {
+      await window.claudeAPI.setState({ updateCheckDisabled: !togInp.checked });
+      toast(togInp.checked ? 'Controllo automatico attivato' : 'Controllo automatico disattivato', 'info');
+    });
+    rowAuto.appendChild(togWrap);
+    gUpd.appendChild(rowAuto);
+  })();
+
   // Backup snapshot (idea #5)
   const g6 = group('Backup snapshot');
   const snapRow = el('div', 'settings-row');
@@ -1103,7 +1173,7 @@ function renderSettings() {
 
   const g3 = group('Informazioni');
   row(g3, 'Nome app', null, 'CLACOROO');
-  row(g3, 'Versione', null, '1.0.08');
+  row(g3, 'Versione', null, '1.0.09');
   row(g3, 'Piattaforma', null, d.platform);
 
   setContent(wrap);
@@ -1193,6 +1263,45 @@ function showOnboardingTour() {
   overlay.appendChild(modal);
   document.body.appendChild(overlay);
   renderStep();
+}
+
+/* ── UPDATE BANNER (v1.0.09) ──────────────────────────────────────────── */
+function renderUpdateBanner(info) {
+  const existing = document.querySelector('.update-banner');
+  if (existing) existing.remove();
+
+  const banner = el('div', 'update-banner');
+  banner.setAttribute('role', 'status');
+  banner.setAttribute('aria-live', 'polite');
+  const txt = el('div', 'update-banner-text');
+  const dot = el('span', 'update-banner-dot');
+  const msg = el('span', null, 'Nuova versione ');
+  const ver = el('strong', null, 'v' + info.latest);
+  const tail = el('span', null, ' disponibile');
+  txt.appendChild(dot); txt.appendChild(msg); txt.appendChild(ver); txt.appendChild(tail);
+
+  const actions = el('div', 'update-banner-actions');
+  const openBtn = el('button', 'btn btn-sm btn-primary', 'Apri pagina download');
+  openBtn.addEventListener('click', () => {
+    window.claudeAPI.openExternal(info.url);
+  });
+  const laterBtn = el('button', 'btn btn-sm btn-ghost', 'Ricorda più tardi');
+  laterBtn.addEventListener('click', () => banner.remove());
+  const skipBtn = el('button', 'btn btn-sm btn-ghost', 'Salta questa versione');
+  skipBtn.addEventListener('click', () => {
+    window.claudeAPI.setState({ skippedVersion: info.latest });
+    banner.remove();
+  });
+  actions.appendChild(openBtn);
+  actions.appendChild(laterBtn);
+  actions.appendChild(skipBtn);
+
+  banner.appendChild(txt);
+  banner.appendChild(actions);
+
+  // Insert sotto la topbar
+  const topbar = document.querySelector('.topbar');
+  if (topbar) topbar.insertAdjacentElement('afterend', banner);
 }
 
 /* ── STATUS ───────────────────────────────────────────────────────────── */
