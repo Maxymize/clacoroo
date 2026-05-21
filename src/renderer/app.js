@@ -148,7 +148,21 @@ function render() {
     settings:    'Impostazioni',
   };
   $('topbar-title').textContent = sectionTitles[state.section] || '';
-  $('topbar-actions').textContent = '';
+
+  // Topbar actions: bottone refresh sempre visibile
+  const actions = $('topbar-actions');
+  actions.textContent = '';
+  const refreshBtn = el('button', 'btn btn-sm btn-ghost btn-refresh', '↻ Aggiorna');
+  refreshBtn.title = 'Ricarica i dati dai file di configurazione di Claude Code';
+  refreshBtn.addEventListener('click', async () => {
+    refreshBtn.disabled = true;
+    refreshBtn.textContent = '…';
+    await loadData();
+    refreshBtn.disabled = false;
+    refreshBtn.textContent = '↻ Aggiorna';
+    toast('Dati ricaricati', 'success');
+  });
+  actions.appendChild(refreshBtn);
 
   switch (state.section) {
     case 'dashboard':    renderDashboard();   break;

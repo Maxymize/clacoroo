@@ -238,11 +238,13 @@ function createWindow() {
 
   mainWindow.loadFile(path.join(__dirname, 'renderer', 'index.html'));
 
-  // Reload UI when config files change (SETTINGS is the source of truth for
-  // enabled/disabled state since the CLI updates settings.json, not blocklist.json)
+  // Reload UI when config files change. fs.watchFile (polling) is used instead
+  // of fs.watch because atomic-save tools (Claude Code CLI, VS Code, ecc.)
+  // do rename+replace which breaks fs.watch on macOS; polling at 1s is robust
+  // and the cost is negligible (4 stat syscalls/sec).
   [INSTALLED, BLOCKLIST, MARKETPLACES, SETTINGS].forEach(f => {
-    if (!fs.existsSync(f)) return;
-    fs.watch(f, () => {
+    fs.watchFile(f, { interval: 1000 }, (curr, prev) => {
+      if (curr.mtimeMs === prev.mtimeMs) return;
       if (mainWindow && !mainWindow.isDestroyed()) {
         mainWindow.webContents.send('config-changed');
       }
