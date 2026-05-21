@@ -34,3 +34,4 @@ Thumbs.db
 # Electron-builder cache
 .electron-vendor-cache/
 .npmrc-electron
+.superpowers/
