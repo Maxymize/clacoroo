@@ -144,8 +144,14 @@ function processData() {
   const raw     = state.rawData;
   const blocked = new Set((raw.blocklist.plugins || []).map(b => b.plugin));
   const catalog = raw.catalog.plugins || {};
+  const localData = raw.localData || { localPlugins: [], localSkills: [], localAgents: [] };
 
-  state.plugins = (raw.installed.plugins || []).map(fullId => {
+  state.trackedProjects = raw.trackedProjects || [];
+  state.localPlugins    = localData.localPlugins;
+  state.localSkills     = localData.localSkills;
+  state.localAgents     = localData.localAgents;
+
+  const globalPlugins = (raw.installed.plugins || []).map(fullId => {
     const atIdx = fullId.lastIndexOf('@');
     const id    = atIdx >= 0 ? fullId.slice(0, atIdx) : fullId;
     const mkt   = atIdx >= 0 ? fullId.slice(atIdx + 1) : '';
@@ -171,10 +177,38 @@ function processData() {
       hasMcp:      cache.hasMcp      || false,
       hasHooks:    cache.hasHooks    || false,
       blocked:     blocked.has(fullId),
+      scope:       'global',
       tokensAlways: tokenInfo?.always_on  || 0,
       tokensInvoke: tokenInfo?.on_invoke  || 0,
     };
   });
+
+  // v1.0.11 — Plugin locali normalizzati con skill/agent aggregati per pluginId
+  const localNormalized = (localData.localPlugins || []).map(lp => {
+    const atIdx = lp.fullId.lastIndexOf('@');
+    const id  = atIdx >= 0 ? lp.fullId.slice(0, atIdx) : lp.fullId;
+    const mkt = atIdx >= 0 ? lp.fullId.slice(atIdx + 1) : '';
+    const skillsForPlugin = (localData.localSkills || [])
+      .filter(s => s.plugin === lp.fullId && s.projectPath === lp.projectPath)
+      .map(s => s.name);
+    const agentsForPlugin = (localData.localAgents || [])
+      .filter(a => a.plugin === lp.fullId && a.projectPath === lp.projectPath)
+      .map(a => a.name);
+    return {
+      fullId: lp.fullId, id, mkt,
+      name: id, description: '',
+      version: '—', author: '',
+      skills: skillsForPlugin, agents: agentsForPlugin,
+      skillHealth: {}, agentHealth: {},
+      hasMcp: false, hasHooks: false,
+      blocked: false,
+      scope: 'local',
+      projectName: lp.projectName,
+      projectPath: lp.projectPath,
+      tokensAlways: 0, tokensInvoke: 0,
+    };
+  });
+  state.plugins = [...globalPlugins, ...localNormalized];
 
   // Marketplaces
   const mktMap = raw.marketplaces || {};
@@ -217,9 +251,24 @@ function render() {
   };
   $('topbar-title').textContent = sectionTitles[state.section] || '';
 
-  // Topbar actions: bottone refresh sempre visibile
+  // Topbar actions
   const actions = $('topbar-actions');
   actions.textContent = '';
+
+  // v1.0.11 — Bottone "+" per aggiungere progetto tracciato (locale)
+  const addProjBtn = el('button', 'btn btn-sm btn-ghost btn-refresh', '+ Progetto');
+  addProjBtn.title = 'Aggiungi un progetto da tracciare (per vedere plugin/skill/agent locali)';
+  addProjBtn.addEventListener('click', async () => {
+    const r = await window.claudeAPI.addTrackedProject();
+    if (r.success) {
+      toast('Progetto aggiunto: ' + r.path.split('/').pop(), 'success');
+      await loadData();
+    } else if (r.error !== 'Annullato') {
+      toast('Errore: ' + r.error, 'error');
+    }
+  });
+  actions.appendChild(addProjBtn);
+
   const refreshBtn = el('button', 'btn btn-sm btn-ghost btn-refresh', '↻ Aggiorna');
   refreshBtn.title = 'Ricarica i dati dai file di configurazione di Claude Code';
   refreshBtn.addEventListener('click', async () => {
@@ -275,11 +324,14 @@ let dashboardRenderToken = 0;
 
 function renderDashboard() {
   const renderToken = ++dashboardRenderToken;
-  const active   = state.plugins.filter(p => !p.blocked);
-  const disabled = state.plugins.filter(p => p.blocked);
+  // v1.0.11 — KPI: globals e locals conteggiati separatamente
+  const globals = state.plugins.filter(p => p.scope !== 'local');
+  const locals  = state.plugins.filter(p => p.scope === 'local');
+  const active   = globals.filter(p => !p.blocked);
+  const disabled = globals.filter(p => p.blocked);
   const allSkills = state.plugins.flatMap(p => p.skills.map(s => ({ skill: s, plugin: p.fullId })));
   const allAgents = state.plugins.flatMap(p => p.agents.map(a => ({ agent: a, plugin: p.fullId })));
-  const totalTokens = state.plugins.reduce((s, p) => s + p.tokensAlways, 0);
+  const totalTokens = globals.reduce((s, p) => s + p.tokensAlways, 0);
 
   const wrap = el('div');
 
@@ -292,8 +344,9 @@ function renderDashboard() {
 
   const kpiGrid = el('div', 'kpi-grid');
   const kpis = [
-    { num: active.length,      label: 'Plugin attivi',     color: '#788c5d' },  // Anthropic green
+    { num: active.length,      label: 'Plugin attivi',     color: '#788c5d' },  // global only
     { num: disabled.length,    label: 'Disattivati',       color: '#ef4444' },
+    { num: locals.length,      label: 'Plugin locali',     color: '#b8c79a' },  // verde Anthropic chiaro
     { num: state.mktList.length, label: 'Marketplace',     color: '#d97757' },  // CLACOROO orange
     { num: allSkills.length,   label: 'Skill totali',      color: '#e89478' },  // accent2 chiaro
     { num: allAgents.length,   label: 'Agent totali',      color: '#f97316' },
@@ -502,7 +555,7 @@ function applyPluginFilters(grid) {
 
 function buildPluginCard(p) {
   const col = mktColor(p.mkt);
-  const card = el('div', 'plugin-card' + (p.blocked ? ' blocked' : ''));
+  const card = el('div', 'plugin-card' + (p.blocked ? ' blocked' : '') + (p.scope === 'local' ? ' local-scope' : ''));
   card.style.setProperty('--mkt-color', col);
 
   // BODY
@@ -514,10 +567,19 @@ function buildPluginCard(p) {
   const verEl = el('div', 'pc-ver', 'v' + p.version);
   leftCol.appendChild(idEl); leftCol.appendChild(verEl);
 
+  const rightCol = el('div');
+  rightCol.style.cssText = 'display:flex;flex-direction:column;align-items:flex-end;gap:4px;';
   const pill = el('span', 'pc-mkt-pill', p.mkt);
   pill.style.background = col + '28';
   pill.style.color = col;
-  top.appendChild(leftCol); top.appendChild(pill);
+  rightCol.appendChild(pill);
+  // Badge scope (v1.0.11)
+  const scopeBadge = el('span', 'scope-badge scope-' + p.scope,
+    p.scope === 'local' ? 'locale: ' + (p.projectName || 'progetto') : 'globale');
+  if (p.projectPath) scopeBadge.title = p.projectPath;
+  rightCol.appendChild(scopeBadge);
+
+  top.appendChild(leftCol); top.appendChild(rightCol);
   body.appendChild(top);
 
   if (p.description) {
@@ -542,6 +604,25 @@ function buildPluginCard(p) {
 
   // FOOTER
   const footer = el('div', 'pc-footer');
+
+  // v1.0.11 — Scope locale: footer ridotto (la CLI 'claude plugins' opera
+  // solo globalmente, niente toggle/update/remove)
+  if (p.scope === 'local') {
+    const info = el('div', 'pc-local-info', 'read-only · progetto');
+    footer.appendChild(info);
+    const openBtn = el('button', 'btn btn-sm btn-ghost', '📁 Apri progetto');
+    openBtn.title = p.projectPath || '';
+    openBtn.addEventListener('click', async () => {
+      // shell.openPath è il metodo corretto cross-platform per aprire una directory
+      // nel file manager (Finder/Explorer/Files).
+      if (!p.projectPath) return;
+      const r = await window.claudeAPI.openDirectory(p.projectPath);
+      if (!r.success) toast('Errore apertura: ' + r.error, 'error');
+    });
+    footer.appendChild(openBtn);
+    card.appendChild(footer);
+    return card;
+  }
 
   // Toggle enable/disable
   const toggleWrap = el('label', 'toggle');
@@ -757,12 +838,17 @@ function renderMarketplaces() {
 
 /* ── SKILLS ───────────────────────────────────────────────────────────── */
 function renderSkills() {
-  const all = state.plugins.flatMap(p =>
-    p.skills.map(s => ({ name: s, plugin: p.id, mkt: p.mkt, blocked: p.blocked, health: p.skillHealth[s], fullId: p.fullId }))
-  ).sort((a, b) => a.name.localeCompare(b.name));
+  const globals = state.plugins.flatMap(p =>
+    p.skills.map(s => ({ name: s, plugin: p.id, mkt: p.mkt, blocked: p.blocked, health: p.skillHealth[s], fullId: p.fullId, scope: 'global' }))
+  );
+  const locals = (state.localSkills || []).map(s => {
+    const at = s.plugin.lastIndexOf('@');
+    return { name: s.name, plugin: s.plugin.slice(0, at), mkt: s.plugin.slice(at + 1), blocked: false, fullId: s.plugin, scope: 'local', projectName: s.projectName, projectPath: s.projectPath };
+  });
+  const all = [...globals, ...locals].sort((a, b) => a.name.localeCompare(b.name));
 
   renderListSection(all, 'skills', item => {
-    const chip = el('div', 'skill-chip clickable' + (item.blocked ? ' blocked' : ''));
+    const chip = el('div', 'skill-chip' + (item.scope === 'local' ? ' local-scope' : ' clickable') + (item.blocked ? ' blocked' : ''));
     chip.style.borderLeftColor = mktColor(item.mkt);
     const dot = el('span');
     dot.style.cssText = 'width:6px;height:6px;border-radius:50%;flex-shrink:0;background:' + mktColor(item.mkt);
@@ -770,19 +856,27 @@ function renderSkills() {
     chip.appendChild(el('span', 'skill-chip-name', item.name));
     chip.appendChild(el('span', 'skill-chip-plugin', item.plugin));
     appendHealthBadge(chip, item.health);
-    chip.addEventListener('click', () => openMarkdownPreview(item.fullId, 'skill', item.name));
+    appendScopeBadge(chip, item);
+    if (item.scope === 'global') {
+      chip.addEventListener('click', () => openMarkdownPreview(item.fullId, 'skill', item.name));
+    }
     return chip;
-  }, item => item.name + ' ' + item.plugin + ' ' + item.mkt, 'Cerca skill…', 'skill-grid');
+  }, item => item.name + ' ' + item.plugin + ' ' + item.mkt + (item.projectName || ''), 'Cerca skill…', 'skill-grid');
 }
 
 /* ── AGENTS ───────────────────────────────────────────────────────────── */
 function renderAgents() {
-  const all = state.plugins.flatMap(p =>
-    p.agents.map(a => ({ name: a, plugin: p.id, mkt: p.mkt, health: p.agentHealth[a], fullId: p.fullId }))
-  ).sort((a, b) => a.name.localeCompare(b.name));
+  const globals = state.plugins.flatMap(p =>
+    p.agents.map(a => ({ name: a, plugin: p.id, mkt: p.mkt, health: p.agentHealth[a], fullId: p.fullId, scope: 'global' }))
+  );
+  const locals = (state.localAgents || []).map(a => {
+    const at = a.plugin.lastIndexOf('@');
+    return { name: a.name, plugin: a.plugin.slice(0, at), mkt: a.plugin.slice(at + 1), fullId: a.plugin, scope: 'local', projectName: a.projectName, projectPath: a.projectPath };
+  });
+  const all = [...globals, ...locals].sort((a, b) => a.name.localeCompare(b.name));
 
   renderListSection(all, 'agents', item => {
-    const chip = el('div', 'skill-chip clickable');
+    const chip = el('div', 'skill-chip' + (item.scope === 'local' ? ' local-scope' : ' clickable'));
     chip.style.borderLeftColor = mktColor(item.mkt);
     const dot = el('span');
     dot.style.cssText = 'width:6px;height:6px;border-radius:50%;flex-shrink:0;background:#f97316';
@@ -790,9 +884,19 @@ function renderAgents() {
     chip.appendChild(el('span', 'skill-chip-name', item.name));
     chip.appendChild(el('span', 'skill-chip-plugin', item.plugin));
     appendHealthBadge(chip, item.health);
-    chip.addEventListener('click', () => openMarkdownPreview(item.fullId, 'agent', item.name));
+    appendScopeBadge(chip, item);
+    if (item.scope === 'global') {
+      chip.addEventListener('click', () => openMarkdownPreview(item.fullId, 'agent', item.name));
+    }
     return chip;
-  }, item => item.name + ' ' + item.plugin + ' ' + item.mkt, 'Cerca agent…', 'skill-grid');
+  }, item => item.name + ' ' + item.plugin + ' ' + item.mkt + (item.projectName || ''), 'Cerca agent…', 'skill-grid');
+}
+
+function appendScopeBadge(chip, item) {
+  const badge = el('span', 'scope-badge scope-' + item.scope,
+    item.scope === 'local' ? (item.projectName || 'locale') : 'globale');
+  if (item.projectPath) badge.title = item.projectPath;
+  chip.appendChild(badge);
 }
 
 /* ── HEALTH BADGE (idea #3) ───────────────────────────────────────────── */
@@ -1046,6 +1150,41 @@ function renderSettings() {
   row(g2, 'Skill totali', null, String(state.plugins.reduce((s, p) => s + p.skills.length, 0)));
   row(g2, 'Agent totali', null, String(state.plugins.reduce((s, p) => s + p.agents.length, 0)));
 
+  // v1.0.11 — Progetti tracciati (scope locale)
+  const gProj = group('Progetti tracciati');
+  const projDesc = el('div', 'settings-row');
+  const projDescL = el('div');
+  projDescL.appendChild(el('div', 'settings-row-label', 'Progetti con scope locale'));
+  projDescL.appendChild(el('div', 'settings-row-desc', 'CLACOROO mostrerà anche plugin/skill/agent installati in .claude/ di questi progetti. Click su "+ Progetto" nella topbar per aggiungerli.'));
+  projDesc.appendChild(projDescL);
+  gProj.appendChild(projDesc);
+
+  (state.trackedProjects || []).forEach(projectPath => {
+    const projRow = el('div', 'settings-row');
+    const left = el('div');
+    left.appendChild(el('div', 'settings-row-label', projectPath.split('/').pop() || projectPath));
+    left.appendChild(el('div', 'settings-row-desc', projectPath));
+    projRow.appendChild(left);
+    const removeBtn = el('button', 'btn btn-sm btn-danger', 'Rimuovi');
+    removeBtn.addEventListener('click', async () => {
+      const r = await window.claudeAPI.removeTrackedProject(projectPath);
+      if (r.success) {
+        toast('Progetto rimosso', 'success');
+        await loadData();
+      }
+    });
+    projRow.appendChild(removeBtn);
+    gProj.appendChild(projRow);
+  });
+
+  if (!state.trackedProjects?.length) {
+    const empty = el('div', 'settings-row');
+    const emptyL = el('div');
+    emptyL.appendChild(el('div', 'settings-row-desc', 'Nessun progetto tracciato. Aggiungine uno dal bottone "+" in topbar.'));
+    empty.appendChild(emptyL);
+    gProj.appendChild(empty);
+  }
+
   // Sviluppo plugin (idea #6 riformulata)
   const g4 = group('Sviluppo plugin');
   const devRow = el('div', 'settings-row');
@@ -1220,7 +1359,7 @@ function renderSettings() {
   const chBtn = el('button', 'btn btn-sm btn-green', '📋 Changelog');
   chBtn.title = 'Mostra storico versioni';
   chBtn.addEventListener('click', () => openChangelogModal());
-  const verVal = el('div', 'settings-row-val', '1.0.10');
+  const verVal = el('div', 'settings-row-val', '1.0.11');
   verRight.appendChild(chBtn);
   verRight.appendChild(verVal);
   verRow.appendChild(verRight);

@@ -1,5 +1,14 @@
 # Changelog
 
+## v1.0.11 — 2026-05-21
+
+- Scope locale/globale: CLACOROO ora può tracciare i progetti che usi e mostrare anche i plugin/skill/agent installati nel loro `.claude/` locale
+- Nuovo bottone "+ Progetto" in alto a destra per aggiungere progetti da tracciare
+- Sezione Impostazioni → "Progetti tracciati" per gestire la lista (vedi/rimuovi)
+- Badge "globale" (blu) / "locale: nome-progetto" (verde) su ogni plugin, skill e agent
+- Item locali sono read-only (la CLI `claude plugins` opera solo a livello globale)
+- Auto-refresh quando il file `.claude/plugins/installed_plugins.json` di un progetto cambia
+
 ## v1.0.10 — 2026-05-21
 
 - Nuova command palette globale: premi `Cmd+K` per cercare e aprire plugin, skill, agent, marketplace o eseguire azioni rapide

@@ -1112,6 +1112,37 @@ body {
 .md-content strong { color: var(--text); font-weight: 700; }
 .md-content em     { color: var(--text); font-style: italic; }
 
+/* ── SCOPE BADGE (v1.0.11) ────────────────────────────────────────────── */
+.scope-badge {
+  display: inline-block;
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  padding: 2px 8px;
+  border-radius: 99px;
+  white-space: nowrap;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+.scope-badge.scope-global { background: rgba(106,155,204,.18); color: #9cc1ea; }
+.scope-badge.scope-local  { background: rgba(120,140,93,.22); color: #b8c79a; }
+
+.plugin-card.local-scope { opacity: .92; }
+.plugin-card.local-scope .pc-id { color: var(--text); }
+.pc-local-info {
+  font-size: 10px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  font-weight: 600;
+}
+
+.skill-chip.local-scope {
+  border-style: dashed;
+  cursor: default;
+}
+
 /* ── HEALTH BADGE (idea #3) ───────────────────────────────────────────── */
 .health-badge {
   display: inline-flex; align-items: center; justify-content: center;

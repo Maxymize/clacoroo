@@ -192,6 +192,65 @@ function scanCache() {
   return details;
 }
 
+function scanLocalProjects(trackedProjects) {
+  // Per ogni progetto tracciato leggi <project>/.claude/plugins/installed_plugins.json
+  // e scan cache locale per skills/agents. Ritorna oggetto:
+  // { localPlugins: [{ fullId, projectPath, projectName, scope: 'local' }],
+  //   localSkills:  [{ name, plugin, projectName, scope: 'local' }],
+  //   localAgents:  [{ name, plugin, projectName, scope: 'local' }] }
+  const out = { localPlugins: [], localSkills: [], localAgents: [] };
+  if (!Array.isArray(trackedProjects)) return out;
+
+  for (const projectPath of trackedProjects) {
+    if (!projectPath || !fs.existsSync(projectPath)) continue;
+    const projectName = path.basename(projectPath);
+    const localPluginsFile = path.join(projectPath, '.claude', 'plugins', 'installed_plugins.json');
+    const localCacheDir    = path.join(projectPath, '.claude', 'plugins', 'cache');
+
+    // Plugin list (formato v2)
+    if (fs.existsSync(localPluginsFile)) {
+      const raw = safeReadJson(localPluginsFile, { plugins: {} });
+      const ids = Array.isArray(raw.plugins) ? raw.plugins : Object.keys(raw.plugins || {});
+      ids.forEach(fullId => out.localPlugins.push({
+        fullId, projectPath, projectName, scope: 'local',
+      }));
+    }
+
+    // Cache scan locale (per skills + agents)
+    if (!fs.existsSync(localCacheDir)) continue;
+    for (const mkt of fs.readdirSync(localCacheDir)) {
+      const mktPath = path.join(localCacheDir, mkt);
+      if (!fs.statSync(mktPath).isDirectory()) continue;
+      for (const pluginName of fs.readdirSync(mktPath)) {
+        const pluginRoot = path.join(mktPath, pluginName);
+        if (!fs.statSync(pluginRoot).isDirectory()) continue;
+        const versions = fs.readdirSync(pluginRoot)
+          .filter(d => fs.statSync(path.join(pluginRoot, d)).isDirectory());
+        if (!versions.length) continue;
+        const versionRoot = path.join(pluginRoot, versions[versions.length - 1]);
+        const skillsDir = path.join(versionRoot, 'skills');
+        const agentsDir = path.join(versionRoot, 'agents');
+        if (fs.existsSync(skillsDir)) {
+          fs.readdirSync(skillsDir)
+            .filter(d => fs.statSync(path.join(skillsDir, d)).isDirectory())
+            .forEach(name => out.localSkills.push({
+              name, plugin: pluginName + '@' + mkt, projectName, projectPath, scope: 'local',
+            }));
+        }
+        if (fs.existsSync(agentsDir)) {
+          fs.readdirSync(agentsDir)
+            .filter(f => f.endsWith('.md') && f.toLowerCase() !== 'readme.md')
+            .map(f => f.replace(/\.md$/, ''))
+            .forEach(name => out.localAgents.push({
+              name, plugin: pluginName + '@' + mkt, projectName, projectPath, scope: 'local',
+            }));
+        }
+      }
+    }
+  }
+  return out;
+}
+
 function extractRepoPath(source) {
   if (!source) return '';
   if (source.repo) return source.repo;
@@ -215,6 +274,10 @@ function readAllData() {
   const settings     = safeReadJson(SETTINGS,     {});
   const cacheDetails = scanCache();
 
+  // v1.0.11 — Scope locale: scan progetti tracciati
+  const appState = readState();
+  const localData = scanLocalProjects(appState.trackedProjects || []);
+
   // Source of truth for enabled/disabled state is ~/.claude/settings.json
   // field 'enabledPlugins' (boolean per pluginId).
   // Legacy blocklist.json is kept for backward compat but not authoritative.
@@ -236,6 +299,8 @@ function readAllData() {
     marketplaces: marketplacesNorm,
     catalog:      catalogRaw.catalog || {},
     cacheDetails,
+    trackedProjects: appState.trackedProjects || [],
+    localData,
     claudeDir:    CLAUDE_DIR,
     claudeBin:    CLAUDE_BIN,
     platform:     process.platform,
@@ -310,6 +375,10 @@ function createWindow() {
       }
     });
   });
+
+  // v1.0.11 — watch tracked projects al boot
+  const trackedNow = readState().trackedProjects || [];
+  trackedNow.forEach(watchTrackedProject);
 }
 
 app.whenReady().then(() => {
@@ -332,6 +401,14 @@ app.whenReady().then(() => {
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
+});
+
+// v1.0.11 — Cleanup watcher su quit per terminare pulito il process
+app.on('before-quit', () => {
+  for (const f of TRACKED_WATCHERS.keys()) {
+    try { fs.unwatchFile(f); } catch {}
+  }
+  TRACKED_WATCHERS.clear();
 });
 
 /* ── IPC HANDLERS ──────────────────────────────────────────────────────── */
@@ -485,6 +562,53 @@ ipcMain.handle('apply-snapshot', async (_e, { mktToAdd, pluginsToInstall, snap }
   return { success: log.every(l => l.success), log };
 });
 
+// v1.0.11 — Tracked projects (scope locale/globale)
+ipcMain.handle('add-tracked-project', async () => {
+  const r = await dialog.showOpenDialog(mainWindow, {
+    properties: ['openDirectory'],
+    title: 'Aggiungi progetto da tracciare',
+    message: 'Seleziona la cartella root del progetto (deve contenere .claude/ per essere utile)',
+  });
+  if (r.canceled || !r.filePaths.length) return { success: false, error: 'Annullato' };
+  const projectPath = r.filePaths[0];
+  const st = readState();
+  const list = Array.isArray(st.trackedProjects) ? st.trackedProjects : [];
+  if (list.includes(projectPath)) return { success: false, error: 'Progetto già tracciato' };
+  list.push(projectPath);
+  writeState({ trackedProjects: list });
+  watchTrackedProject(projectPath);
+  if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('config-changed');
+  return { success: true, path: projectPath };
+});
+
+ipcMain.handle('remove-tracked-project', async (_e, projectPath) => {
+  const st = readState();
+  const list = (Array.isArray(st.trackedProjects) ? st.trackedProjects : []).filter(p => p !== projectPath);
+  writeState({ trackedProjects: list });
+  unwatchTrackedProject(projectPath);
+  if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('config-changed');
+  return { success: true };
+});
+
+// Watcher dinamici per progetti tracciati
+const TRACKED_WATCHERS = new Map();
+function watchTrackedProject(projectPath) {
+  const f = path.join(projectPath, '.claude', 'plugins', 'installed_plugins.json');
+  if (TRACKED_WATCHERS.has(f)) return;
+  fs.watchFile(f, { interval: 2000 }, (curr, prev) => {
+    if (curr.mtimeMs === prev.mtimeMs) return;
+    if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('config-changed');
+  });
+  TRACKED_WATCHERS.set(f, true);
+}
+function unwatchTrackedProject(projectPath) {
+  const f = path.join(projectPath, '.claude', 'plugins', 'installed_plugins.json');
+  if (TRACKED_WATCHERS.has(f)) {
+    fs.unwatchFile(f);
+    TRACKED_WATCHERS.delete(f);
+  }
+}
+
 ipcMain.handle('pick-directory', async () => {
   const r = await dialog.showOpenDialog(mainWindow, {
     properties: ['openDirectory'],
@@ -545,6 +669,15 @@ ipcMain.handle('open-plugin-path', async (_e, fullId) => {
   const err = await shell.openPath(p);
   if (err) return { success: false, error: err };
   return { success: true };
+});
+
+// v1.0.11 — Apre una directory arbitraria (usata per tracked projects)
+ipcMain.handle('open-directory', async (_e, dirPath) => {
+  if (typeof dirPath !== 'string' || !fs.existsSync(dirPath)) {
+    return { success: false, error: 'Path non valido' };
+  }
+  const err = await shell.openPath(dirPath);
+  return err ? { success: false, error: err } : { success: true };
 });
 
 ipcMain.handle('open-in-editor', async (_e, fullId) => {
