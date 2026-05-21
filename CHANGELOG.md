@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.0.19 — 2026-05-21
+
+- Barra "Stima contesto" aggiunta anche in cima alla pagina Plugin
+- Tutte le barre di stima contesto si aggiornano dinamicamente quando attivi, disattivi, aggiorni o rimuovi un plugin — vedi in tempo reale quanto contesto liberi o occupi
+- Cache statistiche invalidata sia dopo le azioni plugin sia ogni volta che `~/.claude/settings.json` cambia (anche dall'esterno)
+
 ## v1.0.18 — 2026-05-21
 
 - Dashboard arricchita con i 9 KPI di "Utilizzo Claude Code" (Sessioni, Messaggi, Token totali, Giorni attivi, Giorno più attivo, Serie attuale, Serie più lunga, Ora di punta, Modello preferito) — visione "Tutto", senza filtri di range

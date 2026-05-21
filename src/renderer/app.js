@@ -429,15 +429,18 @@ async function renderActivityList(container, limit, token) {
   });
 }
 
+async function fetchStatsSafe() {
+  if (statsCache) return statsCache;
+  try {
+    const d = await window.claudeAPI.getStats();
+    statsCache = d;
+    return d;
+  } catch { return null; }
+}
+
 async function loadDashboardStats(container, token) {
-  // Riusa cache stats globale se già caricata (evita re-IO)
-  let data = statsCache;
-  if (!data) {
-    try { data = await window.claudeAPI.getStats(); }
-    catch { return; }
-    if (token !== dashboardRenderToken) return;
-    statsCache = data;
-  }
+  const data = await fetchStatsSafe();
+  if (token !== dashboardRenderToken) return;  // sezione cambiata mentre fetching
   if (!data || !data.cache) return;
 
   // KPI Stats (range fisso 'all', no filtri)
@@ -454,11 +457,30 @@ async function loadDashboardStats(container, token) {
   }
 }
 
+async function loadPluginsContextBar(container, token) {
+  const data = await fetchStatsSafe();
+  if (token !== pluginsRenderToken) return;
+  if (!data || !data.contextBreakdown) return;
+  container.appendChild(el('div', 'list-section-title', 'Stima contesto'));
+  container.appendChild(buildContextBreakdown(data.contextBreakdown, {
+    horizontalLegend: true,
+    hideNote: true,
+  }));
+}
+
 /* ── PLUGINS ──────────────────────────────────────────────────────────── */
+let pluginsRenderToken = 0;
+
 function renderPlugins() {
   const f = state.filters.plugins;
+  const renderToken = ++pluginsRenderToken;
 
   const wrap = el('div');
+
+  // Stima contesto in cima — aggiornata in tempo reale a ogni toggle/enable/disable
+  const ctxSection = el('div', 'plugins-context-section');
+  wrap.appendChild(ctxSection);
+  loadPluginsContextBar(ctxSection, renderToken);
 
   // FILTER BAR
   const bar = el('div', 'filter-bar');
@@ -676,6 +698,7 @@ function buildPluginCard(p) {
       const verb = action === 'enable' ? 'Attivato' : 'Disattivato';
       toast((action === 'enable' ? '✓ ' : '✗ ') + verb + ': ' + p.id, action === 'enable' ? 'success' : 'warn');
       window.claudeAPI.showNotification('Plugin ' + verb.toLowerCase(), p.id);
+      statsCache = null;  // forza re-fetch contextBreakdown → barra si aggiorna
       await loadData();
     } else {
       toast('Errore: ' + result.error, 'error');
@@ -720,6 +743,7 @@ function buildPluginCard(p) {
     } else toast('Errore aggiornamento: ' + r.error, 'error');
     updateBtn.disabled = false;
     updateBtn.textContent = 'Aggiorna';
+    statsCache = null;
     await loadData();
   });
 
@@ -737,6 +761,7 @@ function buildPluginCard(p) {
     if (r.success) {
       toast('Plugin rimosso: ' + p.id, 'success');
       window.claudeAPI.showNotification('Plugin rimosso', p.id);
+      statsCache = null;
       await loadData();
     } else {
       toast('Errore: ' + r.error, 'error');
@@ -1925,7 +1950,7 @@ function renderSettings() {
   const chBtn = el('button', 'btn btn-sm btn-green', '📋 Changelog');
   chBtn.title = 'Mostra storico versioni';
   chBtn.addEventListener('click', () => openChangelogModal());
-  const verVal = el('div', 'settings-row-val', '1.0.18');
+  const verVal = el('div', 'settings-row-val', '1.0.19');
   verRight.appendChild(chBtn);
   verRight.appendChild(verVal);
   verRow.appendChild(verRight);

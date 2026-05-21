@@ -371,6 +371,7 @@ function createWindow() {
   [INSTALLED, BLOCKLIST, MARKETPLACES, SETTINGS].forEach(f => {
     fs.watchFile(f, { interval: 1000 }, (curr, prev) => {
       if (curr.mtimeMs === prev.mtimeMs) return;
+      STATS_CACHE = null;  // ogni cambio config impatta contextBreakdown/stats
       if (mainWindow && !mainWindow.isDestroyed()) {
         mainWindow.webContents.send('config-changed');
       }
@@ -422,6 +423,7 @@ ipcMain.handle('get-data', async () => {
 ipcMain.handle('plugin-action', async (_e, { action, pluginId }) => {
   if (!validPluginId(pluginId)) return { success: false, error: 'ID plugin non valido.' };
   const result = await runClaudeArgs(['plugins', action, pluginId]);
+  if (result.success) STATS_CACHE = null;  // contextBreakdown dipende dai plugin abilitati
   appendActivity({
     kind: 'plugin', action, target: pluginId,
     success: result.success, error: result.error,

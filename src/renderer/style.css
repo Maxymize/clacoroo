@@ -1349,6 +1349,9 @@ body {
 
 .dashboard-stats-section { margin-bottom: 28px; }
 .dashboard-stats-section .list-section-title { margin-top: 4px; }
+
+.plugins-context-section { margin-bottom: 20px; }
+.plugins-context-section:empty { display: none; }
 .context-note {
   font-size: 11px;
   color: var(--text-dim);
