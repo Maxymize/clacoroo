@@ -1360,6 +1360,107 @@ body {
 .dashboard-mcp-section { margin-top: 28px; margin-bottom: 28px; }
 .dashboard-mcp-section:empty { display: none; }
 
+/* ── ACCOUNT PANEL (v1.0.27, Pack A) ──────────────────────────────────── */
+.settings-account-wrap { margin-bottom: 8px; }
+.account-loading {
+  padding: 16px 20px;
+  color: var(--text-muted);
+  font-size: 12px;
+  background: var(--surface);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+}
+.account-error {
+  padding: 14px 18px;
+  background: rgba(239, 68, 68, .08);
+  border: 1px solid rgba(239, 68, 68, .35);
+  border-radius: var(--radius);
+  color: #ef4444;
+  font-size: 12px;
+}
+.account-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.account-card-loggedout { border-color: rgba(245, 158, 11, .4); }
+.account-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 4px;
+}
+.account-plan-badge {
+  font-family: "Inter", -apple-system, sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  padding: 4px 10px;
+  border-radius: 6px;
+  text-transform: uppercase;
+}
+.account-plan-max  { background: linear-gradient(135deg, #d97757 0%, #f97316 100%); color: white; }
+.account-plan-pro  { background: rgba(106, 155, 204, .2); color: #6a9bcc; }
+.account-plan-team { background: rgba(120, 140, 93, .2); color: #788c5d; }
+.account-plan-unknown { background: var(--surface2); color: var(--text-muted); }
+.account-status {
+  font-size: 12px;
+  font-weight: 600;
+}
+.account-status-ok { color: #22c55e; }
+.account-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 14px;
+  font-size: 12px;
+}
+.account-row-lbl {
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  font-size: 10px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+.account-row-val {
+  color: var(--text);
+  font-family: "SF Mono", "Fira Code", Menlo, monospace;
+  font-size: 11px;
+  text-align: right;
+  word-break: break-all;
+}
+.account-note {
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.5;
+  margin-top: 4px;
+  font-style: italic;
+}
+.account-quota-note {
+  font-size: 11px;
+  color: var(--text-dim);
+  line-height: 1.5;
+  padding: 8px 12px;
+  background: var(--surface2);
+  border-left: 3px solid var(--accent2, #6a9bcc);
+  border-radius: 4px;
+  margin-top: 4px;
+}
+.account-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 6px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+
 /* ── MCP CARDS (v1.0.21) ──────────────────────────────────────────────── */
 .mcp-grid {
   display: grid;

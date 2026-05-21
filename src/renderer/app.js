@@ -2081,6 +2081,108 @@ function buildMcpCard(srv) {
   return card;
 }
 
+/* ── ACCOUNT (v1.0.27, Pack A) ────────────────────────────────────────── */
+let accountCache = null;
+
+function paintAccountPanel(container, result) {
+  container.textContent = '';
+  if (!result || !result.ok) {
+    const err = el('div', 'account-error',
+      'Impossibile leggere lo stato auth: ' + ((result && result.error) || 'errore sconosciuto'));
+    container.appendChild(err);
+    return;
+  }
+  const d = result.data || {};
+
+  if (!d.loggedIn) {
+    const card = el('div', 'account-card account-card-loggedout');
+    card.appendChild(el('div', 'account-status', '⚠ Non autenticato'));
+    card.appendChild(el('div', 'account-note',
+      'Esegui `claude auth login` da terminale (o avvia Claude Code) per accedere.'));
+    container.appendChild(card);
+    return;
+  }
+
+  const card = el('div', 'account-card');
+
+  const head = el('div', 'account-head');
+  const planBadge = el('span', 'account-plan-badge account-plan-' + (d.subscriptionType || 'unknown'));
+  planBadge.textContent = (d.subscriptionType || '—').toUpperCase();
+  head.appendChild(planBadge);
+  const status = el('span', 'account-status account-status-ok', '✓ Connesso');
+  head.appendChild(status);
+  card.appendChild(head);
+
+  // Info rows
+  function infoRow(label, value) {
+    const r = el('div', 'account-row');
+    r.appendChild(el('span', 'account-row-lbl', label));
+    r.appendChild(el('span', 'account-row-val', value || '—'));
+    card.appendChild(r);
+  }
+  infoRow('Email', d.email);
+  infoRow('Organizzazione', d.orgName);
+  infoRow('ID organizzazione', d.orgId);
+  infoRow('Auth method', d.authMethod === 'claude.ai' ? 'claude.ai (OAuth)' : d.authMethod || '—');
+  infoRow('API provider', d.apiProvider || '—');
+
+  // Quota note (non disponibile via CLI)
+  const note = el('div', 'account-quota-note',
+    'Le quote sessione e settimanale non sono attualmente esposte via CLI di Claude Code. ' +
+    'Per vederle apri Claude Code in modalità interattiva ed esegui /usage.');
+  card.appendChild(note);
+
+  // Actions
+  const actions = el('div', 'account-actions');
+  const refreshBtn = el('button', 'btn btn-sm btn-ghost', '↻ Aggiorna');
+  refreshBtn.addEventListener('click', async () => {
+    refreshBtn.disabled = true;
+    refreshBtn.textContent = '…';
+    const r = await window.claudeAPI.getAccount({ force: true });
+    accountCache = r;
+    paintAccountPanel(container, r);
+  });
+  const logoutBtn = el('button', 'btn btn-sm btn-danger', 'Logout');
+  logoutBtn.title = 'Esegue `claude auth logout`. Per riloggarsi servirà ripetere OAuth da terminale.';
+  logoutBtn.addEventListener('click', async () => {
+    const ok = await window.claudeAPI.confirmDialog({
+      title:   'Logout da Claude',
+      message: 'Confermi il logout?',
+      detail:  'Verrai disconnesso dall\'account Anthropic. Per accedere di nuovo dovrai eseguire `claude auth login` da terminale.',
+      buttons: ['Annulla', 'Logout'],
+    });
+    if (ok !== 1) return;
+    logoutBtn.disabled = true;
+    logoutBtn.textContent = '…';
+    const r = await window.claudeAPI.accountLogout();
+    if (r.ok) {
+      toast('Logout effettuato', 'success');
+      accountCache = null;
+      const fresh = await window.claudeAPI.getAccount({ force: true });
+      accountCache = fresh;
+      paintAccountPanel(container, fresh);
+    } else {
+      toast('Errore logout: ' + r.error, 'error');
+      logoutBtn.disabled = false;
+      logoutBtn.textContent = 'Logout';
+    }
+  });
+  actions.appendChild(refreshBtn);
+  actions.appendChild(logoutBtn);
+  card.appendChild(actions);
+
+  container.appendChild(card);
+}
+
+async function loadAccountPanel(container) {
+  // Render ottimistico con cache se disponibile
+  if (accountCache) paintAccountPanel(container, accountCache);
+  else container.appendChild(el('div', 'account-loading', 'Caricamento info account…'));
+  const data = await window.claudeAPI.getAccount({});
+  accountCache = data;
+  paintAccountPanel(container, data);
+}
+
 /* ── SETTINGS ─────────────────────────────────────────────────────────── */
 function renderSettings() {
   if (!state.rawData) return;
@@ -2107,6 +2209,12 @@ function renderSettings() {
     g.appendChild(r);
     return r;
   }
+
+  // v1.0.27 — Pack A: pannello Account (sopra a tutto)
+  const gAccount = group('Account Claude');
+  const accountWrap = el('div', 'settings-account-wrap');
+  gAccount.appendChild(accountWrap);
+  loadAccountPanel(accountWrap);
 
   const g1 = group('Percorsi');
   row(g1, 'Cartella Claude Code', 'Directory di configurazione globale', d.claudeDir);
@@ -2350,7 +2458,7 @@ function renderSettings() {
   const chBtn = el('button', 'btn btn-sm btn-green', '📋 Changelog');
   chBtn.title = 'Mostra storico versioni';
   chBtn.addEventListener('click', () => openChangelogModal());
-  const verVal = el('div', 'settings-row-val', '1.0.26');
+  const verVal = el('div', 'settings-row-val', '1.0.27');
   verRight.appendChild(chBtn);
   verRight.appendChild(verVal);
   verRow.appendChild(verRight);

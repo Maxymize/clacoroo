@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.0.27 — 2026-05-21
+
+- Nuovo pannello "Account Claude" in Impostazioni: piano (badge Max / Pro / Team colorato), email, organizzazione, ID org, metodo di autenticazione, provider API
+- Bottoni "Aggiorna" e "Logout" — il logout chiede conferma prima di disconnettere
+- Le quote sessione/settimanale al momento non sono esposte dalla CLI di Claude Code: per vederle apri Claude Code interattivo ed esegui `/usage` (avvisato nel pannello)
+- Cache 5 minuti per non rilanciare `claude auth status` a ogni apertura della sezione
+
 ## v1.0.26 — 2026-05-21
 
 - Card KPI: rimossa la linea colorata in alto, sostituita con un glow morbido del colore di accent che avvolge tutta la card (e si intensifica leggermente in hover)

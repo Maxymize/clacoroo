@@ -37,8 +37,9 @@ const {
 const { buildAppMenu, setupAboutPanel } = require('./lib/menu');
 const { checkLatestRelease } = require('./lib/updater');
 const { readChangelogRaw, parseChangelog } = require('./lib/changelog');
-const STATS = require('./lib/stats');
-const MCP   = require('./lib/mcp');
+const STATS   = require('./lib/stats');
+const MCP     = require('./lib/mcp');
+const ACCOUNT = require('./lib/account');
 
 /* ── CONFIG PATHS ──────────────────────────────────────────────────────── */
 
@@ -547,6 +548,33 @@ ipcMain.handle('get-mcp', async (_e, { force } = {}) => {
   };
   MCP_CACHE_AT = Date.now();
   return MCP_CACHE;
+});
+
+// v1.0.27 — Pack A: account/auth (Claude Max plan). Cache 5min: i dati
+// (email, org, plan) cambiano raramente, evitiamo di rilanciare `claude auth status`
+// ad ogni apertura della sezione Impostazioni.
+let ACCOUNT_CACHE = null;
+let ACCOUNT_CACHE_AT = 0;
+const ACCOUNT_TTL_MS = 5 * 60 * 1000;
+
+ipcMain.handle('get-account', async (_e, { force } = {}) => {
+  if (!force && ACCOUNT_CACHE && Date.now() - ACCOUNT_CACHE_AT < ACCOUNT_TTL_MS) {
+    return ACCOUNT_CACHE;
+  }
+  ACCOUNT_CACHE = await ACCOUNT.getAuthStatus(CLAUDE_BIN);
+  ACCOUNT_CACHE_AT = Date.now();
+  return ACCOUNT_CACHE;
+});
+
+ipcMain.handle('account-logout', async () => {
+  const r = await ACCOUNT.logout(CLAUDE_BIN);
+  if (r.ok) {
+    ACCOUNT_CACHE = null;
+    appendActivity({ kind: 'account', action: 'logout', target: 'claude', success: true });
+  } else {
+    appendActivity({ kind: 'account', action: 'logout', target: 'claude', success: false, error: r.error });
+  }
+  return r;
 });
 
 ipcMain.handle('update-settings', async (_e, patch) => {
