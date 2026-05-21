@@ -19,6 +19,7 @@ contextBridge.exposeInMainWorld('claudeAPI', {
   getState:           ()                  => ipcRenderer.invoke('get-state'),
   setState:           (patch)             => ipcRenderer.invoke('set-state',          patch),
   checkUpdates:       (force)             => ipcRenderer.invoke('check-updates',     { force: !!force }),
+  getChangelog:       ()                  => ipcRenderer.invoke('get-changelog'),
   exportSnapshot:     ()                  => ipcRenderer.invoke('export-snapshot'),
   importSnapshot:     ()                  => ipcRenderer.invoke('import-snapshot'),
   applySnapshot:      (preview)           => ipcRenderer.invoke('apply-snapshot',     preview),

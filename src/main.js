@@ -36,6 +36,7 @@ const {
 } = require('./lib/state');
 const { buildAppMenu, setupAboutPanel } = require('./lib/menu');
 const { checkLatestRelease } = require('./lib/updater');
+const { readChangelogRaw, parseChangelog } = require('./lib/changelog');
 
 /* ── CONFIG PATHS ──────────────────────────────────────────────────────── */
 
@@ -366,6 +367,11 @@ ipcMain.handle('marketplace-action', async (_e, { action, name, source }) => {
 
 ipcMain.handle('get-activity-log', async () => readActivityLog());
 ipcMain.handle('clear-activity-log', async () => clearActivityLog());
+
+ipcMain.handle('get-changelog', async () => {
+  const raw = readChangelogRaw();
+  return raw ? parseChangelog(raw) : [];
+});
 
 ipcMain.handle('get-state', async () => readState());
 

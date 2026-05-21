@@ -107,7 +107,37 @@ async function loadData() {
   state.rawData = result.data;
   processData();
   render();
+  refreshSidebarRecent();
   setStatus('ok', state.plugins.length + ' plugin');
+}
+
+let sidebarRecentToken = 0;
+async function refreshSidebarRecent() {
+  const container = $('sidebar-recent');
+  if (!container) return;
+  const token = ++sidebarRecentToken;
+  const log = await window.claudeAPI.getActivityLog();
+  if (token !== sidebarRecentToken) return;  // stale
+  container.textContent = '';
+  if (!log.length) {
+    container.style.display = 'none';
+    return;
+  }
+  container.style.display = '';
+  const title = el('div', 'sidebar-recent-title', 'RECENTI');
+  container.appendChild(title);
+  log.slice(0, 4).forEach(entry => {
+    const row = el('button', 'sidebar-recent-row' + (entry.success ? ' ok' : ' err'));
+    row.title = entry.kind + ' ' + entry.action + ' · ' + entry.target;
+    const icon = el('span', 'sidebar-recent-icon', entry.success ? '✓' : '✗');
+    const txt = el('span', 'sidebar-recent-txt', entry.target.split('@')[0]);
+    row.appendChild(icon); row.appendChild(txt);
+    row.addEventListener('click', () => {
+      const target = entry.kind === 'marketplace' ? 'marketplaces' : 'plugins';
+      switchToSection(target);
+    });
+    container.appendChild(row);
+  });
 }
 
 function processData() {
@@ -1178,7 +1208,24 @@ function renderSettings() {
 
   const g3 = group('Informazioni');
   row(g3, 'Nome app', null, 'CLACOROO');
-  row(g3, 'Versione', null, '1.0.09');
+
+  // Riga versione custom con bottone Changelog
+  const verRow = el('div', 'settings-row');
+  const verLeft = el('div');
+  verLeft.appendChild(el('div', 'settings-row-label', 'Versione'));
+  verLeft.appendChild(el('div', 'settings-row-desc', 'Storico completo delle release'));
+  verRow.appendChild(verLeft);
+  const verRight = el('div');
+  verRight.style.cssText = 'display:flex;gap:10px;align-items:center;';
+  const chBtn = el('button', 'btn btn-sm btn-green', '📋 Changelog');
+  chBtn.title = 'Mostra storico versioni';
+  chBtn.addEventListener('click', () => openChangelogModal());
+  const verVal = el('div', 'settings-row-val', '1.0.10');
+  verRight.appendChild(chBtn);
+  verRight.appendChild(verVal);
+  verRow.appendChild(verRight);
+  g3.appendChild(verRow);
+
   row(g3, 'Piattaforma', null, d.platform);
 
   setContent(wrap);
@@ -1268,6 +1315,239 @@ function showOnboardingTour() {
   overlay.appendChild(modal);
   document.body.appendChild(overlay);
   renderStep();
+}
+
+/* ── COMMAND PALETTE Cmd+K (v1.0.10) ──────────────────────────────────── */
+function fuzzyScore(query, target) {
+  const q = query.toLowerCase();
+  const t = String(target || '').toLowerCase();
+  if (!q) return 1;
+  const idx = t.indexOf(q);
+  if (idx >= 0) return 1000 - idx;
+  // subsequence match
+  let i = 0;
+  for (const ch of t) {
+    if (ch === q[i]) i++;
+    if (i >= q.length) return 50;
+  }
+  return 0;
+}
+
+function buildPaletteItems() {
+  const items = [];
+  // Azioni rapide
+  const sections = ['dashboard', 'plugins', 'marketplaces', 'skills', 'agents', 'settings'];
+  sections.forEach(s => items.push({
+    kind: 'action', icon: '→',
+    label: 'Vai a ' + s.charAt(0).toUpperCase() + s.slice(1),
+    sub: 'sezione',
+    run: () => switchToSection(s),
+  }));
+  items.push({ kind: 'action', icon: '↻', label: 'Ricarica dati', sub: 'azione', run: () => loadData() });
+  items.push({ kind: 'action', icon: '⤓', label: 'Esporta snapshot', sub: 'azione', run: async () => {
+    const r = await window.claudeAPI.exportSnapshot();
+    if (r.success) toast('Snapshot esportato', 'success');
+  }});
+  items.push({ kind: 'action', icon: '⤒', label: 'Importa snapshot', sub: 'azione', run: () => switchToSection('settings') });
+  items.push({ kind: 'action', icon: '📋', label: 'Apri changelog', sub: 'azione', run: () => openChangelogModal() });
+  items.push({ kind: 'action', icon: '🎓', label: 'Riavvia onboarding tour', sub: 'azione', run: () => showOnboardingTour() });
+  items.push({ kind: 'action', icon: '⤓', label: 'Controlla aggiornamenti', sub: 'azione', run: () => runUpdateCheck(true) });
+
+  // Plugin
+  state.plugins.forEach(p => items.push({
+    kind: 'plugin', icon: '🧩', label: p.id, sub: p.mkt + (p.blocked ? ' · disattivato' : ''),
+    run: () => { switchToSection('plugins'); state.filters.plugins.search = p.id.toLowerCase(); render(); },
+  }));
+  // Marketplace
+  state.mktList.forEach(m => items.push({
+    kind: 'marketplace', icon: '🏪', label: m.id, sub: m.plugins.length + ' plugin',
+    run: () => switchToSection('marketplaces'),
+  }));
+  // Skill
+  state.plugins.forEach(p => p.skills.forEach(s => items.push({
+    kind: 'skill', icon: '⚡', label: s, sub: p.id,
+    run: () => openMarkdownPreview(p.fullId, 'skill', s),
+  })));
+  // Agent
+  state.plugins.forEach(p => p.agents.forEach(a => items.push({
+    kind: 'agent', icon: '🤖', label: a, sub: p.id,
+    run: () => openMarkdownPreview(p.fullId, 'agent', a),
+  })));
+  return items;
+}
+
+function openCommandPalette() {
+  // Cross-modal guard: non aprire se è già aperto un altro modale
+  if (document.querySelector('.palette-overlay, .tour-overlay, .md-overlay, .changelog-overlay')) return;
+  const overlay = el('div', 'palette-overlay');
+  const palette = el('div', 'palette');
+  palette.setAttribute('role', 'dialog');
+  palette.setAttribute('aria-modal', 'true');
+
+  const input = el('input', 'palette-input');
+  input.type = 'text';
+  input.placeholder = 'Cerca plugin, skill, agent, marketplace o azione…';
+  input.setAttribute('aria-label', 'Command palette');
+
+  const list = el('div', 'palette-list');
+  const allItems = buildPaletteItems();
+  let visible = [];
+  let activeIdx = 0;
+
+  function renderList(query) {
+    list.textContent = '';
+    visible = allItems
+      .map(it => ({ ...it, _score: Math.max(fuzzyScore(query, it.label), fuzzyScore(query, it.sub) * 0.5) }))
+      .filter(it => it._score > 0)
+      .sort((a, b) => b._score - a._score)
+      .slice(0, 30);
+    if (!visible.length) {
+      list.appendChild(el('div', 'palette-empty', 'Nessun risultato'));
+      return;
+    }
+    visible.forEach((it, i) => {
+      const row = el('div', 'palette-row' + (i === activeIdx ? ' active' : ''));
+      row.appendChild(el('span', 'palette-icon', it.icon));
+      const txtCol = el('div', 'palette-col');
+      txtCol.appendChild(el('div', 'palette-label', it.label));
+      txtCol.appendChild(el('div', 'palette-sub', it.sub));
+      row.appendChild(txtCol);
+      row.appendChild(el('span', 'palette-kind', it.kind));
+      row.addEventListener('mouseenter', () => {
+        activeIdx = i;
+        list.querySelectorAll('.palette-row').forEach((r, j) => r.classList.toggle('active', j === activeIdx));
+      });
+      row.addEventListener('click', () => { run(); });
+      list.appendChild(row);
+    });
+  }
+
+  function run() {
+    const item = visible[activeIdx];
+    if (!item) return;
+    close();
+    setTimeout(() => item.run(), 50);
+  }
+
+  function close() {
+    document.removeEventListener('keydown', onKey, true);
+    overlay.remove();
+  }
+
+  function onKey(e) {
+    if (e.key === 'Escape') { e.preventDefault(); close(); return; }
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      activeIdx = Math.min(activeIdx + 1, visible.length - 1);
+      renderList(input.value);
+      list.querySelector('.palette-row.active')?.scrollIntoView({ block: 'nearest' });
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      activeIdx = Math.max(activeIdx - 1, 0);
+      renderList(input.value);
+      list.querySelector('.palette-row.active')?.scrollIntoView({ block: 'nearest' });
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      run();
+    }
+  }
+
+  input.addEventListener('input', () => { activeIdx = 0; renderList(input.value); });
+  overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+  document.addEventListener('keydown', onKey, true);
+
+  palette.appendChild(input);
+  palette.appendChild(list);
+  overlay.appendChild(palette);
+  document.body.appendChild(overlay);
+
+  renderList('');
+  input.focus();
+}
+
+// Global Cmd+K binding
+document.addEventListener('keydown', e => {
+  if ((e.metaKey || e.ctrlKey) && e.key === 'k' && !e.shiftKey) {
+    e.preventDefault();
+    openCommandPalette();
+  }
+});
+
+/* ── CHANGELOG MODAL (v1.0.10) ────────────────────────────────────────── */
+async function openChangelogModal() {
+  if (document.querySelector('.changelog-overlay')) return;
+  const versions = await window.claudeAPI.getChangelog();
+  if (!versions || !versions.length) {
+    toast('Changelog non disponibile', 'error');
+    return;
+  }
+
+  const overlay = el('div', 'changelog-overlay');
+  const modal = el('div', 'changelog-modal');
+  modal.setAttribute('role', 'dialog');
+  modal.setAttribute('aria-modal', 'true');
+
+  const header = el('div', 'changelog-header');
+  const title = el('div', 'changelog-title', 'Changelog');
+  const closeBtn = el('button', 'md-close', '×');
+  closeBtn.setAttribute('aria-label', 'Chiudi');
+  header.appendChild(title); header.appendChild(closeBtn);
+
+  const body = el('div', 'changelog-body');
+
+  versions.forEach((v, idx) => {
+    const card = el('div', 'changelog-card' + (idx === 0 ? ' current' : ''));
+    const cardHead = el('div', 'changelog-card-head');
+    const verBadge = el('span', 'changelog-version-badge', 'v' + v.version);
+    const dateLbl = el('span', 'changelog-date', v.date);
+    if (idx === 0) {
+      const currentLbl = el('span', 'changelog-current-tag', 'attuale');
+      cardHead.appendChild(verBadge);
+      cardHead.appendChild(currentLbl);
+    } else {
+      cardHead.appendChild(verBadge);
+    }
+    cardHead.appendChild(dateLbl);
+    card.appendChild(cardHead);
+
+    v.sections.forEach(sec => {
+      if (sec.title) {
+        const secTitle = el('div', 'changelog-section-title', sec.title);
+        card.appendChild(secTitle);
+      }
+      if (sec.notes && sec.notes.length) {
+        const note = el('p', 'changelog-note', sec.notes.join(' '));
+        card.appendChild(note);
+      }
+      if (sec.items.length) {
+        const ul = el('ul', 'changelog-items');
+        sec.items.forEach(item => {
+          const li = el('li');
+          inlineNodes(item).forEach(n => li.appendChild(n));
+          ul.appendChild(li);
+        });
+        card.appendChild(ul);
+      }
+    });
+
+    body.appendChild(card);
+  });
+
+  modal.appendChild(header);
+  modal.appendChild(body);
+  overlay.appendChild(modal);
+
+  function onKey(e) { if (e.key === 'Escape') close(); }
+  function close() {
+    document.removeEventListener('keydown', onKey);
+    overlay.remove();
+  }
+  closeBtn.addEventListener('click', close);
+  overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+  document.addEventListener('keydown', onKey);
+
+  document.body.appendChild(overlay);
+  closeBtn.focus();
 }
 
 /* ── UPDATE BANNER (v1.0.09) ──────────────────────────────────────────── */
