@@ -1438,6 +1438,13 @@ body {
 .mcp-card-transport-stdio { color: #788c5d; font-weight: 600; }
 .mcp-card-transport-sse   { color: #f97316; font-weight: 600; }
 
+.mcp-card-conn-wrap {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
 .mcp-card-conn {
   font-family: "SF Mono", "Fira Code", Menlo, monospace;
   font-size: 11px;
@@ -1447,6 +1454,49 @@ body {
   border-radius: 4px;
   word-break: break-all;
   flex: 1;
+  min-width: 0;
+}
+.mcp-card-conn-link {
+  cursor: pointer;
+  color: var(--accent2, #6a9bcc);
+  text-decoration: underline dotted;
+  text-underline-offset: 2px;
+  transition: color .15s, background .15s;
+}
+.mcp-card-conn-link:hover {
+  color: var(--accent);
+  background: var(--surface);
+}
+.mcp-card-icon-btn {
+  flex-shrink: 0;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all .15s;
+  padding: 0;
+}
+.mcp-card-icon-btn:hover {
+  background: var(--surface2);
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.mcp-card-icon-btn:active { transform: scale(.94); }
+
+/* Separator visivo fra gruppi di chip — usato in renderMcp per
+   distinguere i filtri di stato dai filtri di tipo */
+.chips-group-divider {
+  margin-left: 8px;
+  padding-left: 14px;
+  border-left: 1px solid var(--border);
 }
 .mcp-card-status-msg {
   font-size: 11px;

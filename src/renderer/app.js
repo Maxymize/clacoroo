@@ -1824,13 +1824,13 @@ async function renderMcp() {
   });
   bar.appendChild(sChips);
 
-  // Scope chips (builtin / plugin)
+  // Scope chips (builtin / plugin) — gruppo separato visivamente dai filtri stato
   const scopeDefs = [
     { key: 'all',     label: 'Tutti i tipi' },
     { key: 'builtin', label: 'claude.ai' },
     { key: 'plugin',  label: 'Dai plugin' },
   ];
-  const scChips = el('div', 'chips');
+  const scChips = el('div', 'chips chips-group-divider');
   scopeDefs.forEach(c => {
     const chip = el('div', 'chip' + (mcpFilter.scope === c.key ? ' active' : ''));
     chip.textContent = c.label;
@@ -1978,9 +1978,49 @@ function buildMcpCard(srv) {
 
   const connRow = el('div', 'mcp-card-row');
   connRow.appendChild(el('span', 'mcp-card-label', srv.transport === 'stdio' ? 'Comando' : 'URL'));
+
+  const connWrap = el('div', 'mcp-card-conn-wrap');
   const conn = el('code', 'mcp-card-conn');
   conn.textContent = srv.connection || '—';
-  connRow.appendChild(conn);
+
+  const isLink = (srv.transport === 'http' || srv.transport === 'sse')
+    && /^https?:\/\//i.test(srv.connection || '');
+  if (isLink) {
+    conn.classList.add('mcp-card-conn-link');
+    conn.title = 'Apri in browser esterno';
+    conn.addEventListener('click', () => window.claudeAPI.openExternal(srv.connection));
+  }
+  connWrap.appendChild(conn);
+
+  if (srv.connection) {
+    if (isLink) {
+      const openBtn = el('button', 'mcp-card-icon-btn');
+      openBtn.title = 'Apri in browser esterno';
+      openBtn.setAttribute('aria-label', 'Apri in browser');
+      openBtn.textContent = '↗';
+      openBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        window.claudeAPI.openExternal(srv.connection);
+      });
+      connWrap.appendChild(openBtn);
+    }
+    const copyBtn = el('button', 'mcp-card-icon-btn');
+    copyBtn.title = 'Copia negli appunti';
+    copyBtn.setAttribute('aria-label', 'Copia');
+    copyBtn.textContent = '⧉';
+    copyBtn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      try {
+        await navigator.clipboard.writeText(srv.connection);
+        const short = srv.connection.length > 50 ? srv.connection.slice(0, 47) + '…' : srv.connection;
+        toast('Copiato: ' + short, 'success');
+      } catch {
+        toast('Impossibile copiare negli appunti', 'error');
+      }
+    });
+    connWrap.appendChild(copyBtn);
+  }
+  connRow.appendChild(connWrap);
   body.appendChild(connRow);
 
   if (srv.statusText && srv.status !== 'connected') {
@@ -2272,7 +2312,7 @@ function renderSettings() {
   const chBtn = el('button', 'btn btn-sm btn-green', '📋 Changelog');
   chBtn.title = 'Mostra storico versioni';
   chBtn.addEventListener('click', () => openChangelogModal());
-  const verVal = el('div', 'settings-row-val', '1.0.21');
+  const verVal = el('div', 'settings-row-val', '1.0.22');
   verRight.appendChild(chBtn);
   verRight.appendChild(verVal);
   verRow.appendChild(verRight);

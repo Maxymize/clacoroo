@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.0.22 — 2026-05-21
+
+- Sezione MCP: i filtri per tipo (claude.ai / Dai plugin) sono ora visivamente separati dai filtri di stato con un divisore verticale
+- Bottone copy negli appunti su ogni card MCP per URL o comando
+- URL HTTP / SSE cliccabili direttamente: si aprono nel browser di sistema (utile per OAuth dei server "Needs Auth")
+- Icona dedicata ↗ accanto agli URL per aprirli senza dover cliccare sul testo
+
 ## v1.0.21 — 2026-05-21
 
 - Nuova sezione "MCP" in sidebar: lista tutti gli MCP server configurati con stato Connected / Needs Auth / Errore
