@@ -471,11 +471,17 @@ ipcMain.handle('get-stats', async (_e, { force } = {}) => {
     cache,
     streak: cache ? STATS.computeStreak(cache.dailyActivity) : 0,
     totalTokens: cache ? STATS.totalTokensFromModelUsage(cache.modelUsage) : 0,
+    contextBreakdown: STATS.computeContextBreakdown(CLAUDE_DIR),
     projects: projects.slice(0, 20).map(key => {
       const t = projectTokens[key] || {};
       // path: usa cwd reale dal JSONL se disponibile (più accurato del decode ambiguo
       // della chiave dir). Fallback: la chiave grezza (utente la riconosce).
-      return { key, path: t.cwd || key, sessions: t.sessions || 0, totalTokens: t.totalTokens || 0 };
+      return {
+        key, path: t.cwd || key,
+        sessions: t.sessions || 0,
+        messages: t.messages || 0,
+        totalTokens: t.totalTokens || 0,
+      };
     }),
     settings: safeReadJson(SETTINGS, {}),
   };
@@ -491,6 +497,7 @@ ipcMain.handle('update-settings', async (_e, patch) => {
     const current = safeReadJson(SETTINGS, {});
     const next = { ...current, ...patch };
     fs.writeFileSync(SETTINGS, JSON.stringify(next, null, 2), 'utf8');
+    STATS_CACHE = null;  // invalida cache server-side (settings cambiati)
     return { success: true };
   } catch (e) {
     return { success: false, error: e.message };

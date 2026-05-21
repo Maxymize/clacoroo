@@ -46,7 +46,7 @@ function totalTokensFromModelUsage(modelUsage) {
   }, 0);
 }
 
-// Estima token contesto basato su byte: ~3.5 byte/token per testo inglese
+// Stima token contesto basato su byte (~3.5 byte/token per testo)
 function estimateContextTokens(filesByCategory) {
   const out = {};
   for (const [cat, files] of Object.entries(filesByCategory || {})) {
@@ -57,6 +57,74 @@ function estimateContextTokens(filesByCategory) {
     out[cat] = { bytes, tokensEstimate: Math.round(bytes / 3.5) };
   }
   return out;
+}
+
+// Calcola context breakdown stimato in stile claude /context — categorie:
+// System prompt, Memory files (CLAUDE.md), Skills, Agents, Custom agents
+function computeContextBreakdown(claudeDir) {
+  const cacheDir = path.join(claudeDir, 'plugins', 'cache');
+  const skills = [], agents = [];
+
+  // Scansiona cache globale
+  if (fs.existsSync(cacheDir)) {
+    for (const mkt of fs.readdirSync(cacheDir)) {
+      const mktPath = path.join(cacheDir, mkt);
+      try { if (!fs.statSync(mktPath).isDirectory()) continue; } catch { continue; }
+      for (const plug of fs.readdirSync(mktPath)) {
+        const plugPath = path.join(mktPath, plug);
+        try { if (!fs.statSync(plugPath).isDirectory()) continue; } catch { continue; }
+        const versions = fs.readdirSync(plugPath).filter(d => {
+          try { return fs.statSync(path.join(plugPath, d)).isDirectory(); }
+          catch { return false; }
+        });
+        if (!versions.length) continue;
+        const ver = versions[versions.length - 1];
+        const root = path.join(plugPath, ver);
+        const skillsDir = path.join(root, 'skills');
+        const agentsDir = path.join(root, 'agents');
+        if (fs.existsSync(skillsDir)) {
+          for (const s of fs.readdirSync(skillsDir)) {
+            const skMd = path.join(skillsDir, s, 'SKILL.md');
+            if (fs.existsSync(skMd)) skills.push(skMd);
+          }
+        }
+        if (fs.existsSync(agentsDir)) {
+          for (const a of fs.readdirSync(agentsDir)) {
+            if (a.endsWith('.md') && a.toLowerCase() !== 'readme.md') {
+              agents.push(path.join(agentsDir, a));
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // Memory files: ~/.claude/CLAUDE.md (global)
+  const globalClaudeMd = path.join(claudeDir, 'CLAUDE.md');
+  const memoryFiles = fs.existsSync(globalClaudeMd) ? [globalClaudeMd] : [];
+
+  // System prompt: stima fissa ~6.5k token (non leggibile da disco)
+  const systemPromptTokens = 6500;
+
+  const skillsBytes = skills.reduce((s, f) => { try { return s + fs.statSync(f).size; } catch { return s; } }, 0);
+  const agentsBytes = agents.reduce((s, f) => { try { return s + fs.statSync(f).size; } catch { return s; } }, 0);
+  const memoryBytes = memoryFiles.reduce((s, f) => { try { return s + fs.statSync(f).size; } catch { return s; } }, 0);
+
+  const skillsTok  = Math.round(skillsBytes / 3.5);
+  const agentsTok  = Math.round(agentsBytes / 3.5);
+  const memoryTok  = Math.round(memoryBytes / 3.5);
+  const totalTok   = systemPromptTokens + skillsTok + agentsTok + memoryTok;
+  const contextMax = 200000;
+
+  return {
+    systemPrompt: { tokens: systemPromptTokens, label: 'System prompt' },
+    memoryFiles:  { tokens: memoryTok,  bytes: memoryBytes, count: memoryFiles.length, label: 'Memory files (CLAUDE.md)' },
+    skills:       { tokens: skillsTok,  bytes: skillsBytes, count: skills.length,      label: 'Skills (SKILL.md)' },
+    agents:       { tokens: agentsTok,  bytes: agentsBytes, count: agents.length,      label: 'Agents (.md)' },
+    totalEstimate: totalTok,
+    contextWindow: contextMax,
+    fillPercent: Math.round((totalTok / contextMax) * 100),
+  };
 }
 
 // Estrae cwd dal primo messaggio JSONL valido (Claude Code include il campo cwd
@@ -76,12 +144,13 @@ function extractCwdFromSessionFile(filePath) {
   return null;
 }
 
-// Per-progetto: aggregazione leggera da JSONL session files
+// Per-progetto: aggregazione leggera da JSONL session files (anche message count)
 function aggregateProjectTokens(projectKey) {
   const sessionDir = path.join(PROJECTS_DIR, projectKey);
-  if (!fs.existsSync(sessionDir)) return { sessions: 0, totalTokens: 0, cwd: null };
+  if (!fs.existsSync(sessionDir)) return { sessions: 0, totalTokens: 0, messages: 0, cwd: null };
   const files = fs.readdirSync(sessionDir).filter(f => f.endsWith('.jsonl'));
   let totalTokens = 0;
+  let messages = 0;
   let cwd = null;
   for (const f of files) {
     const filePath = path.join(sessionDir, f);
@@ -92,6 +161,10 @@ function aggregateProjectTokens(projectKey) {
         if (!line.trim()) continue;
         try {
           const msg = JSON.parse(line);
+          // Conta i messaggi assistant/user come "interazioni"
+          if (msg?.message?.role === 'assistant' || msg?.message?.role === 'user') {
+            messages++;
+          }
           const u = msg?.message?.usage;
           if (u) {
             totalTokens += (u.input_tokens || 0) + (u.output_tokens || 0)
@@ -101,7 +174,7 @@ function aggregateProjectTokens(projectKey) {
       }
     } catch { /* skip unreadable file */ }
   }
-  return { sessions: files.length, totalTokens, cwd };
+  return { sessions: files.length, totalTokens, messages, cwd };
 }
 
 function listProjects() {
@@ -118,6 +191,7 @@ module.exports = {
   computeStreak,
   totalTokensFromModelUsage,
   estimateContextTokens,
+  computeContextBreakdown,
   aggregateProjectTokens,
   listProjects,
 };

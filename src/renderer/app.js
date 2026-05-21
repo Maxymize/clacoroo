@@ -45,6 +45,7 @@ async function init() {
   await loadData();
   window.claudeAPI.onConfigChanged(() => {
     toast('Configurazione aggiornata — ricarico…', 'info');
+    statsCache = null;  // invalida cache stats: settings/cache files cambiati
     loadData();
   });
   window.claudeAPI.onSwitchSection(name => switchToSection(name));
@@ -1167,16 +1168,65 @@ function renderStatsOverview(container, data) {
   });
   container.appendChild(kpiGrid);
 
-  // Heatmap attività ultimi ~90 giorni
-  container.appendChild(el('div', 'list-section-title', 'Attività'));
+  // Heatmap attività ultime 13 settimane (~3 mesi)
+  container.appendChild(el('div', 'list-section-title', 'Attività · ultime 13 settimane'));
   container.appendChild(buildHeatmap(c.dailyActivity || []));
 
-  // Context breakdown stimato (skill + agent dimensione file ÷ 3.5)
-  container.appendChild(el('div', 'list-section-title', 'Stima contesto'));
-  const total = state.plugins.reduce((s, p) => s + (p.skills?.length || 0) + (p.agents?.length || 0), 0);
-  const summary = el('div', 'stats-context-summary',
-    'Ci sono ' + total + ' elementi (skill + agent) tra plugin globali e locali. Stima byte/3.5 token totale: richiede file-read per ogni elemento (non eseguito in real-time per performance).');
-  container.appendChild(summary);
+  // Context breakdown reale stile claude /context
+  const cb = data.contextBreakdown;
+  if (cb) {
+    container.appendChild(el('div', 'list-section-title', 'Stima contesto · stile claude /context'));
+    container.appendChild(buildContextBreakdown(cb));
+  }
+}
+
+function buildContextBreakdown(cb) {
+  const wrap = el('div', 'context-breakdown');
+  const total = cb.totalEstimate;
+  const max = cb.contextWindow;
+
+  const summary = el('div', 'context-summary');
+  summary.appendChild(el('span', 'context-summary-tokens', fmtNum(total) + '/' + fmtNum(max) + ' tokens'));
+  summary.appendChild(el('span', 'context-summary-pct', cb.fillPercent + '%'));
+  wrap.appendChild(summary);
+
+  const bar = el('div', 'context-bar');
+  const cats = [
+    { key: 'systemPrompt', tokens: cb.systemPrompt.tokens, label: 'System prompt',                           color: '#6a9bcc' },
+    { key: 'memoryFiles',  tokens: cb.memoryFiles.tokens,  label: 'Memory files · ' + cb.memoryFiles.count,  color: '#788c5d' },
+    { key: 'skills',       tokens: cb.skills.tokens,       label: 'Skills · ' + cb.skills.count,             color: '#d97757' },
+    { key: 'agents',       tokens: cb.agents.tokens,       label: 'Agents · ' + cb.agents.count,             color: '#f97316' },
+  ];
+  cats.forEach(c => {
+    if (!c.tokens) return;
+    const seg = el('div', 'context-bar-seg');
+    seg.style.width = ((c.tokens / max) * 100) + '%';
+    seg.style.background = c.color;
+    seg.title = c.label + ': ' + fmtNum(c.tokens) + ' tokens';
+    bar.appendChild(seg);
+  });
+  wrap.appendChild(bar);
+
+  // Legend rows
+  const legend = el('div', 'context-legend');
+  cats.forEach(c => {
+    const row = el('div', 'context-legend-row');
+    const dot = el('span', 'context-legend-dot');
+    dot.style.background = c.color;
+    row.appendChild(dot);
+    row.appendChild(el('span', 'context-legend-lbl', c.label));
+    const pct = total ? ((c.tokens / total) * 100).toFixed(1) : '0.0';
+    row.appendChild(el('span', 'context-legend-val', fmtNum(c.tokens) + ' tok · ' + pct + '%'));
+    legend.appendChild(row);
+  });
+  wrap.appendChild(legend);
+
+  const note = el('div', 'context-note',
+    'Stima statica basata su lettura byte/3.5 dei file installati globalmente. ' +
+    'Non include messaggi della sessione attiva, autocompact buffer e custom agents (richiede sessione live).');
+  wrap.appendChild(note);
+
+  return wrap;
 }
 
 function buildHeatmap(dailyActivity) {
@@ -1186,19 +1236,58 @@ function buildHeatmap(dailyActivity) {
     byDate[e.date] = e.messageCount || 0;
     if (e.messageCount > maxCount) maxCount = e.messageCount;
   }
-  const days = 90;
-  const today = new Date(); today.setHours(0,0,0,0);
-  const wrap = el('div', 'heatmap');
-  for (let i = days - 1; i >= 0; i--) {
-    const d = new Date(today);
-    d.setDate(today.getDate() - i);
-    const key = d.toISOString().slice(0, 10);
-    const count = byDate[key] || 0;
-    const intensity = count === 0 ? 0 : Math.min(4, Math.ceil((count / Math.max(maxCount, 1)) * 4));
-    const cell = el('div', 'heatmap-cell i-' + intensity);
-    cell.title = key + ' · ' + count + ' messaggi';
-    wrap.appendChild(cell);
+  // GitHub-style: 13 settimane × 7 giorni (lun-dom), label mese in alto
+  const weeks = 13;
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  // Trova la domenica della settimana corrente (fine settimana)
+  const dayOfWeek = today.getDay(); // 0=dom, 1=lun, ...
+  const endDate = new Date(today);
+  endDate.setDate(today.getDate() + (6 - dayOfWeek)); // sposta a sabato
+  const totalDays = weeks * 7;
+  const startDate = new Date(endDate);
+  startDate.setDate(endDate.getDate() - totalDays + 1);
+
+  const wrap = el('div', 'heatmap-wrap');
+  // Label mesi
+  const monthLabels = el('div', 'heatmap-months');
+  let lastMonth = -1;
+  for (let w = 0; w < weeks; w++) {
+    const d = new Date(startDate);
+    d.setDate(startDate.getDate() + w * 7);
+    const m = d.getMonth();
+    const lbl = el('span', 'heatmap-month-lbl', m !== lastMonth ? d.toLocaleDateString('it-IT', { month: 'short' }) : '');
+    if (m !== lastMonth) lastMonth = m;
+    monthLabels.appendChild(lbl);
   }
+  wrap.appendChild(monthLabels);
+
+  // Griglia: container 7 righe, dom-sab. Aggiungiamo label giorni a sinistra.
+  const grid = el('div', 'heatmap-grid');
+  // Generiamo per ogni settimana una colonna di 7 celle
+  for (let w = 0; w < weeks; w++) {
+    const col = el('div', 'heatmap-col');
+    for (let d = 0; d < 7; d++) {
+      const date = new Date(startDate);
+      date.setDate(startDate.getDate() + w * 7 + d);
+      const key = date.toISOString().slice(0, 10);
+      const isFuture = date > today;
+      const count = byDate[key] || 0;
+      const intensity = isFuture ? -1 : (count === 0 ? 0 : Math.min(4, Math.ceil((count / Math.max(maxCount, 1)) * 4)));
+      const cell = el('div', 'heatmap-cell' + (isFuture ? ' future' : ' i-' + intensity));
+      cell.title = key + ' · ' + count + ' messaggi';
+      col.appendChild(cell);
+    }
+    grid.appendChild(col);
+  }
+  wrap.appendChild(grid);
+
+  // Legenda
+  const legend = el('div', 'heatmap-legend');
+  legend.appendChild(el('span', 'heatmap-legend-txt', 'meno'));
+  for (let i = 0; i <= 4; i++) legend.appendChild(el('span', 'heatmap-cell i-' + i));
+  legend.appendChild(el('span', 'heatmap-legend-txt', 'più'));
+  wrap.appendChild(legend);
+
   return wrap;
 }
 
@@ -1233,23 +1322,45 @@ function renderStatsModels(container, data) {
       container.appendChild(detail);
     });
 
-  // Daily histogram
+  // Daily histogram con tooltip flottante
   const dmt = data.cache.dailyModelTokens || [];
   if (dmt.length) {
     container.appendChild(el('div', 'list-section-title', 'Token giornalieri'));
     const last30 = dmt.slice(-30);
     const maxDay = Math.max(...last30.map(d => Object.values(d.tokensByModel || {}).reduce((s, v) => s + v, 0)));
+
+    const chartWrap = el('div', 'daily-chart-wrap');
+    const tip = el('div', 'daily-chart-tip');
+    tip.style.display = 'none';
     const chart = el('div', 'daily-chart');
+
     last30.forEach(d => {
       const total = Object.values(d.tokensByModel || {}).reduce((s, v) => s + v, 0);
       const h = maxDay ? Math.max(2, Math.round((total / maxDay) * 100)) : 2;
       const bar = el('div', 'daily-bar');
       bar.style.height = h + '%';
-      bar.title = d.date + ' · ' + fmtNum(total) + ' token';
+      bar.addEventListener('mouseenter', e => {
+        const byModel = d.tokensByModel || {};
+        const lines = [d.date, fmtNum(total) + ' token totali'];
+        Object.entries(byModel)
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 3)
+          .forEach(([m, v]) => lines.push(m.replace(/^claude-/, '') + ': ' + fmtNum(v)));
+        tip.textContent = lines.join('\n');
+        tip.style.display = 'block';
+      });
+      bar.addEventListener('mousemove', e => {
+        const r = chartWrap.getBoundingClientRect();
+        tip.style.left = (e.clientX - r.left + 10) + 'px';
+        tip.style.top = (e.clientY - r.top - 10) + 'px';
+      });
+      bar.addEventListener('mouseleave', () => { tip.style.display = 'none'; });
       chart.appendChild(bar);
     });
-    container.appendChild(chart);
-    container.appendChild(el('div', 'daily-chart-legend', 'Ultimi 30 giorni — hover per dettagli'));
+    chartWrap.appendChild(chart);
+    chartWrap.appendChild(tip);
+    container.appendChild(chartWrap);
+    container.appendChild(el('div', 'daily-chart-legend', 'Ultimi 30 giorni — hover per dettagli per modello'));
   }
 }
 
@@ -1267,14 +1378,23 @@ function renderStatsProjects(container, data) {
     row.appendChild(el('div', 'project-name', p.path.split('/').pop() || p.key));
     row.appendChild(el('div', 'project-path', p.path));
     const meta = el('div', 'project-meta');
-    meta.appendChild(el('span', 'project-meta-val', (p.sessions || 0) + ' sessioni'));
-    meta.appendChild(el('span', 'project-meta-val', fmtNum(p.totalTokens || 0) + ' token'));
+    const sessLbl = el('span', 'project-meta-val', (p.sessions || 0) + ' sess');
+    sessLbl.title = 'Una sessione = una apertura di Claude Code (può contenere centinaia di interazioni)';
+    meta.appendChild(sessLbl);
+    if (p.messages) {
+      const msgLbl = el('span', 'project-meta-val', fmtNum(p.messages) + ' msg');
+      msgLbl.title = 'Numero totale messaggi user+assistant nelle sessioni';
+      meta.appendChild(msgLbl);
+    }
+    meta.appendChild(el('span', 'project-meta-val', fmtNum(p.totalTokens || 0) + ' tok'));
     row.appendChild(meta);
     container.appendChild(row);
   });
 
   container.appendChild(el('div', 'daily-chart-legend',
-    'Mostrati i primi 20 progetti — token aggregati dai file JSONL di sessione'));
+    'Mostrati i primi 20 progetti — token aggregati dai file JSONL di sessione. ' +
+    'Sessione = 1 apertura di Claude Code (anche se dura ore con migliaia di messaggi è 1 sola sessione). ' +
+    'Messaggi = singole interazioni user/assistant.'));
 }
 
 function renderStatsConfig(container, data) {
@@ -1314,8 +1434,16 @@ function renderStatsConfig(container, data) {
       toggleWrap.appendChild(thumb);
       input.addEventListener('change', async () => {
         const r = await window.claudeAPI.updateSettings({ [key]: input.checked });
-        if (r.success) toast(label + (input.checked ? ' attivato' : ' disattivato'), 'success');
-        else toast('Errore salvataggio: ' + r.error, 'error');
+        if (r.success) {
+          // Aggiorna cache locale per evitare reset al prossimo render (settings.json
+          // fs.watchFile scatta 'config-changed' che re-renderizza)
+          settings[key] = input.checked;
+          if (statsCache && statsCache.settings) statsCache.settings[key] = input.checked;
+          toast(label + (input.checked ? ' attivato' : ' disattivato'), 'success');
+        } else {
+          input.checked = !input.checked;  // revert UI
+          toast('Errore salvataggio: ' + r.error, 'error');
+        }
       });
       row.appendChild(toggleWrap);
       container.appendChild(row);
@@ -1327,8 +1455,13 @@ function renderStatsConfig(container, data) {
     if (type === 'select') {
       input.addEventListener('change', async () => {
         const r = await window.claudeAPI.updateSettings({ [key]: input.value });
-        if (r.success) toast(label + ' impostato a: ' + input.value, 'success');
-        else toast('Errore salvataggio: ' + r.error, 'error');
+        if (r.success) {
+          settings[key] = input.value;
+          if (statsCache && statsCache.settings) statsCache.settings[key] = input.value;
+          toast(label + ' impostato a: ' + input.value, 'success');
+        } else {
+          toast('Errore salvataggio: ' + r.error, 'error');
+        }
       });
     }
     row.appendChild(input);
@@ -1612,7 +1745,7 @@ function renderSettings() {
   const chBtn = el('button', 'btn btn-sm btn-green', '📋 Changelog');
   chBtn.title = 'Mostra storico versioni';
   chBtn.addEventListener('click', () => openChangelogModal());
-  const verVal = el('div', 'settings-row-val', '1.0.12');
+  const verVal = el('div', 'settings-row-val', '1.0.13');
   verRight.appendChild(chBtn);
   verRight.appendChild(verVal);
   verRow.appendChild(verRight);

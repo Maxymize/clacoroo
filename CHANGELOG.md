@@ -1,5 +1,13 @@
 # Changelog
 
+## v1.0.13 — 2026-05-21
+
+- Heatmap attività ridisegnata in stile GitHub contribution graph (13 settimane × 7 giorni) con label mesi e legenda intensità
+- Nuova "Stima contesto" stile `claude /context`: barra orizzontale con segmenti System prompt / Memory files / Skills / Agents, percentuale fill su 200k, lettura reale dei file installati
+- Istogramma giornaliero token: tooltip personalizzato segue il mouse con dettaglio per-modello (top 3)
+- Tab Per-progetto: aggiunto conteggio messaggi e nota chiarificatrice ("1 sessione = 1 apertura di Claude Code, può contenere migliaia di messaggi")
+- Fix: toggle Always Thinking / Voice nel Config tab non si resetta più dopo 1 secondo (cache stats invalidata correttamente quando settings.json cambia)
+
 ## v1.0.12 — 2026-05-21
 
 - Nuova sezione "Stats" nella sidebar con 4 tab:
