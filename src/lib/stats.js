@@ -143,7 +143,14 @@ function frontmatterBytes(filePath) {
 // IMPORTANTE: per skill/agent conta SOLO il frontmatter (quello che Claude vede
 // nell'index discovery), non il body completo del file. Senza questo accorgimento
 // si ottengono numeri irrealistici (sommare TUTTI gli SKILL.md gonfia × 10-20).
-function computeContextBreakdown(claudeDir, blockedSet) {
+// Stima media di token per MCP server "connesso" — calibrata sul
+// plugin-catalog-cache.json di Claude Code: i plugin con MCP servers
+// hanno tokens.always_on residuo (al netto di skills/agents) di ~300-500
+// token per server. 400 è la mediana osservata su un campione di plugin
+// ufficiali (airtable, adobe-for-creativity, ecc.).
+const MCP_TOKENS_PER_CONNECTED_SERVER = 400;
+
+function computeContextBreakdown(claudeDir, blockedSet, mcpInfo) {
   const cacheDir = path.join(claudeDir, 'plugins', 'cache');
   const skills = [], agents = [];
   const blocked = blockedSet instanceof Set ? blockedSet : new Set();
@@ -199,7 +206,14 @@ function computeContextBreakdown(claudeDir, blockedSet) {
   const skillsTok  = Math.round(skillsFmBytes / 3.5);
   const agentsTok  = Math.round(agentsFmBytes / 3.5);
   const memoryTok  = Math.round(memoryBytes / 3.5);
-  const usedTok    = systemPromptTokens + skillsTok + agentsTok + memoryTok;
+
+  // MCP servers: stima basata sul N° di server "connected" (i "needs auth"
+  // non hanno ancora caricato tool, contano 0). mcpInfo è { connected, total }.
+  const mcpConnected = (mcpInfo && Number.isFinite(mcpInfo.connected)) ? mcpInfo.connected : 0;
+  const mcpTotal     = (mcpInfo && Number.isFinite(mcpInfo.total))     ? mcpInfo.total     : 0;
+  const mcpTok       = mcpConnected * MCP_TOKENS_PER_CONNECTED_SERVER;
+
+  const usedTok    = systemPromptTokens + skillsTok + agentsTok + memoryTok + mcpTok;
   const contextMax = 200000;
   const freeTok    = Math.max(0, contextMax - usedTok);
 
@@ -208,6 +222,7 @@ function computeContextBreakdown(claudeDir, blockedSet) {
     memoryFiles:  { tokens: memoryTok,  count: memoryFiles.length, label: 'Memory files' },
     skills:       { tokens: skillsTok,  count: skills.length,      label: 'Skills (index)' },
     agents:       { tokens: agentsTok,  count: agents.length,      label: 'Agents (index)' },
+    mcpServers:   { tokens: mcpTok,     count: mcpConnected,       total: mcpTotal, label: 'MCP servers' },
     freeSpace:    { tokens: freeTok,    label: 'Free space' },
     totalEstimate: usedTok,
     contextWindow: contextMax,

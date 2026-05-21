@@ -1,5 +1,13 @@
 # Changelog
 
+## v1.0.23 — 2026-05-21
+
+- La barra "Stima contesto" include ora un nuovo segmento **MCP servers** (colore ciano) accanto a Skills, System prompt, Agents, Memory files e Free space
+- Stima ~400 token per ogni MCP server connesso (mediana osservata sui plugin del catalogo ufficiale; il valore reale varia col numero di tool esposti)
+- La barra si aggiorna in tempo reale quando attivi o disattivi un plugin che porta con sé degli MCP server: vedi visualmente quanto contesto liberi
+- Cache MCP invalidata automaticamente ad ogni cambio plugin (`installed_plugins.json` / `settings.json` modificati o azione plugin riuscita)
+- Il calcolo è applicato ovunque la barra è presente: Dashboard, sezione Plugin, sezione Stats
+
 ## v1.0.22 — 2026-05-21
 
 - Sezione MCP: i filtri per tipo (claude.ai / Dai plugin) sono ora visivamente separati dai filtri di stato con un divisore verticale

@@ -1414,11 +1414,18 @@ function renderStatsOverview(container, data) {
 }
 
 function contextCats(cb) {
+  const mcp = cb.mcpServers || { tokens: 0, count: 0, total: 0 };
+  // Label MCP: "MCP servers · X connessi / Y totali" se ci sono server,
+  // altrimenti "MCP servers" semplice (caso pre-1.0.23 o nessun server)
+  const mcpLabel = mcp.total
+    ? 'MCP servers · ' + mcp.count + ' connessi'
+    : 'MCP servers';
   return [
     { kind: 'skills',       tokens: cb.skills.tokens,       label: 'Skills (index) · ' + cb.skills.count,    color: '#d97757' },
     { kind: 'systemPrompt', tokens: cb.systemPrompt.tokens, label: 'System prompt',                            color: '#6a9bcc' },
     { kind: 'agents',       tokens: cb.agents.tokens,       label: 'Agents (index) · ' + cb.agents.count,    color: '#f97316' },
     { kind: 'memoryFiles',  tokens: cb.memoryFiles.tokens,  label: 'Memory files · ' + cb.memoryFiles.count, color: '#788c5d' },
+    { kind: 'mcpServers',   tokens: mcp.tokens,             label: mcpLabel,                                    color: '#14b8a6' },
     { kind: 'freeSpace',    tokens: cb.freeSpace.tokens,    label: 'Free space',                               color: '#3a3530' },
   ];
 }
@@ -1466,7 +1473,8 @@ function buildContextBreakdown(cb, opts = {}) {
     const note = el('div', 'context-note',
       'Per skill e agent conta SOLO il frontmatter YAML (indice di discovery), non il body completo — ' +
       'che viene caricato solo quando la skill è effettivamente invocata. ' +
-      'Non include: messaggi sessione, autocompact buffer, MCP tools attivi, custom agents (richiede sessione live).');
+      'MCP servers: stima ~400 token per server connesso (il valore reale dipende dal numero di tool esposti). ' +
+      'Non include: messaggi sessione, autocompact buffer, custom agents (richiede sessione live).');
     wrap.appendChild(note);
   }
 
@@ -2312,7 +2320,7 @@ function renderSettings() {
   const chBtn = el('button', 'btn btn-sm btn-green', '📋 Changelog');
   chBtn.title = 'Mostra storico versioni';
   chBtn.addEventListener('click', () => openChangelogModal());
-  const verVal = el('div', 'settings-row-val', '1.0.22');
+  const verVal = el('div', 'settings-row-val', '1.0.23');
   verRight.appendChild(chBtn);
   verRight.appendChild(verVal);
   verRow.appendChild(verRight);

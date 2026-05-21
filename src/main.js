@@ -373,6 +373,7 @@ function createWindow() {
     fs.watchFile(f, { interval: 1000 }, (curr, prev) => {
       if (curr.mtimeMs === prev.mtimeMs) return;
       STATS_CACHE = null;  // ogni cambio config impatta contextBreakdown/stats
+      MCP_CACHE   = null;  // plugin abilitati cambiano → set server MCP cambia
       if (mainWindow && !mainWindow.isDestroyed()) {
         mainWindow.webContents.send('config-changed');
       }
@@ -424,7 +425,10 @@ ipcMain.handle('get-data', async () => {
 ipcMain.handle('plugin-action', async (_e, { action, pluginId }) => {
   if (!validPluginId(pluginId)) return { success: false, error: 'ID plugin non valido.' };
   const result = await runClaudeArgs(['plugins', action, pluginId]);
-  if (result.success) STATS_CACHE = null;  // contextBreakdown dipende dai plugin abilitati
+  if (result.success) {
+    STATS_CACHE = null;  // contextBreakdown dipende dai plugin abilitati
+    MCP_CACHE   = null;  // i server MCP dichiarati dal plugin si attivano/disattivano
+  }
   appendActivity({
     kind: 'plugin', action, target: pluginId,
     success: result.success, error: result.error,
@@ -483,6 +487,18 @@ ipcMain.handle('get-stats', async (_e, { force } = {}) => {
     d7:  STATS.countRealSessions(7),
   };
 
+  // Conteggio MCP per il context breakdown: usa MCP_CACHE se popolata
+  // (l'utente ha già aperto la sezione MCP almeno una volta) per avere il
+  // count "Connected" reale dal health-check. Altrimenti stima veloce.
+  let mcpInfo;
+  if (MCP_CACHE && MCP_CACHE.ok && Array.isArray(MCP_CACHE.servers)) {
+    const connected = MCP_CACHE.servers.filter(s => s.status === 'connected').length;
+    mcpInfo = { total: MCP_CACHE.servers.length, connected };
+  } else {
+    // Per la stima veloce escludiamo i plugin disabilitati dalle declarations
+    mcpInfo = MCP.fastEstimate(blockedSet);
+  }
+
   STATS_CACHE = {
     cache,
     streak: cache ? STATS.computeStreak(cache.dailyActivity) : 0,
@@ -492,7 +508,7 @@ ipcMain.handle('get-stats', async (_e, { force } = {}) => {
     totalTokens: cache ? STATS.totalTokensFromModelUsage(cache.modelUsage) : 0,
     totalMessages: cache?.totalMessages || (cache?.dailyActivity || []).reduce((s, e) => s + (e.messageCount || 0), 0),
     sessionsReal,
-    contextBreakdown: STATS.computeContextBreakdown(CLAUDE_DIR, blockedSet),
+    contextBreakdown: STATS.computeContextBreakdown(CLAUDE_DIR, blockedSet, mcpInfo),
     projects: projects.slice(0, 20).map(key => {
       const t = projectTokens[key] || {};
       // path: usa cwd reale dal JSONL se disponibile (più accurato del decode ambiguo

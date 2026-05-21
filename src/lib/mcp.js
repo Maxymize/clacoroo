@@ -139,9 +139,37 @@ function readNeedsAuthCache() {
   } catch { return {}; }
 }
 
+// Stima veloce del numero di MCP server connessi/totali SENZA spawnare
+// `claude mcp list` (che è lento, 2-5s). Usa: dichiarazioni dai plugin
+// installati (`.mcp.json`) + 3 server built-in claude.ai - i server in
+// `mcp-needs-auth-cache.json`. Approssimazione utile per il context
+// breakdown a freddo (prima che l'utente apra la sezione MCP).
+//   blockedFullIds: Set di "<plugin>@<marketplace>" da escludere
+//                   (plugin disabilitati dall'utente)
+function fastEstimate(blockedFullIds) {
+  const blocked = blockedFullIds instanceof Set ? blockedFullIds : new Set();
+  const decls = readPluginMcpDeclarations();
+  const enabledDecls = decls.filter(d => !blocked.has(d.plugin + '@' + d.marketplace));
+  const builtinCount = 3;  // claude.ai Gmail/Calendar/Drive (hard-coded nel binary)
+  const total = enabledDecls.length + builtinCount;
+  const needsAuth = readNeedsAuthCache();
+  // Conta i needs-auth la cui chiave appare anche fra i declarations abilitati (o builtin)
+  const allowedIds = new Set([
+    'claude.ai Gmail', 'claude.ai Google Calendar', 'claude.ai Google Drive',
+    ...enabledDecls.map(d => 'plugin:' + d.plugin + ':' + d.server),
+  ]);
+  let needsAuthCount = 0;
+  for (const id of Object.keys(needsAuth)) {
+    if (allowedIds.has(id)) needsAuthCount++;
+  }
+  const connected = Math.max(0, total - needsAuthCount);
+  return { total, connected, needsAuth: needsAuthCount };
+}
+
 module.exports = {
   parseListLine,
   runMcpList,
   readPluginMcpDeclarations,
   readNeedsAuthCache,
+  fastEstimate,
 };
