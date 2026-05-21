@@ -31,6 +31,7 @@
     },
     "files": [
       "src/**/*",
+      "assets/icon.png",
       "package.json",
       "!**/*.{map,test.js}",
       "!**/{__tests__,test,tests,.github}"

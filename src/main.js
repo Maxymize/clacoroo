@@ -5,6 +5,11 @@ const path = require('path');
 const fs   = require('fs');
 const os   = require('os');
 const { execFile, execFileSync } = require('child_process');
+
+// Override generic "Electron" name + icon for dev mode (in production the
+// .icns from electron-builder takes precedence in the .app bundle).
+app.setName('CLACOROO');
+const APP_ICON = path.join(__dirname, '..', 'assets', 'icon.png');
 const { checkMarkdownHealth } = require('./lib/markdown');
 const { buildSnapshot, diffSnapshot } = require('./lib/snapshot');
 const {
@@ -226,6 +231,8 @@ function createWindow() {
     height:   820,
     minWidth: 900,
     minHeight: 620,
+    title: 'CLACOROO',
+    icon: APP_ICON,
     titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'default',
     trafficLightPosition: { x: 16, y: 18 },
     backgroundColor: '#0f0f1a',
@@ -254,6 +261,11 @@ function createWindow() {
 
 app.whenReady().then(() => {
   nativeTheme.themeSource = 'dark';
+  // macOS Dock icon (override default Electron in dev; in production the
+  // .icns already provides the icon, but setIcon ensures consistency)
+  if (process.platform === 'darwin' && app.dock && fs.existsSync(APP_ICON)) {
+    app.dock.setIcon(APP_ICON);
+  }
   createWindow();
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
