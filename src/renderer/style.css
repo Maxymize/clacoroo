@@ -1353,6 +1353,118 @@ body {
 
 .plugins-context-section { margin-bottom: 20px; }
 .plugins-context-section:empty { display: none; }
+
+/* ── MCP CARDS (v1.0.21) ──────────────────────────────────────────────── */
+.mcp-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+  gap: 14px;
+}
+.mcp-loading, .mcp-empty {
+  grid-column: 1 / -1;
+  padding: 20px;
+  text-align: center;
+  color: var(--text-muted);
+  background: var(--surface);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+}
+.mcp-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  position: relative;
+}
+.mcp-card::before {
+  content: "";
+  position: absolute; left: 0; top: 0; bottom: 0;
+  width: 3px;
+  background: var(--accent);
+}
+.mcp-card[data-mcp-id^="claude.ai"]::before { background: #6a9bcc; }
+.mcp-card[data-mcp-id^="plugin:"]::before    { background: #d97757; }
+
+.mcp-card-header {
+  padding: 14px 14px 10px 18px;
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 12px;
+}
+.mcp-card-name-wrap { flex: 1; min-width: 0; }
+.mcp-card-name {
+  font-family: "SF Mono", "Fira Code", Menlo, monospace;
+  font-size: 13px; font-weight: 600;
+  color: var(--text);
+  word-break: break-word;
+}
+.mcp-card-sub {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 3px;
+}
+
+.mcp-badge {
+  font-size: 10px;
+  padding: 3px 8px;
+  border-radius: 10px;
+  font-weight: 600;
+  flex-shrink: 0;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+.mcp-badge-connected { background: rgba(34, 197, 94, .15);  color: #22c55e; }
+.mcp-badge-needsAuth { background: rgba(245, 158, 11, .15); color: #f59e0b; }
+.mcp-badge-warning   { background: rgba(245, 158, 11, .15); color: #f59e0b; }
+.mcp-badge-error     { background: rgba(239, 68, 68, .15);  color: #ef4444; }
+.mcp-badge-unknown   { background: rgba(176, 174, 165, .15); color: var(--text-muted); }
+
+.mcp-card-body { padding: 0 14px 12px 18px; }
+.mcp-card-row {
+  display: flex; align-items: baseline; gap: 8px;
+  font-size: 11px;
+  margin-bottom: 6px;
+}
+.mcp-card-label {
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  flex-shrink: 0;
+  width: 70px;
+  font-weight: 600;
+}
+.mcp-card-value { color: var(--text); }
+.mcp-card-transport-http  { color: #6a9bcc; font-weight: 600; }
+.mcp-card-transport-stdio { color: #788c5d; font-weight: 600; }
+.mcp-card-transport-sse   { color: #f97316; font-weight: 600; }
+
+.mcp-card-conn {
+  font-family: "SF Mono", "Fira Code", Menlo, monospace;
+  font-size: 11px;
+  color: var(--text);
+  background: var(--surface2);
+  padding: 2px 6px;
+  border-radius: 4px;
+  word-break: break-all;
+  flex: 1;
+}
+.mcp-card-status-msg {
+  font-size: 11px;
+  color: #f59e0b;
+  margin-top: 4px;
+  font-style: italic;
+}
+
+.mcp-card-footer {
+  padding: 8px 14px 8px 18px;
+  background: var(--surface2);
+  border-top: 1px solid var(--border);
+}
+.mcp-card-hint {
+  font-size: 10px;
+  color: var(--text-dim);
+  font-style: italic;
+}
 .context-note {
   font-size: 11px;
   color: var(--text-dim);

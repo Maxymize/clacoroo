@@ -289,6 +289,7 @@ function render() {
     case 'marketplaces': renderMarketplaces();break;
     case 'skills':       renderSkills();      break;
     case 'agents':       renderAgents();      break;
+    case 'mcp':          renderMcp();         break;
     case 'stats':        renderStats();       break;
     case 'settings':     renderSettings();    break;
   }
@@ -345,6 +346,12 @@ function renderDashboard() {
     Object.values(p.agentHealth).forEach(h => { if (h.status === 'err') healthErr++; else if (h.status === 'warn') healthWarn++; });
   });
 
+  // KPI MCP: usa cache se esiste (popolata dalla sezione MCP o dall'init prefetch),
+  // altrimenti placeholder e lancia fetch async che aggiornerà la card a fetch finito
+  const mcpKpiNum = mcpCache && mcpCache.servers
+    ? mcpCache.servers.filter(s => s.status === 'connected').length + '/' + mcpCache.servers.length
+    : '—';
+
   const kpiGrid = el('div', 'kpi-grid');
   const kpis = [
     { num: active.length,      label: 'Plugin attivi',     color: '#788c5d' },  // global only
@@ -353,6 +360,7 @@ function renderDashboard() {
     { num: state.mktList.length, label: 'Marketplace',     color: '#d97757' },  // CLACOROO orange
     { num: allSkills.length,   label: 'Skill totali',      color: '#e89478' },  // accent2 chiaro
     { num: allAgents.length,   label: 'Agent totali',      color: '#f97316' },
+    { num: mcpKpiNum,          label: 'MCP connessi',      color: '#22c55e', kind: 'mcp' },
     { num: totalTokens > 0 ? (Math.round(totalTokens / 100) / 10) + 'K' : '—',
       label: 'Token always-on',  color: '#6a9bcc' },                            // Anthropic blue
     { num: healthErr + healthWarn,
@@ -361,6 +369,7 @@ function renderDashboard() {
   ];
   kpis.forEach(k => {
     const card = el('div', 'kpi-card');
+    if (k.kind) card.dataset.kpi = k.kind;
     card.style.setProperty('--kpi-color', k.color);
     const num = el('div', 'kpi-num', String(k.num));
     const lbl = el('div', 'kpi-label', k.label);
@@ -368,6 +377,20 @@ function renderDashboard() {
     kpiGrid.appendChild(card);
   });
   wrap.appendChild(kpiGrid);
+
+  // Se cache MCP non disponibile, fetcha async e aggiorna la card MCP in-place
+  if (!mcpCache) {
+    (async () => {
+      const data = await window.claudeAPI.getMcp({});
+      if (renderToken !== dashboardRenderToken) return;
+      mcpCache = data;
+      const mcpCard = kpiGrid.querySelector('.kpi-card[data-kpi="mcp"] .kpi-num');
+      if (mcpCard && data.ok && data.servers) {
+        const conn = data.servers.filter(s => s.status === 'connected').length;
+        mcpCard.textContent = conn + '/' + data.servers.length;
+      }
+    })();
+  }
 
   // Stats KPIs + context breakdown (range = 'all')
   const statsSection = el('div', 'dashboard-stats-section');
@@ -1751,6 +1774,235 @@ function renderStatsConfig(container, data) {
   configRow('language', 'Lingua', 'select', ['auto', 'en', 'it']);
 }
 
+/* ── MCP (v1.0.21) ────────────────────────────────────────────────────── */
+let mcpCache = null;       // ultimo result di get-mcp (riusato fra cambi sezione)
+let mcpRenderToken = 0;
+let mcpFilter = { search: '', status: 'all', scope: 'all' };
+
+async function renderMcp() {
+  const myToken = ++mcpRenderToken;
+  const wrap = el('div');
+
+  // Filter bar + bottone refresh
+  const bar = el('div', 'filter-bar');
+  const searchWrap = el('div', 'search-wrap');
+  const sicon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  sicon.setAttribute('viewBox', '0 0 20 20'); sicon.setAttribute('fill', 'currentColor');
+  const sPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  sPath.setAttribute('fill-rule', 'evenodd');
+  sPath.setAttribute('d', 'M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z');
+  sicon.appendChild(sPath); searchWrap.appendChild(sicon);
+  const searchInp = el('input', 'search-input');
+  searchInp.setAttribute('placeholder', 'Cerca server MCP…');
+  searchInp.setAttribute('type', 'text');
+  searchInp.value = mcpFilter.search;
+  searchInp.addEventListener('input', () => {
+    mcpFilter.search = searchInp.value.toLowerCase();
+    applyMcpFilters(wrap);
+  });
+  searchWrap.appendChild(searchInp);
+  bar.appendChild(searchWrap);
+
+  // Status chips
+  const statusDefs = [
+    { key: 'all',       label: 'Tutti' },
+    { key: 'connected', label: 'Connected', dot: '#22c55e' },
+    { key: 'needsAuth', label: 'Needs Auth', dot: '#f59e0b' },
+    { key: 'error',     label: 'Errore',    dot: '#ef4444' },
+  ];
+  const sChips = el('div', 'chips');
+  statusDefs.forEach(c => {
+    const chip = el('div', 'chip' + (mcpFilter.status === c.key ? ' active' : ''));
+    if (c.dot) {
+      const dot = el('span', 'chip-dot');
+      dot.style.background = c.dot;
+      chip.appendChild(dot);
+    }
+    chip.appendChild(document.createTextNode(c.label));
+    chip.addEventListener('click', () => { mcpFilter.status = c.key; renderMcp(); });
+    sChips.appendChild(chip);
+  });
+  bar.appendChild(sChips);
+
+  // Scope chips (builtin / plugin)
+  const scopeDefs = [
+    { key: 'all',     label: 'Tutti i tipi' },
+    { key: 'builtin', label: 'claude.ai' },
+    { key: 'plugin',  label: 'Dai plugin' },
+  ];
+  const scChips = el('div', 'chips');
+  scopeDefs.forEach(c => {
+    const chip = el('div', 'chip' + (mcpFilter.scope === c.key ? ' active' : ''));
+    chip.textContent = c.label;
+    chip.addEventListener('click', () => { mcpFilter.scope = c.key; renderMcp(); });
+    scChips.appendChild(chip);
+  });
+  bar.appendChild(scChips);
+
+  wrap.appendChild(bar);
+
+  // Count + refresh button
+  const headerRow = el('div', 'section-header');
+  const countSpan = el('span', 'section-count', '');
+  headerRow.appendChild(countSpan);
+  const refreshBtn = el('button', 'btn btn-sm btn-ghost', '↻ Aggiorna stato live');
+  refreshBtn.title = 'Esegue `claude mcp list` con health-check (può richiedere qualche secondo)';
+  refreshBtn.addEventListener('click', async () => {
+    refreshBtn.disabled = true;
+    refreshBtn.textContent = '…controllo…';
+    mcpCache = null;
+    const data = await window.claudeAPI.getMcp({ force: true });
+    if (myToken !== mcpRenderToken) return;
+    mcpCache = data;
+    refreshBtn.disabled = false;
+    refreshBtn.textContent = '↻ Aggiorna stato live';
+    renderMcp();
+  });
+  headerRow.appendChild(refreshBtn);
+  wrap.appendChild(headerRow);
+
+  // Grid
+  const grid = el('div', 'mcp-grid');
+  wrap.appendChild(grid);
+
+  // Caricamento iniziale o usa cache
+  setContent(wrap);
+
+  if (!mcpCache) {
+    grid.appendChild(el('div', 'mcp-loading', 'Controllo stato MCP server… (health-check live, può richiedere qualche secondo)'));
+    const data = await window.claudeAPI.getMcp({});
+    if (myToken !== mcpRenderToken) return;
+    mcpCache = data;
+    grid.textContent = '';
+  }
+
+  if (!mcpCache.ok) {
+    grid.appendChild(el('div', 'mcp-empty',
+      'Errore lettura MCP: ' + (mcpCache.error || 'sconosciuto')));
+    return;
+  }
+
+  const servers = mcpCache.servers || [];
+  if (!servers.length) {
+    grid.appendChild(el('div', 'mcp-empty', 'Nessun MCP server configurato.'));
+    return;
+  }
+
+  let visible = 0;
+  servers.forEach(srv => {
+    const card = buildMcpCard(srv);
+    const show = mcpMatches(srv, mcpFilter);
+    card.style.display = show ? '' : 'none';
+    if (show) visible++;
+    grid.appendChild(card);
+  });
+
+  if (visible === 0) {
+    grid.appendChild(el('div', 'no-results', 'Nessun server corrisponde ai filtri.'));
+  }
+  const connectedCount = servers.filter(s => s.status === 'connected').length;
+  countSpan.textContent = visible + ' di ' + servers.length + ' server · ' + connectedCount + ' connessi';
+}
+
+function applyMcpFilters(wrap) {
+  const grid = wrap.querySelector('.mcp-grid');
+  if (!grid || !mcpCache || !mcpCache.servers) return;
+  let visible = 0;
+  Array.from(grid.querySelectorAll('.mcp-card')).forEach(card => {
+    const id = card.dataset.mcpId;
+    const srv = mcpCache.servers.find(s => s.id === id);
+    const show = srv && mcpMatches(srv, mcpFilter);
+    card.style.display = show ? '' : 'none';
+    if (show) visible++;
+  });
+  // remove any existing no-results
+  const old = grid.querySelector('.no-results');
+  if (old) old.remove();
+  if (visible === 0) grid.appendChild(el('div', 'no-results', 'Nessun server corrisponde ai filtri.'));
+  const countSpan = wrap.querySelector('.section-count');
+  if (countSpan && mcpCache.servers) {
+    const connected = mcpCache.servers.filter(s => s.status === 'connected').length;
+    countSpan.textContent = visible + ' di ' + mcpCache.servers.length + ' server · ' + connected + ' connessi';
+  }
+}
+
+function mcpMatches(srv, f) {
+  if (f.status !== 'all' && srv.status !== f.status) return false;
+  if (f.scope !== 'all' && srv.scope !== f.scope) return false;
+  if (!f.search) return true;
+  const q = f.search;
+  return srv.id.toLowerCase().includes(q)
+      || (srv.displayName || '').toLowerCase().includes(q)
+      || (srv.plugin || '').toLowerCase().includes(q)
+      || (srv.connection || '').toLowerCase().includes(q);
+}
+
+function buildMcpCard(srv) {
+  const card = el('div', 'mcp-card');
+  card.dataset.mcpId = srv.id;
+
+  // Header
+  const header = el('div', 'mcp-card-header');
+  const nameWrap = el('div', 'mcp-card-name-wrap');
+  const name = el('div', 'mcp-card-name', srv.displayName || srv.id);
+  nameWrap.appendChild(name);
+  const sub = el('div', 'mcp-card-sub');
+  if (srv.scope === 'builtin') {
+    sub.textContent = 'claude.ai · globale';
+  } else if (srv.scope === 'plugin') {
+    sub.textContent = 'plugin: ' + (srv.plugin || '—');
+  } else {
+    sub.textContent = 'user-added';
+  }
+  nameWrap.appendChild(sub);
+  header.appendChild(nameWrap);
+
+  const badge = el('div', 'mcp-badge mcp-badge-' + srv.status);
+  const badgeText = {
+    connected: '✓ Connected',
+    needsAuth: '! Needs auth',
+    warning:   '! Warning',
+    error:     '✗ Errore',
+    unknown:   '? Sconosciuto',
+  }[srv.status] || srv.status;
+  badge.textContent = badgeText;
+  header.appendChild(badge);
+  card.appendChild(header);
+
+  // Body: transport + connection (mono)
+  const body = el('div', 'mcp-card-body');
+  const transportRow = el('div', 'mcp-card-row');
+  transportRow.appendChild(el('span', 'mcp-card-label', 'Transport'));
+  transportRow.appendChild(el('span', 'mcp-card-value mcp-card-transport-' + srv.transport, srv.transport.toUpperCase()));
+  body.appendChild(transportRow);
+
+  const connRow = el('div', 'mcp-card-row');
+  connRow.appendChild(el('span', 'mcp-card-label', srv.transport === 'stdio' ? 'Comando' : 'URL'));
+  const conn = el('code', 'mcp-card-conn');
+  conn.textContent = srv.connection || '—';
+  connRow.appendChild(conn);
+  body.appendChild(connRow);
+
+  if (srv.statusText && srv.status !== 'connected') {
+    const stRow = el('div', 'mcp-card-status-msg');
+    stRow.textContent = srv.statusText;
+    body.appendChild(stRow);
+  }
+
+  card.appendChild(body);
+
+  // Footer: placeholder per azioni (v1 sola lettura — vedi TASK Pack G)
+  const footer = el('div', 'mcp-card-footer');
+  const hint = el('div', 'mcp-card-hint',
+    srv.status === 'needsAuth'
+      ? 'Apri Claude Code o IDE e completa OAuth quando richiesto'
+      : 'Solo lettura · azioni in arrivo');
+  footer.appendChild(hint);
+  card.appendChild(footer);
+
+  return card;
+}
+
 /* ── SETTINGS ─────────────────────────────────────────────────────────── */
 function renderSettings() {
   if (!state.rawData) return;
@@ -2020,7 +2272,7 @@ function renderSettings() {
   const chBtn = el('button', 'btn btn-sm btn-green', '📋 Changelog');
   chBtn.title = 'Mostra storico versioni';
   chBtn.addEventListener('click', () => openChangelogModal());
-  const verVal = el('div', 'settings-row-val', '1.0.20');
+  const verVal = el('div', 'settings-row-val', '1.0.21');
   verRight.appendChild(chBtn);
   verRight.appendChild(verVal);
   verRow.appendChild(verRight);
@@ -2136,7 +2388,7 @@ function fuzzyScore(query, target) {
 function buildPaletteItems() {
   const items = [];
   // Azioni rapide
-  const sections = ['dashboard', 'plugins', 'marketplaces', 'skills', 'agents', 'settings'];
+  const sections = ['dashboard', 'plugins', 'marketplaces', 'skills', 'agents', 'mcp', 'stats', 'settings'];
   sections.forEach(s => items.push({
     kind: 'action', icon: '→',
     label: 'Vai a ' + s.charAt(0).toUpperCase() + s.slice(1),

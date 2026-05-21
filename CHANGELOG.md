@@ -1,5 +1,14 @@
 # Changelog
 
+## v1.0.21 — 2026-05-21
+
+- Nuova sezione "MCP" in sidebar: lista tutti gli MCP server configurati con stato Connected / Needs Auth / Errore
+- Card stile Marketplace per ogni server: nome, origine (claude.ai globale oppure plugin), transport (HTTP / stdio / SSE), URL o comando, badge stato colorato
+- Filtri per stato (Tutti / Connected / Needs Auth / Errore) e per tipo (claude.ai / Dai plugin)
+- Bottone "Aggiorna stato live" che rilancia il health-check ufficiale di Claude Code
+- KPI "MCP connessi" aggiunto alla Dashboard (X/Y connessi)
+- Solo lettura in questa versione: azioni come Reconnect, Clear auth, Disable, View tools sono pianificate per le prossime release
+
 ## v1.0.20 — 2026-05-21
 
 - La barra "Stima contesto" non sparisce più quando attivi o disattivi un plugin: i segmenti si animano in modo fluido fino al nuovo valore (era un flash bianco di ~1 secondo)

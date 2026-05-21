@@ -38,6 +38,7 @@ const { buildAppMenu, setupAboutPanel } = require('./lib/menu');
 const { checkLatestRelease } = require('./lib/updater');
 const { readChangelogRaw, parseChangelog } = require('./lib/changelog');
 const STATS = require('./lib/stats');
+const MCP   = require('./lib/mcp');
 
 /* ── CONFIG PATHS ──────────────────────────────────────────────────────── */
 
@@ -507,6 +508,29 @@ ipcMain.handle('get-stats', async (_e, { force } = {}) => {
   };
   STATS_CACHE_AT = Date.now();
   return STATS_CACHE;
+});
+
+// v1.0.21 — Pack G: MCP server (lista + stato). Cache 30s perché
+// `claude mcp list` esegue health-check live, può essere lento (2-5s).
+let MCP_CACHE = null;
+let MCP_CACHE_AT = 0;
+const MCP_TTL_MS = 30 * 1000;
+
+ipcMain.handle('get-mcp', async (_e, { force } = {}) => {
+  if (!force && MCP_CACHE && Date.now() - MCP_CACHE_AT < MCP_TTL_MS) {
+    return MCP_CACHE;
+  }
+  const list = await MCP.runMcpList(CLAUDE_BIN);
+  const declarations = MCP.readPluginMcpDeclarations();
+  MCP_CACHE = {
+    ok: list.ok,
+    error: list.error || null,
+    servers: list.servers,
+    declarations,  // utili per arricchire (marketplace name, args, ecc.)
+    fetchedAt: Date.now(),
+  };
+  MCP_CACHE_AT = Date.now();
+  return MCP_CACHE;
 });
 
 ipcMain.handle('update-settings', async (_e, patch) => {
