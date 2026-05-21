@@ -1,5 +1,39 @@
 # Changelog
 
+## v1.0.06 — 2026-05-21
+
+### Tipografia Anthropic-inspired (self-hosted, cross-platform)
+
+CLACOROO ora usa font self-hosted ispirati alla tipografia ufficiale di
+Anthropic per Claude. I font ufficiali (Styrene B + Tiempos) sono
+proprietari/commerciali e non ridistribuibili. Le alternative scelte sono
+le più vicine open-source disponibili (entrambe SIL OFL 1.1):
+
+- **Inter** (al posto di Styrene B) — UI, sidebar, brand mark, KPI numeri,
+  headings markdown, tour, dialog. Stack: Inter → Styrene fallback → system
+- **Source Serif 4** (al posto di Tiempos) — body lungo (markdown preview
+  SKILL.md/agent.md, tour-body narrative). Stack: Source Serif 4 → Tiempos
+  fallback → Source Serif Pro → Lora → Georgia
+- **System mono** invariato (SF Mono / Fira Code / Consolas / Monaco) per
+  codice e identifier
+
+Modifiche:
+- src/renderer/fonts/ (NEW): InterVariable.woff2 + Italic, SourceSerif4Variable
+  Roman + Italic (variable fonts ~1.5MB totali). Include licenze SIL OFL e
+  NOTICE.md con attribuzione
+- src/renderer/style.css: 4 @font-face dichiarazioni con font-display: swap,
+  font-feature-settings cv02/cv03/cv04/cv11 per character variants Inter,
+  letter-spacing -0.02em sui numeri grandi (KPI, marketplace count)
+- src/renderer/index.html: CSP estesa con font-src 'self' esplicito
+- package.json: rimosso esclusione `**/*.md` dai files perché la SIL OFL
+  richiede la distribuzione dei file LICENSE con il software
+
+Cross-platform compliance:
+- Tutti i font sono WOFF2 variable, formato standard supportato da Chromium
+  (Electron) identico su macOS / Windows / Linux
+- Nessuna dipendenza da font system installati dell'OS
+- Nessuna chiamata a CDN remoti (CSP-compliant)
+
 ## v1.0.05 — 2026-05-20
 
 ### Sette feature locali (goal mode)

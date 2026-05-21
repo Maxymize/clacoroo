@@ -1,6 +1,6 @@
 {
   "name": "clacoroo",
-  "version": "1.0.05",
+  "version": "1.0.06",
   "description": "CLACOROO — Claude Code Control Room: pannello visuale per plugin, marketplace, skill e agent",
   "main": "src/main.js",
   "author": {
@@ -32,8 +32,8 @@
     "files": [
       "src/**/*",
       "package.json",
-      "!**/*.{md,map,test.js}",
-      "!**/{__tests__,test,tests,docs,.github}"
+      "!**/*.{map,test.js}",
+      "!**/{__tests__,test,tests,.github}"
     ],
     "asar": true,
     "compression": "normal",
