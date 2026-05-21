@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.0.25 — 2026-05-21
+
+- Dashboard: spazio aggiuntivo tra le sezioni "Marketplace" e "MCP server" per migliorarne la leggibilità
+- Card KPI più compatte: padding ridotto, numero principale 26px (era 32px), griglia con larghezza minima 140px (era 160px) — più informazioni a colpo d'occhio senza scroll
+
 ## v1.0.24 — 2026-05-21
 
 - Dashboard: nuova sezione "MCP server" subito sotto "Marketplace" con chip cliccabili (dot colorato per stato), click porta alla sezione MCP

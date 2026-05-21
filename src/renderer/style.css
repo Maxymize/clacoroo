@@ -821,16 +821,16 @@ body {
 /* ── KPI CARDS ────────────────────────────────────────────────────────── */
 .kpi-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-  gap: 14px;
-  margin-bottom: 28px;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 10px;
+  margin-bottom: 24px;
 }
 
 .kpi-card {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 20px;
+  padding: 14px 16px;
   position: relative;
   overflow: hidden;
 }
@@ -842,16 +842,16 @@ body {
 }
 
 .kpi-num {
-  font-size: 32px;
+  font-size: 26px;
   font-weight: 800;
-  line-height: 1;
+  line-height: 1.1;
   color: var(--kpi-color, var(--accent));
   margin-bottom: 4px;
   font-family: "Inter", "Styrene A", -apple-system, sans-serif;
   letter-spacing: -.02em;
 }
 .kpi-label {
-  font-size: 11px;
+  font-size: 10px;
   color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: .06em;
@@ -1354,7 +1354,7 @@ body {
 .plugins-context-section { margin-bottom: 20px; }
 .plugins-context-section:empty { display: none; }
 
-.dashboard-mcp-section { margin-bottom: 28px; }
+.dashboard-mcp-section { margin-top: 28px; margin-bottom: 28px; }
 .dashboard-mcp-section:empty { display: none; }
 
 /* ── MCP CARDS (v1.0.21) ──────────────────────────────────────────────── */
