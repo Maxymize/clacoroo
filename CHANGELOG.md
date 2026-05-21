@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.0.18 — 2026-05-21
+
+- Dashboard arricchita con i 9 KPI di "Utilizzo Claude Code" (Sessioni, Messaggi, Token totali, Giorni attivi, Giorno più attivo, Serie attuale, Serie più lunga, Ora di punta, Modello preferito) — visione "Tutto", senza filtri di range
+- Aggiunta in Dashboard la barra "Stima contesto" con legenda in linea orizzontale sotto la barra, per restare compatta verticalmente
+- Le statistiche caricate sono condivise con la sezione Stats (no doppio I/O)
+
 ## v1.0.17 — 2026-05-21
 
 - KPI "Modello preferito" mostra ora il nome esteso `Opus 4.7` / `Sonnet 4.6` (era abbreviato a `opus` / `sonnet`)

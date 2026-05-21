@@ -369,6 +369,11 @@ function renderDashboard() {
   });
   wrap.appendChild(kpiGrid);
 
+  // Stats KPIs + context breakdown (range = 'all')
+  const statsSection = el('div', 'dashboard-stats-section');
+  wrap.appendChild(statsSection);
+  loadDashboardStats(statsSection, renderToken);
+
   // Elenco marketplace riassuntivo
   const mktTitle = el('div', 'list-section-title', 'Marketplace');
   wrap.appendChild(mktTitle);
@@ -422,6 +427,31 @@ async function renderActivityList(container, limit, token) {
     row.appendChild(icon); row.appendChild(main); row.appendChild(time);
     container.appendChild(row);
   });
+}
+
+async function loadDashboardStats(container, token) {
+  // Riusa cache stats globale se già caricata (evita re-IO)
+  let data = statsCache;
+  if (!data) {
+    try { data = await window.claudeAPI.getStats(); }
+    catch { return; }
+    if (token !== dashboardRenderToken) return;
+    statsCache = data;
+  }
+  if (!data || !data.cache) return;
+
+  // KPI Stats (range fisso 'all', no filtri)
+  container.appendChild(el('div', 'list-section-title', 'Utilizzo Claude Code'));
+  container.appendChild(buildStatsKpiGrid(data, 'all'));
+
+  // Stima contesto con legenda orizzontale, senza nota (più compatto)
+  if (data.contextBreakdown) {
+    container.appendChild(el('div', 'list-section-title', 'Stima contesto'));
+    container.appendChild(buildContextBreakdown(data.contextBreakdown, {
+      horizontalLegend: true,
+      hideNote: true,
+    }));
+  }
 }
 
 /* ── PLUGINS ──────────────────────────────────────────────────────────── */
@@ -1229,9 +1259,52 @@ function aggregateRangeClient(data, range) {
   };
 }
 
+// Estrae "Opus 4.7" / "Sonnet 4.6" da id tipo "claude-opus-4-7" o "claude-sonnet-4-6-20251022"
+function formatModelName(id) {
+  if (!id) return '—';
+  const stripped = id.replace(/^claude-/, '');
+  const m = stripped.match(/^([a-zA-Z]+)-(\d+)-(\d+)/);
+  if (m) {
+    const family = m[1].charAt(0).toUpperCase() + m[1].slice(1).toLowerCase();
+    return family + ' ' + m[2] + '.' + m[3];
+  }
+  const first = stripped.split('-')[0] || '—';
+  return first.charAt(0).toUpperCase() + first.slice(1).toLowerCase();
+}
+
+function buildStatsKpiGrid(data, range) {
+  const kpi = aggregateRangeClient(data, range);
+  const favShort = formatModelName(kpi.favoriteModel);
+  const peakH = kpi.peakHour;
+  const activeLabel = kpi.totalDays
+    ? kpi.activeDays + '/' + kpi.totalDays
+    : String(kpi.activeDays);
+  const mad = kpi.mostActiveDay;
+  const madLabel = mad ? new Date(mad.date + 'T00:00:00').toLocaleDateString('it-IT', { day: 'numeric', month: 'short' }) : '—';
+
+  const grid = el('div', 'kpi-grid stats-kpi-grid');
+  [
+    { num: fmtNum(kpi.sessions),  label: 'Sessioni',        color: '#d97757' },
+    { num: fmtNum(kpi.messages),  label: 'Messaggi',        color: '#e89478' },
+    { num: fmtNum(kpi.tokens),    label: 'Token totali',    color: '#6a9bcc' },
+    { num: activeLabel,           label: 'Giorni attivi',   color: '#788c5d' },
+    { num: madLabel,              label: 'Giorno più attivo', color: '#b8c79a' },
+    { num: (data.streak || 0) + 'g',     label: 'Serie attuale',   color: '#b8c79a' },
+    { num: (data.longestStreak || 0) + 'g', label: 'Serie più lunga', color: '#9cc1ea' },
+    { num: peakH != null ? peakH + ':00' : '—', label: 'Ora di punta', color: '#f97316' },
+    { num: favShort,              label: 'Modello\nPreferito', color: '#d97757' },
+  ].forEach(k => {
+    const card = el('div', 'kpi-card');
+    card.style.setProperty('--kpi-color', k.color);
+    card.appendChild(el('div', 'kpi-num', String(k.num)));
+    card.appendChild(el('div', 'kpi-label', k.label));
+    grid.appendChild(card);
+  });
+  return grid;
+}
+
 function renderStatsOverview(container, data) {
   const c = data.cache;
-  const kpi = aggregateRangeClient(data, statsRange);
 
   // Filtri range
   const rangeBar = el('div', 'stats-range');
@@ -1242,47 +1315,7 @@ function renderStatsOverview(container, data) {
   });
   container.appendChild(rangeBar);
 
-  // Format helpers
-  // Estrae "Opus 4.7" / "Sonnet 4.6" da id tipo "claude-opus-4-7" o "claude-sonnet-4-6-20251022"
-  function formatModelName(id) {
-    if (!id) return '—';
-    const stripped = id.replace(/^claude-/, '');
-    const m = stripped.match(/^([a-zA-Z]+)-(\d+)-(\d+)/);
-    if (m) {
-      const family = m[1].charAt(0).toUpperCase() + m[1].slice(1).toLowerCase();
-      return family + ' ' + m[2] + '.' + m[3];
-    }
-    const first = stripped.split('-')[0] || '—';
-    return first.charAt(0).toUpperCase() + first.slice(1).toLowerCase();
-  }
-  const favShort = formatModelName(kpi.favoriteModel);
-  const peakH = kpi.peakHour;
-  const activeLabel = kpi.totalDays
-    ? kpi.activeDays + '/' + kpi.totalDays
-    : String(kpi.activeDays);
-  const mad = kpi.mostActiveDay;
-  const madLabel = mad ? new Date(mad.date + 'T00:00:00').toLocaleDateString('it-IT', { day: 'numeric', month: 'short' }) : '—';
-
-  // KPI grid 9 voci (era 8 + Most active day)
-  const kpiGrid = el('div', 'kpi-grid stats-kpi-grid');
-  [
-    { num: fmtNum(kpi.sessions),  label: 'Sessioni',        color: '#d97757' },
-    { num: fmtNum(kpi.messages),  label: 'Messaggi',        color: '#e89478' },
-    { num: fmtNum(kpi.tokens),    label: 'Token totali',    color: '#6a9bcc' },
-    { num: activeLabel,           label: 'Giorni attivi',   color: '#788c5d' },
-    { num: madLabel,              label: 'Giorno più attivo', color: '#b8c79a' },
-    { num: data.streak + 'g',     label: 'Serie attuale',   color: '#b8c79a' },
-    { num: data.longestStreak + 'g', label: 'Serie più lunga', color: '#9cc1ea' },
-    { num: peakH != null ? peakH + ':00' : '—', label: 'Ora di punta', color: '#f97316' },
-    { num: favShort,              label: 'Modello\nPreferito', color: '#d97757' },
-  ].forEach(k => {
-    const card = el('div', 'kpi-card');
-    card.style.setProperty('--kpi-color', k.color);
-    card.appendChild(el('div', 'kpi-num', String(k.num)));
-    card.appendChild(el('div', 'kpi-label', k.label));
-    kpiGrid.appendChild(card);
-  });
-  container.appendChild(kpiGrid);
+  container.appendChild(buildStatsKpiGrid(data, statsRange));
 
   // Heatmap (range dinamico)
   const title = statsRange === '7'  ? 'Attività · ultimi 7 giorni'
@@ -1299,8 +1332,9 @@ function renderStatsOverview(container, data) {
   }
 }
 
-function buildContextBreakdown(cb) {
-  const wrap = el('div', 'context-breakdown');
+function buildContextBreakdown(cb, opts = {}) {
+  const { horizontalLegend = false, hideNote = false } = opts;
+  const wrap = el('div', 'context-breakdown' + (horizontalLegend ? ' context-compact' : ''));
   const used = cb.totalEstimate;
   const max  = cb.contextWindow;
 
@@ -1328,24 +1362,28 @@ function buildContextBreakdown(cb) {
   });
   wrap.appendChild(bar);
 
-  const legend = el('div', 'context-legend');
+  const legend = el('div', 'context-legend' + (horizontalLegend ? ' context-legend-horizontal' : ''));
   cats.forEach(c => {
     const row = el('div', 'context-legend-row');
     const dot = el('span', 'context-legend-dot');
     dot.style.background = c.color;
     row.appendChild(dot);
     row.appendChild(el('span', 'context-legend-lbl', c.label));
-    const pct = ((c.tokens / max) * 100).toFixed(1);
-    row.appendChild(el('span', 'context-legend-val', fmtNum(c.tokens) + ' · ' + pct + '%'));
+    if (!horizontalLegend) {
+      const pct = ((c.tokens / max) * 100).toFixed(1);
+      row.appendChild(el('span', 'context-legend-val', fmtNum(c.tokens) + ' · ' + pct + '%'));
+    }
     legend.appendChild(row);
   });
   wrap.appendChild(legend);
 
-  const note = el('div', 'context-note',
-    'Per skill e agent conta SOLO il frontmatter YAML (indice di discovery), non il body completo — ' +
-    'che viene caricato solo quando la skill è effettivamente invocata. ' +
-    'Non include: messaggi sessione, autocompact buffer, MCP tools attivi, custom agents (richiede sessione live).');
-  wrap.appendChild(note);
+  if (!hideNote) {
+    const note = el('div', 'context-note',
+      'Per skill e agent conta SOLO il frontmatter YAML (indice di discovery), non il body completo — ' +
+      'che viene caricato solo quando la skill è effettivamente invocata. ' +
+      'Non include: messaggi sessione, autocompact buffer, MCP tools attivi, custom agents (richiede sessione live).');
+    wrap.appendChild(note);
+  }
 
   return wrap;
 }
@@ -1887,7 +1925,7 @@ function renderSettings() {
   const chBtn = el('button', 'btn btn-sm btn-green', '📋 Changelog');
   chBtn.title = 'Mostra storico versioni';
   chBtn.addEventListener('click', () => openChangelogModal());
-  const verVal = el('div', 'settings-row-val', '1.0.17');
+  const verVal = el('div', 'settings-row-val', '1.0.18');
   verRight.appendChild(chBtn);
   verRight.appendChild(verVal);
   verRow.appendChild(verRight);
