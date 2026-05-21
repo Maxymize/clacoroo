@@ -38,12 +38,81 @@ function computeStreak(dailyActivity) {
   return streak;
 }
 
+// Total tokens come Claude /stats: SOLO input + output (esclude cache_read che
+// è "free" e cache_creation che è infrastructure). Sommare tutto gonfiava
+// il dato di ~400× (cache read accumula miliardi rapidamente).
 function totalTokensFromModelUsage(modelUsage) {
   if (!modelUsage || typeof modelUsage !== 'object') return 0;
   return Object.values(modelUsage).reduce((s, m) => {
-    return s + (m.inputTokens || 0) + (m.outputTokens || 0)
-         + (m.cacheReadInputTokens || 0) + (m.cacheCreationInputTokens || 0);
+    return s + (m.inputTokens || 0) + (m.outputTokens || 0);
   }, 0);
+}
+
+// Aggregazione filtrata per range (all|30|7 giorni).
+// Restituisce metriche derivate dai dailyActivity/dailyModelTokens filtrati.
+function aggregateForRange(cache, range) {
+  const dailyActivity    = cache?.dailyActivity || [];
+  const dailyModelTokens = cache?.dailyModelTokens || [];
+  const hourCounts       = cache?.hourCounts || {};
+  const modelUsage       = cache?.modelUsage || {};
+
+  if (range === 'all') {
+    // Tutto: usa cache fields se disponibili
+    return {
+      sessions:    cache?.totalSessions || dailyActivity.reduce((s, e) => s + (e.sessionCount || 0), 0),
+      messages:    cache?.totalMessages || dailyActivity.reduce((s, e) => s + (e.messageCount || 0), 0),
+      tokens:      totalTokensFromModelUsage(modelUsage),
+      activeDays:  dailyActivity.length,
+      totalDays:   dailyActivity.length ? daysBetweenDates(dailyActivity) : 0,
+      peakHour:    peakHour(hourCounts),
+      favoriteModel: favoriteModel(modelUsage),
+      mostActiveDay: mostActiveDay(dailyActivity),
+    };
+  }
+
+  // 30 / 7 giorni: filtra dailyActivity e dailyModelTokens
+  const days = parseInt(range, 10);
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const cutoff = new Date(today);
+  cutoff.setDate(today.getDate() - days + 1);
+  const cutoffKey = cutoff.toISOString().slice(0, 10);
+
+  const filteredActivity = dailyActivity.filter(e => e.date >= cutoffKey);
+  const filteredTokens   = dailyModelTokens.filter(e => e.date >= cutoffKey);
+
+  // Aggrega tokens per modello dal filtered
+  const tokensByModel = {};
+  let totalTok = 0;
+  for (const entry of filteredTokens) {
+    for (const [m, v] of Object.entries(entry.tokensByModel || {})) {
+      tokensByModel[m] = (tokensByModel[m] || 0) + v;
+      totalTok += v;
+    }
+  }
+  const favModel = Object.entries(tokensByModel).sort((a, b) => b[1] - a[1])[0]?.[0] || null;
+
+  return {
+    sessions:    filteredActivity.reduce((s, e) => s + (e.sessionCount || 0), 0),
+    messages:    filteredActivity.reduce((s, e) => s + (e.messageCount || 0), 0),
+    tokens:      totalTok,
+    activeDays:  filteredActivity.length,
+    totalDays:   days,
+    peakHour:    peakHour(hourCounts),  // hourCounts è all-time, non filtrato
+    favoriteModel: favModel,
+    mostActiveDay: mostActiveDay(filteredActivity),
+  };
+}
+
+function daysBetweenDates(dailyActivity) {
+  if (!dailyActivity.length) return 0;
+  const dates = dailyActivity.map(e => new Date(e.date + 'T00:00:00').getTime()).sort();
+  return Math.floor((dates[dates.length - 1] - dates[0]) / 86400000) + 1;
+}
+
+function mostActiveDay(dailyActivity) {
+  if (!Array.isArray(dailyActivity) || !dailyActivity.length) return null;
+  return dailyActivity.reduce((best, e) =>
+    (e.messageCount || 0) > (best?.messageCount || 0) ? e : best, null);
 }
 
 // Stima token contesto basato su byte (~3.5 byte/token per testo)
@@ -248,6 +317,8 @@ module.exports = {
   estimateContextTokens,
   computeContextBreakdown,
   aggregateProjectTokens,
+  aggregateForRange,
+  mostActiveDay,
   listProjects,
   peakHour,
   favoriteModel,

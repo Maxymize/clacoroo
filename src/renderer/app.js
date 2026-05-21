@@ -1152,8 +1152,77 @@ function fmtNum(n) {
 
 let statsRange = 'all';  // all | 30 | 7
 
+function aggregateRangeClient(cache, range) {
+  // Mirror della logica server-side: ricalcola KPI in base al range scelto
+  const dailyActivity    = cache?.dailyActivity || [];
+  const dailyModelTokens = cache?.dailyModelTokens || [];
+  const modelUsage       = cache?.modelUsage || {};
+  const hourCounts       = cache?.hourCounts || {};
+
+  // Total input+output (escluso cache_read/creation che gonfiavano 400×)
+  function tokensOf(mu) {
+    return Object.values(mu).reduce((s, m) => s + (m.inputTokens || 0) + (m.outputTokens || 0), 0);
+  }
+  function findMostActive(arr) {
+    return arr.reduce((best, e) => (e.messageCount || 0) > (best?.messageCount || 0) ? e : best, null);
+  }
+  function findPeakHour(hc) {
+    let best = null, max = -1;
+    for (const [h, c] of Object.entries(hc || {})) if (c > max) { max = c; best = Number(h); }
+    return best;
+  }
+
+  if (range === 'all') {
+    let favModel = null, favTot = -1;
+    for (const [m, u] of Object.entries(modelUsage)) {
+      const t = (u.inputTokens || 0) + (u.outputTokens || 0);
+      if (t > favTot) { favTot = t; favModel = m; }
+    }
+    return {
+      sessions:    cache?.totalSessions || dailyActivity.reduce((s, e) => s + (e.sessionCount || 0), 0),
+      messages:    cache?.totalMessages || dailyActivity.reduce((s, e) => s + (e.messageCount || 0), 0),
+      tokens:      tokensOf(modelUsage),
+      activeDays:  dailyActivity.length,
+      totalDays:   null,
+      peakHour:    findPeakHour(hourCounts),
+      favoriteModel: favModel,
+      mostActiveDay: findMostActive(dailyActivity),
+    };
+  }
+
+  const days = parseInt(range, 10);
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const cutoff = new Date(today);
+  cutoff.setDate(today.getDate() - days + 1);
+  const cutoffKey = cutoff.toISOString().slice(0, 10);
+  const filteredActivity = dailyActivity.filter(e => e.date >= cutoffKey);
+  const filteredTokens   = dailyModelTokens.filter(e => e.date >= cutoffKey);
+
+  const tokensByModel = {};
+  let totalTok = 0;
+  for (const entry of filteredTokens) {
+    for (const [m, v] of Object.entries(entry.tokensByModel || {})) {
+      tokensByModel[m] = (tokensByModel[m] || 0) + v;
+      totalTok += v;
+    }
+  }
+  const favModel = Object.entries(tokensByModel).sort((a, b) => b[1] - a[1])[0]?.[0] || null;
+
+  return {
+    sessions:    filteredActivity.reduce((s, e) => s + (e.sessionCount || 0), 0),
+    messages:    filteredActivity.reduce((s, e) => s + (e.messageCount || 0), 0),
+    tokens:      totalTok,
+    activeDays:  filteredActivity.length,
+    totalDays:   days,
+    peakHour:    findPeakHour(hourCounts),
+    favoriteModel: favModel,
+    mostActiveDay: findMostActive(filteredActivity),
+  };
+}
+
 function renderStatsOverview(container, data) {
   const c = data.cache;
+  const kpi = aggregateRangeClient(c, statsRange);
 
   // Filtri range
   const rangeBar = el('div', 'stats-range');
@@ -1164,20 +1233,27 @@ function renderStatsOverview(container, data) {
   });
   container.appendChild(rangeBar);
 
-  // KPI grid 8 voci (Sessioni, Messaggi, Token, Giorni, Streak, Streak max, Ora picco, Modello pref)
+  // Format helpers
+  const favShort = kpi.favoriteModel ? kpi.favoriteModel.replace(/^claude-/, '').replace(/-\d.*$/, '') : '—';
+  const peakH = kpi.peakHour;
+  const activeLabel = kpi.totalDays
+    ? kpi.activeDays + '/' + kpi.totalDays
+    : String(kpi.activeDays);
+  const mad = kpi.mostActiveDay;
+  const madLabel = mad ? new Date(mad.date + 'T00:00:00').toLocaleDateString('it-IT', { day: 'numeric', month: 'short' }) : '—';
+
+  // KPI grid 9 voci (era 8 + Most active day)
   const kpiGrid = el('div', 'kpi-grid stats-kpi-grid');
-  const peakH = data.peakHour;
-  const favM  = data.favoriteModel;
-  const favShort = favM ? favM.replace(/^claude-/, '').replace(/-\d.*$/, '') : '—';
   [
-    { num: fmtNum(c.totalSessions || 0),    label: 'Sessioni',       color: '#d97757' },
-    { num: fmtNum(data.totalMessages || 0), label: 'Messaggi',       color: '#e89478' },
-    { num: fmtNum(data.totalTokens),        label: 'Token totali',   color: '#6a9bcc' },
-    { num: (c.dailyActivity || []).length,  label: 'Giorni attivi',  color: '#788c5d' },
-    { num: data.streak + 'g',               label: 'Serie attuale',  color: '#b8c79a' },
-    { num: data.longestStreak + 'g',        label: 'Serie più lunga',color: '#9cc1ea' },
-    { num: peakH != null ? peakH + ':00' : '—', label: 'Ora di punta',color: '#f97316' },
-    { num: favShort,                        label: 'Modello pref.',  color: '#d97757' },
+    { num: fmtNum(kpi.sessions),  label: 'Sessioni',        color: '#d97757' },
+    { num: fmtNum(kpi.messages),  label: 'Messaggi',        color: '#e89478' },
+    { num: fmtNum(kpi.tokens),    label: 'Token totali',    color: '#6a9bcc' },
+    { num: activeLabel,           label: 'Giorni attivi',   color: '#788c5d' },
+    { num: madLabel,              label: 'Giorno più attivo', color: '#b8c79a' },
+    { num: data.streak + 'g',     label: 'Serie attuale',   color: '#b8c79a' },
+    { num: data.longestStreak + 'g', label: 'Serie più lunga', color: '#9cc1ea' },
+    { num: peakH != null ? peakH + ':00' : '—', label: 'Ora di punta', color: '#f97316' },
+    { num: favShort,              label: 'Modello pref.',   color: '#d97757' },
   ].forEach(k => {
     const card = el('div', 'kpi-card');
     card.style.setProperty('--kpi-color', k.color);
@@ -1790,7 +1866,7 @@ function renderSettings() {
   const chBtn = el('button', 'btn btn-sm btn-green', '📋 Changelog');
   chBtn.title = 'Mostra storico versioni';
   chBtn.addEventListener('click', () => openChangelogModal());
-  const verVal = el('div', 'settings-row-val', '1.0.14');
+  const verVal = el('div', 'settings-row-val', '1.0.15');
   verRight.appendChild(chBtn);
   verRight.appendChild(verVal);
   verRow.appendChild(verRight);

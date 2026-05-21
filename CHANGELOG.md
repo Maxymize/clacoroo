@@ -1,5 +1,15 @@
 # Changelog
 
+## v1.0.15 — 2026-05-21
+
+Allineate le statistiche al comando `claude /stats` ufficiale:
+
+- "Token totali" ora corrisponde a quello di Claude: somma solo input+output (era ~400× più alto perché includeva erroneamente il cache_read, che è gratis e non viene conteggiato)
+- Filtri Tutto / 30g / 7g ora applicano anche ai KPI (non solo alla heatmap): Sessioni, Messaggi, Token e Giorni attivi cambiano in base al range scelto
+- Nuovo KPI "Giorno più attivo": mostra la data con più messaggi nel range
+- "Giorni attivi" ora mostra il ratio `attivi/totali` quando il range è 30g o 7g (come Claude /stats: "18/30")
+- "Modello preferito" per range 30g/7g: ricalcolato dai dati del periodo, non più all-time
+
 ## v1.0.14 — 2026-05-21
 
 - Heatmap ridisegnata stile Claude Desktop: 52 settimane × 7 giorni (anno intero), label mesi in basso, tooltip flottante che mostra "Lunedì 21 maggio 2026 · 1.234 messaggi" al passaggio del mouse (era un "?" senza info)
