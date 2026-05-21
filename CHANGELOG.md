@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.0.17 — 2026-05-21
+
+- KPI "Modello preferito" mostra ora il nome esteso `Opus 4.7` / `Sonnet 4.6` (era abbreviato a `opus` / `sonnet`)
+- Etichetta del KPI tornata estesa: `Modello Preferito` su due righe (era troncata a `Modello pref.`)
+
 ## v1.0.16 — 2026-05-21
 
 - KPI "Sessioni" ora conta i file `.jsonl` reali nella cartella `~/.claude/projects/` invece di dipendere dalla cache aggregata (che era sottostimata di qualche unità)

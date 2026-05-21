@@ -1243,7 +1243,19 @@ function renderStatsOverview(container, data) {
   container.appendChild(rangeBar);
 
   // Format helpers
-  const favShort = kpi.favoriteModel ? kpi.favoriteModel.replace(/^claude-/, '').replace(/-\d.*$/, '') : '—';
+  // Estrae "Opus 4.7" / "Sonnet 4.6" da id tipo "claude-opus-4-7" o "claude-sonnet-4-6-20251022"
+  function formatModelName(id) {
+    if (!id) return '—';
+    const stripped = id.replace(/^claude-/, '');
+    const m = stripped.match(/^([a-zA-Z]+)-(\d+)-(\d+)/);
+    if (m) {
+      const family = m[1].charAt(0).toUpperCase() + m[1].slice(1).toLowerCase();
+      return family + ' ' + m[2] + '.' + m[3];
+    }
+    const first = stripped.split('-')[0] || '—';
+    return first.charAt(0).toUpperCase() + first.slice(1).toLowerCase();
+  }
+  const favShort = formatModelName(kpi.favoriteModel);
   const peakH = kpi.peakHour;
   const activeLabel = kpi.totalDays
     ? kpi.activeDays + '/' + kpi.totalDays
@@ -1262,7 +1274,7 @@ function renderStatsOverview(container, data) {
     { num: data.streak + 'g',     label: 'Serie attuale',   color: '#b8c79a' },
     { num: data.longestStreak + 'g', label: 'Serie più lunga', color: '#9cc1ea' },
     { num: peakH != null ? peakH + ':00' : '—', label: 'Ora di punta', color: '#f97316' },
-    { num: favShort,              label: 'Modello pref.',   color: '#d97757' },
+    { num: favShort,              label: 'Modello\nPreferito', color: '#d97757' },
   ].forEach(k => {
     const card = el('div', 'kpi-card');
     card.style.setProperty('--kpi-color', k.color);
@@ -1875,7 +1887,7 @@ function renderSettings() {
   const chBtn = el('button', 'btn btn-sm btn-green', '📋 Changelog');
   chBtn.title = 'Mostra storico versioni';
   chBtn.addEventListener('click', () => openChangelogModal());
-  const verVal = el('div', 'settings-row-val', '1.0.16');
+  const verVal = el('div', 'settings-row-val', '1.0.17');
   verRight.appendChild(chBtn);
   verRight.appendChild(verVal);
   verRow.appendChild(verRight);

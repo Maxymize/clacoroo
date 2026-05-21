@@ -856,6 +856,7 @@ body {
   text-transform: uppercase;
   letter-spacing: .06em;
   font-weight: 600;
+  white-space: pre-line;
 }
 
 /* ── MARKETPLACE CARDS ────────────────────────────────────────────────── */
