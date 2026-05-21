@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.0.24 — 2026-05-21
+
+- Dashboard: nuova sezione "MCP server" subito sotto "Marketplace" con chip cliccabili (dot colorato per stato), click porta alla sezione MCP
+- Sezione MCP: rimossi link cliccabili sull'URL e icona apri-in-browser (gli endpoint MCP non sono pagine web). Resta solo il bottone "copia negli appunti"
+
 ## v1.0.23 — 2026-05-21
 
 - La barra "Stima contesto" include ora un nuovo segmento **MCP servers** (colore ciano) accanto a Skills, System prompt, Agents, Memory files e Free space

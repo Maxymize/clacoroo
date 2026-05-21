@@ -1354,6 +1354,9 @@ body {
 .plugins-context-section { margin-bottom: 20px; }
 .plugins-context-section:empty { display: none; }
 
+.dashboard-mcp-section { margin-bottom: 28px; }
+.dashboard-mcp-section:empty { display: none; }
+
 /* ── MCP CARDS (v1.0.21) ──────────────────────────────────────────────── */
 .mcp-grid {
   display: grid;

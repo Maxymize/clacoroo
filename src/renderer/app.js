@@ -417,6 +417,11 @@ function renderDashboard() {
   });
   wrap.appendChild(mktGrid);
 
+  // MCP server (v1.0.24) — chip riassuntiva, click → sezione MCP
+  const mcpSection = el('div', 'dashboard-mcp-section');
+  wrap.appendChild(mcpSection);
+  loadDashboardMcp(mcpSection, renderToken);
+
   // Attività recenti (idea #4)
   const actTitle = el('div', 'list-section-title', 'Attività recenti');
   wrap.appendChild(actTitle);
@@ -522,6 +527,50 @@ async function loadPluginsContextBar(container, token) {
   if (token !== pluginsRenderToken || !data || !data.contextBreakdown) return;
   if (data !== prevData) paintCtxBar(container, data.contextBreakdown);
   lastStatsData = data;
+}
+
+function paintDashboardMcpChips(container, servers) {
+  container.textContent = '';
+  container.appendChild(el('div', 'list-section-title', 'MCP server'));
+  if (!servers || !servers.length) {
+    container.appendChild(el('div', 'mcp-empty', 'Nessun MCP server configurato.'));
+    return;
+  }
+  const grid = el('div', 'skill-grid');
+  const statusColor = { connected: '#22c55e', needsAuth: '#f59e0b', warning: '#f59e0b', error: '#ef4444', unknown: '#b0aea5' };
+  servers.forEach(srv => {
+    const chip = el('div', 'skill-chip clickable');
+    chip.style.borderLeftColor = statusColor[srv.status] || '#b0aea5';
+    chip.title = 'Vai alla sezione MCP per dettagli';
+
+    const dot = el('span');
+    dot.style.cssText = 'width:8px;height:8px;border-radius:50%;flex-shrink:0;background:' + (statusColor[srv.status] || '#b0aea5');
+    chip.appendChild(dot);
+
+    const name = el('span', 'skill-chip-name', srv.displayName || srv.id);
+    name.style.fontFamily = '"SF Mono", "Fira Code", Menlo, monospace';
+    name.style.fontSize = '11px';
+    const sub = el('span', 'skill-chip-plugin',
+      srv.scope === 'builtin' ? 'claude.ai' : (srv.plugin || 'user'));
+    chip.appendChild(name); chip.appendChild(sub);
+
+    chip.addEventListener('click', () => switchToSection('mcp'));
+    grid.appendChild(chip);
+  });
+  container.appendChild(grid);
+}
+
+async function loadDashboardMcp(container, token) {
+  // Render ottimistico se cache già popolata (sezione MCP visitata prima)
+  if (mcpCache && mcpCache.ok && mcpCache.servers) {
+    paintDashboardMcpChips(container, mcpCache.servers);
+  }
+  // Fetch fresh (rispetta cache server-side 30s, no health-check ripetuto)
+  const data = await window.claudeAPI.getMcp({});
+  if (token !== dashboardRenderToken) return;
+  if (!data || !data.ok) return;
+  mcpCache = data;
+  paintDashboardMcpChips(container, data.servers);
 }
 
 /* ── PLUGINS ──────────────────────────────────────────────────────────── */
@@ -1990,28 +2039,9 @@ function buildMcpCard(srv) {
   const connWrap = el('div', 'mcp-card-conn-wrap');
   const conn = el('code', 'mcp-card-conn');
   conn.textContent = srv.connection || '—';
-
-  const isLink = (srv.transport === 'http' || srv.transport === 'sse')
-    && /^https?:\/\//i.test(srv.connection || '');
-  if (isLink) {
-    conn.classList.add('mcp-card-conn-link');
-    conn.title = 'Apri in browser esterno';
-    conn.addEventListener('click', () => window.claudeAPI.openExternal(srv.connection));
-  }
   connWrap.appendChild(conn);
 
   if (srv.connection) {
-    if (isLink) {
-      const openBtn = el('button', 'mcp-card-icon-btn');
-      openBtn.title = 'Apri in browser esterno';
-      openBtn.setAttribute('aria-label', 'Apri in browser');
-      openBtn.textContent = '↗';
-      openBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        window.claudeAPI.openExternal(srv.connection);
-      });
-      connWrap.appendChild(openBtn);
-    }
     const copyBtn = el('button', 'mcp-card-icon-btn');
     copyBtn.title = 'Copia negli appunti';
     copyBtn.setAttribute('aria-label', 'Copia');
@@ -2320,7 +2350,7 @@ function renderSettings() {
   const chBtn = el('button', 'btn btn-sm btn-green', '📋 Changelog');
   chBtn.title = 'Mostra storico versioni';
   chBtn.addEventListener('click', () => openChangelogModal());
-  const verVal = el('div', 'settings-row-val', '1.0.23');
+  const verVal = el('div', 'settings-row-val', '1.0.24');
   verRight.appendChild(chBtn);
   verRight.appendChild(verVal);
   verRow.appendChild(verRight);
