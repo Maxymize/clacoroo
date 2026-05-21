@@ -47,9 +47,26 @@ async function init() {
     toast('Configurazione aggiornata — ricarico…', 'info');
     loadData();
   });
+  // B2 — Native menu → switch section via IPC (Cmd+1..6, Cmd+,)
+  window.claudeAPI.onSwitchSection(name => switchToSection(name));
+  // B2 — Cmd+R refresh dal menu nativo
+  window.claudeAPI.onForceRefresh(() => loadData());
   // First-run onboarding (idea #7)
   const appState = await window.claudeAPI.getState();
+  if (appState.lastSection && appState.lastSection !== 'dashboard') {
+    switchToSection(appState.lastSection);
+  }
   if (!appState.onboardingShown) showOnboardingTour();
+}
+
+function switchToSection(name) {
+  if (state.section === name) return;
+  state.section = name;
+  document.querySelectorAll('.nav-item').forEach(b => {
+    b.classList.toggle('active', b.dataset.section === name);
+  });
+  render();
+  window.claudeAPI.setState({ lastSection: name });
 }
 
 /* ── DATA ─────────────────────────────────────────────────────────────── */
@@ -128,12 +145,7 @@ function processData() {
 /* ── NAVIGATION ───────────────────────────────────────────────────────── */
 function setupNav() {
   document.querySelectorAll('.nav-item').forEach(btn => {
-    btn.addEventListener('click', () => {
-      state.section = btn.dataset.section;
-      document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      render();
-    });
+    btn.addEventListener('click', () => switchToSection(btn.dataset.section));
   });
 }
 
@@ -491,7 +503,9 @@ function buildPluginCard(p) {
     const action = p.blocked ? 'enable' : 'disable';
     const result = await window.claudeAPI.pluginAction(action, p.fullId);
     if (result.success) {
-      toast((action === 'enable' ? '✓ Attivato: ' : '✗ Disattivato: ') + p.id, action === 'enable' ? 'success' : 'warn');
+      const verb = action === 'enable' ? 'Attivato' : 'Disattivato';
+      toast((action === 'enable' ? '✓ ' : '✗ ') + verb + ': ' + p.id, action === 'enable' ? 'success' : 'warn');
+      window.claudeAPI.showNotification('Plugin ' + verb.toLowerCase(), p.id);
       await loadData();
     } else {
       toast('Errore: ' + result.error, 'error');
@@ -530,8 +544,10 @@ function buildPluginCard(p) {
     updateBtn.disabled = true;
     updateBtn.textContent = '…';
     const r = await window.claudeAPI.pluginAction('update', p.fullId);
-    if (r.success) toast('Aggiornato: ' + p.id, 'success');
-    else toast('Errore aggiornamento: ' + r.error, 'error');
+    if (r.success) {
+      toast('Aggiornato: ' + p.id, 'success');
+      window.claudeAPI.showNotification('Plugin aggiornato', p.id);
+    } else toast('Errore aggiornamento: ' + r.error, 'error');
     updateBtn.disabled = false;
     updateBtn.textContent = 'Aggiorna';
     await loadData();
@@ -550,6 +566,7 @@ function buildPluginCard(p) {
     const r = await window.claudeAPI.pluginAction('uninstall', p.fullId);
     if (r.success) {
       toast('Plugin rimosso: ' + p.id, 'success');
+      window.claudeAPI.showNotification('Plugin rimosso', p.id);
       await loadData();
     } else {
       toast('Errore: ' + r.error, 'error');
@@ -1086,7 +1103,7 @@ function renderSettings() {
 
   const g3 = group('Informazioni');
   row(g3, 'Nome app', null, 'CLACOROO');
-  row(g3, 'Versione', null, '1.0.06');
+  row(g3, 'Versione', null, '1.0.07');
   row(g3, 'Piattaforma', null, d.platform);
 
   setContent(wrap);

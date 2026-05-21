@@ -1,6 +1,6 @@
 'use strict';
 
-const { app, BrowserWindow, ipcMain, dialog, shell, nativeTheme } = require('electron');
+const { app, BrowserWindow, Menu, Notification, ipcMain, dialog, shell, nativeTheme } = require('electron');
 const path = require('path');
 const fs   = require('fs');
 const os   = require('os');
@@ -10,12 +10,31 @@ const { execFile, execFileSync } = require('child_process');
 // .icns from electron-builder takes precedence in the .app bundle).
 app.setName('CLACOROO');
 const APP_ICON = path.join(__dirname, '..', 'assets', 'icon.png');
+
+let mainWindow;
+
+// A4 — Single-instance lock: se l'app è già in esecuzione, il secondo lancio
+// riporta in foreground la finestra esistente e si chiude immediatamente
+// (early return per evitare di registrare IPC handler / whenReady nel
+// processo che sta per quittare).
+if (!app.requestSingleInstanceLock()) {
+  app.quit();
+  return;
+}
+app.on('second-instance', () => {
+  if (mainWindow) {
+    if (mainWindow.isMinimized()) mainWindow.restore();
+    mainWindow.show();
+    mainWindow.focus();
+  }
+});
 const { checkMarkdownHealth } = require('./lib/markdown');
 const { buildSnapshot, diffSnapshot } = require('./lib/snapshot');
 const {
   readState, writeState,
   readActivityLog, appendActivity, clearActivityLog,
 } = require('./lib/state');
+const { buildAppMenu, setupAboutPanel } = require('./lib/menu');
 
 /* ── CONFIG PATHS ──────────────────────────────────────────────────────── */
 
@@ -223,12 +242,16 @@ function readAllData() {
 
 /* ── WINDOW ────────────────────────────────────────────────────────────── */
 
-let mainWindow;
-
 function createWindow() {
+  // B5 — Persistenza window size/position dallo state precedente
+  const savedState = readState();
+  const winBounds = savedState.windowBounds || { width: 1280, height: 820 };
+
   mainWindow = new BrowserWindow({
-    width:    1280,
-    height:   820,
+    width:    winBounds.width  || 1280,
+    height:   winBounds.height || 820,
+    x:        winBounds.x,
+    y:        winBounds.y,
     minWidth: 900,
     minHeight: 620,
     title: 'CLACOROO',
@@ -238,12 +261,40 @@ function createWindow() {
     backgroundColor: '#0f0f1a',
     webPreferences: {
       preload:          path.join(__dirname, 'preload.js'),
-      contextIsolation: true,
-      nodeIntegration:  false,
+      contextIsolation: true,    // A1 — già attivo
+      nodeIntegration:  false,   // A1 — già attivo
+      sandbox:          true,    // A1 — sandbox renderer process
     },
   });
 
   mainWindow.loadFile(path.join(__dirname, 'renderer', 'index.html'));
+
+  // A2 — Blocca window.open / new tab: ogni link http esterno apre nel browser
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    if (/^https?:/.test(url)) shell.openExternal(url);
+    return { action: 'deny' };
+  });
+
+  // A3 — Blocca navigazioni esterne: la SPA non deve navigare, link esterni
+  // vanno aperti nel browser di sistema
+  mainWindow.webContents.on('will-navigate', (e, url) => {
+    if (url === mainWindow.webContents.getURL()) return;
+    e.preventDefault();
+    if (/^https?:/.test(url)) shell.openExternal(url);
+  });
+
+  // B5 — Salva bounds al close (debounced)
+  let saveTimer = null;
+  const saveBounds = () => {
+    if (saveTimer) clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        writeState({ windowBounds: mainWindow.getBounds() });
+      }
+    }, 500);
+  };
+  mainWindow.on('resize', saveBounds);
+  mainWindow.on('move',   saveBounds);
 
   // Reload UI when config files change. fs.watchFile (polling) is used instead
   // of fs.watch because atomic-save tools (Claude Code CLI, VS Code, ecc.)
@@ -266,9 +317,14 @@ app.whenReady().then(() => {
   if (process.platform === 'darwin' && app.dock && fs.existsSync(APP_ICON)) {
     app.dock.setIcon(APP_ICON);
   }
+  setupAboutPanel();
   createWindow();
+  buildAppMenu(mainWindow);
   app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+    if (BrowserWindow.getAllWindows().length === 0) {
+      createWindow();
+      buildAppMenu(mainWindow);
+    }
   });
 });
 
@@ -315,6 +371,14 @@ ipcMain.handle('get-state', async () => readState());
 ipcMain.handle('set-state', async (_e, patch) => {
   if (typeof patch !== 'object' || patch === null) return { success: false, error: 'Patch non valido.' };
   return { success: writeState(patch) };
+});
+
+// B4 — Notifiche native (mostrate solo se l'app non è in focus)
+ipcMain.handle('show-notification', async (_e, { title, body }) => {
+  if (!Notification.isSupported()) return { success: false };
+  if (mainWindow?.isFocused()) return { success: false, reason: 'focused' };
+  new Notification({ title: title || 'CLACOROO', body: body || '', silent: false }).show();
+  return { success: true };
 });
 
 /* ── SNAPSHOT EXPORT / IMPORT (idea #5) ───────────────────────────────── */

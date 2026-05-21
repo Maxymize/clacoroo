@@ -1,5 +1,45 @@
 # Changelog
 
+## v1.0.07 — 2026-05-21
+
+### Sicurezza hardening (A) + UX nativa desktop (B)
+
+Realizzati i task v1.0.03 originali (sicurezza Electron + UX nativa) che
+erano rimasti pending dopo il riarrangiamento delle priorità sulle 7 idee.
+
+**A — Sicurezza hardening (4 misure)**
+- `sandbox: true` esplicito in `BrowserWindow.webPreferences` — il renderer
+  process gira in sandbox completa, niente accesso diretto a Node API
+- `setWindowOpenHandler` su `webContents` → blocca tutti i popup e
+  ridirige le URL `https?:` a `shell.openExternal` (apertura nel browser)
+- `webContents.on('will-navigate')` → blocca le navigazioni esterne dalla
+  SPA, ridirige link esterni allo stesso modo (l'app non deve mai navigare)
+- `app.requestSingleInstanceLock()` + handler `second-instance` → due
+  lanci di CLACOROO portano in primo piano la finestra esistente invece
+  di duplicare il processo
+
+**B — UX nativa desktop**
+- `src/lib/menu.js` (NEW): Application menu nativo macOS/Win con menu
+  CLACOROO / File / Modifica / Vista / Finestra / Aiuto. Submenu Vista
+  con shortcut Cmd+1..6 per switch sezione, DevTools, fullscreen
+- Shortcut: `Cmd+R` ricarica dati · `Cmd+Q` quit · `Cmd+,` Impostazioni ·
+  `Cmd+1..6` switch Dashboard/Plugin/Marketplace/Skill/Agent/Settings
+- `setupAboutPanel()` con nome, versione, copyright, link repo GitHub
+  (mostra il pannello About nativo macOS via menu "CLACOROO" → "About")
+- `Notification` nativa su enable / disable / update / uninstall plugin
+  (mostrata SOLO se la finestra non è in focus — niente popup duplicati
+  quando l'utente sta già guardando l'app)
+- Persistenza window bounds (width/height/x/y) + ultima sezione in
+  `~/.claude-control-room/state.json`. L'app si riapre nella stessa
+  dimensione/posizione/sezione di prima
+
+**Refactor**
+- `let mainWindow` spostata in alto perché serve al single-instance lock
+- `src/preload.js`: nuovi metodi `onSwitchSection`, `onForceRefresh`,
+  `showNotification` esposti
+- `src/renderer/app.js`: nuova `switchToSection()` riusata da nav click +
+  IPC dal menu, persiste `lastSection` ad ogni switch
+
 ## v1.0.06 — 2026-05-21
 
 ### Tipografia Anthropic-inspired (self-hosted, cross-platform)

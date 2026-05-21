@@ -21,10 +21,21 @@ contextBridge.exposeInMainWorld('claudeAPI', {
   exportSnapshot:     ()                  => ipcRenderer.invoke('export-snapshot'),
   importSnapshot:     ()                  => ipcRenderer.invoke('import-snapshot'),
   applySnapshot:      (preview)           => ipcRenderer.invoke('apply-snapshot',     preview),
+  showNotification:   (title, body)       => ipcRenderer.invoke('show-notification',  { title, body }),
 
   onConfigChanged: (cb) => {
     const handler = () => cb();
     ipcRenderer.on('config-changed', handler);
     return () => ipcRenderer.removeListener('config-changed', handler);
+  },
+  onSwitchSection: (cb) => {
+    const handler = (_e, name) => cb(name);
+    ipcRenderer.on('switch-section', handler);
+    return () => ipcRenderer.removeListener('switch-section', handler);
+  },
+  onForceRefresh: (cb) => {
+    const handler = () => cb();
+    ipcRenderer.on('force-refresh', handler);
+    return () => ipcRenderer.removeListener('force-refresh', handler);
   },
 });
