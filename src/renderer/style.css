@@ -1304,7 +1304,8 @@ body {
 }
 .context-bar-seg {
   height: 100%;
-  transition: opacity .15s;
+  min-width: 0;
+  transition: width .35s ease, opacity .15s;
 }
 .context-bar-seg:hover { opacity: .8; }
 .context-legend {

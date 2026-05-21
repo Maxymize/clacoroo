@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.0.20 — 2026-05-21
+
+- La barra "Stima contesto" non sparisce più quando attivi o disattivi un plugin: i segmenti si animano in modo fluido fino al nuovo valore (era un flash bianco di ~1 secondo)
+- Aggiornamento in-place dei valori senza ricostruire il DOM; transizione CSS sulla larghezza dei segmenti
+- Render ottimistico con i dati precedenti al cambio sezione, swap morbido quando arrivano i nuovi
+
 ## v1.0.19 — 2026-05-21
 
 - Barra "Stima contesto" aggiunta anche in cima alla pagina Plugin

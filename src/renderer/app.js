@@ -429,6 +429,10 @@ async function renderActivityList(container, limit, token) {
   });
 }
 
+// Ultimo data ricevuto, non azzerato dai toggle: permette render ottimistico
+// (no flash) mentre arriva il fetch fresh dopo invalidazione di statsCache.
+let lastStatsData = null;
+
 async function fetchStatsSafe() {
   if (statsCache) return statsCache;
   try {
@@ -438,16 +442,36 @@ async function fetchStatsSafe() {
   } catch { return null; }
 }
 
-async function loadDashboardStats(container, token) {
-  const data = await fetchStatsSafe();
-  if (token !== dashboardRenderToken) return;  // sezione cambiata mentre fetching
-  if (!data || !data.cache) return;
+function paintCtxBar(container, cb) {
+  const existing = container.querySelector('.context-breakdown');
+  if (existing) {
+    // Update in-place: CSS transition anima la width dei segmenti senza flash
+    updateCtxBarInPlace(existing, cb);
+    return;
+  }
+  container.textContent = '';
+  container.appendChild(el('div', 'list-section-title', 'Stima contesto'));
+  container.appendChild(buildContextBreakdown(cb, {
+    horizontalLegend: true,
+    hideNote: true,
+  }));
+}
 
-  // KPI Stats (range fisso 'all', no filtri)
+function paintDashboardStats(container, data) {
+  const existingBar = container.querySelector('.context-breakdown');
+  const existingKpi = container.querySelector('.kpi-grid');
+  if (existingBar && existingKpi) {
+    // Update incrementale: KPI rebuild (sono numeri statici, nessun valore animabile),
+    // barra in-place per animazione fluida
+    const oldKpi = existingKpi;
+    const newKpi = buildStatsKpiGrid(data, 'all');
+    oldKpi.replaceWith(newKpi);
+    if (data.contextBreakdown) updateCtxBarInPlace(existingBar, data.contextBreakdown);
+    return;
+  }
+  container.textContent = '';
   container.appendChild(el('div', 'list-section-title', 'Utilizzo Claude Code'));
   container.appendChild(buildStatsKpiGrid(data, 'all'));
-
-  // Stima contesto con legenda orizzontale, senza nota (più compatto)
   if (data.contextBreakdown) {
     container.appendChild(el('div', 'list-section-title', 'Stima contesto'));
     container.appendChild(buildContextBreakdown(data.contextBreakdown, {
@@ -457,15 +481,24 @@ async function loadDashboardStats(container, token) {
   }
 }
 
-async function loadPluginsContextBar(container, token) {
+async function loadDashboardStats(container, token) {
+  const prevData = lastStatsData;
+  // 1. Paint sincrono con dati precedenti — niente flash al cambio sezione/toggle
+  if (prevData && prevData.cache) paintDashboardStats(container, prevData);
+  // 2. Fetch fresh e swap quando arriva (no-op se identico)
   const data = await fetchStatsSafe();
-  if (token !== pluginsRenderToken) return;
-  if (!data || !data.contextBreakdown) return;
-  container.appendChild(el('div', 'list-section-title', 'Stima contesto'));
-  container.appendChild(buildContextBreakdown(data.contextBreakdown, {
-    horizontalLegend: true,
-    hideNote: true,
-  }));
+  if (token !== dashboardRenderToken || !data || !data.cache) return;
+  if (data !== prevData) paintDashboardStats(container, data);
+  lastStatsData = data;
+}
+
+async function loadPluginsContextBar(container, token) {
+  const prevData = lastStatsData;
+  if (prevData && prevData.contextBreakdown) paintCtxBar(container, prevData.contextBreakdown);
+  const data = await fetchStatsSafe();
+  if (token !== pluginsRenderToken || !data || !data.contextBreakdown) return;
+  if (data !== prevData) paintCtxBar(container, data.contextBreakdown);
+  lastStatsData = data;
 }
 
 /* ── PLUGINS ──────────────────────────────────────────────────────────── */
@@ -1357,30 +1390,33 @@ function renderStatsOverview(container, data) {
   }
 }
 
+function contextCats(cb) {
+  return [
+    { kind: 'skills',       tokens: cb.skills.tokens,       label: 'Skills (index) · ' + cb.skills.count,    color: '#d97757' },
+    { kind: 'systemPrompt', tokens: cb.systemPrompt.tokens, label: 'System prompt',                            color: '#6a9bcc' },
+    { kind: 'agents',       tokens: cb.agents.tokens,       label: 'Agents (index) · ' + cb.agents.count,    color: '#f97316' },
+    { kind: 'memoryFiles',  tokens: cb.memoryFiles.tokens,  label: 'Memory files · ' + cb.memoryFiles.count, color: '#788c5d' },
+    { kind: 'freeSpace',    tokens: cb.freeSpace.tokens,    label: 'Free space',                               color: '#3a3530' },
+  ];
+}
+
 function buildContextBreakdown(cb, opts = {}) {
   const { horizontalLegend = false, hideNote = false } = opts;
   const wrap = el('div', 'context-breakdown' + (horizontalLegend ? ' context-compact' : ''));
-  const used = cb.totalEstimate;
-  const max  = cb.contextWindow;
+  wrap.dataset.horizontalLegend = horizontalLegend ? '1' : '0';
+  const max = cb.contextWindow;
 
   const summary = el('div', 'context-summary');
-  summary.appendChild(el('span', 'context-summary-tokens', fmtNum(used) + ' / ' + fmtNum(max) + ' tokens'));
+  summary.appendChild(el('span', 'context-summary-tokens', fmtNum(cb.totalEstimate) + ' / ' + fmtNum(max) + ' tokens'));
   summary.appendChild(el('span', 'context-summary-pct', cb.fillPercent + '%'));
   wrap.appendChild(summary);
 
-  const cats = [
-    { tokens: cb.skills.tokens,       label: 'Skills (index) · ' + cb.skills.count,         color: '#d97757' },
-    { tokens: cb.systemPrompt.tokens, label: 'System prompt',                                color: '#6a9bcc' },
-    { tokens: cb.agents.tokens,       label: 'Agents (index) · ' + cb.agents.count,         color: '#f97316' },
-    { tokens: cb.memoryFiles.tokens,  label: 'Memory files · ' + cb.memoryFiles.count,      color: '#788c5d' },
-    { tokens: cb.freeSpace.tokens,    label: 'Free space',                                   color: '#3a3530' },
-  ];
-
+  const cats = contextCats(cb);
   const bar = el('div', 'context-bar');
   cats.forEach(c => {
-    if (!c.tokens) return;
     const seg = el('div', 'context-bar-seg');
-    seg.style.width = ((c.tokens / max) * 100) + '%';
+    seg.dataset.kind = c.kind;
+    seg.style.width = c.tokens ? ((c.tokens / max) * 100) + '%' : '0%';
     seg.style.background = c.color;
     seg.title = c.label + ': ' + fmtNum(c.tokens);
     bar.appendChild(seg);
@@ -1390,6 +1426,7 @@ function buildContextBreakdown(cb, opts = {}) {
   const legend = el('div', 'context-legend' + (horizontalLegend ? ' context-legend-horizontal' : ''));
   cats.forEach(c => {
     const row = el('div', 'context-legend-row');
+    row.dataset.kind = c.kind;
     const dot = el('span', 'context-legend-dot');
     dot.style.background = c.color;
     row.appendChild(dot);
@@ -1411,6 +1448,39 @@ function buildContextBreakdown(cb, opts = {}) {
   }
 
   return wrap;
+}
+
+// Aggiorna in-place i valori di una .context-breakdown esistente, senza
+// distruggere/ricreare il DOM. Permette CSS transition smooth sulla width
+// dei segmenti quando l'utente toggla un plugin.
+function updateCtxBarInPlace(barNode, cb) {
+  const max = cb.contextWindow;
+  const horizontalLegend = barNode.dataset.horizontalLegend === '1';
+
+  const tokensEl = barNode.querySelector('.context-summary-tokens');
+  if (tokensEl) tokensEl.textContent = fmtNum(cb.totalEstimate) + ' / ' + fmtNum(max) + ' tokens';
+  const pctEl = barNode.querySelector('.context-summary-pct');
+  if (pctEl) pctEl.textContent = cb.fillPercent + '%';
+
+  contextCats(cb).forEach(c => {
+    const seg = barNode.querySelector('.context-bar-seg[data-kind="' + c.kind + '"]');
+    if (seg) {
+      seg.style.width = c.tokens ? ((c.tokens / max) * 100) + '%' : '0%';
+      seg.title = c.label + ': ' + fmtNum(c.tokens);
+    }
+    const row = barNode.querySelector('.context-legend-row[data-kind="' + c.kind + '"]');
+    if (row) {
+      const lbl = row.querySelector('.context-legend-lbl');
+      if (lbl) lbl.textContent = c.label;
+      if (!horizontalLegend) {
+        const val = row.querySelector('.context-legend-val');
+        if (val) {
+          const pct = ((c.tokens / max) * 100).toFixed(1);
+          val.textContent = fmtNum(c.tokens) + ' · ' + pct + '%';
+        }
+      }
+    }
+  });
 }
 
 function buildHeatmap(dailyActivity, range) {
@@ -1950,7 +2020,7 @@ function renderSettings() {
   const chBtn = el('button', 'btn btn-sm btn-green', '📋 Changelog');
   chBtn.title = 'Mostra storico versioni';
   chBtn.addEventListener('click', () => openChangelogModal());
-  const verVal = el('div', 'settings-row-val', '1.0.19');
+  const verVal = el('div', 'settings-row-val', '1.0.20');
   verRight.appendChild(chBtn);
   verRight.appendChild(verVal);
   verRow.appendChild(verRight);
