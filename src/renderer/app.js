@@ -70,8 +70,13 @@ async function runUpdateCheck(force) {
   const info = r.skipped ? r.cached : r;
   if (!info || !info.ok || !info.available) {
     if (force) {
-      if (r.ok === false) toast('Errore controllo aggiornamenti: ' + r.error, 'error');
-      else toast('Sei già sulla versione più recente ✓', 'success');
+      if (r.ok === false) {
+        toast('Errore controllo aggiornamenti: ' + r.error, 'error');
+      } else if ((info && info.reason === 'no-release') || (r.reason === 'no-release')) {
+        toast('Nessuna release pubblica disponibile (repo privato o senza release)', 'info');
+      } else {
+        toast('Sei già sulla versione più recente ✓', 'success');
+      }
     }
     return;
   }
