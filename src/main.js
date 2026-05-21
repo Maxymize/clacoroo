@@ -29,6 +29,7 @@ const INSTALLED    = path.join(PLUGINS_DIR, 'installed_plugins.json');
 const BLOCKLIST    = path.join(PLUGINS_DIR, 'blocklist.json');
 const MARKETPLACES = path.join(PLUGINS_DIR, 'known_marketplaces.json');
 const CATALOG      = path.join(PLUGINS_DIR, 'plugin-catalog-cache.json');
+const SETTINGS     = path.join(CLAUDE_DIR, 'settings.json');
 
 /* ── FIND CLAUDE BINARY ────────────────────────────────────────────────── */
 
@@ -185,7 +186,17 @@ function readAllData() {
   const blocklist    = safeReadJson(BLOCKLIST,    { plugins: [] });
   const marketplaces = safeReadJson(MARKETPLACES, {});
   const catalogRaw   = safeReadJson(CATALOG,      { catalog: { plugins: {} } });
+  const settings     = safeReadJson(SETTINGS,     {});
   const cacheDetails = scanCache();
+
+  // Source of truth for enabled/disabled state is ~/.claude/settings.json
+  // field 'enabledPlugins' (boolean per pluginId).
+  // Legacy blocklist.json is kept for backward compat but not authoritative.
+  const enabledMap = settings.enabledPlugins || {};
+  const blockedFromSettings = pluginIds.filter(id => enabledMap[id] === false);
+  const legacyBlocklist = (blocklist.plugins || []).map(b => b.plugin || b);
+  // Merge: a plugin is blocked if explicitly false in settings OR in legacy blocklist
+  const blockedSet = new Set([...blockedFromSettings, ...legacyBlocklist.filter(id => enabledMap[id] !== true)]);
 
   // Normalize marketplace source to simple repo path
   const marketplacesNorm = {};
@@ -195,7 +206,7 @@ function readAllData() {
 
   return {
     installed:    { plugins: pluginIds },
-    blocklist,
+    blocklist:    { plugins: Array.from(blockedSet).map(plugin => ({ plugin })) },
     marketplaces: marketplacesNorm,
     catalog:      catalogRaw.catalog || {},
     cacheDetails,
@@ -227,8 +238,9 @@ function createWindow() {
 
   mainWindow.loadFile(path.join(__dirname, 'renderer', 'index.html'));
 
-  // Reload UI when config files change
-  [INSTALLED, BLOCKLIST, MARKETPLACES].forEach(f => {
+  // Reload UI when config files change (SETTINGS is the source of truth for
+  // enabled/disabled state since the CLI updates settings.json, not blocklist.json)
+  [INSTALLED, BLOCKLIST, MARKETPLACES, SETTINGS].forEach(f => {
     if (!fs.existsSync(f)) return;
     fs.watch(f, () => {
       if (mainWindow && !mainWindow.isDestroyed()) {
