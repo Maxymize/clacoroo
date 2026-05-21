@@ -95,10 +95,10 @@ function setupAboutPanel() {
   app.setAboutPanelOptions({
     applicationName: 'CLACOROO',
     applicationVersion: app.getVersion(),
-    version: 'Claude Code Control Room',
-    copyright: 'Copyright © 2026 Maximilian Giurastante',
+    version: 'CLAude-code COntrol ROom',
+    copyright: '© 2026 MAXYMIZE',
     website: REPO_URL,
-    credits: 'CLAude COde ContROl ROom — gestione visuale plugin, marketplace, skill e agent di Claude Code.',
+    credits: 'Pannello di controllo visuale per gestire plugin, marketplace, skill e agent di Claude Code.\n\nIl nome è la fusione di CLAude-code + COntrol + ROom (il CO si sovrappone tra Code e Control).',
   });
 }
 

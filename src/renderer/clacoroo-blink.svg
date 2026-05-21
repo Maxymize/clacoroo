@@ -1,22 +1,17 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 14 16" shape-rendering="crispEdges" role="img" aria-label="CLACOROO mascotte">
-  <title>CLACOROO — la mascotte tonda della Control Room</title>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 14 16" shape-rendering="crispEdges" role="img" aria-label="CLACOROO mascotte (blink)">
+  <title>CLACOROO — frame blink (occhi chiusi)</title>
 
-  <!-- LED tip (Anthropic green) -->
   <rect x="6" y="0" width="2" height="1" fill="#788c5d"/>
-
-  <!-- Antenna 2px tall in GRIGIO caldo (visibile su sfondo dark) -->
   <rect x="6" y="1" width="2" height="2" fill="#a8a299"/>
 
-  <!-- Body / TESTA TONDA (Claude orange) — silhouette ovale -->
   <g fill="#d97757">
-    <rect x="4" y="3"  width="6"  height="1"/>   <!-- top -->
+    <rect x="4" y="3"  width="6"  height="1"/>
     <rect x="2" y="4"  width="10" height="1"/>
-    <rect x="1" y="5"  width="12" height="6"/>   <!-- main body (rows 5-10) -->
+    <rect x="1" y="5"  width="12" height="6"/>
     <rect x="2" y="11" width="10" height="1"/>
-    <rect x="4" y="12" width="6"  height="1"/>   <!-- bottom narrow (tondo) -->
+    <rect x="4" y="12" width="6"  height="1"/>
   </g>
 
-  <!-- 4 ZAMPETTE separate dal body con gap visivo -->
   <g fill="#d97757">
     <rect x="1"  y="13" width="2" height="2"/>
     <rect x="4"  y="13" width="2" height="2"/>
@@ -24,40 +19,28 @@
     <rect x="11" y="13" width="2" height="2"/>
   </g>
 
-  <!-- Outline (deep terracotta) — silhouette tonda -->
   <g fill="#9a4d35">
-    <!-- Top arc -->
     <rect x="3" y="3"  width="1" height="1"/>
     <rect x="10" y="3" width="1" height="1"/>
     <rect x="1" y="4"  width="1" height="1"/>
     <rect x="12" y="4" width="1" height="1"/>
-    <!-- Sides (rows 5-10) -->
     <rect x="0" y="5"  width="1" height="6"/>
     <rect x="13" y="5" width="1" height="6"/>
-    <!-- Bottom arc -->
     <rect x="1" y="11" width="1" height="1"/>
     <rect x="12" y="11" width="1" height="1"/>
     <rect x="3" y="12" width="1" height="1"/>
     <rect x="10" y="12" width="1" height="1"/>
-    <!-- Feet shadow -->
     <rect x="1"  y="15" width="2" height="1"/>
     <rect x="4"  y="15" width="2" height="1"/>
     <rect x="8"  y="15" width="2" height="1"/>
     <rect x="11" y="15" width="2" height="1"/>
   </g>
 
-  <!-- Eyes 3x3 (occhioni grandi e dolci) -->
-  <g class="mascot-eyes" fill="#141413">
-    <rect x="3" y="6" width="3" height="3"/>
-    <rect x="8" y="6" width="3" height="3"/>
+  <!-- Eyes CLOSED: linee orizzontali 3x1 a metà altezza occhio -->
+  <g fill="#141413">
+    <rect x="3" y="7" width="3" height="1"/>
+    <rect x="8" y="7" width="3" height="1"/>
   </g>
 
-  <!-- Eye glints (cream highlight top-left) -->
-  <g fill="#faf9f5">
-    <rect x="3" y="6" width="1" height="1"/>
-    <rect x="8" y="6" width="1" height="1"/>
-  </g>
-
-  <!-- Mouth piccolo al centro -->
   <rect x="6" y="9" width="2" height="1" fill="#9a4d35"/>
 </svg>

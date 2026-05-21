@@ -1103,7 +1103,7 @@ function renderSettings() {
 
   const g3 = group('Informazioni');
   row(g3, 'Nome app', null, 'CLACOROO');
-  row(g3, 'Versione', null, '1.0.07');
+  row(g3, 'Versione', null, '1.0.08');
   row(g3, 'Piattaforma', null, d.platform);
 
   setContent(wrap);

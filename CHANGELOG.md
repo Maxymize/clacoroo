@@ -1,5 +1,39 @@
 # Changelog
 
+## v1.0.08 — 2026-05-21
+
+### Mascotte ridisegnata + brand subtitle + icona app rigenerata
+
+**Mascotte**
+- Forma "testa tonda" più chiara: bottom step finale 6px wide per silhouette ovale
+- 4 zampette **chiaramente staccate** dal body (riga 12 = bottom testa più stretto,
+  righe 13-14 = zampette indipendenti). Niente più effetto "fantasmino Pac-Man"
+- Antenna in **grigio caldo** `#a8a299` (Anthropic mid-gray) invece di nero —
+  ora visibile sul fondo dark dell'app
+- Occhi 3x3 mantenuti con highlight cream top-left
+- Animazioni `mascotStep` (passettino ogni 12s) + `mascotBlink` (palpebre ogni 5s) attive
+- Dimensione sidebar: 32px → **40px** per migliore leggibilità
+
+**Brand sidebar**
+- Aggiunto subtitle "CLAude-code COntrol ROom" sotto il wordmark CLACOROO
+- Font 8.5px text-muted, monoriga, allineato sotto il wordmark non sotto la mascotte
+- Wrapper `.brand-text` con flex-direction column per stack vertical
+
+**About panel**
+- Copyright: "© 2026 MAXYMIZE"
+- Subtitle: "CLAude-code COntrol ROom" (versione)
+- Credits estesi con etimologia del nome
+
+**Icona app .icns + .png**
+- Rigenerati `assets/icon-source.svg`, `assets/icon.icns` (108KB),
+  `assets/icon.png` (28KB) con la nuova mascotte
+- PNG con alpha trasparente confermato (`sips hasAlpha: yes`)
+- Iconset Apple-compliant 10 dimensioni (16→1024 @1x/@2x) rigenerato
+
+**Nota cache macOS**
+Se dopo install i bordini bianchi attorno all'icona Dock persistono, è cache
+macOS stale. Eseguire `killall Dock; killall Finder` per refresh.
+
 ## v1.0.07 — 2026-05-21
 
 ### Sicurezza hardening (A) + UX nativa desktop (B)
