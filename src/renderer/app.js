@@ -1150,15 +1150,34 @@ function fmtNum(n) {
   return String(n);
 }
 
+let statsRange = 'all';  // all | 30 | 7
+
 function renderStatsOverview(container, data) {
   const c = data.cache;
-  // KPI row
-  const kpiGrid = el('div', 'kpi-grid');
+
+  // Filtri range
+  const rangeBar = el('div', 'stats-range');
+  [['all', 'Tutto'], ['30', '30g'], ['7', '7g']].forEach(([k, l]) => {
+    const btn = el('button', 'stats-range-btn' + (statsRange === k ? ' active' : ''), l);
+    btn.addEventListener('click', () => { statsRange = k; renderStats(); });
+    rangeBar.appendChild(btn);
+  });
+  container.appendChild(rangeBar);
+
+  // KPI grid 8 voci (Sessioni, Messaggi, Token, Giorni, Streak, Streak max, Ora picco, Modello pref)
+  const kpiGrid = el('div', 'kpi-grid stats-kpi-grid');
+  const peakH = data.peakHour;
+  const favM  = data.favoriteModel;
+  const favShort = favM ? favM.replace(/^claude-/, '').replace(/-\d.*$/, '') : '—';
   [
-    { num: fmtNum(data.totalTokens),       label: 'Token totali',   color: '#6a9bcc' },
-    { num: c.totalSessions || 0,           label: 'Sessioni',       color: '#d97757' },
-    { num: data.streak,                    label: 'Streak giorni',  color: '#788c5d' },
-    { num: (c.dailyActivity || []).length, label: 'Giorni attivi',  color: '#e89478' },
+    { num: fmtNum(c.totalSessions || 0),    label: 'Sessioni',       color: '#d97757' },
+    { num: fmtNum(data.totalMessages || 0), label: 'Messaggi',       color: '#e89478' },
+    { num: fmtNum(data.totalTokens),        label: 'Token totali',   color: '#6a9bcc' },
+    { num: (c.dailyActivity || []).length,  label: 'Giorni attivi',  color: '#788c5d' },
+    { num: data.streak + 'g',               label: 'Serie attuale',  color: '#b8c79a' },
+    { num: data.longestStreak + 'g',        label: 'Serie più lunga',color: '#9cc1ea' },
+    { num: peakH != null ? peakH + ':00' : '—', label: 'Ora di punta',color: '#f97316' },
+    { num: favShort,                        label: 'Modello pref.',  color: '#d97757' },
   ].forEach(k => {
     const card = el('div', 'kpi-card');
     card.style.setProperty('--kpi-color', k.color);
@@ -1168,11 +1187,14 @@ function renderStatsOverview(container, data) {
   });
   container.appendChild(kpiGrid);
 
-  // Heatmap attività ultime 13 settimane (~3 mesi)
-  container.appendChild(el('div', 'list-section-title', 'Attività · ultime 13 settimane'));
-  container.appendChild(buildHeatmap(c.dailyActivity || []));
+  // Heatmap (range dinamico)
+  const title = statsRange === '7'  ? 'Attività · ultimi 7 giorni'
+              : statsRange === '30' ? 'Attività · ultimi 30 giorni'
+              : 'Attività · ultime 52 settimane';
+  container.appendChild(el('div', 'list-section-title', title));
+  container.appendChild(buildHeatmap(c.dailyActivity || [], statsRange));
 
-  // Context breakdown reale stile claude /context
+  // Context breakdown realistico
   const cb = data.contextBreakdown;
   if (cb) {
     container.appendChild(el('div', 'list-section-title', 'Stima contesto · stile claude /context'));
@@ -1182,32 +1204,33 @@ function renderStatsOverview(container, data) {
 
 function buildContextBreakdown(cb) {
   const wrap = el('div', 'context-breakdown');
-  const total = cb.totalEstimate;
-  const max = cb.contextWindow;
+  const used = cb.totalEstimate;
+  const max  = cb.contextWindow;
 
   const summary = el('div', 'context-summary');
-  summary.appendChild(el('span', 'context-summary-tokens', fmtNum(total) + '/' + fmtNum(max) + ' tokens'));
+  summary.appendChild(el('span', 'context-summary-tokens', fmtNum(used) + ' / ' + fmtNum(max) + ' tokens'));
   summary.appendChild(el('span', 'context-summary-pct', cb.fillPercent + '%'));
   wrap.appendChild(summary);
 
-  const bar = el('div', 'context-bar');
   const cats = [
-    { key: 'systemPrompt', tokens: cb.systemPrompt.tokens, label: 'System prompt',                           color: '#6a9bcc' },
-    { key: 'memoryFiles',  tokens: cb.memoryFiles.tokens,  label: 'Memory files · ' + cb.memoryFiles.count,  color: '#788c5d' },
-    { key: 'skills',       tokens: cb.skills.tokens,       label: 'Skills · ' + cb.skills.count,             color: '#d97757' },
-    { key: 'agents',       tokens: cb.agents.tokens,       label: 'Agents · ' + cb.agents.count,             color: '#f97316' },
+    { tokens: cb.skills.tokens,       label: 'Skills (index) · ' + cb.skills.count,         color: '#d97757' },
+    { tokens: cb.systemPrompt.tokens, label: 'System prompt',                                color: '#6a9bcc' },
+    { tokens: cb.agents.tokens,       label: 'Agents (index) · ' + cb.agents.count,         color: '#f97316' },
+    { tokens: cb.memoryFiles.tokens,  label: 'Memory files · ' + cb.memoryFiles.count,      color: '#788c5d' },
+    { tokens: cb.freeSpace.tokens,    label: 'Free space',                                   color: '#3a3530' },
   ];
+
+  const bar = el('div', 'context-bar');
   cats.forEach(c => {
     if (!c.tokens) return;
     const seg = el('div', 'context-bar-seg');
     seg.style.width = ((c.tokens / max) * 100) + '%';
     seg.style.background = c.color;
-    seg.title = c.label + ': ' + fmtNum(c.tokens) + ' tokens';
+    seg.title = c.label + ': ' + fmtNum(c.tokens);
     bar.appendChild(seg);
   });
   wrap.appendChild(bar);
 
-  // Legend rows
   const legend = el('div', 'context-legend');
   cats.forEach(c => {
     const row = el('div', 'context-legend-row');
@@ -1215,55 +1238,49 @@ function buildContextBreakdown(cb) {
     dot.style.background = c.color;
     row.appendChild(dot);
     row.appendChild(el('span', 'context-legend-lbl', c.label));
-    const pct = total ? ((c.tokens / total) * 100).toFixed(1) : '0.0';
-    row.appendChild(el('span', 'context-legend-val', fmtNum(c.tokens) + ' tok · ' + pct + '%'));
+    const pct = ((c.tokens / max) * 100).toFixed(1);
+    row.appendChild(el('span', 'context-legend-val', fmtNum(c.tokens) + ' · ' + pct + '%'));
     legend.appendChild(row);
   });
   wrap.appendChild(legend);
 
   const note = el('div', 'context-note',
-    'Stima statica basata su lettura byte/3.5 dei file installati globalmente. ' +
-    'Non include messaggi della sessione attiva, autocompact buffer e custom agents (richiede sessione live).');
+    'Per skill e agent conta SOLO il frontmatter YAML (indice di discovery), non il body completo — ' +
+    'che viene caricato solo quando la skill è effettivamente invocata. ' +
+    'Non include: messaggi sessione, autocompact buffer, MCP tools attivi, custom agents (richiede sessione live).');
   wrap.appendChild(note);
 
   return wrap;
 }
 
-function buildHeatmap(dailyActivity) {
+function buildHeatmap(dailyActivity, range) {
   const byDate = {};
   let maxCount = 0;
   for (const e of dailyActivity) {
     byDate[e.date] = e.messageCount || 0;
     if (e.messageCount > maxCount) maxCount = e.messageCount;
   }
-  // GitHub-style: 13 settimane × 7 giorni (lun-dom), label mese in alto
-  const weeks = 13;
   const today = new Date(); today.setHours(0, 0, 0, 0);
-  // Trova la domenica della settimana corrente (fine settimana)
-  const dayOfWeek = today.getDay(); // 0=dom, 1=lun, ...
+
+  // Determina numero settimane in base al range
+  const weeks = range === '7' ? 1 : range === '30' ? 5 : 52;
+
+  // Trova il sabato della settimana corrente (fine settimana per allineamento)
+  const dayOfWeek = today.getDay();
   const endDate = new Date(today);
-  endDate.setDate(today.getDate() + (6 - dayOfWeek)); // sposta a sabato
-  const totalDays = weeks * 7;
+  endDate.setDate(today.getDate() + (6 - dayOfWeek));
   const startDate = new Date(endDate);
-  startDate.setDate(endDate.getDate() - totalDays + 1);
+  startDate.setDate(endDate.getDate() - weeks * 7 + 1);
 
   const wrap = el('div', 'heatmap-wrap');
-  // Label mesi
-  const monthLabels = el('div', 'heatmap-months');
-  let lastMonth = -1;
-  for (let w = 0; w < weeks; w++) {
-    const d = new Date(startDate);
-    d.setDate(startDate.getDate() + w * 7);
-    const m = d.getMonth();
-    const lbl = el('span', 'heatmap-month-lbl', m !== lastMonth ? d.toLocaleDateString('it-IT', { month: 'short' }) : '');
-    if (m !== lastMonth) lastMonth = m;
-    monthLabels.appendChild(lbl);
-  }
-  wrap.appendChild(monthLabels);
 
-  // Griglia: container 7 righe, dom-sab. Aggiungiamo label giorni a sinistra.
+  // Tooltip flottante (sostituisce title attribute)
+  const tip = el('div', 'heatmap-tip');
+  tip.style.display = 'none';
+  wrap.appendChild(tip);
+
+  // Griglia: una colonna per settimana, 7 righe per giorno (dom-sab)
   const grid = el('div', 'heatmap-grid');
-  // Generiamo per ogni settimana una colonna di 7 celle
   for (let w = 0; w < weeks; w++) {
     const col = el('div', 'heatmap-col');
     for (let d = 0; d < 7; d++) {
@@ -1274,14 +1291,42 @@ function buildHeatmap(dailyActivity) {
       const count = byDate[key] || 0;
       const intensity = isFuture ? -1 : (count === 0 ? 0 : Math.min(4, Math.ceil((count / Math.max(maxCount, 1)) * 4)));
       const cell = el('div', 'heatmap-cell' + (isFuture ? ' future' : ' i-' + intensity));
-      cell.title = key + ' · ' + count + ' messaggi';
+      cell.dataset.date = key;
+      cell.dataset.count = String(count);
+      cell.addEventListener('mouseenter', e => {
+        const dateLabel = new Date(key + 'T00:00:00').toLocaleDateString('it-IT', {
+          weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+        });
+        tip.textContent = dateLabel + '\n' + count + (count === 1 ? ' messaggio' : ' messaggi');
+        tip.style.display = 'block';
+      });
+      cell.addEventListener('mousemove', e => {
+        const r = wrap.getBoundingClientRect();
+        tip.style.left = (e.clientX - r.left + 12) + 'px';
+        tip.style.top = (e.clientY - r.top + 12) + 'px';
+      });
+      cell.addEventListener('mouseleave', () => { tip.style.display = 'none'; });
       col.appendChild(cell);
     }
     grid.appendChild(col);
   }
   wrap.appendChild(grid);
 
-  // Legenda
+  // Label mesi sotto (1 etichetta per mese, sopra la colonna che inizia quel mese)
+  const monthLabels = el('div', 'heatmap-months');
+  monthLabels.style.gridTemplateColumns = 'repeat(' + weeks + ', 1fr)';
+  let lastMonth = -1;
+  for (let w = 0; w < weeks; w++) {
+    const d = new Date(startDate);
+    d.setDate(startDate.getDate() + w * 7);
+    const m = d.getMonth();
+    const txt = (m !== lastMonth) ? d.toLocaleDateString('it-IT', { month: 'short' }) : '';
+    monthLabels.appendChild(el('span', 'heatmap-month-lbl', txt));
+    if (m !== lastMonth) lastMonth = m;
+  }
+  wrap.appendChild(monthLabels);
+
+  // Legenda intensità
   const legend = el('div', 'heatmap-legend');
   legend.appendChild(el('span', 'heatmap-legend-txt', 'meno'));
   for (let i = 0; i <= 4; i++) legend.appendChild(el('span', 'heatmap-cell i-' + i));
@@ -1745,7 +1790,7 @@ function renderSettings() {
   const chBtn = el('button', 'btn btn-sm btn-green', '📋 Changelog');
   chBtn.title = 'Mostra storico versioni';
   chBtn.addEventListener('click', () => openChangelogModal());
-  const verVal = el('div', 'settings-row-val', '1.0.13');
+  const verVal = el('div', 'settings-row-val', '1.0.14');
   verRight.appendChild(chBtn);
   verRight.appendChild(verVal);
   verRow.appendChild(verRight);

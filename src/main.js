@@ -462,16 +462,26 @@ ipcMain.handle('get-stats', async (_e, { force } = {}) => {
   }
   const cache = STATS.readStatsCache();
   const projects = STATS.listProjects();
-  // Aggregazione leggera per i primi 20 progetti (evita IO eccessivo)
   const projectTokens = {};
   for (const key of projects.slice(0, 20)) {
     projectTokens[key] = STATS.aggregateProjectTokens(key);
   }
+  // Calcola blocklist effettiva (settings.enabledPlugins authoritative + legacy blocklist)
+  const installedRaw = safeReadJson(INSTALLED, { plugins: {} });
+  const pluginIds = Array.isArray(installedRaw.plugins) ? installedRaw.plugins : Object.keys(installedRaw.plugins || {});
+  const settingsForCtx = safeReadJson(SETTINGS, {});
+  const enabledMap = settingsForCtx.enabledPlugins || {};
+  const blockedSet = new Set(pluginIds.filter(id => enabledMap[id] === false));
+
   STATS_CACHE = {
     cache,
     streak: cache ? STATS.computeStreak(cache.dailyActivity) : 0,
+    longestStreak: cache ? STATS.computeLongestStreak(cache.dailyActivity) : 0,
+    peakHour: cache ? STATS.peakHour(cache.hourCounts) : null,
+    favoriteModel: cache ? STATS.favoriteModel(cache.modelUsage) : null,
     totalTokens: cache ? STATS.totalTokensFromModelUsage(cache.modelUsage) : 0,
-    contextBreakdown: STATS.computeContextBreakdown(CLAUDE_DIR),
+    totalMessages: cache?.totalMessages || (cache?.dailyActivity || []).reduce((s, e) => s + (e.messageCount || 0), 0),
+    contextBreakdown: STATS.computeContextBreakdown(CLAUDE_DIR, blockedSet),
     projects: projects.slice(0, 20).map(key => {
       const t = projectTokens[key] || {};
       // path: usa cwd reale dal JSONL se disponibile (più accurato del decode ambiguo

@@ -1,5 +1,13 @@
 # Changelog
 
+## v1.0.14 — 2026-05-21
+
+- Heatmap ridisegnata stile Claude Desktop: 52 settimane × 7 giorni (anno intero), label mesi in basso, tooltip flottante che mostra "Lunedì 21 maggio 2026 · 1.234 messaggi" al passaggio del mouse (era un "?" senza info)
+- 8 KPI sopra heatmap: Sessioni, Messaggi, Token totali, Giorni attivi, Serie attuale, Serie più lunga, Ora di punta, Modello preferito
+- Filtri "Tutto / 30g / 7g" per scegliere il periodo della heatmap
+- Stima contesto realistica: per skill/agent conta solo il frontmatter YAML (indice di discovery), non il body completo. Esclude plugin disabilitati. Aggiunge "Free space" alla barra. Il valore non sfora più il 100% (era 417%)
+- Nota chiarificatrice: "Per skill/agent conta solo il frontmatter — il body viene caricato solo quando invocata"
+
 ## v1.0.13 — 2026-05-21
 
 - Heatmap attività ridisegnata in stile GitHub contribution graph (13 settimane × 7 giorni) con label mesi e legenda intensità

@@ -59,18 +59,33 @@ function estimateContextTokens(filesByCategory) {
   return out;
 }
 
-// Calcola context breakdown stimato in stile claude /context — categorie:
-// System prompt, Memory files (CLAUDE.md), Skills, Agents, Custom agents
-function computeContextBreakdown(claudeDir) {
+// Estrae solo il blocco frontmatter (YAML tra `---`) — è quello che Claude
+// "vede" nell'index delle skill/agent. Il body completo NON è nel contesto
+// finché la skill non viene effettivamente invocata.
+function frontmatterBytes(filePath) {
+  try {
+    const content = fs.readFileSync(filePath, 'utf8');
+    const m = content.match(/^---\r?\n[\s\S]*?\r?\n---/);
+    return m ? Buffer.byteLength(m[0], 'utf8') : 0;
+  } catch { return 0; }
+}
+
+// Calcola context breakdown stimato in stile claude /context.
+// IMPORTANTE: per skill/agent conta SOLO il frontmatter (quello che Claude vede
+// nell'index discovery), non il body completo del file. Senza questo accorgimento
+// si ottengono numeri irrealistici (sommare TUTTI gli SKILL.md gonfia × 10-20).
+function computeContextBreakdown(claudeDir, blockedSet) {
   const cacheDir = path.join(claudeDir, 'plugins', 'cache');
   const skills = [], agents = [];
+  const blocked = blockedSet instanceof Set ? blockedSet : new Set();
 
-  // Scansiona cache globale
   if (fs.existsSync(cacheDir)) {
     for (const mkt of fs.readdirSync(cacheDir)) {
       const mktPath = path.join(cacheDir, mkt);
       try { if (!fs.statSync(mktPath).isDirectory()) continue; } catch { continue; }
       for (const plug of fs.readdirSync(mktPath)) {
+        const fullId = plug + '@' + mkt;
+        if (blocked.has(fullId)) continue;  // plugin disabilitato → escluso dal contesto
         const plugPath = path.join(mktPath, plug);
         try { if (!fs.statSync(plugPath).isDirectory()) continue; } catch { continue; }
         const versions = fs.readdirSync(plugPath).filter(d => {
@@ -99,32 +114,71 @@ function computeContextBreakdown(claudeDir) {
     }
   }
 
-  // Memory files: ~/.claude/CLAUDE.md (global)
+  // Memory files: ~/.claude/CLAUDE.md (globale)
   const globalClaudeMd = path.join(claudeDir, 'CLAUDE.md');
   const memoryFiles = fs.existsSync(globalClaudeMd) ? [globalClaudeMd] : [];
 
-  // System prompt: stima fissa ~6.5k token (non leggibile da disco)
-  const systemPromptTokens = 6500;
+  // System prompt: stima fissa ~6.6k token (hardcoded da Claude Code, non leggibile)
+  const systemPromptTokens = 6600;
 
-  const skillsBytes = skills.reduce((s, f) => { try { return s + fs.statSync(f).size; } catch { return s; } }, 0);
-  const agentsBytes = agents.reduce((s, f) => { try { return s + fs.statSync(f).size; } catch { return s; } }, 0);
+  // Skills/Agents: somma SOLO frontmatter (index discovery cost)
+  const skillsFmBytes = skills.reduce((s, f) => s + frontmatterBytes(f), 0);
+  const agentsFmBytes = agents.reduce((s, f) => s + frontmatterBytes(f), 0);
+  // Memory file letto per intero (è caricato in toto)
   const memoryBytes = memoryFiles.reduce((s, f) => { try { return s + fs.statSync(f).size; } catch { return s; } }, 0);
 
-  const skillsTok  = Math.round(skillsBytes / 3.5);
-  const agentsTok  = Math.round(agentsBytes / 3.5);
+  const skillsTok  = Math.round(skillsFmBytes / 3.5);
+  const agentsTok  = Math.round(agentsFmBytes / 3.5);
   const memoryTok  = Math.round(memoryBytes / 3.5);
-  const totalTok   = systemPromptTokens + skillsTok + agentsTok + memoryTok;
+  const usedTok    = systemPromptTokens + skillsTok + agentsTok + memoryTok;
   const contextMax = 200000;
+  const freeTok    = Math.max(0, contextMax - usedTok);
 
   return {
     systemPrompt: { tokens: systemPromptTokens, label: 'System prompt' },
-    memoryFiles:  { tokens: memoryTok,  bytes: memoryBytes, count: memoryFiles.length, label: 'Memory files (CLAUDE.md)' },
-    skills:       { tokens: skillsTok,  bytes: skillsBytes, count: skills.length,      label: 'Skills (SKILL.md)' },
-    agents:       { tokens: agentsTok,  bytes: agentsBytes, count: agents.length,      label: 'Agents (.md)' },
-    totalEstimate: totalTok,
+    memoryFiles:  { tokens: memoryTok,  count: memoryFiles.length, label: 'Memory files' },
+    skills:       { tokens: skillsTok,  count: skills.length,      label: 'Skills (index)' },
+    agents:       { tokens: agentsTok,  count: agents.length,      label: 'Agents (index)' },
+    freeSpace:    { tokens: freeTok,    label: 'Free space' },
+    totalEstimate: usedTok,
     contextWindow: contextMax,
-    fillPercent: Math.round((totalTok / contextMax) * 100),
+    fillPercent: Math.min(100, Math.round((usedTok / contextMax) * 100)),
   };
+}
+
+// Calcola "longest streak" — la serie consecutiva di giorni attivi più lunga
+function computeLongestStreak(dailyActivity) {
+  if (!Array.isArray(dailyActivity) || !dailyActivity.length) return 0;
+  const dates = dailyActivity.map(e => e.date).sort();
+  let longest = 1, current = 1;
+  for (let i = 1; i < dates.length; i++) {
+    const prev = new Date(dates[i - 1] + 'T00:00:00');
+    const curr = new Date(dates[i]     + 'T00:00:00');
+    const diff = Math.round((curr - prev) / 86400000);
+    if (diff === 1) { current++; if (current > longest) longest = current; }
+    else current = 1;
+  }
+  return longest;
+}
+
+// Trova ora di punta (0-23) e modello preferito dai dati cache
+function peakHour(hourCounts) {
+  if (!hourCounts || typeof hourCounts !== 'object') return null;
+  let best = null, bestCount = -1;
+  for (const [h, c] of Object.entries(hourCounts)) {
+    if (c > bestCount) { bestCount = c; best = h; }
+  }
+  return best === null ? null : Number(best);
+}
+
+function favoriteModel(modelUsage) {
+  if (!modelUsage || typeof modelUsage !== 'object') return null;
+  let best = null, bestTotal = -1;
+  for (const [m, u] of Object.entries(modelUsage)) {
+    const total = (u.inputTokens||0) + (u.outputTokens||0) + (u.cacheReadInputTokens||0) + (u.cacheCreationInputTokens||0);
+    if (total > bestTotal) { bestTotal = total; best = m; }
+  }
+  return best;
 }
 
 // Estrae cwd dal primo messaggio JSONL valido (Claude Code include il campo cwd
@@ -189,9 +243,12 @@ function listProjects() {
 module.exports = {
   readStatsCache,
   computeStreak,
+  computeLongestStreak,
   totalTokensFromModelUsage,
   estimateContextTokens,
   computeContextBreakdown,
   aggregateProjectTokens,
   listProjects,
+  peakHour,
+  favoriteModel,
 };
