@@ -37,6 +37,7 @@ const {
 const { buildAppMenu, setupAboutPanel } = require('./lib/menu');
 const { checkLatestRelease } = require('./lib/updater');
 const { readChangelogRaw, parseChangelog } = require('./lib/changelog');
+const STATS = require('./lib/stats');
 
 /* ── CONFIG PATHS ──────────────────────────────────────────────────────── */
 
@@ -448,6 +449,52 @@ ipcMain.handle('clear-activity-log', async () => clearActivityLog());
 ipcMain.handle('get-changelog', async () => {
   const raw = readChangelogRaw();
   return raw ? parseChangelog(raw) : [];
+});
+
+// v1.0.12 — Sezione Stats (cache 60s per evitare IO ripetuto su tab change)
+let STATS_CACHE = null;
+let STATS_CACHE_AT = 0;
+const STATS_TTL_MS = 60 * 1000;
+
+ipcMain.handle('get-stats', async (_e, { force } = {}) => {
+  if (!force && STATS_CACHE && Date.now() - STATS_CACHE_AT < STATS_TTL_MS) {
+    return STATS_CACHE;
+  }
+  const cache = STATS.readStatsCache();
+  const projects = STATS.listProjects();
+  // Aggregazione leggera per i primi 20 progetti (evita IO eccessivo)
+  const projectTokens = {};
+  for (const key of projects.slice(0, 20)) {
+    projectTokens[key] = STATS.aggregateProjectTokens(key);
+  }
+  STATS_CACHE = {
+    cache,
+    streak: cache ? STATS.computeStreak(cache.dailyActivity) : 0,
+    totalTokens: cache ? STATS.totalTokensFromModelUsage(cache.modelUsage) : 0,
+    projects: projects.slice(0, 20).map(key => {
+      const t = projectTokens[key] || {};
+      // path: usa cwd reale dal JSONL se disponibile (più accurato del decode ambiguo
+      // della chiave dir). Fallback: la chiave grezza (utente la riconosce).
+      return { key, path: t.cwd || key, sessions: t.sessions || 0, totalTokens: t.totalTokens || 0 };
+    }),
+    settings: safeReadJson(SETTINGS, {}),
+  };
+  STATS_CACHE_AT = Date.now();
+  return STATS_CACHE;
+});
+
+ipcMain.handle('update-settings', async (_e, patch) => {
+  if (typeof patch !== 'object' || patch === null) {
+    return { success: false, error: 'Patch non valido.' };
+  }
+  try {
+    const current = safeReadJson(SETTINGS, {});
+    const next = { ...current, ...patch };
+    fs.writeFileSync(SETTINGS, JSON.stringify(next, null, 2), 'utf8');
+    return { success: true };
+  } catch (e) {
+    return { success: false, error: e.message };
+  }
 });
 
 ipcMain.handle('get-state', async () => readState());

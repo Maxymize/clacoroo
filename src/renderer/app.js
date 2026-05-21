@@ -247,6 +247,7 @@ function render() {
     marketplaces:'Marketplace',
     skills:      'Skill',
     agents:      'Agent',
+    stats:       'Stats',
     settings:    'Impostazioni',
   };
   $('topbar-title').textContent = sectionTitles[state.section] || '';
@@ -287,6 +288,7 @@ function render() {
     case 'marketplaces': renderMarketplaces();break;
     case 'skills':       renderSkills();      break;
     case 'agents':       renderAgents();      break;
+    case 'stats':        renderStats();       break;
     case 'settings':     renderSettings();    break;
   }
 }
@@ -1090,6 +1092,257 @@ function renderListSection(items, key, buildChip, searchFn, gridCls) {
   inp.focus();
 }
 
+/* ── STATS (v1.0.12) ──────────────────────────────────────────────────── */
+let statsCache = null;
+let statsActiveTab = 'overview';
+let statsRenderToken = 0;
+
+async function renderStats() {
+  const myToken = ++statsRenderToken;
+  const wrap = el('div', 'stats-wrap');
+  // Tab strip
+  const tabs = ['overview', 'modelli', 'progetti', 'config'];
+  const tabLabels = { overview: 'Overview', modelli: 'Modelli', progetti: 'Per-progetto', config: 'Config' };
+  const tabBar = el('div', 'stats-tabs');
+  tabs.forEach(t => {
+    const btn = el('button', 'stats-tab' + (t === statsActiveTab ? ' active' : ''), tabLabels[t]);
+    btn.addEventListener('click', () => { statsActiveTab = t; renderStats(); });
+    tabBar.appendChild(btn);
+  });
+  wrap.appendChild(tabBar);
+
+  const content = el('div', 'stats-content');
+  wrap.appendChild(content);
+  setContent(wrap);
+
+  // Riusa cache se disponibile (evita IO ripetuto su cambio tab)
+  if (statsCache) {
+    paintStatsTab(content, statsCache);
+    return;
+  }
+
+  content.appendChild(el('div', 'stats-loading', 'Caricamento statistiche…'));
+  const data = await window.claudeAPI.getStats();
+  if (myToken !== statsRenderToken) return;  // race guard: tab cambiata
+  statsCache = data;
+  content.textContent = '';
+  paintStatsTab(content, data);
+}
+
+function paintStatsTab(content, data) {
+  if (!data.cache && statsActiveTab !== 'config') {
+    content.appendChild(el('div', 'stats-empty',
+      'stats-cache.json non disponibile. Claude Code lo crea quando inizi a usarlo: usa la CLI o IDE per qualche sessione e tornerai a vedere statistiche qui.'));
+    return;
+  }
+  if (statsActiveTab === 'overview') renderStatsOverview(content, data);
+  else if (statsActiveTab === 'modelli')  renderStatsModels(content, data);
+  else if (statsActiveTab === 'progetti') renderStatsProjects(content, data);
+  else if (statsActiveTab === 'config')   renderStatsConfig(content, data);
+}
+
+function fmtNum(n) {
+  if (!n) return '0';
+  if (n >= 1e9) return (n / 1e9).toFixed(1) + 'B';
+  if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M';
+  if (n >= 1e3) return (n / 1e3).toFixed(1) + 'K';
+  return String(n);
+}
+
+function renderStatsOverview(container, data) {
+  const c = data.cache;
+  // KPI row
+  const kpiGrid = el('div', 'kpi-grid');
+  [
+    { num: fmtNum(data.totalTokens),       label: 'Token totali',   color: '#6a9bcc' },
+    { num: c.totalSessions || 0,           label: 'Sessioni',       color: '#d97757' },
+    { num: data.streak,                    label: 'Streak giorni',  color: '#788c5d' },
+    { num: (c.dailyActivity || []).length, label: 'Giorni attivi',  color: '#e89478' },
+  ].forEach(k => {
+    const card = el('div', 'kpi-card');
+    card.style.setProperty('--kpi-color', k.color);
+    card.appendChild(el('div', 'kpi-num', String(k.num)));
+    card.appendChild(el('div', 'kpi-label', k.label));
+    kpiGrid.appendChild(card);
+  });
+  container.appendChild(kpiGrid);
+
+  // Heatmap attività ultimi ~90 giorni
+  container.appendChild(el('div', 'list-section-title', 'Attività'));
+  container.appendChild(buildHeatmap(c.dailyActivity || []));
+
+  // Context breakdown stimato (skill + agent dimensione file ÷ 3.5)
+  container.appendChild(el('div', 'list-section-title', 'Stima contesto'));
+  const total = state.plugins.reduce((s, p) => s + (p.skills?.length || 0) + (p.agents?.length || 0), 0);
+  const summary = el('div', 'stats-context-summary',
+    'Ci sono ' + total + ' elementi (skill + agent) tra plugin globali e locali. Stima byte/3.5 token totale: richiede file-read per ogni elemento (non eseguito in real-time per performance).');
+  container.appendChild(summary);
+}
+
+function buildHeatmap(dailyActivity) {
+  const byDate = {};
+  let maxCount = 0;
+  for (const e of dailyActivity) {
+    byDate[e.date] = e.messageCount || 0;
+    if (e.messageCount > maxCount) maxCount = e.messageCount;
+  }
+  const days = 90;
+  const today = new Date(); today.setHours(0,0,0,0);
+  const wrap = el('div', 'heatmap');
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date(today);
+    d.setDate(today.getDate() - i);
+    const key = d.toISOString().slice(0, 10);
+    const count = byDate[key] || 0;
+    const intensity = count === 0 ? 0 : Math.min(4, Math.ceil((count / Math.max(maxCount, 1)) * 4));
+    const cell = el('div', 'heatmap-cell i-' + intensity);
+    cell.title = key + ' · ' + count + ' messaggi';
+    wrap.appendChild(cell);
+  }
+  return wrap;
+}
+
+function renderStatsModels(container, data) {
+  const models = data.cache.modelUsage || {};
+  const total = data.totalTokens || 1;
+
+  container.appendChild(el('div', 'list-section-title', 'Token per modello'));
+  Object.entries(models)
+    .sort((a, b) => {
+      const sa = (a[1].inputTokens||0)+(a[1].outputTokens||0)+(a[1].cacheReadInputTokens||0)+(a[1].cacheCreationInputTokens||0);
+      const sb = (b[1].inputTokens||0)+(b[1].outputTokens||0)+(b[1].cacheReadInputTokens||0)+(b[1].cacheCreationInputTokens||0);
+      return sb - sa;
+    })
+    .forEach(([model, u]) => {
+      const sum = (u.inputTokens||0)+(u.outputTokens||0)+(u.cacheReadInputTokens||0)+(u.cacheCreationInputTokens||0);
+      const pct = ((sum / total) * 100).toFixed(1);
+      const row = el('div', 'model-row');
+      row.appendChild(el('div', 'model-name', model));
+      const bar = el('div', 'model-bar');
+      const fill = el('div', 'model-bar-fill');
+      fill.style.width = pct + '%';
+      bar.appendChild(fill);
+      row.appendChild(bar);
+      row.appendChild(el('div', 'model-val', fmtNum(sum) + ' (' + pct + '%)'));
+      const detail = el('div', 'model-detail',
+        'in ' + fmtNum(u.inputTokens||0) +
+        ' · out ' + fmtNum(u.outputTokens||0) +
+        ' · cache-read ' + fmtNum(u.cacheReadInputTokens||0) +
+        ' · cache-create ' + fmtNum(u.cacheCreationInputTokens||0));
+      container.appendChild(row);
+      container.appendChild(detail);
+    });
+
+  // Daily histogram
+  const dmt = data.cache.dailyModelTokens || [];
+  if (dmt.length) {
+    container.appendChild(el('div', 'list-section-title', 'Token giornalieri'));
+    const last30 = dmt.slice(-30);
+    const maxDay = Math.max(...last30.map(d => Object.values(d.tokensByModel || {}).reduce((s, v) => s + v, 0)));
+    const chart = el('div', 'daily-chart');
+    last30.forEach(d => {
+      const total = Object.values(d.tokensByModel || {}).reduce((s, v) => s + v, 0);
+      const h = maxDay ? Math.max(2, Math.round((total / maxDay) * 100)) : 2;
+      const bar = el('div', 'daily-bar');
+      bar.style.height = h + '%';
+      bar.title = d.date + ' · ' + fmtNum(total) + ' token';
+      chart.appendChild(bar);
+    });
+    container.appendChild(chart);
+    container.appendChild(el('div', 'daily-chart-legend', 'Ultimi 30 giorni — hover per dettagli'));
+  }
+}
+
+function renderStatsProjects(container, data) {
+  container.appendChild(el('div', 'list-section-title', 'Progetti Claude Code'));
+
+  if (!data.projects.length) {
+    container.appendChild(el('div', 'stats-empty', 'Nessun progetto trovato in ~/.claude/projects/'));
+    return;
+  }
+
+  const sorted = [...data.projects].sort((a, b) => (b.totalTokens || 0) - (a.totalTokens || 0));
+  sorted.forEach(p => {
+    const row = el('div', 'project-row');
+    row.appendChild(el('div', 'project-name', p.path.split('/').pop() || p.key));
+    row.appendChild(el('div', 'project-path', p.path));
+    const meta = el('div', 'project-meta');
+    meta.appendChild(el('span', 'project-meta-val', (p.sessions || 0) + ' sessioni'));
+    meta.appendChild(el('span', 'project-meta-val', fmtNum(p.totalTokens || 0) + ' token'));
+    row.appendChild(meta);
+    container.appendChild(row);
+  });
+
+  container.appendChild(el('div', 'daily-chart-legend',
+    'Mostrati i primi 20 progetti — token aggregati dai file JSONL di sessione'));
+}
+
+function renderStatsConfig(container, data) {
+  container.appendChild(el('div', 'list-section-title', 'Configurazione Claude Code'));
+  const warn = el('div', 'stats-warning',
+    'Le modifiche qui sono immediate — equivalenti a `claude /config`. Modifica con cautela: '
+    + 'la sintassi/valori errati possono rompere Claude Code.');
+  container.appendChild(warn);
+
+  const settings = data.settings || {};
+
+  function configRow(key, label, type, opts) {
+    const row = el('div', 'settings-row');
+    const left = el('div');
+    left.appendChild(el('div', 'settings-row-label', label));
+    left.appendChild(el('div', 'settings-row-desc', '~/.claude/settings.json → ' + key));
+    row.appendChild(left);
+
+    let input;
+    if (type === 'select') {
+      input = el('select', 'config-select');
+      (opts || []).forEach(o => {
+        const opt = el('option', null, o);
+        opt.value = o;
+        input.appendChild(opt);
+      });
+      input.value = settings[key] || (opts && opts[0]) || '';
+    } else if (type === 'toggle') {
+      const toggleWrap = el('label', 'toggle');
+      input = el('input');
+      input.type = 'checkbox';
+      input.checked = !!settings[key];
+      const track = el('span', 'toggle-track');
+      const thumb = el('span', 'toggle-thumb');
+      toggleWrap.appendChild(input);
+      toggleWrap.appendChild(track);
+      toggleWrap.appendChild(thumb);
+      input.addEventListener('change', async () => {
+        const r = await window.claudeAPI.updateSettings({ [key]: input.checked });
+        if (r.success) toast(label + (input.checked ? ' attivato' : ' disattivato'), 'success');
+        else toast('Errore salvataggio: ' + r.error, 'error');
+      });
+      row.appendChild(toggleWrap);
+      container.appendChild(row);
+      return;
+    } else {
+      input = el('input', 'config-input');
+      input.value = settings[key] || '';
+    }
+    if (type === 'select') {
+      input.addEventListener('change', async () => {
+        const r = await window.claudeAPI.updateSettings({ [key]: input.value });
+        if (r.success) toast(label + ' impostato a: ' + input.value, 'success');
+        else toast('Errore salvataggio: ' + r.error, 'error');
+      });
+    }
+    row.appendChild(input);
+    container.appendChild(row);
+  }
+
+  configRow('alwaysThinkingEnabled', 'Always Thinking', 'toggle');
+  configRow('voiceEnabled', 'Voice', 'toggle');
+  configRow('model', 'Modello predefinito', 'select',
+    ['default', 'claude-opus-4-7', 'claude-sonnet-4-6', 'claude-haiku-4-5-20251001']);
+  configRow('theme', 'Tema', 'select', ['auto', 'dark', 'light']);
+  configRow('language', 'Lingua', 'select', ['auto', 'en', 'it']);
+}
+
 /* ── SETTINGS ─────────────────────────────────────────────────────────── */
 function renderSettings() {
   if (!state.rawData) return;
@@ -1359,7 +1612,7 @@ function renderSettings() {
   const chBtn = el('button', 'btn btn-sm btn-green', '📋 Changelog');
   chBtn.title = 'Mostra storico versioni';
   chBtn.addEventListener('click', () => openChangelogModal());
-  const verVal = el('div', 'settings-row-val', '1.0.11');
+  const verVal = el('div', 'settings-row-val', '1.0.12');
   verRight.appendChild(chBtn);
   verRight.appendChild(verVal);
   verRow.appendChild(verRight);

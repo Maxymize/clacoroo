@@ -1112,6 +1112,190 @@ body {
 .md-content strong { color: var(--text); font-weight: 700; }
 .md-content em     { color: var(--text); font-style: italic; }
 
+/* ── STATS SECTION (v1.0.12) ──────────────────────────────────────────── */
+.stats-wrap { display: flex; flex-direction: column; gap: 20px; }
+.stats-tabs {
+  display: flex; gap: 4px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0;
+}
+.stats-tab {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  padding: 10px 18px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  font-family: inherit;
+  transition: color .15s, border-color .15s;
+}
+.stats-tab:hover { color: var(--text); }
+.stats-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+.stats-content { display: flex; flex-direction: column; gap: 16px; }
+.stats-loading, .stats-empty {
+  padding: 40px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+.stats-warning {
+  background: rgba(245,158,11,.10);
+  border-left: 3px solid var(--yellow);
+  padding: 10px 14px;
+  border-radius: 0 6px 6px 0;
+  font-size: 12.5px;
+  color: var(--text);
+  line-height: 1.5;
+}
+.stats-context-summary {
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.6;
+  padding: 12px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+/* Heatmap */
+.heatmap {
+  display: grid;
+  grid-template-columns: repeat(15, 1fr);
+  gap: 3px;
+  padding: 8px 0;
+}
+.heatmap-cell {
+  aspect-ratio: 1;
+  border-radius: 2px;
+  background: var(--surface3);
+  cursor: help;
+  transition: transform .12s;
+}
+.heatmap-cell:hover { transform: scale(1.4); }
+.heatmap-cell.i-0 { background: var(--surface2); }
+.heatmap-cell.i-1 { background: rgba(217,119,87,.25); }
+.heatmap-cell.i-2 { background: rgba(217,119,87,.45); }
+.heatmap-cell.i-3 { background: rgba(217,119,87,.70); }
+.heatmap-cell.i-4 { background: var(--accent); box-shadow: 0 0 4px var(--accent-glow); }
+
+/* Model rows */
+.model-row {
+  display: grid;
+  grid-template-columns: 220px 1fr 140px;
+  gap: 12px;
+  align-items: center;
+  margin-top: 8px;
+}
+.model-name {
+  font-family: "SF Mono", "Fira Code", monospace;
+  font-size: 12px;
+  color: var(--text);
+  font-weight: 600;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.model-bar {
+  height: 18px;
+  background: var(--surface2);
+  border-radius: 9px;
+  overflow: hidden;
+}
+.model-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--accent2));
+  border-radius: 9px;
+  transition: width .4s;
+}
+.model-val {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-align: right;
+}
+.model-detail {
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-left: 232px;
+  margin-bottom: 8px;
+  font-family: "SF Mono", monospace;
+}
+
+/* Daily chart */
+.daily-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 120px;
+  padding: 10px 0;
+}
+.daily-bar {
+  flex: 1;
+  background: var(--accent);
+  min-height: 2px;
+  border-radius: 2px 2px 0 0;
+  opacity: .7;
+  transition: opacity .15s, transform .15s;
+}
+.daily-bar:hover { opacity: 1; transform: scaleY(1.05); }
+.daily-chart-legend {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-align: center;
+  margin-top: 4px;
+}
+
+/* Per-project */
+.project-row {
+  display: grid;
+  grid-template-columns: 200px 1fr 200px;
+  gap: 12px;
+  align-items: center;
+  padding: 10px 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius-sm);
+  margin-bottom: 6px;
+}
+.project-name {
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--text);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.project-path {
+  font-family: "SF Mono", "Fira Code", monospace;
+  font-size: 11px;
+  color: var(--text-muted);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.project-meta { display: flex; gap: 10px; justify-content: flex-end; }
+.project-meta-val {
+  font-size: 11px;
+  color: var(--text);
+  background: var(--surface2);
+  padding: 3px 10px;
+  border-radius: 99px;
+  font-family: "SF Mono", monospace;
+}
+
+/* Config inputs */
+.config-input, .config-select {
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius-sm);
+  padding: 6px 10px;
+  font-size: 12.5px;
+  color: var(--text);
+  font-family: inherit;
+  outline: none;
+  min-width: 200px;
+}
+.config-input:focus, .config-select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
 /* ── SCOPE BADGE (v1.0.11) ────────────────────────────────────────────── */
 .scope-badge {
   display: inline-block;

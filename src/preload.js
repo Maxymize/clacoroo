@@ -19,6 +19,8 @@ contextBridge.exposeInMainWorld('claudeAPI', {
   addTrackedProject:    ()                => ipcRenderer.invoke('add-tracked-project'),
   removeTrackedProject: (p)               => ipcRenderer.invoke('remove-tracked-project', p),
   openDirectory:        (p)               => ipcRenderer.invoke('open-directory',         p),
+  getStats:             ()                => ipcRenderer.invoke('get-stats'),
+  updateSettings:       (patch)           => ipcRenderer.invoke('update-settings',        patch),
   getState:           ()                  => ipcRenderer.invoke('get-state'),
   setState:           (patch)             => ipcRenderer.invoke('set-state',          patch),
   checkUpdates:       (force)             => ipcRenderer.invoke('check-updates',     { force: !!force }),

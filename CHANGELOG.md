@@ -1,5 +1,16 @@
 # Changelog
 
+## v1.0.12 — 2026-05-21
+
+- Nuova sezione "Stats" nella sidebar con 4 tab:
+  - **Overview**: KPI (token totali, sessioni, streak, giorni attivi) e heatmap attività ultimi 90 giorni
+  - **Modelli**: barre token per modello (input/output/cache) e istogramma giornaliero ultimi 30 giorni
+  - **Per-progetto**: lista progetti Claude Code con sessioni e token aggregati, path reale via lettura JSONL
+  - **Config**: editor visuale per modificare al volo `~/.claude/settings.json` (modello, tema, lingua, Always Thinking, Voice)
+- Heatmap stile GitHub contribution graph, colori palette CLACOROO
+- Caching server-side 60s + caching client-side per evitare re-IO ad ogni cambio tab
+- Path progetti decodificato leggendo il campo `cwd` dei file JSONL (più affidabile del decode ambiguo della directory)
+
 ## v1.0.11 — 2026-05-21
 
 - Scope locale/globale: CLACOROO ora può tracciare i progetti che usi e mostrare anche i plugin/skill/agent installati nel loro `.claude/` locale
