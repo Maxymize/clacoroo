@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.0.26 — 2026-05-21
+
+- Card KPI: rimossa la linea colorata in alto, sostituita con un glow morbido del colore di accent che avvolge tutta la card (e si intensifica leggermente in hover)
+- Bordo della card tinto del colore di accent ma desaturato, in modo coerente con la palette dark
+
 ## v1.0.25 — 2026-05-21
 
 - Dashboard: spazio aggiuntivo tra le sezioni "Marketplace" e "MCP server" per migliorarne la leggibilità

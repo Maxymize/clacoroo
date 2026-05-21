@@ -828,17 +828,20 @@ body {
 
 .kpi-card {
   background: var(--surface);
-  border: 1px solid var(--border);
+  border: 1px solid color-mix(in srgb, var(--kpi-color, var(--border)) 28%, var(--border));
   border-radius: var(--radius);
   padding: 14px 16px;
   position: relative;
-  overflow: hidden;
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--kpi-color, transparent) 18%, transparent),
+    0 0 22px -8px color-mix(in srgb, var(--kpi-color, transparent) 55%, transparent);
+  transition: box-shadow .2s ease, border-color .2s ease, transform .15s ease;
 }
-.kpi-card::before {
-  content: "";
-  position: absolute; left: 0; top: 0; right: 0;
-  height: 2px;
-  background: var(--kpi-color, var(--accent));
+.kpi-card:hover {
+  border-color: color-mix(in srgb, var(--kpi-color, var(--border)) 45%, var(--border));
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--kpi-color, transparent) 32%, transparent),
+    0 0 30px -6px color-mix(in srgb, var(--kpi-color, transparent) 70%, transparent);
 }
 
 .kpi-num {
