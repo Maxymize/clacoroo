@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.0.16 — 2026-05-21
+
+- KPI "Sessioni" ora conta i file `.jsonl` reali nella cartella `~/.claude/projects/` invece di dipendere dalla cache aggregata (che era sottostimata di qualche unità)
+- I filtri 30g / 7g applicano il count reale filtrando i file per data di modifica, allineando il valore mostrato a quello di `claude /stats`
+
 ## v1.0.15 — 2026-05-21
 
 Allineate le statistiche al comando `claude /stats` ufficiale:

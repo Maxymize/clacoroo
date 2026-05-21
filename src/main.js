@@ -473,6 +473,13 @@ ipcMain.handle('get-stats', async (_e, { force } = {}) => {
   const enabledMap = settingsForCtx.enabledPlugins || {};
   const blockedSet = new Set(pluginIds.filter(id => enabledMap[id] === false));
 
+  // Count reale sessioni dai file .jsonl (più accurato di cache.totalSessions)
+  const sessionsReal = {
+    all: STATS.countRealSessions(),
+    d30: STATS.countRealSessions(30),
+    d7:  STATS.countRealSessions(7),
+  };
+
   STATS_CACHE = {
     cache,
     streak: cache ? STATS.computeStreak(cache.dailyActivity) : 0,
@@ -481,6 +488,7 @@ ipcMain.handle('get-stats', async (_e, { force } = {}) => {
     favoriteModel: cache ? STATS.favoriteModel(cache.modelUsage) : null,
     totalTokens: cache ? STATS.totalTokensFromModelUsage(cache.modelUsage) : 0,
     totalMessages: cache?.totalMessages || (cache?.dailyActivity || []).reduce((s, e) => s + (e.messageCount || 0), 0),
+    sessionsReal,
     contextBreakdown: STATS.computeContextBreakdown(CLAUDE_DIR, blockedSet),
     projects: projects.slice(0, 20).map(key => {
       const t = projectTokens[key] || {};

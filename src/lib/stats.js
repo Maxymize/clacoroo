@@ -309,6 +309,32 @@ function listProjects() {
     });
 }
 
+// Conta file .jsonl reali (= sessioni) in tutti i progetti, opzionalmente
+// filtrati per mtime degli ultimi N giorni. Più accurato di cache.totalSessions
+// che è aggiornato solo periodicamente da Claude Code.
+function countRealSessions(daysFilter) {
+  if (!fs.existsSync(PROJECTS_DIR)) return { total: 0, byRange: {} };
+  const cutoffMs = daysFilter
+    ? Date.now() - daysFilter * 24 * 3600 * 1000
+    : 0;
+  let count = 0;
+  for (const dir of fs.readdirSync(PROJECTS_DIR)) {
+    const dirPath = path.join(PROJECTS_DIR, dir);
+    try {
+      if (!fs.statSync(dirPath).isDirectory()) continue;
+      for (const f of fs.readdirSync(dirPath)) {
+        if (!f.endsWith('.jsonl')) continue;
+        if (!cutoffMs) { count++; continue; }
+        try {
+          const m = fs.statSync(path.join(dirPath, f)).mtimeMs;
+          if (m >= cutoffMs) count++;
+        } catch { /* skip */ }
+      }
+    } catch { /* skip */ }
+  }
+  return count;
+}
+
 module.exports = {
   readStatsCache,
   computeStreak,
@@ -320,6 +346,7 @@ module.exports = {
   aggregateForRange,
   mostActiveDay,
   listProjects,
+  countRealSessions,
   peakHour,
   favoriteModel,
 };

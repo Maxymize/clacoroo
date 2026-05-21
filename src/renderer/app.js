@@ -1152,12 +1152,15 @@ function fmtNum(n) {
 
 let statsRange = 'all';  // all | 30 | 7
 
-function aggregateRangeClient(cache, range) {
+function aggregateRangeClient(data, range) {
   // Mirror della logica server-side: ricalcola KPI in base al range scelto
+  const cache            = data?.cache;
   const dailyActivity    = cache?.dailyActivity || [];
   const dailyModelTokens = cache?.dailyModelTokens || [];
   const modelUsage       = cache?.modelUsage || {};
   const hourCounts       = cache?.hourCounts || {};
+  // Sessioni reali contate dai file .jsonl (più accurato di cache.totalSessions)
+  const sessionsReal     = data?.sessionsReal || {};
 
   // Total input+output (escluso cache_read/creation che gonfiavano 400×)
   function tokensOf(mu) {
@@ -1179,7 +1182,7 @@ function aggregateRangeClient(cache, range) {
       if (t > favTot) { favTot = t; favModel = m; }
     }
     return {
-      sessions:    cache?.totalSessions || dailyActivity.reduce((s, e) => s + (e.sessionCount || 0), 0),
+      sessions:    sessionsReal.all || cache?.totalSessions || dailyActivity.reduce((s, e) => s + (e.sessionCount || 0), 0),
       messages:    cache?.totalMessages || dailyActivity.reduce((s, e) => s + (e.messageCount || 0), 0),
       tokens:      tokensOf(modelUsage),
       activeDays:  dailyActivity.length,
@@ -1208,8 +1211,14 @@ function aggregateRangeClient(cache, range) {
   }
   const favModel = Object.entries(tokensByModel).sort((a, b) => b[1] - a[1])[0]?.[0] || null;
 
+  // Sessions from real .jsonl mtime filtered count (more accurate than dailyActivity rollup)
+  const realByRange = days === 30 ? sessionsReal.d30 : days === 7 ? sessionsReal.d7 : null;
+  const sessions = (realByRange != null)
+    ? realByRange
+    : filteredActivity.reduce((s, e) => s + (e.sessionCount || 0), 0);
+
   return {
-    sessions:    filteredActivity.reduce((s, e) => s + (e.sessionCount || 0), 0),
+    sessions,
     messages:    filteredActivity.reduce((s, e) => s + (e.messageCount || 0), 0),
     tokens:      totalTok,
     activeDays:  filteredActivity.length,
@@ -1222,7 +1231,7 @@ function aggregateRangeClient(cache, range) {
 
 function renderStatsOverview(container, data) {
   const c = data.cache;
-  const kpi = aggregateRangeClient(c, statsRange);
+  const kpi = aggregateRangeClient(data, statsRange);
 
   // Filtri range
   const rangeBar = el('div', 'stats-range');
@@ -1866,7 +1875,7 @@ function renderSettings() {
   const chBtn = el('button', 'btn btn-sm btn-green', '📋 Changelog');
   chBtn.title = 'Mostra storico versioni';
   chBtn.addEventListener('click', () => openChangelogModal());
-  const verVal = el('div', 'settings-row-val', '1.0.15');
+  const verVal = el('div', 'settings-row-val', '1.0.16');
   verRight.appendChild(chBtn);
   verRight.appendChild(verVal);
   verRow.appendChild(verRight);
