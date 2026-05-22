@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.0.42 — 2026-05-22
+
+- Fix: percentuali Token per modello in Stats > Modelli (Opus 4.7 mostrava 24622% al posto di 57.3%). Il bug era un'incoerenza fra numeratore (somma di tutti i tipi: input+output+cache_read+cache_create) e denominatore (`data.totalTokens` che dal v1.0.15 conta solo input+output per allineamento con `claude /stats`). Adesso il totale viene calcolato localmente con tutti i tipi, somma dei 6 modelli = 100%
+
 ## v1.0.41 — 2026-05-22
 
 - Sezione Config: cambiare un'opzione (toggle, select, slider) non fa più "ricaricare" la pagina con 1-2 secondi di lag. La UI è già aggiornata ottimisticamente al click, e quando il filesystem watch rileva la nostra stessa modifica saltiamo il re-render

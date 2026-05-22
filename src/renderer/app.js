@@ -1725,17 +1725,22 @@ function buildHeatmap(dailyActivity, range) {
 
 function renderStatsModels(container, data) {
   const models = data.cache.modelUsage || {};
-  const total = data.totalTokens || 1;
+
+  // v1.0.42 — Bug fix: il denominatore deve essere coerente con il numeratore.
+  // data.totalTokens dal v1.0.15 conta solo input+output (per allineamento
+  // con `claude /stats`), mentre qui sommiamo TUTTI i tipi (input + output +
+  // cache_read + cache_create). Calcoliamo localmente il totale completo.
+  function sumAllTypes(u) {
+    return (u.inputTokens||0) + (u.outputTokens||0)
+         + (u.cacheReadInputTokens||0) + (u.cacheCreationInputTokens||0);
+  }
+  const total = Object.values(models).reduce((s, u) => s + sumAllTypes(u), 0) || 1;
 
   container.appendChild(el('div', 'list-section-title', 'Token per modello'));
   Object.entries(models)
-    .sort((a, b) => {
-      const sa = (a[1].inputTokens||0)+(a[1].outputTokens||0)+(a[1].cacheReadInputTokens||0)+(a[1].cacheCreationInputTokens||0);
-      const sb = (b[1].inputTokens||0)+(b[1].outputTokens||0)+(b[1].cacheReadInputTokens||0)+(b[1].cacheCreationInputTokens||0);
-      return sb - sa;
-    })
+    .sort((a, b) => sumAllTypes(b[1]) - sumAllTypes(a[1]))
     .forEach(([model, u]) => {
-      const sum = (u.inputTokens||0)+(u.outputTokens||0)+(u.cacheReadInputTokens||0)+(u.cacheCreationInputTokens||0);
+      const sum = sumAllTypes(u);
       const pct = ((sum / total) * 100).toFixed(1);
       const row = el('div', 'model-row');
       row.appendChild(el('div', 'model-name', model));
@@ -2938,7 +2943,7 @@ function renderSettings() {
   infoRow.appendChild(infoLeft);
   const infoRight = el('div');
   infoRight.style.cssText = 'display:flex;gap:10px;align-items:center;';
-  const verVal = el('div', 'settings-row-val', '1.0.41');
+  const verVal = el('div', 'settings-row-val', '1.0.42');
   const chBtn = btnWithIcon('btn btn-sm btn-green btn-with-icon', 'changelog', ' Changelog');
   chBtn.title = 'Mostra storico versioni';
   chBtn.addEventListener('click', () => openChangelogModal());
