@@ -787,9 +787,30 @@ function applyPluginFilters(grid) {
   if (countEl) countEl.textContent = visible + ' di ' + state.plugins.length + ' plugin';
 }
 
-// v1.0.46 — Modal "Contenuto plugin": mostra tutte le skill/agent/hook/MCP
-// di un plugin. Ogni voce è cliccabile e porta alla sezione dedicata con
-// filtro pre-applicato.
+// Helper condiviso dai modal Contenuto plugin / Plugin marketplace:
+// aggiunge una sezione con titolo e una lista di item cliccabili.
+// extraRender(item, infoBlock) consente di iniettare badge o info aggiuntive.
+function appendModalItemList(content, sectionTitle, items, onClick, extraRender) {
+  if (!items || !items.length) return;
+  content.appendChild(el('h3', 'plugin-content-section-title', sectionTitle));
+  const list = el('div', 'plugin-content-list');
+  items.forEach(item => {
+    const row = el('button', 'plugin-content-item');
+    row.appendChild(svgIcon('code'));
+    const info = el('div', 'plugin-content-item-info');
+    info.appendChild(el('div', 'plugin-content-item-name', item.name || item.id || item));
+    if (item.description) info.appendChild(el('div', 'plugin-content-item-desc', item.description));
+    if (extraRender) extraRender(item, info);
+    row.appendChild(info);
+    row.appendChild(el('span', 'plugin-content-item-arrow', '→'));
+    row.addEventListener('click', () => onClick(item));
+    list.appendChild(row);
+  });
+  content.appendChild(list);
+}
+
+// Modal "Contenuto plugin": skill/agent/hook/MCP di un plugin con click
+// → switch sezione + filtro pre-applicato sul nome.
 function showPluginContentModal(p) {
   if (document.querySelector('.md-overlay')) return;
   const overlay = el('div', 'md-overlay');
@@ -829,37 +850,15 @@ function showPluginContentModal(p) {
   if (p.tokensAlways) summary.appendChild(summCell(p.tokensAlways, 'tok always-on'));
   content.appendChild(summary);
 
-  function listSection(titleText, items, onClick) {
-    if (!items || !items.length) return;
-    content.appendChild(el('h3', 'plugin-content-section-title', titleText));
-    const list = el('div', 'plugin-content-list');
-    items.forEach(item => {
-      const row = el('button', 'plugin-content-item');
-      row.appendChild(svgIcon('code'));
-      const nameWrap = el('div', 'plugin-content-item-info');
-      nameWrap.appendChild(el('div', 'plugin-content-item-name', item.name || item));
-      if (item.description) {
-        nameWrap.appendChild(el('div', 'plugin-content-item-desc', item.description));
-      }
-      row.appendChild(nameWrap);
-      const arrow = el('span', 'plugin-content-item-arrow', '→');
-      row.appendChild(arrow);
-      row.addEventListener('click', () => {
-        onClick(item.name || item);
-        close();
-      });
-      list.appendChild(row);
-    });
-    content.appendChild(list);
-  }
-
-  listSection('Skills', p.skills, (name) => {
-    state.filters.skills = { search: name.toLowerCase() };
+  appendModalItemList(content, 'Skills', p.skills, item => {
+    state.filters.skills = { search: (item.name || item).toLowerCase() };
     switchToSection('skills');
+    close();
   });
-  listSection('Agents', p.agents, (name) => {
-    state.filters.agents = { search: name.toLowerCase() };
+  appendModalItemList(content, 'Agents', p.agents, item => {
+    state.filters.agents = { search: (item.name || item).toLowerCase() };
     switchToSection('agents');
+    close();
   });
 
   if (p.hasMcp) {
@@ -1007,8 +1006,6 @@ function buildPluginCard(p) {
   // Action buttons
   const actions = el('div', 'pc-actions');
 
-  // v1.0.46 — Icone SVG al posto delle emoji (coerenza con la sidebar)
-  // v1.0.47 — Tooltip data-tt istantanei (no delay 2s del title nativo)
   const detailsBtn = el('button', 'btn btn-sm btn-ghost btn-icon');
   detailsBtn.dataset.tt = 'Vedi contenuto plugin';
   detailsBtn.appendChild(svgIcon('eye'));
@@ -1080,9 +1077,8 @@ function buildPluginCard(p) {
 }
 
 /* ── MARKETPLACES ─────────────────────────────────────────────────────── */
-// v1.0.47 — Modal "Plugin del marketplace": stessa modalità del modal
-// Contenuto plugin per coerenza UI. Ogni plugin è cliccabile e apre il
-// modal Contenuto plugin del singolo plugin.
+// Modal "Plugin del marketplace": lista dei plugin contenuti. Click su un
+// plugin apre il modal Contenuto plugin del singolo plugin (drill-down).
 function showMarketplaceContentModal(m) {
   if (document.querySelector('.md-overlay')) return;
   const overlay = el('div', 'md-overlay');
@@ -1113,42 +1109,32 @@ function showMarketplaceContentModal(m) {
     info.appendChild(repoLink);
   }
   const meta = el('div', 'plugin-content-desc');
-  meta.textContent = m.plugins.length + ' ' + (m.plugins.length === 1 ? 'plugin' : 'plugin')
+  meta.textContent = m.plugins.length + ' ' + ('plugin')
     + ' · ' + (m.autoUpdate ? 'aggiornamento automatico' : 'aggiornamento manuale')
     + (m.lastUpdated ? ' · ultimo aggiornamento ' + new Date(m.lastUpdated).toLocaleDateString('it-IT') : '');
   info.appendChild(meta);
   content.appendChild(info);
 
-  // Lista plugin cliccabile
-  content.appendChild(el('h3', 'plugin-content-section-title', 'Plugin contenuti'));
-  const list = el('div', 'plugin-content-list');
-  m.plugins.forEach(p => {
-    const row = el('button', 'plugin-content-item');
-    row.appendChild(svgIcon('code'));
-    const infoBlock = el('div', 'plugin-content-item-info');
-    infoBlock.appendChild(el('div', 'plugin-content-item-name', p.id + ' · v' + p.version));
-    if (p.description) {
-      infoBlock.appendChild(el('div', 'plugin-content-item-desc', p.description));
-    }
-    // Mini-badge riassuntivi
+  // Costruisce gli item per appendModalItemList: name = "<id> · v<ver>",
+  // description = p.description, badges aggiunti via extraRender
+  const pluginItems = m.plugins.map(p => ({
+    name: p.id + ' · v' + p.version,
+    description: p.description,
+    _plugin: p,  // riferimento opaco per onClick
+  }));
+  appendModalItemList(content, 'Plugin contenuti', pluginItems, item => {
+    close();
+    showPluginContentModal(item._plugin);
+  }, (item, info) => {
+    const p = item._plugin;
     const minibar = el('div', 'plugin-content-item-badges');
-    if (p.skills.length) minibar.appendChild(el('span', 'badge b-skill', p.skills.length + ' skill'));
-    if (p.agents.length) minibar.appendChild(el('span', 'badge b-agent', p.agents.length + ' agent'));
-    if (p.hasMcp)        minibar.appendChild(el('span', 'badge b-mcp', 'MCP'));
-    if (p.hasHooks)      minibar.appendChild(el('span', 'badge b-hook', 'Hook'));
+    if (p.skills.length) minibar.appendChild(el('span', 'badge b-skill',  p.skills.length + ' skill'));
+    if (p.agents.length) minibar.appendChild(el('span', 'badge b-agent',  p.agents.length + ' agent'));
+    if (p.hasMcp)        minibar.appendChild(el('span', 'badge b-mcp',    'MCP'));
+    if (p.hasHooks)      minibar.appendChild(el('span', 'badge b-hook',   'Hook'));
     if (p.blocked)       minibar.appendChild(el('span', 'badge b-blocked', 'disattivato'));
-    if (minibar.childNodes.length) infoBlock.appendChild(minibar);
-    row.appendChild(infoBlock);
-    const arrow = el('span', 'plugin-content-item-arrow', '→');
-    row.appendChild(arrow);
-    row.addEventListener('click', () => {
-      close();
-      // Apre il modal Contenuto plugin del singolo plugin selezionato
-      showPluginContentModal(p);
-    });
-    list.appendChild(row);
+    if (minibar.childNodes.length) info.appendChild(minibar);
   });
-  content.appendChild(list);
 
   function onKey(e) { if (e.key === 'Escape') close(); }
   function close() { document.removeEventListener('keydown', onKey); overlay.remove(); }
@@ -1209,12 +1195,10 @@ function renderMarketplaces() {
 
     card.appendChild(body);
 
-    // v1.0.47 — Bottone "Vedi plugin" che apre modal (rimpiazza il toggle
-    // accordion: stessa metodologia delle card plugin per coerenza)
     if (m.plugins.length > 0) {
       const seeBtn = el('button', 'mkt-card-see-btn');
       seeBtn.appendChild(svgIcon('eye'));
-      seeBtn.appendChild(document.createTextNode(' Vedi ' + m.plugins.length + ' ' + (m.plugins.length === 1 ? 'plugin' : 'plugin')));
+      seeBtn.appendChild(document.createTextNode(' Vedi ' + m.plugins.length + ' ' + ('plugin')));
       seeBtn.addEventListener('click', () => showMarketplaceContentModal(m));
       card.appendChild(seeBtn);
     }

@@ -620,8 +620,18 @@ body {
 .btn-green:hover:not(:disabled) { background: rgba(120,140,93,.28); }
 
 .btn-sm { padding: 4px 10px; font-size: 11px; }
-.btn-icon { padding: 6px; gap: 0; }
-.btn-icon svg { width: 14px; height: 14px; }
+.btn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 6px;
+  min-width: 28px;
+  height: 26px;
+  gap: 0;
+  position: relative;
+}
+.btn-icon svg,
+.btn-icon .inline-icon { width: 14px; height: 14px; }
 .btn-icon-text { padding: 4px 8px; font-size: 14px; line-height: 1; }
 
 /* SPINNER in button */
@@ -735,7 +745,6 @@ body {
   display: flex;
   flex-direction: column;
 }
-.pc-body { flex: 1; }
 .plugin-card::before {
   content: "";
   position: absolute; left: 0; top: 0; bottom: 0;
@@ -746,7 +755,7 @@ body {
 .plugin-card.blocked { opacity: .55; }
 .plugin-card.blocked .pc-id { text-decoration: line-through; }
 
-.pc-body { padding: 16px 16px 12px 20px; }
+.pc-body { flex: 1; padding: 16px 16px 12px 20px; }
 
 .pc-top {
   display: flex;
@@ -817,7 +826,7 @@ body {
   border-top: 1px solid var(--border);
   background: rgba(0,0,0,.18);
   gap: 8px;
-  margin-top: auto;  /* v1.0.47: spinge il footer sempre in fondo alla card */
+  margin-top: auto;  /* footer sempre in fondo, anche con descrizioni corte */
 }
 
 .pc-actions { display: flex; gap: 6px; }
@@ -1969,27 +1978,12 @@ body {
   font-style: italic;
 }
 
-/* Bottoni icona quadrati per le card plugin (v1.0.46) */
-.btn-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 4px 6px;
-  min-width: 28px;
-  height: 26px;
-  position: relative;
-}
-.btn-icon .inline-icon {
-  width: 14px;
-  height: 14px;
-}
+/* .btn-icon definito sopra (consolidato con la regola legacy) */
 
-/* Tooltip immediato custom (v1.0.47) — usato sui btn-icon delle card plugin
-   tramite attribute data-tt; vince sul nativo title (delay ~2s) */
-[data-tt] {
-  position: relative;
-}
-[data-tt]::after {
+/* Tooltip immediato custom — usato sui btn-icon tramite attribute data-tt;
+   vince sul nativo title (delay ~2s). Scope ristretto a .btn-icon per
+   evitare conflitti con altri elementi che gia hanno position: relative. */
+.btn-icon[data-tt]::after {
   content: attr(data-tt);
   position: absolute;
   bottom: calc(100% + 6px);
@@ -2010,15 +2004,15 @@ body {
   box-shadow: 0 4px 10px rgba(0, 0, 0, .4);
   z-index: 20;
 }
-[data-tt]:hover::after,
-[data-tt]:focus-visible::after {
+.btn-icon[data-tt]:hover::after,
+.btn-icon[data-tt]:focus-visible::after {
   opacity: 1;
   visibility: visible;
   transform: translateX(-50%) translateY(0);
   transition: opacity .1s ease, transform .1s ease, visibility 0s;
 }
 
-/* Bottone "Vedi N plugin" su card marketplace (v1.0.47) */
+/* Bottone "Vedi N plugin" su card marketplace */
 .mkt-card-see-btn {
   display: flex;
   align-items: center;
@@ -2044,7 +2038,7 @@ body {
   height: 13px;
 }
 
-/* Badge inline nei plugin item del modal marketplace (v1.0.47) */
+/* Badge inline nei plugin item del modal marketplace */
 .plugin-content-item-badges {
   display: flex;
   flex-wrap: wrap;
