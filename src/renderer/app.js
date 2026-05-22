@@ -2196,9 +2196,15 @@ function paintAccountPanel(container, result) {
       logoutBtn.textContent = 'Logout';
     }
   });
+  // v1.0.31 — Pulsante guida API key (sicurezza: CLACOROO NON gestisce la chiave)
+  const apiKeyBtn = el('button', 'btn btn-sm btn-ghost', 'ℹ Modalità API key');
+  apiKeyBtn.title = 'Guida per usare un\'API key invece della subscription';
+  apiKeyBtn.addEventListener('click', () => showApiKeyGuideModal());
+
   actions.appendChild(refreshBtn);
   actions.appendChild(claudeBtn);
   actions.appendChild(consoleBtn);
+  actions.appendChild(apiKeyBtn);
   actions.appendChild(logoutBtn);
   card.appendChild(actions);
 
@@ -2235,6 +2241,94 @@ function refreshSidebarAccountPill() {
   pill.title = 'Account: ' + (d.email || '') + ' · click per aprire Impostazioni';
   pill.style.cursor = 'pointer';
   pill.onclick = () => switchToSection('settings');
+}
+
+// v1.0.31 — Guida modalità API key. Per sicurezza CLACOROO non maneggia mai
+// la chiave: mostriamo solo istruzioni per impostarla nel proprio shell profile,
+// così la chiave resta esclusivamente sul sistema dell'utente.
+function showApiKeyGuideModal() {
+  if (document.querySelector('.md-overlay')) return;
+  const overlay = el('div', 'md-overlay');
+  const modal   = el('div', 'md-modal');
+  modal.setAttribute('role', 'dialog');
+  modal.setAttribute('aria-modal', 'true');
+
+  const header = el('div', 'md-header');
+  const title  = el('div', 'md-title');
+  title.appendChild(el('span', 'md-kind-badge md-kind-skill', 'guida'));
+  title.appendChild(document.createTextNode(' Modalità API key'));
+  const closeBtn = el('button', 'md-close', '×');
+  closeBtn.setAttribute('aria-label', 'Chiudi');
+  header.appendChild(title);
+  header.appendChild(closeBtn);
+
+  const content = el('div', 'md-content');
+
+  function p(text) { content.appendChild(el('p', null, text)); }
+  function h(text) { content.appendChild(el('h3', null, text)); }
+  function note(text, kind) {
+    const n = el('div', 'apikey-note apikey-note-' + (kind || 'info'), text);
+    content.appendChild(n);
+  }
+  function codeBlock(label, snippet) {
+    const wrap = el('div', 'apikey-code-wrap');
+    const lbl = el('div', 'apikey-code-label', label);
+    const pre = el('div', 'apikey-code-block');
+    const code = el('code', null, snippet);
+    pre.appendChild(code);
+    const copyBtn = el('button', 'apikey-code-copy', '⧉ Copia');
+    copyBtn.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(snippet);
+        toast('Copiato', 'success');
+      } catch { toast('Impossibile copiare', 'error'); }
+    });
+    wrap.appendChild(lbl);
+    wrap.appendChild(pre);
+    wrap.appendChild(copyBtn);
+    content.appendChild(wrap);
+  }
+
+  note('⚡ Sicurezza prima di tutto: CLACOROO NON salva, legge o trasmette mai la tua API key. La chiave resta esclusivamente nel tuo shell profile, accessibile solo al tuo utente macOS.', 'security');
+
+  h('Quando usare la modalità API key');
+  p('Se non hai una subscription Claude Max/Pro/Team e vuoi usare i tuoi crediti API pay-per-use, oppure se vuoi forzare l\'uso di un\'API key specifica (es. per un progetto con billing separato).');
+
+  h('Step 1 — Ottieni una chiave');
+  p('Vai sulla console Anthropic, crea o copia una chiave esistente. Le chiavi iniziano con sk-ant-…');
+  const consoleBtn = el('button', 'btn btn-sm btn-primary apikey-step-btn', '↗ Apri console.anthropic.com');
+  consoleBtn.addEventListener('click', () => window.claudeAPI.openExternal('https://console.anthropic.com/settings/keys'));
+  content.appendChild(consoleBtn);
+
+  h('Step 2 — Aggiungila al tuo shell profile');
+  p('Aggiungi questa riga al file di configurazione della tua shell. Sostituisci sk-ant-xxxx con la tua chiave reale.');
+  codeBlock('Per Zsh (default su macOS recente):', 'echo \'export ANTHROPIC_API_KEY="sk-ant-xxxx"\' >> ~/.zshrc');
+  codeBlock('Per Bash (es. Linux o macOS legacy):', 'echo \'export ANTHROPIC_API_KEY="sk-ant-xxxx"\' >> ~/.bashrc');
+
+  h('Step 3 — Ricarica la shell');
+  p('Chiudi e riapri il terminale, oppure esegui:');
+  codeBlock('Zsh:',  'source ~/.zshrc');
+  codeBlock('Bash:', 'source ~/.bashrc');
+
+  h('Step 4 — Verifica');
+  p('Esegui in terminale:');
+  codeBlock('Verifica auth:', 'claude auth status --json');
+  p('Dovresti vedere "authMethod" cambiare a "api" e "apiProvider" che resta "firstParty".');
+
+  note('💡 Nota: questa modalità sostituisce l\'OAuth della subscription. Se vuoi tornare alla subscription Max/Pro, rimuovi la riga export dal profile, ricarica la shell, e ri-esegui claude auth login.', 'info');
+
+  note('🔒 Perché non un campo di input qui? Salvare la chiave in CLACOROO significherebbe scriverla in un file leggibile, oppure usare macOS Keychain. Entrambi gli approcci aggiungono complessità e nuovi vettori di rischio. Lo shell profile è il modo standard e più sicuro: niente intermediari.', 'security');
+
+  function onKey(e) { if (e.key === 'Escape') close(); }
+  function close() { document.removeEventListener('keydown', onKey); overlay.remove(); }
+  closeBtn.addEventListener('click', close);
+  overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+  document.addEventListener('keydown', onKey);
+
+  modal.appendChild(header);
+  modal.appendChild(content);
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
 }
 
 // All'avvio carica l'account pill anche se l'utente non visita Impostazioni
@@ -2521,7 +2615,7 @@ function renderSettings() {
   const chBtn = el('button', 'btn btn-sm btn-green', '📋 Changelog');
   chBtn.title = 'Mostra storico versioni';
   chBtn.addEventListener('click', () => openChangelogModal());
-  const verVal = el('div', 'settings-row-val', '1.0.30');
+  const verVal = el('div', 'settings-row-val', '1.0.31');
   verRight.appendChild(chBtn);
   verRight.appendChild(verVal);
   verRow.appendChild(verRight);

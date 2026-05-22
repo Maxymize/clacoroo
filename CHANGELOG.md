@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.0.31 — 2026-05-22
+
+- Nuovo bottone "ℹ Modalità API key" nel pannello Account: apre una guida step-by-step (modal) per chi vuole usare un'API key pay-per-use invece della subscription Max/Pro
+- Sicurezza assoluta: CLACOROO NON salva, legge o trasmette mai la tua chiave. La guida ti mostra come impostarla nel tuo `.zshrc` / `.bashrc` (lo standard più sicuro), e copia i comandi in clipboard
+
 ## v1.0.30 — 2026-05-22
 
 - Tab Config (Stats): nuovo selettore "Effort level" (low / medium / high / xhigh / max) — modifica `effortLevel` di `~/.claude/settings.json` istantaneamente, equivalente a `claude --effort <level>`. Posizionato accanto a Modello predefinito
