@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.0.44 — 2026-05-22
+
+- Fix: il tooltip dell'istogramma "Token giornalieri" in Stats > Modelli non esce più dalla finestra quando si passa il mouse sulle barre a destra. Il tooltip ora flippa a sinistra del cursore se a destra non c'è spazio, e viene clampato dentro il contenitore anche sopra/sotto
+
 ## v1.0.43 — 2026-05-22
 
 - Stats > Modelli: aggiunta nota esplicativa sopra la lista per chiarire che le percentuali rappresentano la distribuzione del proprio uso fra i modelli (somma 100%), non una quota o un limite. Per le quote reali resta il rimando alle barre "Quote Claude" in Dashboard / Account

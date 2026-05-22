@@ -1793,9 +1793,21 @@ function renderStatsModels(container, data) {
         tip.style.display = 'block';
       });
       bar.addEventListener('mousemove', e => {
+        // v1.0.44 — fix: tooltip rimane sempre dentro chartWrap. Flippa a
+        // sinistra del cursore se a destra non c'è spazio (era il caso
+        // delle barre più recenti che uscivano dalla finestra).
         const r = chartWrap.getBoundingClientRect();
-        tip.style.left = (e.clientX - r.left + 10) + 'px';
-        tip.style.top = (e.clientY - r.top - 10) + 'px';
+        const tw = tip.offsetWidth  || 180;
+        const th = tip.offsetHeight || 60;
+        const pad = 6;
+        let x = e.clientX - r.left + 10;
+        let y = e.clientY - r.top  - 10;
+        if (x + tw + pad > r.width)  x = e.clientX - r.left - tw - 10;  // flip sinistra
+        if (x < pad)                 x = pad;
+        if (y < pad)                 y = pad;
+        if (y + th + pad > r.height) y = r.height - th - pad;
+        tip.style.left = x + 'px';
+        tip.style.top  = y + 'px';
       });
       bar.addEventListener('mouseleave', () => { tip.style.display = 'none'; });
       chart.appendChild(bar);
@@ -2949,7 +2961,7 @@ function renderSettings() {
   infoRow.appendChild(infoLeft);
   const infoRight = el('div');
   infoRight.style.cssText = 'display:flex;gap:10px;align-items:center;';
-  const verVal = el('div', 'settings-row-val', '1.0.43');
+  const verVal = el('div', 'settings-row-val', '1.0.44');
   const chBtn = btnWithIcon('btn btn-sm btn-green btn-with-icon', 'changelog', ' Changelog');
   chBtn.title = 'Mostra storico versioni';
   chBtn.addEventListener('click', () => openChangelogModal());
