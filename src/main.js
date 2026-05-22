@@ -278,6 +278,26 @@ function extractRepoPath(source) {
   return '';
 }
 
+// v1.0.53 — Conta i plugin dichiarati in un marketplace (NON solo quelli
+// installati). Legge ~/.claude/plugins/marketplaces/<id>/marketplace.json
+// o .claude-plugin/marketplace.json. Veloce (read+parse, no IPC).
+function readMarketplacePluginCount(marketplaceId) {
+  const dir = path.join(CLAUDE_DIR, 'plugins', 'marketplaces', marketplaceId);
+  if (!fs.existsSync(dir)) return 0;
+  const candidates = [
+    path.join(dir, '.claude-plugin', 'marketplace.json'),
+    path.join(dir, 'marketplace.json'),
+  ];
+  const fp = candidates.find(p => fs.existsSync(p));
+  if (!fp) return 0;
+  try {
+    const raw = JSON.parse(fs.readFileSync(fp, 'utf8'));
+    if (Array.isArray(raw.plugins))       return raw.plugins.length;
+    if (raw.plugins && typeof raw.plugins === 'object') return Object.keys(raw.plugins).length;
+    return 0;
+  } catch { return 0; }
+}
+
 function readAllData() {
   const installedRaw = safeReadJson(INSTALLED, { version: 2, plugins: {} });
   // plugins can be an array of IDs (old format) or an object {id: [...entries...]} (v2)
@@ -304,10 +324,16 @@ function readAllData() {
   // Merge: a plugin is blocked if explicitly false in settings OR in legacy blocklist
   const blockedSet = new Set([...blockedFromSettings, ...legacyBlocklist.filter(id => enabledMap[id] !== true)]);
 
-  // Normalize marketplace source to simple repo path
+  // Normalize marketplace source to simple repo path + count plugin
+  // dichiarati nel marketplace.json (per distinguere da "installati"
+  // che e' solo m.plugins.length nel renderer).
   const marketplacesNorm = {};
   for (const [id, cfg] of Object.entries(marketplaces)) {
-    marketplacesNorm[id] = { ...cfg, _repo: extractRepoPath(cfg.source) };
+    marketplacesNorm[id] = {
+      ...cfg,
+      _repo: extractRepoPath(cfg.source),
+      _availableCount: readMarketplacePluginCount(id),
+    };
   }
 
   return {

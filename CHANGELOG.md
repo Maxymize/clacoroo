@@ -1,5 +1,18 @@
 # Changelog
 
+## v1.0.53 — 2026-05-22 — Card marketplace: distinzione installati vs disponibili
+
+Fix UX importante: prima la card mostrava solo i plugin **installati** del marketplace, ignorando quelli **disponibili**. Un marketplace appena aggiunto con N plugin ma 0 installati appariva come "0 plugin · inattivo grigio", impossibile da esplorare.
+
+- Backend: nuova lettura `readMarketplacePluginCount(id)` in `readAllData()` che legge il `marketplace.json` di ciascun marketplace configurato (sincrono, ~1ms)
+- State arricchito: `mktList[i]` ora ha `available` (totale dichiarato) e `installed` (già presenti in `state.plugins`)
+- Card mostra:
+  - "N" se installati == disponibili o se zero installati
+  - "X/Y" se installati parzialmente (es. "2/15")
+  - Grigio "inactive" solo se `available === 0` (marketplace vuoto / malformato)
+- Tooltip differenziato: "Vedi e installa plugin" se mancano installazioni, "Vedi plugin installati" se completo
+- Ordinamento marketplace ora per `available` desc, poi `installed` desc
+
 ## v1.0.52 — 2026-05-22 — Pack H step 2: Install plugin dal marketplace
 
 - Modal "Plugin del marketplace" ora mostra **tutti** i plugin del marketplace (non solo gli installati): legge il `marketplace.json` reale del marketplace via nuovo IPC `getMarketplaceDetail`

@@ -225,14 +225,21 @@ function processData() {
   const mktMap = raw.marketplaces || {};
   state.mktList = Object.entries(mktMap).map(([id, cfg]) => {
     const mktPlugins = state.plugins.filter(p => p.mkt === id);
+    // available = plugin dichiarati nel marketplace.json; installed = ciò
+    // che è già in state. Distinzione importante: marketplace appena
+    // aggiunti hanno installed=0 ma available>0 (vedi screenshot user).
+    const available  = cfg._availableCount || 0;
+    const installed  = mktPlugins.length;
     return {
       id,
       repo:        cfg._repo || '',
       autoUpdate:  cfg.autoUpdate  || false,
       lastUpdated: cfg.lastUpdated || '',
       plugins:     mktPlugins,
+      available,
+      installed,
     };
-  }).sort((a, b) => b.plugins.length - a.plugins.length);
+  }).sort((a, b) => b.available - a.available || b.installed - a.installed);
 
   // Badge disattivati
   const blockedCount = state.plugins.filter(p => p.blocked).length;
@@ -1383,7 +1390,11 @@ function renderMarketplaces() {
 
   state.mktList.forEach(m => {
     const col  = mktColor(m.id);
-    const card = el('div', 'mkt-card' + (m.plugins.length === 0 ? ' inactive' : ''));
+    // 'inactive' (grigio) solo se il marketplace.json non dichiara plugin:
+    // marketplace vuoto/non valido. Se ha plugin disponibili ma non installati,
+    // la card resta attiva (l'utente può installare via modal).
+    const totalAvailable = m.available || m.plugins.length;
+    const card = el('div', 'mkt-card' + (totalAvailable === 0 ? ' inactive' : ''));
     card.style.setProperty('--mkt-color', col);
 
     const body = el('div', 'mkt-card-body');
@@ -1403,16 +1414,28 @@ function renderMarketplaces() {
     body.appendChild(repoEl);
 
     const meta = el('div', 'mkt-card-meta');
-    // "N plugin" è cliccabile (apre il modal con la lista) se ci sono plugin.
-    // Hover effect arancione + glow, niente striscia full-width invadente.
+    // Mostra "N installati / M disponibili" se ce ne sono entrambi.
+    // Solo "N plugin" se nessuno installato ma alcuni disponibili.
+    // 0 se vuoto.
     const countBtn = el('button', 'mkt-card-count-btn');
-    const cnt  = el('span', 'mkt-card-count', String(m.plugins.length));
-    const cntL = el('span', 'mkt-card-count-label', 'plugin');
+    const cnt = el('span', 'mkt-card-count');
+    if (totalAvailable === 0) {
+      cnt.textContent = '0';
+    } else if (m.installed === 0) {
+      cnt.textContent = String(totalAvailable);
+    } else if (m.installed === totalAvailable) {
+      cnt.textContent = String(totalAvailable);
+    } else {
+      cnt.textContent = m.installed + '/' + totalAvailable;
+    }
     cnt.style.color = col;
+    const cntL = el('span', 'mkt-card-count-label', totalAvailable === 1 ? 'plugin' : 'plugin');
     countBtn.appendChild(cnt);
     countBtn.appendChild(cntL);
-    if (m.plugins.length > 0) {
-      countBtn.dataset.tt = 'Vedi lista plugin';
+    if (totalAvailable > 0) {
+      countBtn.dataset.tt = m.installed === totalAvailable
+        ? 'Vedi plugin installati'
+        : 'Vedi e installa plugin';
       countBtn.addEventListener('click', () => showMarketplaceContentModal(m));
     } else {
       countBtn.disabled = true;
@@ -3390,7 +3413,7 @@ function renderSettings() {
   infoRow.appendChild(infoLeft);
   const infoRight = el('div');
   infoRight.style.cssText = 'display:flex;gap:10px;align-items:center;';
-  const verVal = el('div', 'settings-row-val', '1.0.52');
+  const verVal = el('div', 'settings-row-val', '1.0.53');
   const chBtn = btnWithIcon('btn btn-sm btn-green btn-with-icon', 'changelog', ' Changelog');
   chBtn.title = 'Mostra storico versioni';
   chBtn.addEventListener('click', () => openChangelogModal());
