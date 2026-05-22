@@ -1,5 +1,13 @@
 # Changelog
 
+## v1.0.39 — 2026-05-22
+
+- Quote sessione/settimana ora funzionano anche su **Windows** e **Linux** (prima solo macOS): CLACOROO legge il token OAuth dal file di fallback `~/.claude/.credentials.json` che Claude Code usa quando Keychain/Credential Manager non sono disponibili
+- macOS: invariato (Keychain principale, file come emergency fallback)
+- Linux: legge solo dal file (Claude Code non usa Secret Service nel binario ufficiale)
+- Windows: legge dal file (Credential Manager via API native è TODO — la maggior parte degli utenti Win ha comunque il file plaintext perché Credential Manager non sempre riesce a salvare blob lunghi)
+- Messaggi di errore ora distinguono la causa per piattaforma
+
 ## v1.0.38 — 2026-05-22
 
 - Dashboard riorganizzata: in cima ora ci sono "Stima contesto" e "Quote Claude" (le info che cambiano più spesso), seguiti dalle KPI di installazione (Plugin, Marketplace, Skill, ecc.) con il nuovo titolo "Statistiche", poi le KPI "Utilizzo Claude Code"
