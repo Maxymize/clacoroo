@@ -322,6 +322,8 @@ const ICONS = {
   download:  'M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 9.293a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z',
   upload:    'M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM13.707 5.707a1 1 0 01-1.414 0L11 4.414V12a1 1 0 11-2 0V4.414L7.707 5.707a1 1 0 01-1.414-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 010 1.414z',
   changelog: 'M9 2a1 1 0 000 2h2a1 1 0 100-2H9zM4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z',
+  code:      'M12.316 3.051a1 1 0 01.633 1.265l-4 12a1 1 0 11-1.898-.632l4-12a1 1 0 011.265-.633zM5.707 6.293a1 1 0 010 1.414L3.414 10l2.293 2.293a1 1 0 11-1.414 1.414l-3-3a1 1 0 010-1.414l3-3a1 1 0 011.414 0zm8.586 0a1 1 0 011.414 0l3 3a1 1 0 010 1.414l-3 3a1 1 0 11-1.414-1.414L16.586 10l-2.293-2.293a1 1 0 010-1.414z',
+  eye:       'M10 12a2 2 0 100-4 2 2 0 000 4z M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z',
 };
 function svgIcon(name, size = 14) {
   const d = ICONS[name];
@@ -776,6 +778,110 @@ function applyPluginFilters(grid) {
   if (countEl) countEl.textContent = visible + ' di ' + state.plugins.length + ' plugin';
 }
 
+// v1.0.46 — Modal "Contenuto plugin": mostra tutte le skill/agent/hook/MCP
+// di un plugin. Ogni voce è cliccabile e porta alla sezione dedicata con
+// filtro pre-applicato.
+function showPluginContentModal(p) {
+  if (document.querySelector('.md-overlay')) return;
+  const overlay = el('div', 'md-overlay');
+  const modal = el('div', 'md-modal');
+  modal.setAttribute('role', 'dialog');
+  modal.setAttribute('aria-modal', 'true');
+
+  const header = el('div', 'md-header');
+  const title = el('div', 'md-title');
+  title.appendChild(el('span', 'md-kind-badge md-kind-skill', 'plugin'));
+  title.appendChild(document.createTextNode(' ' + p.id));
+  const closeBtn = el('button', 'md-close', '×');
+  closeBtn.setAttribute('aria-label', 'Chiudi');
+  header.appendChild(title);
+  header.appendChild(closeBtn);
+
+  const content = el('div', 'md-content');
+
+  // Header info
+  const info = el('div', 'plugin-content-info');
+  info.appendChild(el('div', 'plugin-content-mkt', p.mkt + ' · v' + p.version));
+  if (p.description) info.appendChild(el('div', 'plugin-content-desc', p.description));
+  content.appendChild(info);
+
+  // Summary numerico
+  const summary = el('div', 'plugin-content-summary');
+  function summCell(value, label) {
+    const c = el('div', 'plugin-content-stat');
+    c.appendChild(el('div', 'plugin-content-stat-value', String(value)));
+    c.appendChild(el('div', 'plugin-content-stat-label', label));
+    return c;
+  }
+  summary.appendChild(summCell(p.skills.length, p.skills.length === 1 ? 'skill' : 'skills'));
+  summary.appendChild(summCell(p.agents.length, p.agents.length === 1 ? 'agent' : 'agents'));
+  summary.appendChild(summCell(p.hasMcp ? 'sì' : '—', 'MCP'));
+  summary.appendChild(summCell(p.hasHooks ? 'sì' : '—', 'Hook'));
+  if (p.tokensAlways) summary.appendChild(summCell(p.tokensAlways, 'tok always-on'));
+  content.appendChild(summary);
+
+  function listSection(titleText, items, onClick) {
+    if (!items || !items.length) return;
+    content.appendChild(el('h3', 'plugin-content-section-title', titleText));
+    const list = el('div', 'plugin-content-list');
+    items.forEach(item => {
+      const row = el('button', 'plugin-content-item');
+      row.appendChild(svgIcon('code'));
+      const nameWrap = el('div', 'plugin-content-item-info');
+      nameWrap.appendChild(el('div', 'plugin-content-item-name', item.name || item));
+      if (item.description) {
+        nameWrap.appendChild(el('div', 'plugin-content-item-desc', item.description));
+      }
+      row.appendChild(nameWrap);
+      const arrow = el('span', 'plugin-content-item-arrow', '→');
+      row.appendChild(arrow);
+      row.addEventListener('click', () => {
+        onClick(item.name || item);
+        close();
+      });
+      list.appendChild(row);
+    });
+    content.appendChild(list);
+  }
+
+  listSection('Skills', p.skills, (name) => {
+    state.filters.skills = { search: name.toLowerCase() };
+    switchToSection('skills');
+  });
+  listSection('Agents', p.agents, (name) => {
+    state.filters.agents = { search: name.toLowerCase() };
+    switchToSection('agents');
+  });
+
+  if (p.hasMcp) {
+    content.appendChild(el('h3', 'plugin-content-section-title', 'MCP server'));
+    const note = el('div', 'plugin-content-mcp-link');
+    note.textContent = 'Questo plugin espone MCP server — vedi i dettagli completi nella sezione MCP.';
+    const goBtn = el('button', 'btn btn-sm btn-primary');
+    goBtn.textContent = '↗ Vai a MCP';
+    goBtn.addEventListener('click', () => { switchToSection('mcp'); close(); });
+    note.appendChild(goBtn);
+    content.appendChild(note);
+  }
+
+  if (p.hasHooks) {
+    content.appendChild(el('h3', 'plugin-content-section-title', 'Hook'));
+    content.appendChild(el('div', 'plugin-content-note',
+      'Plugin definisce hook (PreToolUse, PostToolUse, UserPromptSubmit, ecc.). Apri il sorgente con il bottone editor per ispezionarli.'));
+  }
+
+  function onKey(e) { if (e.key === 'Escape') close(); }
+  function close() { document.removeEventListener('keydown', onKey); overlay.remove(); }
+  closeBtn.addEventListener('click', close);
+  overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+  document.addEventListener('keydown', onKey);
+
+  modal.appendChild(header);
+  modal.appendChild(content);
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
+}
+
 function buildPluginCard(p) {
   const col = mktColor(p.mkt);
   const card = el('div', 'plugin-card' + (p.blocked ? ' blocked' : '') + (p.scope === 'local' ? ' local-scope' : ''));
@@ -810,17 +916,28 @@ function buildPluginCard(p) {
     body.appendChild(desc);
   }
 
-  // BADGES
+  // BADGES (v1.0.46 — cliccabili: aprono il modal "Contenuto plugin")
   const badges = el('div', 'pc-badges');
-  function addBadge(txt, cls) {
+  function addBadge(txt, cls, tooltip, onClick) {
     const b = el('span', 'badge ' + cls, txt);
+    if (tooltip) b.title = tooltip;
+    if (onClick) {
+      b.classList.add('badge-clickable');
+      b.addEventListener('click', onClick);
+    }
     badges.appendChild(b);
   }
-  if (p.skills.length)  addBadge(p.skills.length + ' skill', 'b-skill');
-  if (p.agents.length)  addBadge(p.agents.length + ' agent', 'b-agent');
-  if (p.hasMcp)         addBadge('MCP', 'b-mcp');
-  if (p.hasHooks)       addBadge('Hook', 'b-hook');
-  if (p.tokensAlways)   addBadge(p.tokensAlways + ' tok', 'b-tokens');
+  const openDetails = () => showPluginContentModal(p);
+  if (p.skills.length)  addBadge(p.skills.length + ' skill', 'b-skill',
+    'Skill in questo plugin — click per vedere lista e dettagli', openDetails);
+  if (p.agents.length)  addBadge(p.agents.length + ' agent', 'b-agent',
+    'Agent in questo plugin — click per vedere lista', openDetails);
+  if (p.hasMcp)         addBadge('MCP', 'b-mcp',
+    'Plugin esporta uno o più MCP server — click per dettagli', openDetails);
+  if (p.hasHooks)       addBadge('Hook', 'b-hook',
+    'Plugin definisce hook (PreToolUse, PostToolUse, ecc.)', openDetails);
+  if (p.tokensAlways)   addBadge(p.tokensAlways + ' tok', 'b-tokens',
+    'Token "always-on" stimati: peso aggiunto al context window di Claude Code da questo plugin a prescindere dall\'utilizzo attivo. Fonte: plugin-catalog-cache.json di Claude Code.');
   if (p.blocked)        addBadge('DISATTIVATO', 'b-blocked');
   body.appendChild(badges);
   card.appendChild(body);
@@ -833,7 +950,7 @@ function buildPluginCard(p) {
   if (p.scope === 'local') {
     const info = el('div', 'pc-local-info', 'read-only · progetto');
     footer.appendChild(info);
-    const openBtn = el('button', 'btn btn-sm btn-ghost', '📁 Apri progetto');
+    const openBtn = btnWithIcon('btn btn-sm btn-ghost btn-with-icon', 'folder', ' Apri progetto');
     openBtn.title = p.projectPath || '';
     openBtn.addEventListener('click', async () => {
       // shell.openPath è il metodo corretto cross-platform per aprire una directory
@@ -881,22 +998,32 @@ function buildPluginCard(p) {
   // Action buttons
   const actions = el('div', 'pc-actions');
 
-  // Apri nel Finder (idea #2)
-  const finderBtn = el('button', 'btn btn-sm btn-ghost btn-icon-text', '📁');
+  // v1.0.46 — Icone SVG al posto delle emoji (coerenza con la sidebar)
+  // Vedi contenuto (modal con skills/agents/MCP/hooks navigabili)
+  const detailsBtn = el('button', 'btn btn-sm btn-ghost btn-icon');
+  detailsBtn.title = 'Vedi contenuto del plugin (skill, agent, MCP, hook)';
+  detailsBtn.appendChild(svgIcon('eye'));
+  detailsBtn.addEventListener('click', () => showPluginContentModal(p));
+
+  // Apri nel Finder
+  const finderBtn = el('button', 'btn btn-sm btn-ghost btn-icon');
   finderBtn.title = 'Apri sorgente nel Finder';
+  finderBtn.appendChild(svgIcon('folder'));
   finderBtn.addEventListener('click', async () => {
     const r = await window.claudeAPI.openPluginPath(p.fullId);
     if (!r.success) toast('Errore apertura Finder: ' + r.error, 'error');
   });
 
-  // Apri in VS Code (idea #2)
-  const codeBtn = el('button', 'btn btn-sm btn-ghost btn-icon-text', '📝');
+  // Apri in VS Code
+  const codeBtn = el('button', 'btn btn-sm btn-ghost btn-icon');
   codeBtn.title = 'Apri sorgente in VS Code';
+  codeBtn.appendChild(svgIcon('code'));
   codeBtn.addEventListener('click', async () => {
     const r = await window.claudeAPI.openInEditor(p.fullId);
     if (!r.success) toast('Errore apertura VS Code: ' + r.error, 'error');
   });
 
+  actions.appendChild(detailsBtn);
   actions.appendChild(finderBtn);
   actions.appendChild(codeBtn);
 
@@ -2982,7 +3109,7 @@ function renderSettings() {
   infoRow.appendChild(infoLeft);
   const infoRight = el('div');
   infoRight.style.cssText = 'display:flex;gap:10px;align-items:center;';
-  const verVal = el('div', 'settings-row-val', '1.0.45');
+  const verVal = el('div', 'settings-row-val', '1.0.46');
   const chBtn = btnWithIcon('btn btn-sm btn-green btn-with-icon', 'changelog', ' Changelog');
   chBtn.title = 'Mostra storico versioni';
   chBtn.addEventListener('click', () => openChangelogModal());

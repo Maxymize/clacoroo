@@ -1,5 +1,22 @@
 # Changelog
 
+## v1.0.46 — 2026-05-22
+
+**Plugin card — Vedi contenuto**
+
+- Nuovo bottone occhio (👁 → icona SVG) accanto a Finder ed editor: apre un modal con il contenuto completo del plugin (skills, agents, MCP, hook)
+- Badge "N skill", "N agent", "MCP", "Hook" sono ora cliccabili: aprono lo stesso modal
+- Nel modal ogni skill/agent è cliccabile → apre la sezione Skill / Agent con filtro pre-applicato sul nome
+- Per i plugin con MCP server: bottone "↗ Vai a MCP" che porta direttamente alla sezione MCP
+
+**Tooltip sul badge "tok"**
+
+- Hover sul badge "N tok" mostra ora il significato: "Token always-on stimati: peso aggiunto al context window di Claude Code da questo plugin a prescindere dall'utilizzo attivo. Fonte: plugin-catalog-cache.json"
+
+**Icone**
+
+- Sostituite tutte le emoji 📁 📝 nei plugin card con icone SVG inline coerenti con la sidebar (folder + code), riusando il helper `svgIcon()`/`btnWithIcon()`
+
 ## v1.0.45 — 2026-05-22
 
 - Stats > Per-progetto: design più professionale. Le metriche non sono più mostrate in pillole ovali, ma come colonne con valore grande + label sotto (stile KPI). Hover effect blu sulla card
