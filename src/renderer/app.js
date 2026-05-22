@@ -71,6 +71,12 @@ const $ = id => document.getElementById(id);
 /* ── INIT ─────────────────────────────────────────────────────────────── */
 async function init() {
   setupNav();
+  // v1.0.67 — Carica caps pty PRIMA del primo render, così il bottone
+  // "Terminale" appare nel topbar fin dal primo paint (altrimenti il
+  // render parte con termState.caps=null e l'utente non vede il bottone).
+  try {
+    termState.caps = await window.claudeAPI.pty.capabilities();
+  } catch { /* graceful: pty non disponibile, nessun bottone */ }
   await loadData();
   window.claudeAPI.onConfigChanged(() => {
     // v1.0.41 — se l'utente ha appena modificato un setting dalla pagina
@@ -101,6 +107,8 @@ async function init() {
   scheduleUpdateCheck();
   // v1.0.29 — Pack A: pill account sempre visibile in sidebar
   bootSidebarAccount();
+  // v1.0.67 — Pack B: Terminale integrato (drawer + multi-tab)
+  await initTerminalDrawer();
 }
 
 function scheduleUpdateCheck() {
@@ -350,6 +358,14 @@ function render() {
     toast('Dati ricaricati', 'success');
   });
   actions.appendChild(refreshBtn);
+
+  // v1.0.67 — Pack B: toggle terminale integrato
+  if (termState && termState.caps && termState.caps.available) {
+    const termBtn = el('button', 'btn btn-sm btn-ghost btn-refresh', '▣ Terminale');
+    termBtn.title = 'Apri/chiudi il terminale integrato (Cmd+`)';
+    termBtn.addEventListener('click', () => termSetOpen(!termState.open));
+    actions.appendChild(termBtn);
+  }
 
   switch (state.section) {
     case 'dashboard':    renderDashboard();   break;
@@ -3576,7 +3592,7 @@ function renderSettings() {
   infoRow.appendChild(infoLeft);
   const infoRight = el('div');
   infoRight.style.cssText = 'display:flex;gap:10px;align-items:center;';
-  const verVal = el('div', 'settings-row-val', '1.0.66');
+  const verVal = el('div', 'settings-row-val', '1.0.67');
   const chBtn = btnWithIcon('btn btn-sm btn-green btn-with-icon', 'changelog', ' Changelog');
   chBtn.title = 'Mostra storico versioni';
   chBtn.addEventListener('click', () => openChangelogModal());
@@ -4019,6 +4035,376 @@ function toast(msg, type) {
     t.style.transition = 'opacity .3s';
     setTimeout(() => t.remove(), 320);
   }, 3200);
+}
+
+/* ── v1.0.67 — TERMINAL DRAWER (Pack B) ──────────────────────────────── */
+/* Stato in-memory delle tab aperte. Ogni voce: { id, ptyId, term, cwd, title, shell, container, ... } */
+const termState = {
+  tabs: new Map(),   // tabId → tabObj
+  order: [],         // tabId in ordine di creazione/UI
+  activeId: null,
+  open: false,
+  height: 280,       // px
+  caps: null,        // pty capabilities (default shell, platform, ecc.)
+  saveDebounce: 0,
+  busyTimers: new Map(),  // tabId → timeout id (per status dot: arancio ↔ verde)
+  cwdPoll: 0,        // setInterval handle per live cwd tracking
+};
+
+// Trasforma `/Users/maxymize/Sviluppo/Claude/Claude-Control-Room` in
+// `~/…/Claude-Control-Room`. Path al di fuori di HOME: solo basename.
+function termShortCwd(cwd) {
+  if (!cwd) return '';
+  const home = termState.caps && termState.caps.defaultCwd ? termState.caps.defaultCwd : '';
+  const sep = (cwd.indexOf('\\') !== -1 && cwd.indexOf('/') === -1) ? '\\' : '/';
+  if (home && cwd === home) return '~';
+  if (home && (cwd.startsWith(home + '/') || cwd.startsWith(home + '\\'))) {
+    const rest = cwd.slice(home.length + 1);
+    const parts = rest.split(/[\/\\]/).filter(Boolean);
+    if (parts.length === 0) return '~';
+    if (parts.length === 1) return '~/' + parts[0];
+    if (parts.length === 2) return '~/' + parts.join('/');
+    return '~/…/' + parts[parts.length - 1];
+  }
+  const parts = cwd.split(/[\/\\]/).filter(Boolean);
+  return parts.length ? parts[parts.length - 1] : cwd;
+}
+
+function termMarkBusy(tabId) {
+  const tab = termState.tabs.get(tabId);
+  if (!tab) return;
+  tab.busy = true;
+  if (tab.dotEl) tab.dotEl.className = 'terminal-tab-dot busy';
+  if (termState.busyTimers.has(tabId)) clearTimeout(termState.busyTimers.get(tabId));
+  termState.busyTimers.set(tabId, setTimeout(() => {
+    tab.busy = false;
+    if (tab.dotEl) tab.dotEl.className = 'terminal-tab-dot idle';
+    termState.busyTimers.delete(tabId);
+  }, 400));
+}
+
+async function termPollActiveCwd() {
+  const id = termState.activeId;
+  if (!id) return;
+  const tab = termState.tabs.get(id);
+  if (!tab) return;
+  try {
+    const r = await window.claudeAPI.pty.cwd(tab.ptyId);
+    const newCwd = r && r.cwd;
+    if (newCwd && newCwd !== tab.cwd) {
+      tab.cwd = newCwd;
+      // Aggiorna SOLO la label di questa tab, niente full re-render
+      if (tab.labelEl) tab.labelEl.textContent = termShortCwd(newCwd);
+      const btn = document.querySelector(`.terminal-tab[data-tab-id="${id}"]`);
+      if (btn) btn.title = `${tab.shell}  •  ${newCwd}`;
+      termSavePersistent();
+    }
+  } catch { /* ignore */ }
+}
+
+function termSavePersistent() {
+  clearTimeout(termState.saveDebounce);
+  termState.saveDebounce = setTimeout(() => {
+    const payload = {
+      open: termState.open,
+      height: termState.height,
+      activeTabId: termState.activeId,
+      tabs: termState.order.map(id => {
+        const t = termState.tabs.get(id);
+        return t ? { id: t.id, cwd: t.cwd, title: t.title, shell: t.shell } : null;
+      }).filter(Boolean),
+    };
+    window.claudeAPI.setState({ terminalDrawer: payload });
+  }, 250);
+}
+
+function termPickTabId() {
+  // ID stabile per UI: non riusiamo il ptyId perché può cambiare al reload.
+  return 't' + Math.random().toString(36).slice(2, 9);
+}
+
+async function initTerminalDrawer() {
+  if (!termState.caps) {
+    try { termState.caps = await window.claudeAPI.pty.capabilities(); }
+    catch { termState.caps = { available: false }; }
+  }
+  if (!termState.caps.available) {
+    console.warn('[CLACOROO] pty non disponibile:', termState.caps.loadError);
+    const drawer = document.getElementById('terminal-drawer');
+    if (drawer) drawer.style.display = 'none';
+    return;
+  }
+
+  // Routing eventi pty → tab corrispondente. Ogni chunk attiva il dot "busy"
+  // (arancio) della tab per 400ms; senza ulteriori chunk torna idle (verde).
+  window.claudeAPI.pty.onData(({ id, chunk }) => {
+    for (const t of termState.tabs.values()) {
+      if (t.ptyId === id) {
+        t.write(chunk);
+        termMarkBusy(t.id);
+        break;
+      }
+    }
+  });
+  window.claudeAPI.pty.onExit(({ id }) => {
+    for (const t of termState.tabs.values()) {
+      if (t.ptyId === id) {
+        t.write('\r\n\x1b[33m[processo terminato]\x1b[0m\r\n');
+        // Visualizza dot rosso fisso (processo morto)
+        if (t.dotEl) t.dotEl.className = 'terminal-tab-dot dead';
+        break;
+      }
+    }
+  });
+
+  // Bind topbar/drawer buttons
+  document.getElementById('terminal-drawer-newtab').addEventListener('click', () => termOpenNewTab());
+  document.getElementById('terminal-drawer-close').addEventListener('click', () => termSetOpen(false));
+  termInitResizer();
+
+  // Restore state
+  const appState = await window.claudeAPI.getState();
+  const saved = appState.terminalDrawer;
+  if (saved && Number.isFinite(saved.height)) {
+    termState.height = Math.max(140, Math.min(800, saved.height));
+  }
+  applyDrawerHeight();
+
+  if (saved && Array.isArray(saved.tabs) && saved.tabs.length) {
+    for (const s of saved.tabs) {
+      await termCreateTab({ cwd: s.cwd, title: s.title, shell: s.shell, makeActive: false });
+    }
+    if (saved.activeTabId) {
+      // Trova il tab nella stessa posizione (gli id nuovi sono diversi)
+      const idx = saved.tabs.findIndex(t => t.id === saved.activeTabId);
+      if (idx >= 0 && idx < termState.order.length) {
+        termActivateTab(termState.order[idx]);
+      } else if (termState.order.length) {
+        termActivateTab(termState.order[0]);
+      }
+    } else if (termState.order.length) {
+      termActivateTab(termState.order[0]);
+    }
+  }
+  if (saved && saved.open) {
+    termSetOpen(true, /*skipSave*/ true);
+  }
+
+  // Shortcut globali
+  document.addEventListener('keydown', (e) => {
+    const isMac = navigator.userAgent.includes('Mac');
+    const mod = isMac ? e.metaKey : e.ctrlKey;
+    if (!mod) return;
+    // Cmd + ` toggle drawer
+    if (e.key === '`') {
+      e.preventDefault();
+      termSetOpen(!termState.open);
+    }
+    // Cmd + T nuova tab (solo quando drawer aperto, altrimenti rispetta default browser)
+    if (e.key === 't' && termState.open) {
+      e.preventDefault();
+      termOpenNewTab();
+    }
+  });
+}
+
+async function termCreateTab(opts = {}) {
+  const id = termPickTabId();
+  const body = document.getElementById('terminal-drawer-body');
+
+  // Spawn pty lato main
+  const r = await window.claudeAPI.pty.spawn({
+    cwd:   opts.cwd   || termState.caps?.defaultCwd,
+    title: opts.title || null,
+    shell: opts.shell || null,
+    cols:  80,
+    rows:  24,
+  });
+  if (!r || !r.success) {
+    toast('Errore avvio terminale: ' + (r?.error || 'sconosciuto'), 'error');
+    return null;
+  }
+  const info = r.info;
+
+  const tab = window.TermDrawer.createTab({
+    id,
+    ptyId: info.id,
+    cwd:   info.cwd,
+    title: info.title,
+    shell: info.shell,
+    parent: null,  // attacchiamo solo quando diventa attiva
+  });
+  // tab è ritornato dall'helper TermDrawer; aggiungo property a posteriori per sicurezza
+  tab.id = id;
+  tab.ptyId = info.id;
+  tab.cwd = info.cwd;
+  tab.title = info.title;
+  tab.shell = info.shell;
+
+  termState.tabs.set(id, tab);
+  termState.order.push(id);
+  renderTermTabs();
+
+  if (opts.makeActive !== false) termActivateTab(id);
+  termSavePersistent();
+  return tab;
+}
+
+function termOpenNewTab() {
+  if (!termState.open) termSetOpen(true);
+  return termCreateTab({});
+}
+
+function termActivateTab(id) {
+  const tab = termState.tabs.get(id);
+  if (!tab) return;
+  const body = document.getElementById('terminal-drawer-body');
+  // Detach altre tab dal body (preserviamo le istanze)
+  for (const t of termState.tabs.values()) {
+    if (t.id !== id) t.detach();
+  }
+  tab.attach(body);
+  termState.activeId = id;
+  renderTermTabs();
+  // Aggiorna subito cwd della nuova tab attiva (non aspettare 3s)
+  if (termState.open) termPollActiveCwd();
+  termSavePersistent();
+}
+
+function termCloseTab(id) {
+  const tab = termState.tabs.get(id);
+  if (!tab) return;
+  window.claudeAPI.pty.kill(tab.ptyId);
+  tab.dispose();
+  termState.tabs.delete(id);
+  termState.order = termState.order.filter(x => x !== id);
+  if (termState.activeId === id) {
+    termState.activeId = termState.order[termState.order.length - 1] || null;
+    if (termState.activeId) termActivateTab(termState.activeId);
+  }
+  renderTermTabs();
+  termSavePersistent();
+}
+
+function renderTermTabs() {
+  const bar = document.getElementById('terminal-drawer-tabs');
+  if (!bar) return;
+  bar.textContent = '';
+  for (const id of termState.order) {
+    const t = termState.tabs.get(id);
+    if (!t) continue;
+    const btn = document.createElement('button');
+    btn.className = 'terminal-tab' + (id === termState.activeId ? ' active' : '');
+    btn.dataset.tabId = id;
+    btn.title = `${t.shell}  •  ${t.cwd}`;
+
+    // Status dot: idle (verde) di default, busy (arancio pulse) se attività
+    // recente, dead (rosso) se processo terminato.
+    const dot = document.createElement('span');
+    dot.className = 'terminal-tab-dot ' + (t.busy ? 'busy' : 'idle');
+    btn.appendChild(dot);
+    t.dotEl = dot;
+
+    const lbl = document.createElement('span');
+    lbl.className = 'terminal-tab-label';
+    lbl.textContent = termShortCwd(t.cwd);
+    btn.appendChild(lbl);
+    t.labelEl = lbl;
+
+    const close = document.createElement('span');
+    close.className = 'terminal-tab-close';
+    close.textContent = '×';
+    close.title = 'Chiudi tab';
+    close.addEventListener('click', (ev) => { ev.stopPropagation(); termCloseTab(id); });
+    btn.appendChild(close);
+
+    btn.addEventListener('click', () => termActivateTab(id));
+    bar.appendChild(btn);
+  }
+}
+
+function applyDrawerHeight() {
+  const d = document.getElementById('terminal-drawer');
+  if (d) d.style.height = termState.height + 'px';
+}
+
+function termSetOpen(open, skipSave) {
+  termState.open = !!open;
+  const d = document.getElementById('terminal-drawer');
+  if (!d) return;
+  d.dataset.open = String(termState.open);
+  d.setAttribute('aria-hidden', String(!termState.open));
+  if (termState.open) {
+    applyDrawerHeight();
+    // Se non c'è nessuna tab, aprine una di default
+    if (termState.order.length === 0) {
+      termCreateTab({});
+    } else if (termState.activeId) {
+      // Refit dopo che il drawer è visibile
+      const t = termState.tabs.get(termState.activeId);
+      if (t) requestAnimationFrame(() => {
+        try {
+          t.fit.fit();
+          const { cols, rows } = t.term;
+          if (cols && rows) window.claudeAPI.pty.resize(t.ptyId, cols, rows);
+        } catch {}
+        t.term.focus();
+      });
+    }
+    // Start live cwd polling (3s) per la tab attiva
+    if (!termState.cwdPoll) {
+      termPollActiveCwd();
+      termState.cwdPoll = setInterval(termPollActiveCwd, 3000);
+    }
+  } else {
+    // Ferma polling per non sprecare CPU quando il drawer è chiuso
+    if (termState.cwdPoll) {
+      clearInterval(termState.cwdPoll);
+      termState.cwdPoll = 0;
+    }
+  }
+  if (!skipSave) termSavePersistent();
+}
+
+function termInitResizer() {
+  const handle = document.getElementById('terminal-drawer-resizer');
+  if (!handle) return;
+  let dragStartY = 0;
+  let dragStartH = 0;
+  let dragging = false;
+  const onMove = (ev) => {
+    if (!dragging) return;
+    const dy = dragStartY - ev.clientY;
+    let h = dragStartH + dy;
+    h = Math.max(140, Math.min(window.innerHeight - 120, h));
+    termState.height = h;
+    applyDrawerHeight();
+  };
+  const onUp = () => {
+    if (!dragging) return;
+    dragging = false;
+    document.body.style.userSelect = '';
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('mouseup', onUp);
+    // Refit la tab attiva dopo resize completato
+    const t = termState.tabs.get(termState.activeId);
+    if (t) requestAnimationFrame(() => {
+      try {
+        t.fit.fit();
+        const { cols, rows } = t.term;
+        if (cols && rows) window.claudeAPI.pty.resize(t.ptyId, cols, rows);
+      } catch {}
+    });
+    termSavePersistent();
+  };
+  handle.addEventListener('mousedown', (ev) => {
+    dragging = true;
+    dragStartY = ev.clientY;
+    dragStartH = termState.height;
+    document.body.style.userSelect = 'none';
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  });
 }
 
 /* ── START ────────────────────────────────────────────────────────────── */

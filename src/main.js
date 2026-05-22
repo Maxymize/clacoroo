@@ -51,6 +51,7 @@ const MCP     = require('./lib/mcp');
 const ACCOUNT = require('./lib/account');
 const PRICING = require('./lib/pricing');
 const USAGE   = require('./lib/usage');
+const PTY     = require('./lib/pty');
 
 /* ── CONFIG PATHS ──────────────────────────────────────────────────────── */
 
@@ -781,6 +782,50 @@ ipcMain.handle('check-updates', async (_e, { force } = {}) => {
   }
   return result;
 });
+
+// v1.0.67 — Pack B: Terminale integrato (xterm.js + node-pty)
+// I dati pty fluiscono dal main al renderer come eventi 'pty:data:<id>'.
+// L'input renderer→main passa via 'pty:input' (one-way send, niente attesa).
+ipcMain.handle('pty:capabilities', async () => ({
+  available: PTY.isAvailable(),
+  loadError: PTY.getLoadError(),
+  defaultShell: PTY.isAvailable() ? PTY.defaultShell() : null,
+  defaultCwd: PTY.defaultCwd(),
+  platform: process.platform,
+}));
+
+ipcMain.handle('pty:spawn', async (_e, opts = {}) => {
+  if (!PTY.isAvailable()) return { success: false, error: 'Terminale non disponibile su questa piattaforma' };
+  try {
+    const info = PTY.spawn(opts);
+    PTY.setHandlers(info.id, {
+      onData: (chunk) => { if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('pty:data', { id: info.id, chunk }); },
+      onExit: (exit)  => { if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('pty:exit', { id: info.id, ...exit }); },
+    });
+    return { success: true, info };
+  } catch (e) {
+    return { success: false, error: e.message };
+  }
+});
+
+ipcMain.on('pty:input', (_e, { id, data }) => {
+  if (typeof id !== 'string') return;
+  PTY.write(id, data);
+});
+
+ipcMain.handle('pty:resize', async (_e, { id, cols, rows }) => {
+  return { success: PTY.resize(id, cols, rows) };
+});
+
+ipcMain.handle('pty:kill', async (_e, { id }) => {
+  return { success: PTY.kill(id) };
+});
+
+ipcMain.handle('pty:list', async () => PTY.list());
+
+ipcMain.handle('pty:cwd', async (_e, { id }) => ({ cwd: PTY.getCwd(id) }));
+
+app.on('before-quit', () => PTY.killAll());
 
 // B4 — Notifiche native (mostrate solo se l'app non è in focus)
 ipcMain.handle('show-notification', async (_e, { title, body }) => {

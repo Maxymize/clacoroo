@@ -1,5 +1,80 @@
 # Changelog
 
+## v1.0.67 — 2026-05-22 — Pack B foundation: Terminale integrato (drawer + multi-tab + live cwd)
+
+Implementata la foundation del **Pack B — Terminale integrato + One-click launcher**: drawer fisso in basso, multi-tab, persistenza completa fra riavvii, dot di stato e tracking live della directory.
+
+### Architettura
+
+**Nuove dipendenze runtime** (rompe il "zero runtime deps" precedente, scelta consapevole per il valore della feature):
+- `node-pty` 1.1.0 — pseudo-terminale nativo (prebuilds darwin arm64+x64 e win32 arm64+x64, no rebuild necessario)
+- `@xterm/xterm` 6.0.0 — render terminale in canvas/DOM
+- `@xterm/addon-fit` 0.11.0 — auto-resize cols/rows
+- `@xterm/addon-web-links` 0.12.0 — URL cliccabili nell'output → `shell.openExternal`
+
+**File nuovi**:
+- `src/lib/pty.js` — manager sessioni pty cross-platform: `spawn / write / resize / kill / killAll / list / setHandlers / getCwd`. Validazione `cwd`/`cols`/`rows` + detect default shell (`$SHELL` su Unix, `pwsh.exe`/`cmd.exe` su Win)
+- `src/renderer/lib/term.js` — wrapper xterm.js per tab con palette CLACOROO (cursor orange, background `#0d0c0b`, fg cream, accenti Anthropic green/blue)
+- `src/renderer/vendor/xterm/` — xterm.js + 2 addon + CSS vendored localmente (no path node_modules in renderer, evita gotchas asar/CSP)
+- `scripts/fix-node-pty-perms.js` — postinstall hook che applica `chmod +x` allo `spawn-helper` di node-pty (i tarball npm non preservano il bit eseguibile su macOS, causando `posix_spawnp failed` al primo spawn)
+
+**`package.json`**:
+- `"postinstall": "node scripts/fix-node-pty-perms.js"` — automatic per ogni `npm install`
+- `"asarUnpack": ["node_modules/node-pty/**/*"]` — native module + spawn-helper devono restare unpacked perché eseguibili
+
+### UI
+
+- **Drawer fisso in basso** di `.main-area`, sotto la `.content-area`. Altezza ridimensionabile trascinando il bordo superiore (handle 6px), range 140–800px
+- **Bottone "▣ Terminale"** nel topbar (visibile solo se pty disponibile su questa piattaforma) + shortcut globale `Cmd+\``
+- **Tab bar** stile editor IDE: tab attiva si fonde col corpo nero del drawer + top stripe arancio CLACOROO; tab inattive come "card warm" `#2a2622` con bordi arrotondati. Hover state esplicito
+- **Status dot per tab** (8px circle prima della label):
+  - 🟢 `idle` (verde Anthropic `#788c5d`) — shell idle, prompt pronto
+  - 🟠 `busy` (arancio CLACOROO `#d97757` + pulse 1s) — dati in arrivo nei ultimi 400ms (comando in esecuzione)
+  - 🔴 `dead` (rosso `#ef4444`) — processo terminato
+- **Label tab = cwd corto** invece di "zsh": `~` per home, `~/Sviluppo` per primi 2 livelli, `~/…/clacoroo` per path profondi. Tooltip mostra `shell • full-path`
+- **Live cwd tracking**: polling 3s sul tab attivo via `lsof -p <pid> -a -d cwd -Fn` (macOS) / `readlink /proc/<pid>/cwd` (Linux). Quando l'utente fa `cd`, la label si aggiorna entro 3s. Polling fermato quando drawer chiuso per non sprecare CPU. Windows skipato (richiederebbe Win32 API)
+- **Bottoni header drawer**: `+` nuova tab (`Cmd+T` quando drawer aperto), `×` chiudi drawer
+
+### Persistenza
+
+Nuova chiave `terminalDrawer` in `~/.claude-control-room/state.json`:
+```json
+{
+  "open": true,
+  "height": 320,
+  "activeTabId": "t9k3z2a",
+  "tabs": [
+    { "id": "t9k3z2a", "cwd": "/Users/.../clacoroo", "title": "zsh", "shell": "/bin/zsh" }
+  ]
+}
+```
+
+Al reload dell'app: ripristina altezza + stato aperto/chiuso + ricrea tutte le tab con il cwd salvato. Restart automatico delle sessioni shell.
+
+### IPC nuovi
+
+`pty:capabilities` (returns `{available, loadError, defaultShell, defaultCwd, platform}`) · `pty:spawn` · `pty:input` (one-way send per stdin) · `pty:resize` · `pty:kill` · `pty:list` · `pty:cwd`. Eventi push dal main: `pty:data` (chunk stdout) · `pty:exit` (exitCode + signal). Cleanup su `app.before-quit` via `PTY.killAll()`.
+
+### Sicurezza
+
+- Tutti gli spawn passano per `node-pty` (no shell stringa, sempre array args) → zero rischio injection
+- `cwd` validato: deve esistere ed essere una directory, altrimenti fallback HOME
+- `cols`/`rows` validati range 2–1000 / 2–500
+- `env` passato esplicitamente con override `TERM=xterm-256color` (no leakage extra)
+- `contextIsolation` + `sandbox` invariati: il renderer non ha accesso diretto al filesystem o ai child processes
+
+### Note cross-platform
+
+- macOS: testato in dev (Mac mini arm64, zsh)
+- Linux: codice cross-platform pronto ma serve rebuild node-pty da source (prebuilds Linux assenti, Python 3.12+ ha rimosso `distutils` → workaround `pip install setuptools` o Python 3.11)
+- Windows: codice include ConPTY-aware path + URL handler `C:\` → `/C:/`. Test pianificato quando l'utente attiverà UTM VM
+
+### Prossimo (v1.0.68)
+
+- Bottone `▶` su ogni skill/agent → apre drawer + crea/seleziona tab + esegue `claude -p "<name>"` nel terminale principale
+- Shell selector in Impostazioni
+- Lancio rapido `claude` nel progetto tracciato attivo
+
 ## v1.0.66 — 2026-05-22 — Cleanup residui MIT in CLAUDE.md e doc-tecnico_handoff.html
 
 Follow-up alla v1.0.65 (switch licenza AGPL-3.0). Aggiornati i due file di documentazione interna che ancora citavano "MIT":

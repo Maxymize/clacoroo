@@ -44,6 +44,27 @@ contextBridge.exposeInMainWorld('claudeAPI', {
   applySnapshot:      (preview)           => ipcRenderer.invoke('apply-snapshot',     preview),
   showNotification:   (title, body)       => ipcRenderer.invoke('show-notification',  { title, body }),
 
+  // v1.0.67 — Pack B: Terminale integrato
+  pty: {
+    capabilities: ()                       => ipcRenderer.invoke('pty:capabilities'),
+    spawn:        (opts)                   => ipcRenderer.invoke('pty:spawn', opts || {}),
+    write:        (id, data)               => ipcRenderer.send('pty:input', { id, data }),
+    resize:       (id, cols, rows)         => ipcRenderer.invoke('pty:resize', { id, cols, rows }),
+    kill:         (id)                     => ipcRenderer.invoke('pty:kill', { id }),
+    list:         ()                       => ipcRenderer.invoke('pty:list'),
+    cwd:          (id)                     => ipcRenderer.invoke('pty:cwd', { id }),
+    onData: (cb) => {
+      const handler = (_e, payload) => cb(payload);
+      ipcRenderer.on('pty:data', handler);
+      return () => ipcRenderer.removeListener('pty:data', handler);
+    },
+    onExit: (cb) => {
+      const handler = (_e, payload) => cb(payload);
+      ipcRenderer.on('pty:exit', handler);
+      return () => ipcRenderer.removeListener('pty:exit', handler);
+    },
+  },
+
   onConfigChanged: (cb) => {
     const handler = () => cb();
     ipcRenderer.on('config-changed', handler);

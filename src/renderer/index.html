@@ -6,6 +6,7 @@
   <meta http-equiv="Content-Security-Policy"
         content="default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; font-src 'self'">
   <title>CLACOROO — Claude Code Control Room</title>
+  <link rel="stylesheet" href="vendor/xterm/xterm.css">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -91,12 +92,30 @@
           <p>CLACOROO sta accendendo la control room…</p>
         </div>
       </div>
+
+      <!-- v1.0.67 — Terminal drawer (Pack B): drawer fisso in basso, multi-tab -->
+      <div class="terminal-drawer" id="terminal-drawer" data-open="false" aria-hidden="true">
+        <div class="terminal-drawer-resizer" id="terminal-drawer-resizer" title="Trascina per ridimensionare"></div>
+        <div class="terminal-drawer-header">
+          <div class="terminal-drawer-tabs" id="terminal-drawer-tabs"></div>
+          <div class="terminal-drawer-actions">
+            <button class="terminal-drawer-btn" id="terminal-drawer-newtab" title="Nuova tab (Cmd+T)" data-tt="Nuova tab">+</button>
+            <button class="terminal-drawer-btn" id="terminal-drawer-close" title="Chiudi terminale (Cmd+`)" data-tt="Chiudi terminale">×</button>
+          </div>
+        </div>
+        <div class="terminal-drawer-body" id="terminal-drawer-body"></div>
+      </div>
     </main>
   </div>
 
   <!-- TOAST CONTAINER -->
   <div class="toast-container" id="toast-container"></div>
 
+  <!-- v1.0.67 — xterm.js vendored (cfr. src/renderer/vendor/xterm/) -->
+  <script src="vendor/xterm/xterm.js"></script>
+  <script src="vendor/xterm/addon-fit.js"></script>
+  <script src="vendor/xterm/addon-web-links.js"></script>
+  <script src="lib/term.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

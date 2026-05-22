@@ -11,7 +11,7 @@ Pannello di controllo visuale per [Claude Code](https://github.com/anthropics/cl
 [![Electron](https://img.shields.io/badge/Electron-36-47848F?logo=electron&logoColor=white)](https://www.electronjs.org/)
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20Windows-141413)](#requisiti)
 [![License: AGPL v3+](https://img.shields.io/badge/License-AGPL%20v3+-d97757.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-1.0.66-d97757.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-1.0.67-d97757.svg)](CHANGELOG.md)
 
 </div>
 
@@ -29,9 +29,10 @@ Prima di CLACOROO, l'unico modo per gestire plugin e marketplace di Claude Code 
 |---|---|
 | 🏠 **Dashboard** | KPI a colpo d'occhio: plugin attivi/disattivati, marketplace, skill e agent totali, token always-on |
 | 🧩 **Plugin** | Toggle enable/disable · update · uninstall · ricerca full-text · filtri per stato e marketplace |
-| 🏪 **Marketplace** | Card espandibili con i plugin contenuti · aggiornamento · rimozione |
+| 🏪 **Marketplace** | Card espandibili con i plugin contenuti · aggiungi nuovi · install plugin · aggiornamento · rimozione |
 | ⚡ **Skill** | Browser ricercabile su tutte le skill installate globalmente |
 | 🤖 **Agent** | Browser ricercabile su tutti gli agent installati globalmente |
+| 📟 **Terminale** | Drawer in basso multi-tab con xterm.js + node-pty: zsh/bash/pwsh, persistenza tab fra riavvii, status dot live, cwd tracking — apri con `Cmd+\`` |
 | ⚙️ **Impostazioni** | Percorsi rilevati, statistiche, configurazione manuale binario `claude` |
 
 **Auto-refresh**: la UI si aggiorna sola quando i file di configurazione di Claude Code cambiano (`fs.watch`), senza dover riavviare l'app.
@@ -106,7 +107,7 @@ CLACOROO segue le best practice Electron moderne:
 - ✅ Tutte le chiamate CLI usano `execFile` con array di argomenti (zero rischio shell injection)
 - ✅ ID plugin e nomi marketplace validati con regex prima di qualsiasi chiamata
 - ✅ CSP rigida: solo risorse `'self'`, nessun CDN remoto (font, librerie, immagini)
-- ✅ Zero dipendenze runtime — solo `electron` e `electron-builder` come devDependencies
+- ✅ Dipendenze runtime ridotte al minimo: solo `node-pty` (terminale integrato) + `@xterm/xterm` & 2 addon (renderer). Zero framework UI
 
 ### Build non firmato — workaround Gatekeeper (macOS)
 
