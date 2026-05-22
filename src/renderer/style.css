@@ -1453,15 +1453,79 @@ body {
   border-radius: 4px;
   margin-top: 4px;
 }
-.account-logout-warning {
-  font-size: 11px;
+/* Logout tooltip custom (v1.0.34) — appare in hover sopra il bottone */
+.logout-btn-wrap {
+  position: relative;
+  display: inline-block;
+}
+.logout-tooltip {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  right: 0;
+  width: 320px;
+  padding: 12px 14px;
+  background: var(--surface);
+  border: 1px solid #f59e0b;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .5), 0 0 0 1px rgba(245, 158, 11, .15);
+  z-index: 100;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(4px);
+  pointer-events: none;
+  transition: opacity .18s ease, transform .18s ease, visibility 0s linear .18s;
+}
+.logout-btn-wrap:hover .logout-tooltip,
+.logout-btn-wrap:focus-within .logout-tooltip {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+  transition: opacity .18s ease, transform .18s ease, visibility 0s;
+}
+.logout-tooltip::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  right: 14px;
+  border: 6px solid transparent;
+  border-top-color: #f59e0b;
+}
+.logout-tooltip-title {
+  font-size: 12px;
+  font-weight: 700;
   color: #f59e0b;
+  margin-bottom: 6px;
+}
+.logout-tooltip-body {
+  font-size: 11px;
+  color: var(--text);
   line-height: 1.5;
-  padding: 8px 12px;
-  background: rgba(245, 158, 11, .08);
-  border-left: 3px solid #f59e0b;
-  border-radius: 4px;
+  margin-bottom: 6px;
+}
+.logout-tooltip-list {
+  list-style: disc inside;
+  margin: 0 0 8px;
+  padding: 0;
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+.logout-tooltip-footer {
+  font-size: 11px;
+  color: var(--text-muted);
+  border-top: 1px solid var(--border);
+  padding-top: 6px;
   margin-top: 4px;
+  font-style: italic;
+}
+.logout-tooltip-footer code,
+.logout-tooltip-body code {
+  font-family: "SF Mono", "Fira Code", Menlo, monospace;
+  font-size: 10px;
+  background: var(--surface2);
+  padding: 1px 4px;
+  border-radius: 3px;
+  color: var(--text);
 }
 .account-actions {
   display: flex;

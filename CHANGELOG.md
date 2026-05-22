@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.0.34 — 2026-05-22
+
+- Pannello Account: rimosso il box arancio fisso, sostituito con un tooltip custom che appare al passaggio del mouse sul bottone Logout. Stesso contenuto (avviso che il logout è globale di sistema), ma estetica più pulita
+- Tooltip stilizzato in card con freccia, titolo arancio "⚠ Logout di sistema", lista delle istanze impattate e nota su come ri-autenticarsi
+
 ## v1.0.33 — 2026-05-22
 
 - Avviso esplicito sul Logout: ora il pannello Account mostra un box arancio "⚠ Il logout disconnette OVUNQUE (CLACOROO + CLI terminale + plugin IDE)" già prima di cliccare il bottone

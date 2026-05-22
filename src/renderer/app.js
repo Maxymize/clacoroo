@@ -2198,12 +2198,6 @@ function paintAccountPanel(container, result) {
     'Per vederle apri Claude Code in modalità interattiva ed esegui /usage.');
   card.appendChild(note);
 
-  // Avviso sicurezza logout — visibile prima ancora di cliccare il bottone
-  const logoutWarning = el('div', 'account-logout-warning',
-    '⚠ Il bottone "Logout" qui sotto disconnette OVUNQUE (CLACOROO + CLI terminale + plugin IDE), ' +
-    'perché il token è nel Keychain macOS condiviso. Per riaccedere dovrai eseguire ' +
-    '`claude auth login` da terminale.');
-  card.appendChild(logoutWarning);
 
   // Actions
   const actions = el('div', 'account-actions');
@@ -2224,8 +2218,24 @@ function paintAccountPanel(container, result) {
   const consoleBtn = el('button', 'btn btn-sm btn-ghost', '↗ Console API');
   consoleBtn.title = 'Apri console.anthropic.com (API key, billing, usage API)';
   consoleBtn.addEventListener('click', () => window.claudeAPI.openExternal('https://console.anthropic.com'));
+  // Logout con tooltip custom hover (warning esplicito, niente box invadente)
+  const logoutWrap = el('div', 'logout-btn-wrap');
   const logoutBtn = el('button', 'btn btn-sm btn-danger', 'Logout');
-  logoutBtn.title = '⚠ Logout di sistema: disconnette anche terminale e IDE plugin (storage Keychain condiviso).';
+  const logoutTooltip = el('div', 'logout-tooltip');
+  logoutTooltip.appendChild(el('div', 'logout-tooltip-title', '⚠ Logout di sistema'));
+  logoutTooltip.appendChild(el('div', 'logout-tooltip-body',
+    'Disconnette OVUNQUE — non solo da CLACOROO: il token è nel macOS Keychain condiviso.'));
+  const list = el('ul', 'logout-tooltip-list');
+  ['CLACOROO', 'Claude Code nel terminale (CLI)', 'Plugin IDE (VS Code, JetBrains, ecc.)'].forEach(item => {
+    const li = el('li', null, item);
+    list.appendChild(li);
+  });
+  logoutTooltip.appendChild(list);
+  logoutTooltip.appendChild(el('div', 'logout-tooltip-footer',
+    'Per riaccedere: apri terminale ed esegui `claude auth login`.'));
+  logoutWrap.appendChild(logoutBtn);
+  logoutWrap.appendChild(logoutTooltip);
+
   logoutBtn.addEventListener('click', async () => {
     const ok = await window.claudeAPI.confirmDialog({
       title:   '⚠ Logout di sistema da Claude',
@@ -2266,7 +2276,7 @@ function paintAccountPanel(container, result) {
   actions.appendChild(claudeBtn);
   actions.appendChild(consoleBtn);
   actions.appendChild(apiKeyBtn);
-  actions.appendChild(logoutBtn);
+  actions.appendChild(logoutWrap);
   card.appendChild(actions);
 
   container.appendChild(card);
@@ -2676,7 +2686,7 @@ function renderSettings() {
   const chBtn = el('button', 'btn btn-sm btn-green', '📋 Changelog');
   chBtn.title = 'Mostra storico versioni';
   chBtn.addEventListener('click', () => openChangelogModal());
-  const verVal = el('div', 'settings-row-val', '1.0.33');
+  const verVal = el('div', 'settings-row-val', '1.0.34');
   verRight.appendChild(chBtn);
   verRight.appendChild(verVal);
   verRow.appendChild(verRight);
