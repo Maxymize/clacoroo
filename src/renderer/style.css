@@ -2090,18 +2090,29 @@ body {
   margin-top: 4px;
 }
 
-/* Per-project */
+/* Per-project (v1.0.45 — design pulito senza pillole ovali) */
 .project-row {
   display: grid;
-  grid-template-columns: 200px 1fr 200px;
-  gap: 12px;
+  grid-template-columns: 1fr auto;
+  gap: 24px;
   align-items: center;
-  padding: 10px 14px;
+  padding: 14px 18px;
   background: var(--surface);
   border: 1px solid var(--border);
   border-left: 3px solid var(--accent);
-  border-radius: var(--radius-sm);
-  margin-bottom: 6px;
+  border-radius: var(--radius);
+  margin-bottom: 8px;
+  transition: border-color .15s, background .15s;
+}
+.project-row:hover {
+  border-color: var(--accent2, #6a9bcc);
+  background: color-mix(in srgb, var(--surface) 85%, var(--accent2, #6a9bcc) 15%);
+}
+.project-left {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
 }
 .project-name {
   font-weight: 700;
@@ -2115,14 +2126,33 @@ body {
   color: var(--text-muted);
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-.project-meta { display: flex; gap: 10px; justify-content: flex-end; }
-.project-meta-val {
-  font-size: 11px;
+.project-stats {
+  display: flex;
+  gap: 28px;
+  align-items: baseline;
+  flex-shrink: 0;
+}
+.project-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  min-width: 70px;
+}
+.project-stat-value {
+  font-family: "Inter", -apple-system, sans-serif;
+  font-size: 18px;
+  font-weight: 700;
   color: var(--text);
-  background: var(--surface2);
-  padding: 3px 10px;
-  border-radius: 99px;
-  font-family: "SF Mono", monospace;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+.project-stat-label {
+  font-size: 10px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  font-weight: 600;
+  margin-top: 2px;
 }
 
 /* Config inputs */

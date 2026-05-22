@@ -1822,34 +1822,55 @@ function renderStatsModels(container, data) {
 function renderStatsProjects(container, data) {
   container.appendChild(el('div', 'list-section-title', 'Progetti Claude Code'));
 
-  if (!data.projects.length) {
-    container.appendChild(el('div', 'stats-empty', 'Nessun progetto trovato in ~/.claude/projects/'));
+  // v1.0.45 — Filtra i progetti "fantasma" (0 sessioni, 0 token): tipicamente
+  // directory dove Claude Code è stato aperto una volta ma senza interazioni
+  // significative (es. via cowork plugin o sessioni terminate prematuramente).
+  const filtered = (data.projects || []).filter(p =>
+    (p.sessions || 0) > 0 || (p.messages || 0) > 0 || (p.totalTokens || 0) > 0
+  );
+
+  if (!filtered.length) {
+    container.appendChild(el('div', 'stats-empty', 'Nessun progetto con attività trovato in ~/.claude/projects/'));
     return;
   }
 
-  const sorted = [...data.projects].sort((a, b) => (b.totalTokens || 0) - (a.totalTokens || 0));
+  const sorted = filtered.sort((a, b) => (b.totalTokens || 0) - (a.totalTokens || 0));
   sorted.forEach(p => {
     const row = el('div', 'project-row');
-    row.appendChild(el('div', 'project-name', p.path.split('/').pop() || p.key));
-    row.appendChild(el('div', 'project-path', p.path));
-    const meta = el('div', 'project-meta');
-    const sessLbl = el('span', 'project-meta-val', (p.sessions || 0) + ' sess');
-    sessLbl.title = 'Una sessione = una apertura di Claude Code (può contenere centinaia di interazioni)';
-    meta.appendChild(sessLbl);
-    if (p.messages) {
-      const msgLbl = el('span', 'project-meta-val', fmtNum(p.messages) + ' msg');
-      msgLbl.title = 'Numero totale messaggi user+assistant nelle sessioni';
-      meta.appendChild(msgLbl);
+
+    const left = el('div', 'project-left');
+    left.appendChild(el('div', 'project-name', p.path.split('/').pop() || p.key));
+    left.appendChild(el('div', 'project-path', p.path));
+    row.appendChild(left);
+
+    const meta = el('div', 'project-stats');
+    function statCell(value, label, tooltip) {
+      const cell = el('div', 'project-stat');
+      const v = el('div', 'project-stat-value', value);
+      const l = el('div', 'project-stat-label', label);
+      cell.appendChild(v);
+      cell.appendChild(l);
+      if (tooltip) cell.title = tooltip;
+      return cell;
     }
-    meta.appendChild(el('span', 'project-meta-val', fmtNum(p.totalTokens || 0) + ' tok'));
+    meta.appendChild(statCell(
+      fmtNum(p.totalTokens || 0), 'token',
+      'Token totali aggregati dai file JSONL di sessione'));
+    meta.appendChild(statCell(
+      fmtNum(p.messages || 0), 'messaggi',
+      'Singole interazioni user/assistant nelle sessioni'));
+    meta.appendChild(statCell(
+      String(p.sessions || 0), p.sessions === 1 ? 'sessione' : 'sessioni',
+      'Sessioni riprendibili (file .jsonl ancora presenti in ~/.claude/projects/)'));
     row.appendChild(meta);
+
     container.appendChild(row);
   });
 
   container.appendChild(el('div', 'daily-chart-legend',
-    'Mostrati i primi 20 progetti — token aggregati dai file JSONL di sessione. ' +
-    'Sessione = 1 apertura di Claude Code (anche se dura ore con migliaia di messaggi è 1 sola sessione). ' +
-    'Messaggi = singole interazioni user/assistant.'));
+    'Mostrati i primi ' + sorted.length + ' progetti — token aggregati dai file JSONL di sessione. ' +
+    'Il count "sessioni" rappresenta i file di sessione ancora presenti e riprendibili (con `claude --continue`), ' +
+    'non il numero totale di volte che hai aperto Claude Code nel progetto.'));
 }
 
 // v1.0.38 — Config promossa a sezione sidebar standalone.
@@ -2961,7 +2982,7 @@ function renderSettings() {
   infoRow.appendChild(infoLeft);
   const infoRight = el('div');
   infoRight.style.cssText = 'display:flex;gap:10px;align-items:center;';
-  const verVal = el('div', 'settings-row-val', '1.0.44');
+  const verVal = el('div', 'settings-row-val', '1.0.45');
   const chBtn = btnWithIcon('btn btn-sm btn-green btn-with-icon', 'changelog', ' Changelog');
   chBtn.title = 'Mostra storico versioni';
   chBtn.addEventListener('click', () => openChangelogModal());

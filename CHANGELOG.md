@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.0.45 — 2026-05-22
+
+- Stats > Per-progetto: design più professionale. Le metriche non sono più mostrate in pillole ovali, ma come colonne con valore grande + label sotto (stile KPI). Hover effect blu sulla card
+- Filtrati i "progetti fantasma" con 0 sessioni e 0 token (tipicamente directory aperte in Claude Code senza interazioni significative, es. cowork plugin transient)
+- Legenda aggiornata: chiarito che il count "sessioni" si riferisce ai file di sessione ancora riprendibili (`claude --continue`), non al numero totale di volte che si è aperto Claude Code nel progetto
+
 ## v1.0.44 — 2026-05-22
 
 - Fix: il tooltip dell'istogramma "Token giornalieri" in Stats > Modelli non esce più dalla finestra quando si passa il mouse sulle barre a destra. Il tooltip ora flippa a sinistra del cursore se a destra non c'è spazio, e viene clampato dentro il contenitore anche sopra/sotto
