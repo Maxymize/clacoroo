@@ -10,8 +10,8 @@ Pannello di controllo visuale per [Claude Code](https://github.com/anthropics/cl
 
 [![Electron](https://img.shields.io/badge/Electron-36-47848F?logo=electron&logoColor=white)](https://www.electronjs.org/)
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20Windows-141413)](#requisiti)
-[![License: MIT](https://img.shields.io/badge/License-MIT-d97757.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-1.0.64-d97757.svg)](CHANGELOG.md)
+[![License: AGPL v3+](https://img.shields.io/badge/License-AGPL%20v3+-d97757.svg)](LICENSE)
+[![Version](https://img.shields.io/badge/version-1.0.65-d97757.svg)](CHANGELOG.md)
 
 </div>
 
@@ -155,4 +155,20 @@ Versionamento: solo l'ultima cifra `1.0.xx` (vedi [`CLAUDE.md`](CLAUDE.md) per l
 
 ## Licenza
 
-MIT © 2026 Maximilian Giurastante — vedi [`LICENSE`](LICENSE).
+**GNU Affero General Public License v3.0 or later (AGPL-3.0-or-later)**
+
+Copyright © 2026 **MAXYMIZE BUSINESS** (Maximilian Giurastante &lt;info@maxymizebusiness.com&gt;)
+
+CLACOROO è software libero: puoi ridistribuirlo e/o modificarlo secondo i termini della GNU Affero General Public License come pubblicata dalla Free Software Foundation, versione 3 della licenza o (a tua scelta) qualsiasi versione successiva.
+
+CLACOROO è distribuito nella speranza che sia utile, ma SENZA ALCUNA GARANZIA; senza nemmeno la garanzia implicita di COMMERCIABILITÀ o IDONEITÀ PER UN PARTICOLARE SCOPO. Vedi la GNU Affero General Public License per maggiori dettagli — testo completo in [`LICENSE`](LICENSE) o su [gnu.org/licenses/agpl-3.0](https://www.gnu.org/licenses/agpl-3.0).
+
+### Cosa significa AGPL-3.0 in pratica
+
+- ✅ **Puoi** usarlo, copiarlo, modificarlo e ridistribuirlo gratuitamente
+- ✅ **Puoi** usarlo in progetti personali e commerciali interni
+- ⚠️ **Devi** rilasciare con la stessa licenza qualsiasi opera derivata che distribuisci
+- ⚠️ **Devi** rendere disponibile il codice sorgente se offri CLACOROO (o un derivato) come servizio di rete accessibile a terzi
+- ❌ **Non puoi** trasformarlo in un prodotto SaaS chiuso senza ridistribuire il codice modificato
+
+Per usi commerciali che non possono rispettare i termini AGPL, è disponibile una licenza commerciale separata su richiesta: scrivi a `info@maxymizebusiness.com`.

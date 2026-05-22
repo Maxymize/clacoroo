@@ -1,3 +1,12 @@
+/*
+ * CLACOROO — Claude Code Control Room
+ * Copyright (C) 2026 MAXYMIZE BUSINESS (Maximilian Giurastante <info@maxymizebusiness.com>)
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ *
+ * This program is free software: you can redistribute it and/or modify it under
+ * the terms of the GNU Affero General Public License v3 or later.
+ * Full license text: see LICENSE file or https://www.gnu.org/licenses/agpl-3.0
+ */
 'use strict';
 
 /* ── PALETTE MARKETPLACE ──────────────────────────────────────────────── */
@@ -3567,7 +3576,7 @@ function renderSettings() {
   infoRow.appendChild(infoLeft);
   const infoRight = el('div');
   infoRight.style.cssText = 'display:flex;gap:10px;align-items:center;';
-  const verVal = el('div', 'settings-row-val', '1.0.64');
+  const verVal = el('div', 'settings-row-val', '1.0.65');
   const chBtn = btnWithIcon('btn btn-sm btn-green btn-with-icon', 'changelog', ' Changelog');
   chBtn.title = 'Mostra storico versioni';
   chBtn.addEventListener('click', () => openChangelogModal());
@@ -3575,6 +3584,25 @@ function renderSettings() {
   infoRight.appendChild(chBtn);
   infoRow.appendChild(infoRight);
   g3.appendChild(infoRow);
+
+  // v1.0.65 — Riga Licenza: AGPL-3.0-or-later + copyright MAXYMIZE BUSINESS
+  const licRow = el('div', 'settings-row');
+  const licLeft = el('div');
+  licLeft.appendChild(el('div', 'settings-row-label', 'Licenza'));
+  licLeft.appendChild(el('div', 'settings-row-desc', '© 2026 MAXYMIZE BUSINESS (Maximilian Giurastante)'));
+  licRow.appendChild(licLeft);
+  const licRight = el('div');
+  licRight.style.cssText = 'display:flex;gap:10px;align-items:center;';
+  const licVal = el('div', 'settings-row-val', 'AGPL-3.0-or-later');
+  const licBtn = el('button', 'btn btn-sm btn-ghost', 'Testo licenza');
+  licBtn.title = 'Apri il testo completo della GNU AGPL v3 su gnu.org';
+  licBtn.addEventListener('click', () => {
+    window.claudeAPI.openExternal('https://www.gnu.org/licenses/agpl-3.0');
+  });
+  licRight.appendChild(licVal);
+  licRight.appendChild(licBtn);
+  licRow.appendChild(licRight);
+  g3.appendChild(licRow);
 
   setContent(wrap);
 }

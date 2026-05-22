@@ -1,3 +1,12 @@
+/*
+ * CLACOROO — Claude Code Control Room
+ * Copyright (C) 2026 MAXYMIZE BUSINESS (Maximilian Giurastante <info@maxymizebusiness.com>)
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ *
+ * This program is free software: you can redistribute it and/or modify it under
+ * the terms of the GNU Affero General Public License v3 or later.
+ * Full license text: see LICENSE file or https://www.gnu.org/licenses/agpl-3.0
+ */
 'use strict';
 
 const { contextBridge, ipcRenderer } = require('electron');

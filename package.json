@@ -1,13 +1,13 @@
 {
   "name": "clacoroo",
-  "version": "1.0.64",
+  "version": "1.0.65",
   "description": "CLACOROO — Claude Code Control Room: pannello visuale per plugin, marketplace, skill e agent",
   "main": "src/main.js",
   "author": {
     "name": "Maximilian Giurastante",
     "email": "info@maxymizebusiness.com"
   },
-  "license": "MIT",
+  "license": "AGPL-3.0-or-later",
   "homepage": "https://github.com/Maxymize/clacoroo",
   "repository": {
     "type": "git",
@@ -24,7 +24,7 @@
   "build": {
     "appId": "com.maxymize.clacoroo",
     "productName": "CLACOROO",
-    "copyright": "Copyright © 2026 Maximilian Giurastante",
+    "copyright": "Copyright © 2026 MAXYMIZE BUSINESS (Maximilian Giurastante)",
     "directories": {
       "output": "dist",
       "buildResources": "build"
@@ -52,7 +52,7 @@
       "entitlements": "build/entitlements.mac.plist",
       "entitlementsInherit": "build/entitlements.mac.plist",
       "extendInfo": {
-        "NSHumanReadableCopyright": "Copyright © 2026 Maximilian Giurastante",
+        "NSHumanReadableCopyright": "Copyright © 2026 MAXYMIZE BUSINESS (Maximilian Giurastante)",
         "LSUIElement": false
       },
       "identity": null

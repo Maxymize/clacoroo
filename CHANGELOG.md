@@ -1,5 +1,26 @@
 # Changelog
 
+## v1.0.65 — 2026-05-22 — Switch licenza da MIT a AGPL-3.0-or-later
+
+Cambio di licenza significativo in vista del lancio pubblico open source su GitHub: da **MIT** a **GNU Affero General Public License v3.0 or later**. Motivazione strategica: AGPL protegge il progetto da fork commerciali che lo trasformerebbero in un SaaS chiuso senza ridistribuire il codice modificato. Il modello business pianificato — community gratuita + corso a pagamento in italiano — non dipende dalla vendita diretta dell'app, quindi AGPL è la scelta naturale.
+
+**File modificati:**
+- `LICENSE` → testo verbatim AGPL-3.0 ufficiale scaricato da `gnu.org/licenses/agpl-3.0.txt` (661 righe) — garantisce match SPDX automatico con GitHub Licensee
+- `package.json` → `"license": "AGPL-3.0-or-later"` (identificativo SPDX moderno con `-or-later` per essere future-proof rispetto a future versioni AGPL). `copyright` e `NSHumanReadableCopyright` (macOS bundle) aggiornati a `Copyright © 2026 MAXYMIZE BUSINESS (Maximilian Giurastante)`
+- `README.md` → badge License da `MIT` a `AGPL v3+`. Sezione "Licenza" riscritta con spiegazione in italiano di cosa significa AGPL in pratica (puoi/devi/non puoi) + nota su licenza commerciale separata su richiesta (`info@maxymizebusiness.com`) per uso "dual licensing"
+- `src/main.js`, `src/preload.js`, `src/renderer/app.js` → aggiunto header standard AGPL con `SPDX-License-Identifier: AGPL-3.0-or-later` (prassi FSF + REUSE)
+- `src/renderer/app.js` `renderSettings()` → nuova riga "Licenza" nel pannello Impostazioni → Informazioni che mostra `AGPL-3.0-or-later` + copyright MAXYMIZE BUSINESS + bottone "Testo licenza" che apre `gnu.org/licenses/agpl-3.0` nel browser via `shell.openExternal`
+
+**Cosa cambia per chi usa CLACOROO:**
+- ✅ Uso personale e interno aziendale → invariato
+- ✅ Modifiche al codice → permesse, ma se distribuite devono restare AGPL
+- ⚠️ Offrirlo come servizio di rete a terzi (es. SaaS) → obbligo di rendere disponibile il codice modificato
+- ❌ Trasformarlo in un prodotto commerciale chiuso → vietato senza licenza commerciale separata
+
+Su GitHub la licenza sarà rilevata automaticamente al primo push (Licensee gem fa match col testo SPDX verbatim) e comparirà nella sidebar del repo come "GNU Affero General Public License v3.0 or later".
+
+Documento strategico completo che ha portato a questa decisione: `docs/strategia-lancio/doc-tecnico_strategia-lancio-clacoroo.html` (sezione "AGPL-3.0 vs MIT — il trade-off").
+
 ## v1.0.64 — 2026-05-22 — Fix cache update stale dopo aggiornamento + nota Gatekeeper
 
 **Bug fix** soft auto-update: il footer mostrava ancora "Aggiornamento disponibile" anche dopo aver effettivamente aggiornato l'app. Causa: il check-updates rispettava il cooldown di 1h e restituiva la cache (`lastUpdateResult`) salvata quando l'app era alla versione precedente, senza accorgersi che la `current` cached non corrispondeva più alla versione reale.
