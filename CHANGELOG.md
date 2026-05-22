@@ -1,5 +1,15 @@
 # Changelog
 
+## v1.0.64 — 2026-05-22 — Fix cache update stale dopo aggiornamento + nota Gatekeeper
+
+**Bug fix** soft auto-update: il footer mostrava ancora "Aggiornamento disponibile" anche dopo aver effettivamente aggiornato l'app. Causa: il check-updates rispettava il cooldown di 1h e restituiva la cache (`lastUpdateResult`) salvata quando l'app era alla versione precedente, senza accorgersi che la `current` cached non corrispondeva più alla versione reale.
+
+Fix in `src/main.js`: prima di restituire il risultato cached, confronta `cached.current` con `app.getVersion()`. Se diverso → cache invalidata, forza un check fresh. Output corretto: footer 🟢 verde dopo update, banner topbar sparisce.
+
+Trovato durante il test end-to-end della v1.0.63: detect + download + install funzionano tutti, ma la lucina restava arancio finché non si forzava un `Controlla aggiornamenti`.
+
+**README**: aggiunta nota sul workaround Gatekeeper (`xattr -cr` + `codesign --sign -`) per i build non firmati distribuiti come .dmg — necessario finché non si applica Apple Developer ID + notarization (vedi Pack E in TASK.md).
+
 ## v1.0.63 — 2026-05-22 — Release test full end-to-end soft auto-update
 
 Versione di test per verificare il flusso completo del soft auto-update: detect (footer + topbar banner) → click UPDATE → download `.dmg` → install → app aggiornata. Include `.dmg` (arm64 + x64) come asset in GitHub Releases per permettere il download reale dall'UI di un'installazione precedente.

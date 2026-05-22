@@ -757,8 +757,12 @@ ipcMain.handle('check-updates', async (_e, { force } = {}) => {
   const lastFailTs = st.lastUpdateFailedAt || 0;
   const since = Date.now() - Math.max(lastTs, lastFailTs);
   const cooldown = lastFailTs > lastTs ? UPDATE_COOLDOWN_FAIL_MS : UPDATE_COOLDOWN_OK_MS;
-  if (!force && since < cooldown) {
-    return { ok: true, skipped: true, reason: 'cooldown', cached: st.lastUpdateResult || null };
+  // v1.0.64 — Invalida cache se l'app è stata aggiornata fra il check precedente
+  // e questo avvio: la `current` cached non corrisponde più alla versione reale.
+  const cached = st.lastUpdateResult || null;
+  const cacheStale = cached && cached.current && cached.current !== app.getVersion();
+  if (!force && !cacheStale && since < cooldown) {
+    return { ok: true, skipped: true, reason: 'cooldown', cached };
   }
   const result = await checkLatestRelease(app.getVersion());
   if (result.ok) {

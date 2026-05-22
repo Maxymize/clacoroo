@@ -11,7 +11,7 @@ Pannello di controllo visuale per [Claude Code](https://github.com/anthropics/cl
 [![Electron](https://img.shields.io/badge/Electron-36-47848F?logo=electron&logoColor=white)](https://www.electronjs.org/)
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20Windows-141413)](#requisiti)
 [![License: MIT](https://img.shields.io/badge/License-MIT-d97757.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-1.0.63-d97757.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-1.0.64-d97757.svg)](CHANGELOG.md)
 
 </div>
 
@@ -107,6 +107,17 @@ CLACOROO segue le best practice Electron moderne:
 - ✅ ID plugin e nomi marketplace validati con regex prima di qualsiasi chiamata
 - ✅ CSP rigida: solo risorse `'self'`, nessun CDN remoto (font, librerie, immagini)
 - ✅ Zero dipendenze runtime — solo `electron` e `electron-builder` come devDependencies
+
+### Build non firmato — workaround Gatekeeper (macOS)
+
+Finché CLACOROO non viene firmato con Apple Developer ID + notarization, i `.dmg` distribuiti sono **non firmati**. macOS bloccherà l'avvio con "*CLACOROO è danneggiato e non può essere aperto*". Workaround dopo l'install in `/Applications`:
+
+```bash
+sudo xattr -cr /Applications/CLACOROO.app
+sudo codesign --force --deep --sign - /Applications/CLACOROO.app
+```
+
+Cosa fa: rimuove l'attributo `com.apple.quarantine` che macOS mette ai file scaricati da Internet, poi applica una firma **ad-hoc** (placeholder) che soddisfa il requisito hardened runtime. Una volta firmati e notarizzati con Apple Developer ID (~ $99/anno, vedi Pack E in [`TASK.md`](TASK.md)), il workaround non sarà più necessario.
 
 ## Brand
 
