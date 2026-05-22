@@ -2348,8 +2348,14 @@ function buildUsageBar(label, band, color) {
   const header = el('div', 'usage-bar-header');
   header.appendChild(el('span', 'usage-bar-label', label));
   const pctEl = el('span', 'usage-bar-pct');
-  if (band && Number.isFinite(band.utilization)) {
-    pctEl.textContent = Math.round(band.utilization * 100) + '%';
+  // utilization è GIÀ in percentuale (0..100) — confermato leggendo il
+  // plugin VS Code: Math.min(100, Math.max(0, Z)) senza moltiplicazioni.
+  // Clampiamo a [0, 100] per sicurezza.
+  const pct = band && Number.isFinite(band.utilization)
+    ? Math.min(100, Math.max(0, band.utilization))
+    : null;
+  if (pct != null) {
+    pctEl.textContent = Math.floor(pct) + '%';
   } else {
     pctEl.textContent = '—';
     pctEl.classList.add('usage-bar-pct-na');
@@ -2360,10 +2366,10 @@ function buildUsageBar(label, band, color) {
   const track = el('div', 'usage-bar-track');
   const fill = el('div', 'usage-bar-fill');
   fill.style.background = color;
-  fill.style.width = band ? (Math.round(band.utilization * 100) + '%') : '0%';
+  fill.style.width = pct != null ? (pct + '%') : '0%';
   // Color shift se vicino alla soglia (>=80% arancio, >=95% rosso)
-  if (band && band.utilization >= 0.95) fill.style.background = '#ef4444';
-  else if (band && band.utilization >= 0.80) fill.style.background = '#f59e0b';
+  if (pct != null && pct >= 95) fill.style.background = '#ef4444';
+  else if (pct != null && pct >= 80) fill.style.background = '#f59e0b';
   track.appendChild(fill);
   wrap.appendChild(track);
 
@@ -2800,7 +2806,7 @@ function renderSettings() {
   const chBtn = el('button', 'btn btn-sm btn-green', '📋 Changelog');
   chBtn.title = 'Mostra storico versioni';
   chBtn.addEventListener('click', () => openChangelogModal());
-  const verVal = el('div', 'settings-row-val', '1.0.36');
+  const verVal = el('div', 'settings-row-val', '1.0.37');
   verRight.appendChild(chBtn);
   verRight.appendChild(verVal);
   verRow.appendChild(verRight);

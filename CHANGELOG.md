@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.0.37 — 2026-05-22
+
+- Fix: i valori percentuali delle quote ora corrispondono a quelli del plugin VS Code Claude (erano 100× più grandi, es. 1400% al posto di 14%). L'API Anthropic restituisce `utilization` già in percentuale 0..100, non come float 0..1; la moltiplicazione extra era un errore mio
+- Clamp di sicurezza a [0, 100] per evitare display oltre 100% in caso di transienti API
+
 ## v1.0.36 — 2026-05-22
 
 Fix critici alle quote (v1.0.35 mostrava sempre "Token non valido"):
