@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.0.48 — 2026-05-22
+
+- Marketplace card: rimossa la striscia full-width "Vedi N plugin" colorata (era invadente e non coerente con l'estetica generale)
+- Il numero "N plugin" già presente nella card è ora cliccabile direttamente: hover diventa arancione CLACOROO con glow morbido attorno
+- Click sul "N plugin" apre la stessa modal della lista plugin
+- Tooltip immediato sul numero ("Vedi lista plugin") riusando il sistema `data-tt`
+
 ## v1.0.47 — 2026-05-22
 
 **Polish plugin card**

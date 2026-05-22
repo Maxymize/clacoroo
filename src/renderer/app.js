@@ -1179,12 +1179,24 @@ function renderMarketplaces() {
     body.appendChild(repoEl);
 
     const meta = el('div', 'mkt-card-meta');
+    // "N plugin" è cliccabile (apre il modal con la lista) se ci sono plugin.
+    // Hover effect arancione + glow, niente striscia full-width invadente.
+    const countBtn = el('button', 'mkt-card-count-btn');
     const cnt  = el('span', 'mkt-card-count', String(m.plugins.length));
     const cntL = el('span', 'mkt-card-count-label', ' plugin');
     cnt.style.color = col;
+    countBtn.appendChild(cnt);
+    countBtn.appendChild(cntL);
+    if (m.plugins.length > 0) {
+      countBtn.dataset.tt = 'Vedi lista plugin';
+      countBtn.addEventListener('click', () => showMarketplaceContentModal(m));
+    } else {
+      countBtn.disabled = true;
+    }
     const autoBadge = el('span', 'badge ' + (m.autoUpdate ? 'b-auto' : 'b-manual'),
       m.autoUpdate ? 'auto-update' : 'manuale');
-    meta.appendChild(cnt); meta.appendChild(cntL); meta.appendChild(autoBadge);
+    meta.appendChild(countBtn);
+    meta.appendChild(autoBadge);
     body.appendChild(meta);
 
     if (m.lastUpdated) {
@@ -1195,13 +1207,6 @@ function renderMarketplaces() {
 
     card.appendChild(body);
 
-    if (m.plugins.length > 0) {
-      const seeBtn = el('button', 'mkt-card-see-btn');
-      seeBtn.appendChild(svgIcon('eye'));
-      seeBtn.appendChild(document.createTextNode(' Vedi ' + m.plugins.length + ' ' + ('plugin')));
-      seeBtn.addEventListener('click', () => showMarketplaceContentModal(m));
-      card.appendChild(seeBtn);
-    }
 
     // Remove button
     const cardFooter = el('div');
@@ -3161,7 +3166,7 @@ function renderSettings() {
   infoRow.appendChild(infoLeft);
   const infoRight = el('div');
   infoRight.style.cssText = 'display:flex;gap:10px;align-items:center;';
-  const verVal = el('div', 'settings-row-val', '1.0.47');
+  const verVal = el('div', 'settings-row-val', '1.0.48');
   const chBtn = btnWithIcon('btn btn-sm btn-green btn-with-icon', 'changelog', ' Changelog');
   chBtn.title = 'Mostra storico versioni';
   chBtn.addEventListener('click', () => openChangelogModal());

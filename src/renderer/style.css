@@ -1983,7 +1983,10 @@ body {
 /* Tooltip immediato custom — usato sui btn-icon tramite attribute data-tt;
    vince sul nativo title (delay ~2s). Scope ristretto a .btn-icon per
    evitare conflitti con altri elementi che gia hanno position: relative. */
-.btn-icon[data-tt]::after {
+.btn-icon[data-tt],
+.mkt-card-count-btn[data-tt] { position: relative; }
+.btn-icon[data-tt]::after,
+.mkt-card-count-btn[data-tt]::after {
   content: attr(data-tt);
   position: absolute;
   bottom: calc(100% + 6px);
@@ -2005,37 +2008,43 @@ body {
   z-index: 20;
 }
 .btn-icon[data-tt]:hover::after,
-.btn-icon[data-tt]:focus-visible::after {
+.btn-icon[data-tt]:focus-visible::after,
+.mkt-card-count-btn[data-tt]:hover::after,
+.mkt-card-count-btn[data-tt]:focus-visible::after {
   opacity: 1;
   visibility: visible;
   transform: translateX(-50%) translateY(0);
   transition: opacity .1s ease, transform .1s ease, visibility 0s;
 }
 
-/* Bottone "Vedi N plugin" su card marketplace */
-.mkt-card-see-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  width: 100%;
-  padding: 10px 16px;
-  background: var(--surface2);
-  border: none;
-  border-top: 1px solid var(--border);
-  color: var(--text);
+/* "N plugin" cliccabile nella meta della card marketplace. Hover arancione
+   CLACOROO con glow morbido, click apre il modal con la lista plugin. */
+.mkt-card-count-btn {
+  background: transparent;
+  border: 1px solid transparent;
+  padding: 4px 12px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: baseline;
   cursor: pointer;
-  font-size: 12px;
-  font-weight: 600;
-  transition: background .15s, color .15s;
+  color: inherit;
+  font-family: inherit;
+  margin: -4px 0;
+  transition: background .15s, border-color .15s, box-shadow .2s;
 }
-.mkt-card-see-btn:hover {
-  background: var(--mkt-color, var(--accent));
-  color: white;
+.mkt-card-count-btn:disabled {
+  cursor: default;
+  opacity: .6;
 }
-.mkt-card-see-btn .inline-icon {
-  width: 13px;
-  height: 13px;
+.mkt-card-count-btn:not(:disabled):hover {
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--accent) 22%, transparent),
+    0 0 22px -6px color-mix(in srgb, var(--accent) 70%, transparent);
+}
+.mkt-card-count-btn:not(:disabled):hover .mkt-card-count {
+  color: var(--accent) !important;
 }
 
 /* Badge inline nei plugin item del modal marketplace */
