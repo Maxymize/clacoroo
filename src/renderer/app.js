@@ -3349,9 +3349,10 @@ function renderSettings() {
 
   const edSel = el('select', 'config-select');
   [
-    { v: 'vscode', l: 'Visual Studio Code (vscode://)' },
-    { v: 'cursor', l: 'Cursor (cursor://)' },
-    { v: 'system', l: 'Sistema (default OS)' },
+    { v: 'vscode',      l: 'Visual Studio Code (vscode://)' },
+    { v: 'cursor',      l: 'Cursor (cursor://)' },
+    { v: 'antigravity', l: 'Antigravity (antigravity://)' },
+    { v: 'system',      l: 'Sistema (default OS)' },
   ].forEach(o => {
     const opt = el('option', null, o.l);
     opt.value = o.v;
@@ -3539,7 +3540,7 @@ function renderSettings() {
   infoRow.appendChild(infoLeft);
   const infoRight = el('div');
   infoRight.style.cssText = 'display:flex;gap:10px;align-items:center;';
-  const verVal = el('div', 'settings-row-val', '1.0.57');
+  const verVal = el('div', 'settings-row-val', '1.0.58');
   const chBtn = btnWithIcon('btn btn-sm btn-green btn-with-icon', 'changelog', ' Changelog');
   chBtn.title = 'Mostra storico versioni';
   chBtn.addEventListener('click', () => openChangelogModal());

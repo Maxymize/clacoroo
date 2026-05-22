@@ -981,15 +981,16 @@ ipcMain.handle('open-in-editor', async (_e, fullId) => {
       return err ? { success: false, error: err } : { success: true };
     }
     const schemas = {
-      vscode: 'vscode://file' + encodeURI(p),
-      cursor: 'cursor://file' + encodeURI(p),
+      vscode:      'vscode://file' + encodeURI(p),
+      cursor:      'cursor://file' + encodeURI(p),
+      antigravity: 'antigravity://file' + encodeURI(p),
     };
     const url = schemas[editor];
     if (!url) return { success: false, error: 'Editor non riconosciuto: ' + editor };
     await shell.openExternal(url);
     return { success: true };
   } catch (e) {
-    const label = { vscode: 'VS Code', cursor: 'Cursor', system: 'editor di sistema' }[editor] || editor;
+    const label = { vscode: 'VS Code', cursor: 'Cursor', antigravity: 'Antigravity', system: 'editor di sistema' }[editor] || editor;
     return { success: false, error: e.message || (label + ' non disponibile.') };
   }
 });

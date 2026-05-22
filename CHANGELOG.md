@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.0.58 — 2026-05-22 — Editor esterno: aggiunto Antigravity
+
+- Aggiunto **Antigravity** (Google) come quarta opzione del selettore "Editor predefinito" in Impostazioni
+- Schema URL: `antigravity://file/...` (segue la convenzione dei fork VS Code-like)
+- Lista completa ora: VS Code · Cursor · Antigravity · Sistema (default OS)
+
 ## v1.0.57 — 2026-05-22 — Selettore editor esterno configurabile
 
 Nuovo gruppo "Editor esterno" in Impostazioni con select per scegliere quale editor aprire quando si clicca "Apri in editor" su una plugin card o nel modal Contenuto plugin:
