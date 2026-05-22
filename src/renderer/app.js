@@ -44,8 +44,16 @@ async function init() {
   setupNav();
   await loadData();
   window.claudeAPI.onConfigChanged(() => {
+    // v1.0.41 — se l'utente ha appena modificato un setting dalla pagina
+    // Config (entro 2s), evitiamo il full reload: la UI è già aggiornata
+    // ottimisticamente e ricaricare tutto fa flicker di 1-2s
+    const isOurEdit = Date.now() - lastInternalSettingsWrite < 2000;
+    if (isOurEdit && state.section === 'config') {
+      statsCache = null;  // invalida solo per il prossimo accesso, niente reload
+      return;
+    }
     toast('Configurazione aggiornata — ricarico…', 'info');
-    statsCache = null;  // invalida cache stats: settings/cache files cambiati
+    statsCache = null;
     loadData();
   });
   window.claudeAPI.onSwitchSection(name => switchToSection(name));
@@ -509,6 +517,11 @@ async function renderActivityList(container, limit, token) {
 // Ultimo data ricevuto, non azzerato dai toggle: permette render ottimistico
 // (no flash) mentre arriva il fetch fresh dopo invalidazione di statsCache.
 let lastStatsData = null;
+
+// v1.0.41 — timestamp dell'ultima updateSettings fatta dall'utente da
+// CLACOROO. Usato per skippare il full re-render quando il fs.watchFile
+// rileva la nostra stessa scrittura (evita il flicker "ricarico" da 1-2s).
+let lastInternalSettingsWrite = 0;
 
 async function fetchStatsSafe() {
   if (statsCache) return statsCache;
@@ -1816,14 +1829,21 @@ function renderStatsProjects(container, data) {
     'Messaggi = singole interazioni user/assistant.'));
 }
 
-// v1.0.38 — Config promossa a sezione sidebar standalone. La funzione interna
-// renderConfigContent(container, data) rende il body riusabile.
+// v1.0.38 — Config promossa a sezione sidebar standalone.
+// v1.0.41 — Render ottimistico se cache disponibile: niente spinner se
+// abbiamo già i settings, swap silenzioso quando arriva il fetch fresh.
 async function renderConfig() {
   const wrap = el('div');
   setContent(wrap);
-  wrap.appendChild(el('div', 'stats-loading', 'Caricamento configurazione…'));
+  if (statsCache && statsCache.settings) {
+    renderConfigContent(wrap, statsCache);
+  } else {
+    wrap.appendChild(el('div', 'stats-loading', 'Caricamento configurazione…'));
+  }
   const data = await window.claudeAPI.getStats();
-  if (state.section !== 'config') return;  // race-guard se l'utente è andato altrove
+  if (state.section !== 'config') return;
+  if (data === statsCache) return;  // identica, niente da fare
+  statsCache = data;
   wrap.textContent = '';
   renderConfigContent(wrap, data);
 }
@@ -1888,6 +1908,7 @@ function renderConfigContent(container, data) {
         dot.addEventListener('click', async () => {
           const previous = settings[key];
           refresh(i, v);  // ottimistico
+          lastInternalSettingsWrite = Date.now();
           const r = await window.claudeAPI.updateSettings({ [key]: v });
           if (r.success) {
             settings[key] = v;
@@ -1918,6 +1939,7 @@ function renderConfigContent(container, data) {
       toggleWrap.appendChild(track);
       toggleWrap.appendChild(thumb);
       input.addEventListener('change', async () => {
+        lastInternalSettingsWrite = Date.now();
         const r = await window.claudeAPI.updateSettings({ [key]: input.checked });
         if (r.success) {
           // Aggiorna cache locale per evitare reset al prossimo render (settings.json
@@ -1939,6 +1961,7 @@ function renderConfigContent(container, data) {
     }
     if (type === 'select') {
       input.addEventListener('change', async () => {
+        lastInternalSettingsWrite = Date.now();
         const r = await window.claudeAPI.updateSettings({ [key]: input.value });
         if (r.success) {
           settings[key] = input.value;
@@ -2008,6 +2031,7 @@ function voiceConfigRow(container, settings) {
   input.addEventListener('change', async () => {
     const currentVoice = (statsCache?.settings?.voice) || settings.voice || {};
     const next = { ...currentVoice, enabled: input.checked };
+    lastInternalSettingsWrite = Date.now();
     const r = await window.claudeAPI.updateSettings({ voice: next });
     if (r.success) {
       settings.voice = next;
@@ -2914,7 +2938,7 @@ function renderSettings() {
   infoRow.appendChild(infoLeft);
   const infoRight = el('div');
   infoRight.style.cssText = 'display:flex;gap:10px;align-items:center;';
-  const verVal = el('div', 'settings-row-val', '1.0.40');
+  const verVal = el('div', 'settings-row-val', '1.0.41');
   const chBtn = btnWithIcon('btn btn-sm btn-green btn-with-icon', 'changelog', ' Changelog');
   chBtn.title = 'Mostra storico versioni';
   chBtn.addEventListener('click', () => openChangelogModal());

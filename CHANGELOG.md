@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.0.41 — 2026-05-22
+
+- Sezione Config: cambiare un'opzione (toggle, select, slider) non fa più "ricaricare" la pagina con 1-2 secondi di lag. La UI è già aggiornata ottimisticamente al click, e quando il filesystem watch rileva la nostra stessa modifica saltiamo il re-render
+- Apertura della sezione Config: se i dati sono già in cache vediamo subito il pannello senza spinner "Caricamento configurazione…"
+
 ## v1.0.40 — 2026-05-22
 
 **Impostazioni**
