@@ -969,29 +969,49 @@ ipcMain.handle('open-directory', async (_e, dirPath) => {
   return err ? { success: false, error: err } : { success: true };
 });
 
+// v1.0.59 — Normalizza un path assoluto in formato URI per gli URL handler
+// degli editor cross-platform. Su Windows: 'C:\\Users\\foo' → '/C:/Users/foo'.
+// Su macOS/Linux: invariato (già POSIX-style con leading /).
+function toEditorUriPath(p) {
+  if (process.platform === 'win32') {
+    return '/' + p.replace(/\\/g, '/');
+  }
+  return p;
+}
+
 ipcMain.handle('open-in-editor', async (_e, fullId) => {
   const p = resolvePluginPath(fullId);
   if (!p) return { success: false, error: 'Path plugin non trovato.' };
-  // v1.0.57 — Editor preferito persistito in state.json (preferredEditor)
   const st = readState();
   const editor = st.preferredEditor || 'vscode';
+  const uriPath = encodeURI(toEditorUriPath(p));
   try {
     if (editor === 'system') {
+      // shell.openPath e' cross-platform: Finder su macOS, Explorer su Win,
+      // file manager registrato su Linux (Nautilus, Dolphin, ecc.)
       const err = await shell.openPath(p);
       return err ? { success: false, error: err } : { success: true };
     }
+    // URL schemes registrati dagli installer degli editor su tutte le piattaforme:
+    // macOS via LSApplicationURLTypes, Win via Registry HKEY_CLASSES_ROOT,
+    // Linux via xdg-mime / .desktop x-scheme-handler.
     const schemas = {
-      vscode:      'vscode://file' + encodeURI(p),
-      cursor:      'cursor://file' + encodeURI(p),
-      antigravity: 'antigravity://file' + encodeURI(p),
+      vscode:      'vscode://file'      + uriPath,
+      cursor:      'cursor://file'      + uriPath,
+      antigravity: 'antigravity://file' + uriPath,
     };
     const url = schemas[editor];
     if (!url) return { success: false, error: 'Editor non riconosciuto: ' + editor };
     await shell.openExternal(url);
     return { success: true };
   } catch (e) {
-    const label = { vscode: 'VS Code', cursor: 'Cursor', antigravity: 'Antigravity', system: 'editor di sistema' }[editor] || editor;
-    return { success: false, error: e.message || (label + ' non disponibile.') };
+    const label = ({
+      vscode: 'VS Code', cursor: 'Cursor', antigravity: 'Antigravity', system: 'editor di sistema',
+    })[editor] || editor;
+    const platHint = process.platform === 'darwin'  ? 'Verifica che ' + label + ' sia installato in /Applications.'
+                   : process.platform === 'win32'   ? 'Verifica che ' + label + ' sia installato e che il protocollo URL sia registrato (di solito automatico via installer).'
+                   :                                  'Su Linux verifica `xdg-mime query default x-scheme-handler/<schema>` se il protocollo non è registrato.';
+    return { success: false, error: (e.message || (label + ' non disponibile.')) + ' ' + platHint };
   }
 });
 

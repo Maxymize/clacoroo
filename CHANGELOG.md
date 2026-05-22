@@ -1,5 +1,16 @@
 # Changelog
 
+## v1.0.59 — 2026-05-22 — Cross-platform: editor URL handler funzionante su Win/Linux
+
+Audit cross-platform del selettore editor:
+
+- **Path normalization Windows**: `toEditorUriPath()` converte `C:\Users\foo\...` in `/C:/Users/foo/...` (forward slash + leading slash) come richiesto dagli URL handler di VS Code / Cursor / Antigravity su Win
+- **Error messages platform-aware**: il toast di errore include un hint specifico per OS (macOS: "verifica in /Applications", Win: "verifica installer URL protocol", Linux: comando `xdg-mime` per query del protocol handler)
+- **shell.openPath** già cross-platform: Finder su macOS, Explorer su Win, file manager registrato su Linux (Nautilus/Dolphin/Files)
+- **URL protocols** (`vscode://`, `cursor://`, `antigravity://`) sono registrati dagli installer degli editor su tutte e 3 le piattaforme
+
+Aggiunto in TASK.md un **disclaimer cross-platform always-on** in cima: per ogni nuova feature va sempre verificato il comportamento su Win/Linux, con checklist (path separator, shell-specific commands, URL encoding, credential storage, file system case-sensitivity).
+
 ## v1.0.58 — 2026-05-22 — Editor esterno: aggiunto Antigravity
 
 - Aggiunto **Antigravity** (Google) come quarta opzione del selettore "Editor predefinito" in Impostazioni
