@@ -1843,6 +1843,10 @@ function renderStatsConfig(container, data) {
   configRow('voiceEnabled', 'Voice', 'toggle');
   configRow('model', 'Modello predefinito', 'select',
     ['default', 'claude-opus-4-7', 'claude-sonnet-4-6', 'claude-haiku-4-5-20251001']);
+  // v1.0.30 — Effort level (intensità del ragionamento). Modifica `effortLevel`
+  // in ~/.claude/settings.json. Possibili valori: low | medium | high | xhigh | max
+  configRow('effortLevel', 'Effort level', 'select',
+    ['low', 'medium', 'high', 'xhigh', 'max']);
   configRow('theme', 'Tema', 'select', ['auto', 'dark', 'light']);
   configRow('language', 'Lingua', 'select', ['auto', 'en', 'it']);
 }
@@ -2517,7 +2521,7 @@ function renderSettings() {
   const chBtn = el('button', 'btn btn-sm btn-green', '📋 Changelog');
   chBtn.title = 'Mostra storico versioni';
   chBtn.addEventListener('click', () => openChangelogModal());
-  const verVal = el('div', 'settings-row-val', '1.0.29');
+  const verVal = el('div', 'settings-row-val', '1.0.30');
   verRight.appendChild(chBtn);
   verRight.appendChild(verVal);
   verRow.appendChild(verRight);

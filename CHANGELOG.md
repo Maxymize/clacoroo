@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.0.30 — 2026-05-22
+
+- Tab Config (Stats): nuovo selettore "Effort level" (low / medium / high / xhigh / max) — modifica `effortLevel` di `~/.claude/settings.json` istantaneamente, equivalente a `claude --effort <level>`. Posizionato accanto a Modello predefinito
+
 ## v1.0.29 — 2026-05-22
 
 - Pill account sempre visibile nella sidebar (badge piano + email, sotto Recenti, sopra Stato). Click apre le Impostazioni
