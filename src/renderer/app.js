@@ -1218,9 +1218,10 @@ function showAddMarketplaceModal() {
   setTimeout(() => input.focus(), 50);
 }
 
-// Modal "Plugin del marketplace": lista dei plugin contenuti. Click su un
-// plugin apre il modal Contenuto plugin del singolo plugin (drill-down).
-function showMarketplaceContentModal(m) {
+// Modal "Plugin del marketplace": lista TUTTI i plugin presenti nel
+// marketplace.json (anche non installati), con bottone "Installa" sui
+// non-installati. m.plugins nello state contiene solo gli installati.
+async function showMarketplaceContentModal(m) {
   if (document.querySelector('.md-overlay')) return;
   const overlay = el('div', 'md-overlay');
   const modal = el('div', 'md-modal');
@@ -1249,33 +1250,11 @@ function showMarketplaceContentModal(m) {
     });
     info.appendChild(repoLink);
   }
-  const meta = el('div', 'plugin-content-desc');
-  meta.textContent = m.plugins.length + ' ' + ('plugin')
-    + ' · ' + (m.autoUpdate ? 'aggiornamento automatico' : 'aggiornamento manuale')
+  const metaDesc = el('div', 'plugin-content-desc');
+  metaDesc.textContent = (m.autoUpdate ? 'aggiornamento automatico' : 'aggiornamento manuale')
     + (m.lastUpdated ? ' · ultimo aggiornamento ' + new Date(m.lastUpdated).toLocaleDateString('it-IT') : '');
-  info.appendChild(meta);
+  info.appendChild(metaDesc);
   content.appendChild(info);
-
-  // Costruisce gli item per appendModalItemList: name = "<id> · v<ver>",
-  // description = p.description, badges aggiunti via extraRender
-  const pluginItems = m.plugins.map(p => ({
-    name: p.id + ' · v' + p.version,
-    description: p.description,
-    _plugin: p,  // riferimento opaco per onClick
-  }));
-  appendModalItemList(content, 'Plugin contenuti', pluginItems, item => {
-    close();
-    showPluginContentModal(item._plugin);
-  }, (item, info) => {
-    const p = item._plugin;
-    const minibar = el('div', 'plugin-content-item-badges');
-    if (p.skills.length) minibar.appendChild(el('span', 'badge b-skill',  p.skills.length + ' skill'));
-    if (p.agents.length) minibar.appendChild(el('span', 'badge b-agent',  p.agents.length + ' agent'));
-    if (p.hasMcp)        minibar.appendChild(el('span', 'badge b-mcp',    'MCP'));
-    if (p.hasHooks)      minibar.appendChild(el('span', 'badge b-hook',   'Hook'));
-    if (p.blocked)       minibar.appendChild(el('span', 'badge b-blocked', 'disattivato'));
-    if (minibar.childNodes.length) info.appendChild(minibar);
-  });
 
   function onKey(e) { if (e.key === 'Escape') close(); }
   function close() { document.removeEventListener('keydown', onKey); overlay.remove(); }
@@ -1287,6 +1266,110 @@ function showMarketplaceContentModal(m) {
   modal.appendChild(content);
   overlay.appendChild(modal);
   document.body.appendChild(overlay);
+
+  // Mostra placeholder mentre carichiamo i metadata
+  const listWrap = el('div');
+  content.appendChild(el('h3', 'plugin-content-section-title', 'Plugin nel marketplace'));
+  listWrap.appendChild(el('div', 'plugin-content-note', 'Caricamento lista plugin…'));
+  content.appendChild(listWrap);
+
+  const detail = await window.claudeAPI.getMarketplaceDetail(m.id);
+  listWrap.textContent = '';
+
+  if (!detail.ok || !detail.plugins.length) {
+    // Fallback: mostro solo gli installati (m.plugins)
+    listWrap.appendChild(el('div', 'plugin-content-note',
+      detail.error || 'marketplace.json non leggibile — mostro solo i plugin installati.'));
+    renderInstalledOnly(listWrap, m);
+    return;
+  }
+
+  // Mappa per lookup veloce dei plugin installati di questo marketplace
+  const installed = new Map(m.plugins.map(p => [p.id, p]));
+  // Aggiorno la meta con i conteggi reali
+  metaDesc.textContent = installed.size + '/' + detail.plugins.length + ' installati · '
+    + metaDesc.textContent;
+
+  detail.plugins.forEach(remote => {
+    const local = installed.get(remote.name);
+    const row = el('div', 'mkt-modal-plugin-row');
+
+    const left = el('div', 'mkt-modal-plugin-info');
+    const nameLine = el('div', 'plugin-content-item-name', remote.name);
+    if (local) {
+      const inst = el('span', 'badge b-installed', '✓ installato');
+      nameLine.appendChild(document.createTextNode(' '));
+      nameLine.appendChild(inst);
+    }
+    left.appendChild(nameLine);
+    if (remote.description) {
+      left.appendChild(el('div', 'plugin-content-item-desc', remote.description));
+    }
+    if (remote.category) {
+      const cat = el('div', 'mkt-modal-plugin-cat', remote.category);
+      left.appendChild(cat);
+    }
+    row.appendChild(left);
+
+    const right = el('div', 'mkt-modal-plugin-actions');
+    if (local) {
+      // Già installato: bottone "Dettagli" che apre il modal plugin
+      const detailsBtn = el('button', 'btn btn-sm btn-ghost', 'Dettagli');
+      detailsBtn.addEventListener('click', () => { close(); showPluginContentModal(local); });
+      right.appendChild(detailsBtn);
+    } else {
+      const installBtn = el('button', 'btn btn-sm btn-primary', 'Installa');
+      installBtn.dataset.tt = 'claude plugins install ' + remote.name + '@' + m.id;
+      installBtn.addEventListener('click', async () => {
+        const ok = await window.claudeAPI.confirmDialog({
+          title:   'Installa plugin',
+          message: 'Installare ' + remote.name + '?',
+          detail:  'Da: ' + m.id + '\n\n' +
+                   'CLACOROO eseguirà:\n' +
+                   '  claude plugins install ' + remote.name + '@' + m.id + '\n\n' +
+                   (remote.description ? 'Descrizione: ' + remote.description : ''),
+          buttons: ['Annulla', 'Installa'],
+        });
+        if (ok !== 1) return;
+        installBtn.disabled = true;
+        installBtn.textContent = '…installazione…';
+        const r = await window.claudeAPI.pluginAction('install', remote.name + '@' + m.id);
+        if (r.success) {
+          toast('Installato: ' + remote.name, 'success');
+          window.claudeAPI.showNotification('Plugin installato', remote.name + '@' + m.id);
+          await loadData();
+          close();  // chiudo il modal, lista refreshata
+        } else {
+          installBtn.disabled = false;
+          installBtn.textContent = 'Installa';
+          toast('Errore installazione: ' + r.error, 'error');
+        }
+      });
+      right.appendChild(installBtn);
+    }
+    row.appendChild(right);
+
+    listWrap.appendChild(row);
+  });
+}
+
+function renderInstalledOnly(container, m) {
+  m.plugins.forEach(p => {
+    const row = el('div', 'mkt-modal-plugin-row');
+    const left = el('div', 'mkt-modal-plugin-info');
+    left.appendChild(el('div', 'plugin-content-item-name', p.id));
+    if (p.description) left.appendChild(el('div', 'plugin-content-item-desc', p.description));
+    row.appendChild(left);
+    const right = el('div', 'mkt-modal-plugin-actions');
+    const detailsBtn = el('button', 'btn btn-sm btn-ghost', 'Dettagli');
+    detailsBtn.addEventListener('click', () => {
+      document.querySelector('.md-overlay')?.remove();
+      showPluginContentModal(p);
+    });
+    right.appendChild(detailsBtn);
+    row.appendChild(right);
+    container.appendChild(row);
+  });
 }
 
 function renderMarketplaces() {
@@ -3307,7 +3390,7 @@ function renderSettings() {
   infoRow.appendChild(infoLeft);
   const infoRight = el('div');
   infoRight.style.cssText = 'display:flex;gap:10px;align-items:center;';
-  const verVal = el('div', 'settings-row-val', '1.0.51');
+  const verVal = el('div', 'settings-row-val', '1.0.52');
   const chBtn = btnWithIcon('btn btn-sm btn-green btn-with-icon', 'changelog', ' Changelog');
   chBtn.title = 'Mostra storico versioni';
   chBtn.addEventListener('click', () => openChangelogModal());

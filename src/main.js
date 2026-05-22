@@ -472,6 +472,46 @@ ipcMain.handle('marketplace-action', async (_e, { action, name, source }) => {
   return result;
 });
 
+// v1.0.52 — Pack H step 2: legge il marketplace.json di un marketplace
+// configurato per ottenere la lista COMPLETA dei plugin (anche quelli
+// non ancora installati). m.plugins nello state contiene solo installati.
+ipcMain.handle('get-marketplace-detail', async (_e, marketplaceName) => {
+  if (!validMarketplaceName(marketplaceName)) {
+    return { ok: false, error: 'Nome marketplace non valido' };
+  }
+  const dir = path.join(CLAUDE_DIR, 'plugins', 'marketplaces', marketplaceName);
+  if (!fs.existsSync(dir)) return { ok: false, error: 'Marketplace non trovato in ' + dir };
+  // Cerco marketplace.json in 2 posizioni standard
+  const candidates = [
+    path.join(dir, '.claude-plugin', 'marketplace.json'),
+    path.join(dir, 'marketplace.json'),
+  ];
+  const fp = candidates.find(p => fs.existsSync(p));
+  if (!fp) return { ok: false, error: 'marketplace.json non trovato' };
+  try {
+    const raw = JSON.parse(fs.readFileSync(fp, 'utf8'));
+    const list = Array.isArray(raw.plugins) ? raw.plugins
+               : raw.plugins && typeof raw.plugins === 'object' ? Object.values(raw.plugins)
+               : [];
+    return {
+      ok: true,
+      name:        raw.name || marketplaceName,
+      description: raw.description || '',
+      owner:       raw.owner || null,
+      plugins:     list.map(p => ({
+        name:        p.name || p.id || '',
+        description: p.description || '',
+        author:      p.author || null,
+        category:    p.category || '',
+        homepage:    p.homepage || '',
+        source:      p.source || null,
+      })),
+    };
+  } catch (e) {
+    return { ok: false, error: 'Lettura marketplace.json fallita: ' + e.message };
+  }
+});
+
 ipcMain.handle('get-activity-log', async () => readActivityLog());
 ipcMain.handle('clear-activity-log', async () => clearActivityLog());
 

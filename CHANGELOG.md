@@ -1,5 +1,14 @@
 # Changelog
 
+## v1.0.52 — 2026-05-22 — Pack H step 2: Install plugin dal marketplace
+
+- Modal "Plugin del marketplace" ora mostra **tutti** i plugin del marketplace (non solo gli installati): legge il `marketplace.json` reale del marketplace via nuovo IPC `getMarketplaceDetail`
+- Badge verde "✓ installato" sui plugin già presenti
+- Per i plugin NON installati: bottone **"Installa"** che chiede conferma e esegue `claude plugins install <name>@<marketplace>`
+- Per i plugin già installati: bottone "Dettagli" che apre il modal Contenuto plugin (drill-down)
+- Header del modal mostra ora "X/Y installati" + aggiornamento info
+- Notifica desktop su installazione riuscita, refresh automatico delle liste
+
 ## v1.0.51 — 2026-05-22 — Pack H step 1: Add Marketplace dal pannello
 
 - Nuovo bottone "+ Marketplace" nella topbar della sezione Marketplace (contestuale: prende il posto di "+ Progetto" solo qui)
