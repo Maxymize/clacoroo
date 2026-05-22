@@ -35,3 +35,6 @@ Thumbs.db
 .electron-vendor-cache/
 .npmrc-electron
 .superpowers/
+
+# Documenti strategici personali, non pubblicabili
+docs/strategia-lancio/
