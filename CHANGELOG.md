@@ -1,5 +1,16 @@
 # Changelog
 
+## v1.0.66 — 2026-05-22 — Cleanup residui MIT in CLAUDE.md e doc-tecnico_handoff.html
+
+Follow-up alla v1.0.65 (switch licenza AGPL-3.0). Aggiornati i due file di documentazione interna che ancora citavano "MIT":
+
+- `CLAUDE.md` riga 4 (sezione `## Project`): "Open source MIT" → "Open source **AGPL-3.0-or-later**, copyright © 2026 MAXYMIZE BUSINESS (Maximilian Giurastante)"
+- `docs/doc-tecnico_handoff.html`:
+  - KPI box licenza: `MIT` → `AGPL-3.0+`
+  - File-tree comment `LICENSE — MIT, © 2026 Maximilian Giurastante` → `LICENSE — AGPL-3.0-or-later, © 2026 MAXYMIZE BUSINESS (Maximilian Giurastante)`
+
+Sweep completato: l'unico altro residuo "MIT" è in `package-lock.json` (campi `license` delle dipendenze npm — corretto, NON da modificare) e in `src/renderer/fonts/SourceSerif4-LICENSE.md` (la propria licenza del font Source Serif, indipendente).
+
 ## v1.0.65 — 2026-05-22 — Switch licenza da MIT a AGPL-3.0-or-later
 
 Cambio di licenza significativo in vista del lancio pubblico open source su GitHub: da **MIT** a **GNU Affero General Public License v3.0 or later**. Motivazione strategica: AGPL protegge il progetto da fork commerciali che lo trasformerebbero in un SaaS chiuso senza ridistribuire il codice modificato. Il modello business pianificato — community gratuita + corso a pagamento in italiano — non dipende dalla vendita diretta dell'app, quindi AGPL è la scelta naturale.
