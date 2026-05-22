@@ -3335,6 +3335,40 @@ function renderSettings() {
   }
 
   // Sviluppo plugin (idea #6 riformulata)
+  // v1.0.57 — Editor esterno: usato dal bottone "Apri in editor" delle
+  // plugin card e del modal Contenuto plugin. Schema URL: vscode://file/...,
+  // cursor://file/... (Cursor è fork di VS Code, stesso protocollo).
+  // 'system' = apri con app predefinita del sistema (shell.openPath).
+  const gEditor = group('Editor esterno');
+  const edRow = el('div', 'settings-row');
+  const edLeft = el('div');
+  edLeft.appendChild(el('div', 'settings-row-label', 'Editor predefinito'));
+  edLeft.appendChild(el('div', 'settings-row-desc',
+    'Usato dal bottone "Apri in editor" sulle plugin card e nel modal Contenuto plugin. Apre la cartella del plugin dalla cache locale.'));
+  edRow.appendChild(edLeft);
+
+  const edSel = el('select', 'config-select');
+  [
+    { v: 'vscode', l: 'Visual Studio Code (vscode://)' },
+    { v: 'cursor', l: 'Cursor (cursor://)' },
+    { v: 'system', l: 'Sistema (default OS)' },
+  ].forEach(o => {
+    const opt = el('option', null, o.l);
+    opt.value = o.v;
+    edSel.appendChild(opt);
+  });
+  // Carico la scelta corrente in modo async
+  (async () => {
+    const s = await window.claudeAPI.getState();
+    edSel.value = s.preferredEditor || 'vscode';
+  })();
+  edSel.addEventListener('change', async () => {
+    await window.claudeAPI.setState({ preferredEditor: edSel.value });
+    toast('Editor predefinito: ' + edSel.options[edSel.selectedIndex].textContent, 'success');
+  });
+  edRow.appendChild(edSel);
+  gEditor.appendChild(edRow);
+
   const g4 = group('Sviluppo plugin');
   const devRow = el('div', 'settings-row');
   const devLeft = el('div');
@@ -3505,7 +3539,7 @@ function renderSettings() {
   infoRow.appendChild(infoLeft);
   const infoRight = el('div');
   infoRight.style.cssText = 'display:flex;gap:10px;align-items:center;';
-  const verVal = el('div', 'settings-row-val', '1.0.56');
+  const verVal = el('div', 'settings-row-val', '1.0.57');
   const chBtn = btnWithIcon('btn btn-sm btn-green btn-with-icon', 'changelog', ' Changelog');
   chBtn.title = 'Mostra storico versioni';
   chBtn.addEventListener('click', () => openChangelogModal());

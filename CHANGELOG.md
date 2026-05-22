@@ -1,5 +1,17 @@
 # Changelog
 
+## v1.0.57 — 2026-05-22 — Selettore editor esterno configurabile
+
+Nuovo gruppo "Editor esterno" in Impostazioni con select per scegliere quale editor aprire quando si clicca "Apri in editor" su una plugin card o nel modal Contenuto plugin:
+
+- **Visual Studio Code** (`vscode://file/...`)
+- **Cursor** (`cursor://file/...` — è fork di VS Code, supporta lo stesso schema)
+- **Sistema (default OS)** — apre con l'app predefinita registrata per le cartelle
+
+Prima era hardcoded VS Code, ora la scelta è persistita in `state.json` come `preferredEditor`.
+
+Per ora il bottone apre sempre la **cartella del plugin** (es. `~/.claude/plugins/cache/.../plugin/`). L'apertura di file specifici sarà gestita più avanti quando integreremo un editor di testo inline in CLACOROO.
+
 ## v1.0.56 — 2026-05-22 — Modal plugin: hook dettagliati + apri sorgente + skip sezione
 
 **Hook visibili**

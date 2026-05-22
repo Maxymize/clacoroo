@@ -972,11 +972,25 @@ ipcMain.handle('open-directory', async (_e, dirPath) => {
 ipcMain.handle('open-in-editor', async (_e, fullId) => {
   const p = resolvePluginPath(fullId);
   if (!p) return { success: false, error: 'Path plugin non trovato.' };
+  // v1.0.57 — Editor preferito persistito in state.json (preferredEditor)
+  const st = readState();
+  const editor = st.preferredEditor || 'vscode';
   try {
-    await shell.openExternal('vscode://file' + encodeURI(p));
+    if (editor === 'system') {
+      const err = await shell.openPath(p);
+      return err ? { success: false, error: err } : { success: true };
+    }
+    const schemas = {
+      vscode: 'vscode://file' + encodeURI(p),
+      cursor: 'cursor://file' + encodeURI(p),
+    };
+    const url = schemas[editor];
+    if (!url) return { success: false, error: 'Editor non riconosciuto: ' + editor };
+    await shell.openExternal(url);
     return { success: true };
   } catch (e) {
-    return { success: false, error: e.message || 'VS Code non disponibile.' };
+    const label = { vscode: 'VS Code', cursor: 'Cursor', system: 'editor di sistema' }[editor] || editor;
+    return { success: false, error: e.message || (label + ' non disponibile.') };
   }
 });
 
