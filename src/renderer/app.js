@@ -57,6 +57,8 @@ async function init() {
   if (!appState.onboardingShown) showOnboardingTour();
   // v1.0.09 — Soft auto-update: check all'avvio + ogni 24h se app rimane aperta
   scheduleUpdateCheck();
+  // v1.0.29 — Pack A: pill account sempre visibile in sidebar
+  bootSidebarAccount();
 }
 
 function scheduleUpdateCheck() {
@@ -2155,7 +2157,16 @@ function paintAccountPanel(container, result) {
     const r = await window.claudeAPI.getAccount({ force: true });
     accountCache = r;
     paintAccountPanel(container, r);
+    refreshSidebarAccountPill();
   });
+
+  // Link rapidi alle console Anthropic (v1.0.29)
+  const claudeBtn = el('button', 'btn btn-sm btn-ghost', '↗ claude.ai');
+  claudeBtn.title = 'Apri claude.ai (gestione subscription Max/Pro)';
+  claudeBtn.addEventListener('click', () => window.claudeAPI.openExternal('https://claude.com/settings/profile'));
+  const consoleBtn = el('button', 'btn btn-sm btn-ghost', '↗ Console API');
+  consoleBtn.title = 'Apri console.anthropic.com (API key, billing, usage API)';
+  consoleBtn.addEventListener('click', () => window.claudeAPI.openExternal('https://console.anthropic.com'));
   const logoutBtn = el('button', 'btn btn-sm btn-danger', 'Logout');
   logoutBtn.title = 'Esegue `claude auth logout`. Per riloggarsi servirà ripetere OAuth da terminale.';
   logoutBtn.addEventListener('click', async () => {
@@ -2182,6 +2193,8 @@ function paintAccountPanel(container, result) {
     }
   });
   actions.appendChild(refreshBtn);
+  actions.appendChild(claudeBtn);
+  actions.appendChild(consoleBtn);
   actions.appendChild(logoutBtn);
   card.appendChild(actions);
 
@@ -2195,6 +2208,38 @@ async function loadAccountPanel(container) {
   const data = await window.claudeAPI.getAccount({});
   accountCache = data;
   paintAccountPanel(container, data);
+  refreshSidebarAccountPill();
+}
+
+// Pill account nella sidebar (sotto Recenti, sopra Footer) — sempre visibile
+function refreshSidebarAccountPill() {
+  const pill = document.getElementById('sidebar-account');
+  if (!pill) return;
+  pill.textContent = '';
+  if (!accountCache || !accountCache.ok || !accountCache.data || !accountCache.data.loggedIn) {
+    pill.style.display = 'none';
+    return;
+  }
+  pill.style.display = '';
+  const d = accountCache.data;
+  const badge = el('span', 'sidebar-account-plan account-plan-' + (d.subscriptionType || 'unknown'));
+  badge.textContent = (d.subscriptionType || '—').toUpperCase();
+  const emailEl = el('span', 'sidebar-account-email', d.email || '—');
+  emailEl.title = d.email || '';
+  pill.appendChild(badge);
+  pill.appendChild(emailEl);
+  pill.title = 'Account: ' + (d.email || '') + ' · click per aprire Impostazioni';
+  pill.style.cursor = 'pointer';
+  pill.onclick = () => switchToSection('settings');
+}
+
+// All'avvio carica l'account pill anche se l'utente non visita Impostazioni
+async function bootSidebarAccount() {
+  try {
+    const data = await window.claudeAPI.getAccount({});
+    accountCache = data;
+    refreshSidebarAccountPill();
+  } catch { /* fail silently */ }
 }
 
 /* ── SETTINGS ─────────────────────────────────────────────────────────── */
@@ -2472,7 +2517,7 @@ function renderSettings() {
   const chBtn = el('button', 'btn btn-sm btn-green', '📋 Changelog');
   chBtn.title = 'Mostra storico versioni';
   chBtn.addEventListener('click', () => openChangelogModal());
-  const verVal = el('div', 'settings-row-val', '1.0.28');
+  const verVal = el('div', 'settings-row-val', '1.0.29');
   verRight.appendChild(chBtn);
   verRight.appendChild(verVal);
   verRow.appendChild(verRight);

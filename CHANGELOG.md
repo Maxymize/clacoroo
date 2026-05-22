@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.0.29 — 2026-05-22
+
+- Pill account sempre visibile nella sidebar (badge piano + email, sotto Recenti, sopra Stato). Click apre le Impostazioni
+- Pannello Account: due nuovi bottoni di accesso rapido — "↗ claude.ai" (gestione subscription) e "↗ Console API" (billing, API keys, usage)
+
 ## v1.0.28 — 2026-05-22
 
 - Nuovo KPI "Valore API stimato" in Stats e Dashboard: mostra in USD quanto staresti spendendo se pagassi pay-per-use API (sei su Max plan: questo valore è la stima del risparmio della subscription)
