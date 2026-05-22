@@ -1,5 +1,20 @@
 # Changelog
 
+## v1.0.40 — 2026-05-22
+
+**Impostazioni**
+
+- Rimossa la sezione "Statistiche" duplicata (numeri plugin/skill/agent già visibili in Dashboard e Stats)
+- Sezione "Informazioni" compattata in una sola riga: nome app + piattaforma in chiaro (macOS / Windows / Linux invece del tecnico `darwin`) + numero versione + bottone Changelog
+- Emoji 📁 📋 ⤓ ⤒ sostituite con icone SVG coerenti allo stile della sidebar (cartella, documento, freccia download/upload)
+
+**Configurazione (fix corretti dopo verifica dello schema ufficiale di Claude Code)**
+
+- **Voice**: il toggle ora scrive `voice.enabled` (nested) come da schema ufficiale, invece del campo top-level `voiceEnabled` che Claude Code ignorava silenziosamente
+- **Always Thinking**: descrizione aggiornata — è una modalità interna del modello, l'effetto non è visibile in UI ma si nota nella qualità delle risposte
+- **Tema (Claude Code)**: aggiunte le opzioni mancanti (`dark-daltonized`, `light-daltonized`, `dark-ansi`, `light-ansi`). Label e descrizione chiariscono che si applica alla TUI Claude Code (terminale + IDE), non a CLACOROO
+- **Lingua risposte**: opzioni cambiate da codici ISO (`en/it`, che Claude non riconosce) a nomi capitalized accettati dallo schema (`English`, `Italian`, `Spanish`, `French`, `German`, `Portuguese`, `Japanese`, `Chinese`). Cambia la lingua delle **risposte di Claude**, non la lingua di CLACOROO
+
 ## v1.0.39 — 2026-05-22
 
 - Quote sessione/settimana ora funzionano anche su **Windows** e **Linux** (prima solo macOS): CLACOROO legge il token OAuth dal file di fallback `~/.claude/.credentials.json` che Claude Code usa quando Keychain/Credential Manager non sono disponibili

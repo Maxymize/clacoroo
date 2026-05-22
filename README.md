@@ -11,7 +11,7 @@ Pannello di controllo visuale per [Claude Code](https://github.com/anthropics/cl
 [![Electron](https://img.shields.io/badge/Electron-36-47848F?logo=electron&logoColor=white)](https://www.electronjs.org/)
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20Windows-141413)](#requisiti)
 [![License: MIT](https://img.shields.io/badge/License-MIT-d97757.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-1.0.39-d97757.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-1.0.40-d97757.svg)](CHANGELOG.md)
 
 </div>
 

@@ -306,6 +306,37 @@ function el(tag, cls, txt) {
   return e;
 }
 
+// SVG icon helper (v1.0.40) — sostituisce le emoji nei bottoni con icone
+// coerenti allo stile della nav sidebar (Heroicons-like 20x20).
+const ICONS = {
+  folder:    'M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6z',
+  document:  'M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z',
+  download:  'M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 9.293a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z',
+  upload:    'M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM13.707 5.707a1 1 0 01-1.414 0L11 4.414V12a1 1 0 11-2 0V4.414L7.707 5.707a1 1 0 01-1.414-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 010 1.414z',
+  changelog: 'M9 2a1 1 0 000 2h2a1 1 0 100-2H9zM4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z',
+};
+function svgIcon(name, size = 14) {
+  const d = ICONS[name];
+  if (!d) return null;
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('viewBox', '0 0 20 20');
+  svg.setAttribute('fill', 'currentColor');
+  svg.setAttribute('width',  String(size));
+  svg.setAttribute('height', String(size));
+  svg.setAttribute('class', 'inline-icon');
+  const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  p.setAttribute('d', d);
+  svg.appendChild(p);
+  return svg;
+}
+function btnWithIcon(cls, iconName, label) {
+  const b = el('button', cls);
+  const ic = svgIcon(iconName);
+  if (ic) b.appendChild(ic);
+  b.appendChild(document.createTextNode(label));
+  return b;
+}
+
 function setContent(node) {
   const area = $('content-area');
   area.textContent = '';
@@ -1806,11 +1837,12 @@ function renderConfigContent(container, data) {
 
   const settings = data.settings || {};
 
-  function configRow(key, label, type, opts) {
+  function configRow(key, label, type, opts, extraDesc) {
     const row = el('div', 'settings-row');
     const left = el('div');
     left.appendChild(el('div', 'settings-row-label', label));
-    left.appendChild(el('div', 'settings-row-desc', '~/.claude/settings.json → ' + key));
+    const descTxt = '~/.claude/settings.json → ' + key + (extraDesc ? ' · ' + extraDesc : '');
+    left.appendChild(el('div', 'settings-row-desc', descTxt));
     row.appendChild(left);
 
     let input;
@@ -1921,16 +1953,73 @@ function renderConfigContent(container, data) {
     container.appendChild(row);
   }
 
-  configRow('alwaysThinkingEnabled', 'Always Thinking', 'toggle');
-  configRow('voiceEnabled', 'Voice', 'toggle');
+  // v1.0.40 — Tutte le opzioni di Configurazione sono **per Claude Code** (TUI
+  // terminale e IDE plugin). Non hanno effetto sulla UI di CLACOROO.
+  // Schema corretto verificato da claude-code-settings.schema.json
+  configRow('alwaysThinkingEnabled', 'Always Thinking', 'toggle',
+    null, 'Abilita il ragionamento esteso sui modelli che lo supportano. Effetto interno al modello: non c\'è un\'animazione, ma le risposte sono più ragionate.');
+
+  // Voice: schema corretto è voice.enabled (oggetto nested), NON voiceEnabled top-level
+  voiceConfigRow(container, settings);
+
   configRow('model', 'Modello predefinito', 'select',
-    ['default', 'claude-opus-4-7', 'claude-sonnet-4-6', 'claude-haiku-4-5-20251001']);
+    ['default', 'claude-opus-4-7', 'claude-sonnet-4-6', 'claude-haiku-4-5-20251001'],
+    'Modello scelto da Claude Code per ogni nuova sessione (override del default).');
+
   // v1.0.30/32 — Effort level: slider a pallini stile VS Code (5 livelli).
-  // Modifica `effortLevel` in ~/.claude/settings.json. Valori: low | medium | high | xhigh | max
   configRow('effortLevel', 'Effort', 'dots',
-    ['low', 'medium', 'high', 'xhigh', 'max']);
-  configRow('theme', 'Tema', 'select', ['auto', 'dark', 'light']);
-  configRow('language', 'Lingua', 'select', ['auto', 'en', 'it']);
+    ['low', 'medium', 'high', 'xhigh', 'max'],
+    'Intensità del ragionamento (più alto = più cura, più token, più lento).');
+
+  // Theme: tutti i valori dallo schema ufficiale. Si applica alla UI di
+  // Claude Code (terminale + IDE), non a CLACOROO.
+  configRow('theme', 'Tema (Claude Code)', 'select',
+    ['auto', 'dark', 'light', 'dark-daltonized', 'light-daltonized', 'dark-ansi', 'light-ansi'],
+    'Tema della UI di Claude Code nel terminale e nel plugin IDE. Non ha effetto sul tema di CLACOROO.');
+
+  // Language: nomi capitalized accettati dallo schema (italian, spanish, ...).
+  // Cambia la lingua delle RISPOSTE di Claude, non l'interfaccia CLACOROO.
+  configRow('language', 'Lingua risposte', 'select',
+    ['', 'English', 'Italian', 'Spanish', 'French', 'German', 'Portuguese', 'Japanese', 'Chinese'],
+    'Lingua preferita per le risposte di Claude (e dictation vocale). Non cambia la lingua di CLACOROO.');
+}
+
+// Riga custom per voice.enabled (campo nested in settings.json — lo schema
+// di Claude Code è { voice: { enabled, mode, autoSubmit } }, non un flat
+// voiceEnabled top-level che veniva ignorato).
+function voiceConfigRow(container, settings) {
+  const row = el('div', 'settings-row');
+  const left = el('div');
+  left.appendChild(el('div', 'settings-row-label', 'Voice'));
+  left.appendChild(el('div', 'settings-row-desc',
+    '~/.claude/settings.json → voice.enabled · Abilita la dictation hold-to-talk / tap-to-toggle nella TUI Claude Code'));
+  row.appendChild(left);
+
+  const voice = settings.voice || {};
+  const toggleWrap = el('label', 'toggle');
+  const input = el('input');
+  input.type = 'checkbox';
+  input.checked = !!voice.enabled;
+  const track = el('span', 'toggle-track');
+  const thumb = el('span', 'toggle-thumb');
+  toggleWrap.appendChild(input);
+  toggleWrap.appendChild(track);
+  toggleWrap.appendChild(thumb);
+  input.addEventListener('change', async () => {
+    const currentVoice = (statsCache?.settings?.voice) || settings.voice || {};
+    const next = { ...currentVoice, enabled: input.checked };
+    const r = await window.claudeAPI.updateSettings({ voice: next });
+    if (r.success) {
+      settings.voice = next;
+      if (statsCache?.settings) statsCache.settings.voice = next;
+      toast('Voice ' + (input.checked ? 'attivato' : 'disattivato'), 'success');
+    } else {
+      input.checked = !input.checked;
+      toast('Errore salvataggio: ' + r.error, 'error');
+    }
+  });
+  row.appendChild(toggleWrap);
+  container.appendChild(row);
 }
 
 /* ── MCP (v1.0.21) ────────────────────────────────────────────────────── */
@@ -2618,13 +2707,7 @@ function renderSettings() {
     g1.appendChild(r2);
   }
 
-  const g2 = group('Statistiche');
-  row(g2, 'Plugin installati', null, String(state.plugins.length));
-  row(g2, 'Plugin disattivati', null, String(state.plugins.filter(p => p.blocked).length));
-  row(g2, 'Marketplace', null, String(state.mktList.length));
-  row(g2, 'Skill totali', null, String(state.plugins.reduce((s, p) => s + p.skills.length, 0)));
-  row(g2, 'Agent totali', null, String(state.plugins.reduce((s, p) => s + p.agents.length, 0)));
-
+  // v1.0.40 — Rimossa sezione Statistiche: già presente in Dashboard e Stats
   // v1.0.11 — Progetti tracciati (scope locale)
   const gProj = group('Progetti tracciati');
   const projDesc = el('div', 'settings-row');
@@ -2676,7 +2759,7 @@ function renderSettings() {
   pathInp.style.cssText = 'width:240px;font-family:"SF Mono",monospace;';
   pathInp.setAttribute('placeholder', '/path/to/local/plugin');
   pathInp.setAttribute('type', 'text');
-  const browseBtn = el('button', 'btn btn-sm btn-ghost', '📂 Sfoglia');
+  const browseBtn = btnWithIcon('btn btn-sm btn-ghost btn-with-icon', 'folder', ' Sfoglia');
   const validateBtn = el('button', 'btn btn-sm btn-primary', 'Valida');
   const outputEl = el('pre', 'dev-validate-output');
   outputEl.style.display = 'none';
@@ -2764,13 +2847,13 @@ function renderSettings() {
   snapRow.appendChild(snapLeft);
   const snapBtns = el('div');
   snapBtns.style.cssText = 'display:flex;gap:6px;';
-  const exportBtn = el('button', 'btn btn-sm btn-ghost', '⤓ Esporta');
+  const exportBtn = btnWithIcon('btn btn-sm btn-ghost btn-with-icon', 'download', ' Esporta');
   exportBtn.addEventListener('click', async () => {
     const r = await window.claudeAPI.exportSnapshot();
     if (r.success) toast('Snapshot esportato in ' + r.path, 'success');
     else if (r.error !== 'Annullato') toast('Errore export: ' + r.error, 'error');
   });
-  const importBtn = el('button', 'btn btn-sm btn-primary', '⤒ Importa');
+  const importBtn = btnWithIcon('btn btn-sm btn-primary btn-with-icon', 'upload', ' Importa');
   importBtn.addEventListener('click', async () => {
     const r = await window.claudeAPI.importSnapshot();
     if (!r.success) {
@@ -2793,7 +2876,8 @@ function renderSettings() {
     importBtn.textContent = 'Applicazione…';
     const a = await window.claudeAPI.applySnapshot(r.preview);
     importBtn.disabled = false;
-    importBtn.textContent = '⤒ Importa';
+    importBtn.textContent = ' Importa';
+    importBtn.prepend(svgIcon('upload'));
     if (a.success) toast('Snapshot applicato (' + a.log.length + ' azioni)', 'success');
     else {
       const failed = a.log.filter(l => !l.success).length;
@@ -2820,27 +2904,24 @@ function renderSettings() {
   tourRow.appendChild(restartBtn);
   g5.appendChild(tourRow);
 
+  // v1.0.40 — Informazioni compatta: una sola riga con nome + versione + bottone changelog
   const g3 = group('Informazioni');
-  row(g3, 'Nome app', null, 'CLACOROO');
-
-  // Riga versione custom con bottone Changelog
-  const verRow = el('div', 'settings-row');
-  const verLeft = el('div');
-  verLeft.appendChild(el('div', 'settings-row-label', 'Versione'));
-  verLeft.appendChild(el('div', 'settings-row-desc', 'Storico completo delle release'));
-  verRow.appendChild(verLeft);
-  const verRight = el('div');
-  verRight.style.cssText = 'display:flex;gap:10px;align-items:center;';
-  const chBtn = el('button', 'btn btn-sm btn-green', '📋 Changelog');
+  const infoRow = el('div', 'settings-row');
+  const infoLeft = el('div');
+  infoLeft.appendChild(el('div', 'settings-row-label', 'CLACOROO'));
+  const platformLabel = ({ darwin: 'macOS', win32: 'Windows', linux: 'Linux' })[d.platform] || d.platform;
+  infoLeft.appendChild(el('div', 'settings-row-desc', platformLabel));
+  infoRow.appendChild(infoLeft);
+  const infoRight = el('div');
+  infoRight.style.cssText = 'display:flex;gap:10px;align-items:center;';
+  const verVal = el('div', 'settings-row-val', '1.0.40');
+  const chBtn = btnWithIcon('btn btn-sm btn-green btn-with-icon', 'changelog', ' Changelog');
   chBtn.title = 'Mostra storico versioni';
   chBtn.addEventListener('click', () => openChangelogModal());
-  const verVal = el('div', 'settings-row-val', '1.0.38');
-  verRight.appendChild(chBtn);
-  verRight.appendChild(verVal);
-  verRow.appendChild(verRight);
-  g3.appendChild(verRow);
-
-  row(g3, 'Piattaforma', null, d.platform);
+  infoRight.appendChild(verVal);
+  infoRight.appendChild(chBtn);
+  infoRow.appendChild(infoRight);
+  g3.appendChild(infoRow);
 
   setContent(wrap);
 }

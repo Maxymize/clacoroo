@@ -1812,6 +1812,19 @@ body {
 .dashboard-context-section { margin-bottom: 24px; }
 .dashboard-context-section:empty { display: none; }
 
+/* Inline SVG icons in buttons (v1.0.40) */
+.btn-with-icon {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.btn-with-icon .inline-icon {
+  flex-shrink: 0;
+}
+.inline-icon {
+  vertical-align: middle;
+}
+
 /* ── MCP CARDS (v1.0.21) ──────────────────────────────────────────────── */
 .mcp-grid {
   display: grid;
