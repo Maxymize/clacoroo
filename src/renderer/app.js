@@ -212,6 +212,7 @@ function processData() {
       agentHealth: cache.agentHealth || {},
       hasMcp:      cache.hasMcp      || false,
       hasHooks:    cache.hasHooks    || false,
+      hookEvents:  cache.hookEvents  || [],
       blocked:     blocked.has(fullId),
       scope:       'global',
       tokensAlways: tokenInfo?.always_on  || 0,
@@ -891,15 +892,18 @@ function showPluginContentModal(p) {
   if (p.tokensAlways) summary.appendChild(summCell(p.tokensAlways, 'tok always-on'));
   content.appendChild(summary);
 
+  // v1.0.56 — Click su skill/agent apre direttamente il modal markdown,
+  // saltando il passaggio "vai alla sezione filtrata". Era confondente:
+  // la sezione mostrava 1 solo item che bisognava ri-cliccare per il dettaglio.
   appendModalItemList(content, 'Skills', p.skills, item => {
-    state.filters.skills = { search: (item.name || item).toLowerCase() };
-    switchToSection('skills');
+    const name = item.name || item;
     close();
+    openMarkdownPreview(p.fullId, 'skill', name);
   });
   appendModalItemList(content, 'Agents', p.agents, item => {
-    state.filters.agents = { search: (item.name || item).toLowerCase() };
-    switchToSection('agents');
+    const name = item.name || item;
     close();
+    openMarkdownPreview(p.fullId, 'agent', name);
   });
 
   if (p.hasMcp) {
@@ -915,9 +919,45 @@ function showPluginContentModal(p) {
 
   if (p.hasHooks) {
     content.appendChild(el('h3', 'plugin-content-section-title', 'Hook'));
-    content.appendChild(el('div', 'plugin-content-note',
-      'Plugin definisce hook (PreToolUse, PostToolUse, UserPromptSubmit, ecc.). Apri il sorgente con il bottone editor per ispezionarli.'));
+    if (p.hookEvents && p.hookEvents.length) {
+      // Lista dettagliata: nome evento + N handler (es. "SessionStart · 2 handler")
+      const list = el('div', 'plugin-content-list');
+      p.hookEvents.forEach(h => {
+        const row = el('div', 'plugin-content-item plugin-content-item-static');
+        row.appendChild(svgIcon('code'));
+        const info = el('div', 'plugin-content-item-info');
+        info.appendChild(el('div', 'plugin-content-item-name', h.event));
+        const detailLine = el('div', 'plugin-content-item-desc',
+          h.handlerCount + (h.handlerCount === 1 ? ' handler' : ' handler')
+          + ' · ' + h.matcherCount + (h.matcherCount === 1 ? ' matcher' : ' matcher'));
+        info.appendChild(detailLine);
+        row.appendChild(info);
+        list.appendChild(row);
+      });
+      content.appendChild(list);
+    } else {
+      content.appendChild(el('div', 'plugin-content-note',
+        'Plugin definisce hook ma il file `hooks/hooks.json` non è disponibile per la lettura. Apri il sorgente per ispezionarli.'));
+    }
   }
+
+  // v1.0.56 — Bottoni "Apri sorgente" sempre disponibili in fondo al modal
+  // (l'utente segnalava che la nota faceva riferimento a bottoni non visibili
+  // nel modal: quelli erano sulle plugin card, non qui)
+  const sourceActions = el('div', 'plugin-content-source-actions');
+  const finderBtn = btnWithIcon('btn btn-sm btn-ghost btn-with-icon', 'folder', ' Apri nel Finder');
+  finderBtn.addEventListener('click', async () => {
+    const r = await window.claudeAPI.openPluginPath(p.fullId);
+    if (!r.success) toast('Errore: ' + r.error, 'error');
+  });
+  const editorBtn = btnWithIcon('btn btn-sm btn-ghost btn-with-icon', 'code', ' Apri in editor');
+  editorBtn.addEventListener('click', async () => {
+    const r = await window.claudeAPI.openInEditor(p.fullId);
+    if (!r.success) toast('Errore: ' + r.error, 'error');
+  });
+  sourceActions.appendChild(finderBtn);
+  sourceActions.appendChild(editorBtn);
+  content.appendChild(sourceActions);
 
   function onKey(e) { if (e.key === 'Escape') close(); }
   function close() { document.removeEventListener('keydown', onKey); overlay.remove(); }
@@ -3465,7 +3505,7 @@ function renderSettings() {
   infoRow.appendChild(infoLeft);
   const infoRight = el('div');
   infoRight.style.cssText = 'display:flex;gap:10px;align-items:center;';
-  const verVal = el('div', 'settings-row-val', '1.0.55');
+  const verVal = el('div', 'settings-row-val', '1.0.56');
   const chBtn = btnWithIcon('btn btn-sm btn-green btn-with-icon', 'changelog', ' Changelog');
   chBtn.title = 'Mostra storico versioni';
   chBtn.addEventListener('click', () => openChangelogModal());

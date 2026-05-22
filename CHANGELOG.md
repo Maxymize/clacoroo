@@ -1,5 +1,21 @@
 # Changelog
 
+## v1.0.56 — 2026-05-22 — Modal plugin: hook dettagliati + apri sorgente + skip sezione
+
+**Hook visibili**
+
+Il modal "Contenuto plugin" ora mostra l'elenco degli hook event coperti dal plugin (Setup / SessionStart / UserPromptSubmit / PreToolUse / ecc.), con per ciascuno il conteggio matcher e handler. La lista è letta dal `hooks/hooks.json` del plugin via nuova `readHookEvents()` in main.js.
+
+**Click skill/agent → modal markdown diretto**
+
+Prima: click su una skill nel modal plugin → si chiudeva il modal → si andava alla sezione Skill con filtro pre-applicato → l'utente doveva ri-cliccare sull'unico risultato per aprire il dettaglio markdown. Tre passaggi per arrivare al contenuto.
+
+Adesso: click su una skill/agent nel modal plugin → si chiude il modal plugin → si apre **direttamente** il modal markdown con il contenuto. Un solo passaggio.
+
+**Bottoni Apri sorgente nel modal**
+
+Aggiunti in fondo al modal Contenuto plugin: "📁 Apri nel Finder" e "📝 Apri in editor". Prima la nota faceva riferimento a bottoni che non c'erano nel modal stesso (erano solo sulle plugin card).
+
 ## v1.0.55 — 2026-05-22 — Ordinamento marketplace (5 modalità)
 
 Nuovo selector "Ordina:" nella header della sezione Marketplace con 5 modalità:

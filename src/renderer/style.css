@@ -1982,6 +1982,25 @@ body {
   font-style: italic;
 }
 
+/* Hook list items (statici, non cliccabili) v1.0.56 */
+.plugin-content-item.plugin-content-item-static {
+  cursor: default;
+}
+.plugin-content-item.plugin-content-item-static:hover {
+  background: var(--surface);
+  border-color: var(--border);
+}
+
+/* Bottoni "Apri sorgente" in fondo al modal Contenuto plugin v1.0.56 */
+.plugin-content-source-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+
 /* .btn-icon definito sopra (consolidato con la regola legacy) */
 
 /* Tooltip immediato custom — usato sui btn-icon tramite attribute data-tt;

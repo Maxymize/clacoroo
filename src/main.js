@@ -135,6 +135,26 @@ function safeReadJson(filePath, fallback) {
 
 let LAST_CACHE = {};
 
+// v1.0.56 — Legge hooks/hooks.json di un plugin e ritorna array di eventi
+// hook coperti (es. ['Setup','SessionStart','UserPromptSubmit']) con il
+// conteggio matcher per ogni evento. Ritorna [] se nessun hook.
+function readHookEvents(hooksDir) {
+  if (!fs.existsSync(hooksDir)) return [];
+  const hooksJson = path.join(hooksDir, 'hooks.json');
+  if (!fs.existsSync(hooksJson)) return [];
+  try {
+    const raw = JSON.parse(fs.readFileSync(hooksJson, 'utf8'));
+    const events = raw.hooks || {};
+    return Object.entries(events).map(([eventName, matchers]) => ({
+      event: eventName,
+      matcherCount: Array.isArray(matchers) ? matchers.length : 0,
+      handlerCount: Array.isArray(matchers)
+        ? matchers.reduce((s, m) => s + (Array.isArray(m.hooks) ? m.hooks.length : 0), 0)
+        : 0,
+    }));
+  } catch { return []; }
+}
+
 function scanCache() {
   const details = {};
   if (!fs.existsSync(CACHE_DIR)) {
@@ -202,6 +222,7 @@ function scanCache() {
         agentHealth,
         hasMcp:   mcpPaths.some(p => fs.existsSync(p)),
         hasHooks: fs.existsSync(hooksDir) && fs.readdirSync(hooksDir).length > 0,
+        hookEvents: readHookEvents(hooksDir),
       };
     }
   }
