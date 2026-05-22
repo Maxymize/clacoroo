@@ -2116,6 +2116,37 @@ body {
   border-top: 1px solid var(--border);
 }
 
+/* Marketplace sort selector (v1.0.55) */
+.mkt-sort-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.mkt-sort-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+.mkt-sort-select {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 5px 10px;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  transition: border-color .15s, box-shadow .15s;
+}
+.mkt-sort-select:hover  { border-color: color-mix(in srgb, var(--accent) 50%, var(--border)); }
+.mkt-sort-select:focus  {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
 /* Plugin row nel modal Marketplace con Installa/Dettagli (v1.0.52) */
 .mkt-modal-plugin-row {
   display: flex;

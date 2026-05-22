@@ -1,5 +1,22 @@
 # Changelog
 
+## v1.0.55 — 2026-05-22 — Ordinamento marketplace (5 modalità)
+
+Nuovo selector "Ordina:" nella header della sezione Marketplace con 5 modalità:
+
+- **Predefinito** (default attuale: plugin disponibili desc, poi installati desc)
+- **Aggiunti di recente** — birthtime della directory marketplace desc
+- **Aggiunti meno di recente** — birthtime asc
+- **Aggiornati di recente** — `lastUpdated` desc
+- **Aggiornati meno di recente** — `lastUpdated` asc · utile per scoprire marketplace stale e cliccare "Aggiorna"
+
+La preferenza viene **persistita** in `state.json` (`mktSort`) e ripristinata al riavvio.
+
+Backend:
+- `readMarketplaceAddedAt(id)` legge `birthtime` (con fallback ctime/mtime) della directory marketplace
+- `_addedAt` esposto come ISO string in `marketplacesNorm`
+- Stato `mktList[i].addedAt`
+
 ## v1.0.54 — 2026-05-22 — Card marketplace: count sempre X/Y se non tutti installati
 
 Fix di logica display: prima un marketplace con 0 installati su N disponibili mostrava solo "N" (ambiguo: poteva sembrare "tutti installati"). Ora la regola è semplice e univoca:

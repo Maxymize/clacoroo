@@ -34,7 +34,27 @@ const state = {
     skills:       { search: '' },
     agents:       { search: '' },
   },
+  // v1.0.55 — ordinamento marketplace. Valori:
+  //   'default'        plugin disponibili desc, poi installati desc
+  //   'added-desc'     aggiunti di recente prima
+  //   'added-asc'      aggiunti meno di recente prima
+  //   'updated-desc'   aggiornati di recente prima
+  //   'updated-asc'    aggiornati meno di recente prima (utile per scoprire stale)
+  mktSort: 'default',
 };
+
+const MKT_SORTERS = {
+  'default':      (a, b) => b.available - a.available || b.installed - a.installed,
+  'added-desc':   (a, b) => mktDateValue(b.addedAt) - mktDateValue(a.addedAt),
+  'added-asc':    (a, b) => mktDateValue(a.addedAt) - mktDateValue(b.addedAt),
+  'updated-desc': (a, b) => mktDateValue(b.lastUpdated) - mktDateValue(a.lastUpdated),
+  'updated-asc':  (a, b) => mktDateValue(a.lastUpdated) - mktDateValue(b.lastUpdated),
+};
+function mktDateValue(s) { return s ? Date.parse(s) || 0 : 0; }
+function applyMktSort() {
+  const sorter = MKT_SORTERS[state.mktSort] || MKT_SORTERS['default'];
+  state.mktList.sort(sorter);
+}
 
 /* ── DOM REFS ─────────────────────────────────────────────────────────── */
 const $ = id => document.getElementById(id);
@@ -59,6 +79,11 @@ async function init() {
   window.claudeAPI.onSwitchSection(name => switchToSection(name));
   window.claudeAPI.onForceRefresh(() => loadData());
   const appState = await window.claudeAPI.getState();
+  if (appState.mktSort && MKT_SORTERS[appState.mktSort]) {
+    state.mktSort = appState.mktSort;
+    applyMktSort();
+    if (state.section === 'marketplaces') render();
+  }
   if (appState.lastSection && appState.lastSection !== 'dashboard') {
     switchToSection(appState.lastSection);
   }
@@ -225,9 +250,6 @@ function processData() {
   const mktMap = raw.marketplaces || {};
   state.mktList = Object.entries(mktMap).map(([id, cfg]) => {
     const mktPlugins = state.plugins.filter(p => p.mkt === id);
-    // available = plugin dichiarati nel marketplace.json; installed = ciò
-    // che è già in state. Distinzione importante: marketplace appena
-    // aggiunti hanno installed=0 ma available>0 (vedi screenshot user).
     const available  = cfg._availableCount || 0;
     const installed  = mktPlugins.length;
     return {
@@ -235,11 +257,13 @@ function processData() {
       repo:        cfg._repo || '',
       autoUpdate:  cfg.autoUpdate  || false,
       lastUpdated: cfg.lastUpdated || '',
+      addedAt:     cfg._addedAt    || '',
       plugins:     mktPlugins,
       available,
       installed,
     };
-  }).sort((a, b) => b.available - a.available || b.installed - a.installed);
+  });
+  applyMktSort();  // ordinamento dinamico in base a state.filters.mktSort
 
   // Badge disattivati
   const blockedCount = state.plugins.filter(p => p.blocked).length;
@@ -1384,6 +1408,32 @@ function renderMarketplaces() {
 
   const hdr = el('div', 'section-header');
   hdr.appendChild(el('span', 'section-count', state.mktList.length + ' marketplace configurati'));
+
+  // v1.0.55 — Selector di ordinamento
+  const sortWrap = el('div', 'mkt-sort-wrap');
+  sortWrap.appendChild(el('span', 'mkt-sort-label', 'Ordina:'));
+  const sortSel = el('select', 'mkt-sort-select');
+  [
+    { v: 'default',      l: 'Predefinito (per N plugin)' },
+    { v: 'added-desc',   l: 'Aggiunti di recente' },
+    { v: 'added-asc',    l: 'Aggiunti meno di recente' },
+    { v: 'updated-desc', l: 'Aggiornati di recente' },
+    { v: 'updated-asc',  l: 'Aggiornati meno di recente' },
+  ].forEach(o => {
+    const opt = el('option', null, o.l);
+    opt.value = o.v;
+    sortSel.appendChild(opt);
+  });
+  sortSel.value = state.mktSort;
+  sortSel.addEventListener('change', async () => {
+    state.mktSort = sortSel.value;
+    applyMktSort();
+    renderMarketplaces();
+    await window.claudeAPI.setState({ mktSort: state.mktSort });
+  });
+  sortWrap.appendChild(sortSel);
+  hdr.appendChild(sortWrap);
+
   wrap.appendChild(hdr);
 
   const grid = el('div', 'mkt-cards-grid');
@@ -3415,7 +3465,7 @@ function renderSettings() {
   infoRow.appendChild(infoLeft);
   const infoRight = el('div');
   infoRight.style.cssText = 'display:flex;gap:10px;align-items:center;';
-  const verVal = el('div', 'settings-row-val', '1.0.54');
+  const verVal = el('div', 'settings-row-val', '1.0.55');
   const chBtn = btnWithIcon('btn btn-sm btn-green btn-with-icon', 'changelog', ' Changelog');
   chBtn.title = 'Mostra storico versioni';
   chBtn.addEventListener('click', () => openChangelogModal());

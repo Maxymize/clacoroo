@@ -298,6 +298,18 @@ function readMarketplacePluginCount(marketplaceId) {
   } catch { return 0; }
 }
 
+// v1.0.55 — Data di "installazione" del marketplace dalla directory.
+// Ritorna birthtime ISO string, o ctime/mtime come fallback (alcuni FS
+// non supportano birthtime). null se la dir non esiste.
+function readMarketplaceAddedAt(marketplaceId) {
+  const dir = path.join(CLAUDE_DIR, 'plugins', 'marketplaces', marketplaceId);
+  try {
+    const s = fs.statSync(dir);
+    const t = s.birthtime || s.ctime || s.mtime;
+    return t ? t.toISOString() : null;
+  } catch { return null; }
+}
+
 function readAllData() {
   const installedRaw = safeReadJson(INSTALLED, { version: 2, plugins: {} });
   // plugins can be an array of IDs (old format) or an object {id: [...entries...]} (v2)
@@ -333,6 +345,7 @@ function readAllData() {
       ...cfg,
       _repo: extractRepoPath(cfg.source),
       _availableCount: readMarketplacePluginCount(id),
+      _addedAt: readMarketplaceAddedAt(id),
     };
   }
 
