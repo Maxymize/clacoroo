@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.0.63 — 2026-05-22 — Release test full end-to-end soft auto-update
+
+Versione di test per verificare il flusso completo del soft auto-update: detect (footer + topbar banner) → click UPDATE → download `.dmg` → install → app aggiornata. Include `.dmg` (arm64 + x64) come asset in GitHub Releases per permettere il download reale dall'UI di un'installazione precedente.
+
+Nessun cambiamento al codice rispetto a v1.0.62 — bump version solo per generare il tag e creare la release con asset binari.
+
 ## v1.0.62 — 2026-05-22 — Footer sidebar: versione + indicatore update
 
 Il footer in basso a sinistra del sidebar ora mostra dinamicamente la versione corrente dell'app (es. `v1.0.62`) invece del count plugin. La versione è letta da `app.getVersion()` di Electron via `appVersion` nel `get-data` IPC, così resta sempre allineata al package.json senza hardcode.
