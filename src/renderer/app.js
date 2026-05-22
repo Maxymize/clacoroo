@@ -105,6 +105,8 @@ async function runUpdateCheck(force) {
   // Skipped per cooldown: usa risultato cached se disponibile
   const info = r.skipped ? r.cached : r;
   if (!info || !info.ok || !info.available) {
+    window._latestUpdateInfo = null;
+    refreshFooterStatus(null);
     if (force) {
       if (r.ok === false) {
         toast('Errore controllo aggiornamenti: ' + r.error, 'error');
@@ -116,6 +118,10 @@ async function runUpdateCheck(force) {
     }
     return;
   }
+  // Salvo per il footer (anche se l'utente ha skipped la versione: la
+  // segnalazione resta utile, solo niente banner)
+  window._latestUpdateInfo = info;
+  refreshFooterStatus(info);
   const appState = await window.claudeAPI.getState();
   if (appState.skippedVersion === info.latest) return;
   renderUpdateBanner(info);
@@ -141,10 +147,11 @@ async function loadData() {
     return;
   }
   state.rawData = result.data;
+  if (result.data.appVersion) _currentAppVersion = result.data.appVersion;
   processData();
   render();
   refreshSidebarRecent();
-  setStatus('ok', state.plugins.length + ' plugin');
+  refreshFooterStatus(window._latestUpdateInfo || null);
 }
 
 let sidebarRecentToken = 0;
@@ -3560,7 +3567,7 @@ function renderSettings() {
   infoRow.appendChild(infoLeft);
   const infoRight = el('div');
   infoRight.style.cssText = 'display:flex;gap:10px;align-items:center;';
-  const verVal = el('div', 'settings-row-val', '1.0.61');
+  const verVal = el('div', 'settings-row-val', '1.0.62');
   const chBtn = btnWithIcon('btn btn-sm btn-green btn-with-icon', 'changelog', ' Changelog');
   chBtn.title = 'Mostra storico versioni';
   chBtn.addEventListener('click', () => openChangelogModal());
@@ -3931,12 +3938,47 @@ function renderUpdateBanner(info) {
   if (topbar) topbar.insertAdjacentElement('afterend', banner);
 }
 
-/* ── STATUS ───────────────────────────────────────────────────────────── */
+/* ── STATUS / FOOTER (v1.0.62) ────────────────────────────────────────── */
+// Il footer del sidebar ora mostra la versione corrente + indicatore di
+// stato aggiornamento. Stati:
+//   'loading'    — durante boot
+//   'ok'         — versione aggiornata (lucina verde, label vN.N.NN)
+//   'outdated'   — disponibile nuova versione (lucina arancio + bottone Update)
+//   'error'      — errore boot
 function setStatus(type, label) {
   const dot = $('status-dot');
   const lbl = $('status-label');
-  if (dot) { dot.className = 'status-dot ' + type; }
+  if (dot) dot.className = 'status-dot ' + type;
   if (lbl) lbl.textContent = label;
+}
+
+let _currentAppVersion = '';
+
+function refreshFooterStatus(updateInfo) {
+  const dot = $('status-dot');
+  const lbl = $('status-label');
+  const wrap = $('sidebar-status');
+  if (!dot || !lbl || !wrap) return;
+  // Rimuovo eventuale bottone Update da precedenti chiamate
+  wrap.querySelectorAll('.footer-update-btn').forEach(b => b.remove());
+
+  const v = 'v' + _currentAppVersion;
+  if (updateInfo && updateInfo.available) {
+    dot.className = 'status-dot outdated';
+    lbl.textContent = v;
+    lbl.title = 'Nuova versione disponibile: v' + updateInfo.latest;
+    const btn = el('button', 'footer-update-btn', 'Update');
+    btn.dataset.tt = 'v' + updateInfo.latest + ' disponibile — apri pagina download';
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (updateInfo.url) window.claudeAPI.openExternal(updateInfo.url);
+    });
+    wrap.appendChild(btn);
+  } else {
+    dot.className = 'status-dot ok';
+    lbl.textContent = v;
+    lbl.title = 'Versione aggiornata';
+  }
 }
 
 /* ── TOAST ────────────────────────────────────────────────────────────── */

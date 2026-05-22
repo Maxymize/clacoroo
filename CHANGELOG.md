@@ -1,5 +1,15 @@
 # Changelog
 
+## v1.0.62 — 2026-05-22 — Footer sidebar: versione + indicatore update
+
+Il footer in basso a sinistra del sidebar ora mostra dinamicamente la versione corrente dell'app (es. `v1.0.62`) invece del count plugin. La versione è letta da `app.getVersion()` di Electron via `appVersion` nel `get-data` IPC, così resta sempre allineata al package.json senza hardcode.
+
+**Indicatore stato aggiornamento**:
+- 🟢 **Verde** = sei sulla versione più recente
+- 🟠 **Arancio + pulse** = nuova release disponibile su GitHub. Appare anche un bottone "**Update**" arancio inline accanto al numero versione che apre la pagina di download nel browser (`shell.openExternal`)
+
+Il check sfrutta il sistema soft auto-update esistente (GitHub Releases API), già attivato al boot + ogni 24h. Quando rileva una nuova versione: aggiorna lucina footer + mostra banner sticky in topbar (come prima).
+
 ## v1.0.61 — 2026-05-22 — Flash modali eliminato (vero questa volta)
 
 Il fix v1.0.60 non era sufficiente. Due cause residue:

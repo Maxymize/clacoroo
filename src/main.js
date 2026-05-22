@@ -381,6 +381,7 @@ function readAllData() {
     claudeDir:    CLAUDE_DIR,
     claudeBin:    CLAUDE_BIN,
     platform:     process.platform,
+    appVersion:   app.getVersion(),
   };
 }
 
