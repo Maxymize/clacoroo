@@ -267,19 +267,29 @@ function render() {
   const actions = $('topbar-actions');
   actions.textContent = '';
 
-  // v1.0.11 — Bottone "+" per aggiungere progetto tracciato (locale)
-  const addProjBtn = el('button', 'btn btn-sm btn-ghost btn-refresh', '+ Progetto');
-  addProjBtn.title = 'Aggiungi un progetto da tracciare (per vedere plugin/skill/agent locali)';
-  addProjBtn.addEventListener('click', async () => {
-    const r = await window.claudeAPI.addTrackedProject();
-    if (r.success) {
-      toast('Progetto aggiunto: ' + r.path.split('/').pop(), 'success');
-      await loadData();
-    } else if (r.error !== 'Annullato') {
-      toast('Errore: ' + r.error, 'error');
-    }
-  });
-  actions.appendChild(addProjBtn);
+  // v1.0.51 — Bottone "+" contestuale alla sezione Marketplace: aggiunge
+  // un marketplace da URL/repo. Sostituisce "+ Progetto" quando si è in
+  // questa pagina perché Progetto qui non avrebbe senso.
+  if (state.section === 'marketplaces') {
+    const addMktBtn = el('button', 'btn btn-sm btn-ghost btn-refresh', '+ Marketplace');
+    addMktBtn.title = 'Aggiungi un marketplace da URL git, repo GitHub o path locale';
+    addMktBtn.addEventListener('click', () => showAddMarketplaceModal());
+    actions.appendChild(addMktBtn);
+  } else {
+    // v1.0.11 — Bottone "+" per aggiungere progetto tracciato (locale)
+    const addProjBtn = el('button', 'btn btn-sm btn-ghost btn-refresh', '+ Progetto');
+    addProjBtn.title = 'Aggiungi un progetto da tracciare (per vedere plugin/skill/agent locali)';
+    addProjBtn.addEventListener('click', async () => {
+      const r = await window.claudeAPI.addTrackedProject();
+      if (r.success) {
+        toast('Progetto aggiunto: ' + r.path.split('/').pop(), 'success');
+        await loadData();
+      } else if (r.error !== 'Annullato') {
+        toast('Errore: ' + r.error, 'error');
+      }
+    });
+    actions.appendChild(addProjBtn);
+  }
 
   const refreshBtn = el('button', 'btn btn-sm btn-ghost btn-refresh', '↻ Aggiorna');
   refreshBtn.title = 'Ricarica i dati dai file di configurazione di Claude Code';
@@ -1077,6 +1087,137 @@ function buildPluginCard(p) {
 }
 
 /* ── MARKETPLACES ─────────────────────────────────────────────────────── */
+// v1.0.51 — Modal "Aggiungi marketplace": input source + validazione +
+// chiamata `claude plugins marketplace add <source>` via IPC. Accetta:
+//   - shorthand GitHub:  user/repo  (es. "thedotmack/claude-mem")
+//   - URL git completo:  https://github.com/user/repo[.git]
+//   - path locale:       /path/to/local/marketplace
+function showAddMarketplaceModal() {
+  if (document.querySelector('.md-overlay')) return;
+  const overlay = el('div', 'md-overlay');
+  const modal = el('div', 'md-modal');
+  modal.setAttribute('role', 'dialog');
+  modal.setAttribute('aria-modal', 'true');
+
+  const header = el('div', 'md-header');
+  const title = el('div', 'md-title');
+  title.appendChild(el('span', 'md-kind-badge md-kind-agent', 'marketplace'));
+  title.appendChild(document.createTextNode(' Aggiungi marketplace'));
+  const closeBtn = el('button', 'md-close', '×');
+  closeBtn.setAttribute('aria-label', 'Chiudi');
+  header.appendChild(title); header.appendChild(closeBtn);
+
+  const content = el('div', 'md-content');
+
+  content.appendChild(el('p', null,
+    'Aggiungi un nuovo marketplace per scoprire e installare plugin Claude Code. ' +
+    'CLACOROO esegue `claude plugins marketplace add <source>` per te.'));
+
+  // Input source
+  const formWrap = el('div', 'add-mkt-form');
+  const lbl = el('label', 'add-mkt-label', 'Source');
+  lbl.setAttribute('for', 'add-mkt-input');
+  formWrap.appendChild(lbl);
+
+  const input = el('input', 'add-mkt-input');
+  input.id = 'add-mkt-input';
+  input.type = 'text';
+  input.placeholder = 'es. thedotmack/claude-mem';
+  input.setAttribute('spellcheck', 'false');
+  input.setAttribute('autocomplete', 'off');
+  formWrap.appendChild(input);
+
+  const helper = el('div', 'add-mkt-helper');
+  helper.appendChild(el('div', null, 'Formati accettati:'));
+  const ul = el('ul');
+  [
+    'Shorthand GitHub: user/repo (es. thedotmack/claude-mem)',
+    'URL git: https://github.com/user/repo o https://github.com/user/repo.git',
+    'Path locale: /path/assoluto/al/marketplace',
+  ].forEach(t => {
+    const li = el('li', null, t);
+    ul.appendChild(li);
+  });
+  helper.appendChild(ul);
+  formWrap.appendChild(helper);
+
+  const errBox = el('div', 'add-mkt-error');
+  errBox.style.display = 'none';
+  formWrap.appendChild(errBox);
+
+  content.appendChild(formWrap);
+
+  // Actions
+  const actions = el('div', 'add-mkt-actions');
+  const cancelBtn = el('button', 'btn btn-sm btn-ghost', 'Annulla');
+  cancelBtn.addEventListener('click', () => close());
+  const submitBtn = el('button', 'btn btn-sm btn-primary', 'Aggiungi marketplace');
+
+  function showError(msg) {
+    errBox.textContent = '⚠ ' + msg;
+    errBox.style.display = 'block';
+  }
+  function clearError() { errBox.style.display = 'none'; errBox.textContent = ''; }
+
+  // Validazione client-side: il main.js esegue la propria validazione regex
+  // più strict prima di runClaudeArgs (validMarketplaceName). Qui filtriamo
+  // solo input vuoti o palesemente malformati per evitare round-trip inutili.
+  function validateSource(s) {
+    if (!s) return 'Inserisci un source';
+    if (s.length > 500) return 'Source troppo lungo (max 500 caratteri)';
+    // Caratteri shell pericolosi vietati anche se il main usa execFile
+    if (/[;|&`$<>(){}[\]"'\\]/.test(s)) return 'Caratteri non ammessi nel source';
+    return null;
+  }
+
+  async function submit() {
+    clearError();
+    const src = input.value.trim();
+    const validationErr = validateSource(src);
+    if (validationErr) { showError(validationErr); return; }
+    submitBtn.disabled = true;
+    cancelBtn.disabled = true;
+    submitBtn.textContent = 'Aggiungo…';
+    const r = await window.claudeAPI.marketplaceAction('add', '', src);
+    if (r.success) {
+      toast('Marketplace aggiunto', 'success');
+      close();
+      await loadData();
+    } else {
+      showError(r.error || 'Errore sconosciuto');
+      submitBtn.disabled = false;
+      cancelBtn.disabled = false;
+      submitBtn.textContent = 'Aggiungi marketplace';
+    }
+  }
+  submitBtn.addEventListener('click', submit);
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); submit(); }
+  });
+  input.addEventListener('input', clearError);
+
+  actions.appendChild(cancelBtn);
+  actions.appendChild(submitBtn);
+  content.appendChild(actions);
+
+  function onKey(e) { if (e.key === 'Escape') close(); }
+  function close() {
+    document.removeEventListener('keydown', onKey);
+    overlay.remove();
+  }
+  closeBtn.addEventListener('click', close);
+  overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+  document.addEventListener('keydown', onKey);
+
+  modal.appendChild(header);
+  modal.appendChild(content);
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
+
+  // Focus automatico sull'input
+  setTimeout(() => input.focus(), 50);
+}
+
 // Modal "Plugin del marketplace": lista dei plugin contenuti. Click su un
 // plugin apre il modal Contenuto plugin del singolo plugin (drill-down).
 function showMarketplaceContentModal(m) {
@@ -3166,7 +3307,7 @@ function renderSettings() {
   infoRow.appendChild(infoLeft);
   const infoRight = el('div');
   infoRight.style.cssText = 'display:flex;gap:10px;align-items:center;';
-  const verVal = el('div', 'settings-row-val', '1.0.50');
+  const verVal = el('div', 'settings-row-val', '1.0.51');
   const chBtn = btnWithIcon('btn btn-sm btn-green btn-with-icon', 'changelog', ' Changelog');
   chBtn.title = 'Mostra storico versioni';
   chBtn.addEventListener('click', () => openChangelogModal());

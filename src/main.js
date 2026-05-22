@@ -98,6 +98,18 @@ function validPluginId(id) {
 function validMarketplaceName(name) {
   return typeof name === 'string' && /^[a-zA-Z0-9][a-zA-Z0-9_.-]*$/.test(name);
 }
+// v1.0.51 — source per `claude plugins marketplace add` accetta:
+//   - shorthand GitHub user/repo
+//   - URL https://... .git
+//   - path locale assoluto
+// execFile esegue array di argomenti (no shell), ma vietiamo i caratteri
+// shell pericolosi per evitare confusione lato CLI Claude.
+function validMarketplaceSource(src) {
+  if (typeof src !== 'string') return false;
+  if (src.length < 1 || src.length > 500) return false;
+  if (/[\s;|&`$<>(){}[\]"'\\]/.test(src)) return false;
+  return true;
+}
 
 /* ── SAFE EXEC ─────────────────────────────────────────────────────────── */
 
@@ -440,14 +452,21 @@ ipcMain.handle('plugin-action', async (_e, { action, pluginId }) => {
 });
 
 ipcMain.handle('marketplace-action', async (_e, { action, name, source }) => {
-  if (!validMarketplaceName(name)) return { success: false, error: 'Nome marketplace non valido.' };
   let result;
-  if (action === 'remove')      result = await runClaudeArgs(['plugins', 'marketplace', 'remove', name]);
-  else if (action === 'update') result = await runClaudeArgs(['plugins', 'marketplace', 'update', name]);
-  else if (action === 'add' && source) result = await runClaudeArgs(['plugins', 'marketplace', 'add', source]);
-  else return { success: false, error: 'Azione o parametri non validi.' };
+  if (action === 'add') {
+    if (!validMarketplaceSource(source)) {
+      return { success: false, error: 'Source marketplace non valido: usa "user/repo", URL https git o path locale (no spazi né caratteri shell).' };
+    }
+    result = await runClaudeArgs(['plugins', 'marketplace', 'add', source]);
+  } else if (action === 'remove' || action === 'update') {
+    if (!validMarketplaceName(name)) return { success: false, error: 'Nome marketplace non valido.' };
+    result = await runClaudeArgs(['plugins', 'marketplace', action, name]);
+  } else {
+    return { success: false, error: 'Azione non riconosciuta.' };
+  }
   appendActivity({
-    kind: 'marketplace', action, target: name,
+    kind: 'marketplace', action,
+    target: action === 'add' ? source : name,
     success: result.success, error: result.error,
   });
   return result;

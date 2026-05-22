@@ -1,5 +1,16 @@
 # Changelog
 
+## v1.0.51 — 2026-05-22 — Pack H step 1: Add Marketplace dal pannello
+
+- Nuovo bottone "+ Marketplace" nella topbar della sezione Marketplace (contestuale: prende il posto di "+ Progetto" solo qui)
+- Modal "Aggiungi marketplace" con input source, validazione e helper esplicativo sui formati accettati:
+  - Shorthand GitHub: `user/repo` (es. `thedotmack/claude-mem`)
+  - URL git: `https://github.com/user/repo[.git]`
+  - Path locale assoluto
+- Submit esegue `claude plugins marketplace add <source>` via IPC sicuro (execFile array, no shell)
+- Toast + auto-refresh della lista marketplace su successo, errore inline su fallimento
+- Activity log registra ogni aggiunta
+
 ## v1.0.50 — 2026-05-22
 
 Polish del badge "N plugin" nelle card Marketplace:

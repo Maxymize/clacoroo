@@ -2053,6 +2053,69 @@ body {
   color: var(--accent);
 }
 
+/* Add Marketplace modal (v1.0.51) */
+.add-mkt-form {
+  margin: 14px 0;
+}
+.add-mkt-label {
+  display: block;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--text-muted);
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+.add-mkt-input {
+  width: 100%;
+  padding: 10px 12px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-family: "SF Mono", "Fira Code", Menlo, monospace;
+  font-size: 13px;
+  transition: border-color .15s, box-shadow .15s;
+}
+.add-mkt-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
+}
+.add-mkt-helper {
+  margin-top: 10px;
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+.add-mkt-helper ul {
+  margin: 4px 0 0;
+  padding-left: 16px;
+}
+.add-mkt-helper li {
+  font-family: "SF Mono", "Fira Code", Menlo, monospace;
+  font-size: 11px;
+  margin-bottom: 2px;
+}
+.add-mkt-error {
+  margin-top: 12px;
+  padding: 10px 12px;
+  background: rgba(239, 68, 68, .08);
+  border-left: 3px solid #ef4444;
+  border-radius: 4px;
+  color: #ef4444;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.add-mkt-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
 /* Badge inline nei plugin item del modal marketplace */
 .plugin-content-item-badges {
   display: flex;
