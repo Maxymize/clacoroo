@@ -398,6 +398,19 @@ function btnWithIcon(cls, iconName, label) {
   return b;
 }
 
+// v1.0.60 — Swap atomico fra overlay modali. Appende il nuovo PRIMA di
+// rimuovere i vecchi cosi' l'utente non vede mai assenza di overlay
+// (evita il flash di .2s dovuto alla CSS animation tourFade). Pulisce
+// anche i keydown listener via overlay._close se presente.
+function swapModalOverlay(newOverlay) {
+  const existing = Array.from(document.querySelectorAll('.md-overlay'));
+  document.body.appendChild(newOverlay);
+  existing.forEach(o => {
+    if (typeof o._close === 'function') o._close();
+    else o.remove();
+  });
+}
+
 function setContent(node) {
   const area = $('content-area');
   area.textContent = '';
@@ -854,7 +867,7 @@ function appendModalItemList(content, sectionTitle, items, onClick, extraRender)
 // Modal "Contenuto plugin": skill/agent/hook/MCP di un plugin con click
 // → switch sezione + filtro pre-applicato sul nome.
 function showPluginContentModal(p) {
-  if (document.querySelector('.md-overlay')) return;
+  // v1.0.60 — Il guard del double-open è gestito da swapModalOverlay() a fine funzione
   const overlay = el('div', 'md-overlay');
   const modal = el('div', 'md-modal');
   modal.setAttribute('role', 'dialog');
@@ -968,7 +981,8 @@ function showPluginContentModal(p) {
   modal.appendChild(header);
   modal.appendChild(content);
   overlay.appendChild(modal);
-  document.body.appendChild(overlay);
+  overlay._close = close;
+  swapModalOverlay(overlay);
 }
 
 function buildPluginCard(p) {
@@ -1164,7 +1178,7 @@ function buildPluginCard(p) {
 //   - URL git completo:  https://github.com/user/repo[.git]
 //   - path locale:       /path/to/local/marketplace
 function showAddMarketplaceModal() {
-  if (document.querySelector('.md-overlay')) return;
+  // v1.0.60 — Il guard del double-open è gestito da swapModalOverlay() a fine funzione
   const overlay = el('div', 'md-overlay');
   const modal = el('div', 'md-modal');
   modal.setAttribute('role', 'dialog');
@@ -1283,7 +1297,8 @@ function showAddMarketplaceModal() {
   modal.appendChild(header);
   modal.appendChild(content);
   overlay.appendChild(modal);
-  document.body.appendChild(overlay);
+  overlay._close = close;
+  swapModalOverlay(overlay);
 
   // Focus automatico sull'input
   setTimeout(() => input.focus(), 50);
@@ -1293,7 +1308,7 @@ function showAddMarketplaceModal() {
 // marketplace.json (anche non installati), con bottone "Installa" sui
 // non-installati. m.plugins nello state contiene solo gli installati.
 async function showMarketplaceContentModal(m) {
-  if (document.querySelector('.md-overlay')) return;
+  // v1.0.60 — Il guard del double-open è gestito da swapModalOverlay() a fine funzione
   const overlay = el('div', 'md-overlay');
   const modal = el('div', 'md-modal');
   modal.setAttribute('role', 'dialog');
@@ -1336,7 +1351,8 @@ async function showMarketplaceContentModal(m) {
   modal.appendChild(header);
   modal.appendChild(content);
   overlay.appendChild(modal);
-  document.body.appendChild(overlay);
+  overlay._close = close;
+  swapModalOverlay(overlay);
 
   // Mostra placeholder mentre carichiamo i metadata
   const listWrap = el('div');
@@ -1748,7 +1764,7 @@ function renderMarkdownToContainer(container, content) {
 }
 
 function showMarkdownModal(name, kind, content) {
-  if (document.querySelector('.md-overlay')) return;
+  // v1.0.60 — Il guard del double-open è gestito da swapModalOverlay() a fine funzione
   const overlay = el('div', 'md-overlay');
   const modal   = el('div', 'md-modal');
   modal.setAttribute('role', 'dialog');
@@ -1779,7 +1795,8 @@ function showMarkdownModal(name, kind, content) {
   modal.appendChild(header);
   modal.appendChild(contentEl);
   overlay.appendChild(modal);
-  document.body.appendChild(overlay);
+  overlay._close = close;
+  swapModalOverlay(overlay);
   closeBtn.focus();
 }
 
@@ -3146,7 +3163,7 @@ async function loadDashboardUsage(container, token) {
 // la chiave: mostriamo solo istruzioni per impostarla nel proprio shell profile,
 // così la chiave resta esclusivamente sul sistema dell'utente.
 function showApiKeyGuideModal() {
-  if (document.querySelector('.md-overlay')) return;
+  // v1.0.60 — Il guard del double-open è gestito da swapModalOverlay() a fine funzione
   const overlay = el('div', 'md-overlay');
   const modal   = el('div', 'md-modal');
   modal.setAttribute('role', 'dialog');
@@ -3227,7 +3244,8 @@ function showApiKeyGuideModal() {
   modal.appendChild(header);
   modal.appendChild(content);
   overlay.appendChild(modal);
-  document.body.appendChild(overlay);
+  overlay._close = close;
+  swapModalOverlay(overlay);
 }
 
 // All'avvio carica l'account pill anche se l'utente non visita Impostazioni
@@ -3540,7 +3558,7 @@ function renderSettings() {
   infoRow.appendChild(infoLeft);
   const infoRight = el('div');
   infoRight.style.cssText = 'display:flex;gap:10px;align-items:center;';
-  const verVal = el('div', 'settings-row-val', '1.0.59');
+  const verVal = el('div', 'settings-row-val', '1.0.60');
   const chBtn = btnWithIcon('btn btn-sm btn-green btn-with-icon', 'changelog', ' Changelog');
   chBtn.title = 'Mostra storico versioni';
   chBtn.addEventListener('click', () => openChangelogModal());
@@ -3634,7 +3652,8 @@ function showOnboardingTour() {
   modal.appendChild(counter);
   modal.appendChild(actions);
   overlay.appendChild(modal);
-  document.body.appendChild(overlay);
+  overlay._close = close;
+  swapModalOverlay(overlay);
   renderStep();
 }
 

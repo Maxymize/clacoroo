@@ -1,5 +1,15 @@
 # Changelog
 
+## v1.0.60 — 2026-05-22 — Niente più flash fra modali consecutivi
+
+Risolto il flash visibile della pagina sottostante quando si passa da un modal all'altro (es. marketplace → "Dettagli" → contenuto plugin, oppure plugin → click skill → markdown).
+
+**Causa**: la classe `.md-overlay` ha `animation: tourFade .2s ease` (fade-in). Il pattern precedente era `close()` (rimuovi vecchio) → `show()` (crea nuovo), con un gap di ~50ms in mezzo durante il quale non c'era nessun overlay → si vedeva la pagina sotto + la nuova animazione di fade-in.
+
+**Fix**: nuovo helper `swapModalOverlay(newOverlay)` che **appende il nuovo PRIMA di rimuovere il vecchio** (atomico nel singolo paint del browser). L'utente non vede mai assenza di overlay, e la nuova animation è coperta dal vecchio overlay che viene rimosso subito dopo. Applicato a tutti i 5 modal (`.md-overlay`): Plugin / Marketplace add / Marketplace content / Markdown / API key guide.
+
+In bonus: rimossi i guard `if (document.querySelector('.md-overlay')) return;` ora superflui — lo swap gestisce naturalmente i double-open.
+
 ## v1.0.59 — 2026-05-22 — Cross-platform: editor URL handler funzionante su Win/Linux
 
 Audit cross-platform del selettore editor:
