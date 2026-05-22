@@ -3166,7 +3166,7 @@ function renderSettings() {
   infoRow.appendChild(infoLeft);
   const infoRight = el('div');
   infoRight.style.cssText = 'display:flex;gap:10px;align-items:center;';
-  const verVal = el('div', 'settings-row-val', '1.0.48');
+  const verVal = el('div', 'settings-row-val', '1.0.49');
   const chBtn = btnWithIcon('btn btn-sm btn-green btn-with-icon', 'changelog', ' Changelog');
   chBtn.title = 'Mostra storico versioni';
   chBtn.addEventListener('click', () => openChangelogModal());
@@ -3283,7 +3283,7 @@ function fuzzyScore(query, target) {
 function buildPaletteItems() {
   const items = [];
   // Azioni rapide
-  const sections = ['dashboard', 'plugins', 'marketplaces', 'skills', 'agents', 'mcp', 'stats', 'config', 'settings'];
+  const sections = ['dashboard', 'marketplaces', 'plugins', 'skills', 'agents', 'mcp', 'stats', 'config', 'settings'];
   sections.forEach(s => items.push({
     kind: 'action', icon: '→',
     label: 'Vai a ' + s.charAt(0).toUpperCase() + s.slice(1),

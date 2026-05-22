@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.0.49 — 2026-05-22
+
+- Sidebar: invertito ordine Marketplace ↔ Plugin per rispecchiare la gerarchia logica. Marketplace contengono Plugin che contengono Skill/Agent/MCP. Nuovo ordine: Dashboard · Marketplace · Plugin · Skill · Agent · MCP · Stats · Config · Impostazioni
+- Aggiornati gli accelerator Cmd+1..9 e le entry nella command palette per riflettere il nuovo ordine
+
 ## v1.0.48 — 2026-05-22
 
 - Marketplace card: rimossa la striscia full-width "Vedi N plugin" colorata (era invadente e non coerente con l'estetica generale)
