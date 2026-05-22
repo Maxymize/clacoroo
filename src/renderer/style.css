@@ -1453,6 +1453,16 @@ body {
   border-radius: 4px;
   margin-top: 4px;
 }
+.account-logout-warning {
+  font-size: 11px;
+  color: #f59e0b;
+  line-height: 1.5;
+  padding: 8px 12px;
+  background: rgba(245, 158, 11, .08);
+  border-left: 3px solid #f59e0b;
+  border-radius: 4px;
+  margin-top: 4px;
+}
 .account-actions {
   display: flex;
   gap: 8px;

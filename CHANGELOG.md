@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.0.33 — 2026-05-22
+
+- Avviso esplicito sul Logout: ora il pannello Account mostra un box arancio "⚠ Il logout disconnette OVUNQUE (CLACOROO + CLI terminale + plugin IDE)" già prima di cliccare il bottone
+- Dialog di conferma riscritto con dettaglio chiaro sullo storage condiviso (macOS Keychain) e la lista delle istanze che si disconnetteranno
+- Bottone "Sì, logout globale" invece del generico "Logout" nel dialog
+- Tooltip del bottone aggiornato con il warning
+
 ## v1.0.32 — 2026-05-22
 
 - "Effort level" è ora uno slider a 5 pallini blu stile VS Code Claude plugin (low → max). Click sul pallino imposta il livello, gli attivi diventano blu pieno

@@ -2198,6 +2198,13 @@ function paintAccountPanel(container, result) {
     'Per vederle apri Claude Code in modalità interattiva ed esegui /usage.');
   card.appendChild(note);
 
+  // Avviso sicurezza logout — visibile prima ancora di cliccare il bottone
+  const logoutWarning = el('div', 'account-logout-warning',
+    '⚠ Il bottone "Logout" qui sotto disconnette OVUNQUE (CLACOROO + CLI terminale + plugin IDE), ' +
+    'perché il token è nel Keychain macOS condiviso. Per riaccedere dovrai eseguire ' +
+    '`claude auth login` da terminale.');
+  card.appendChild(logoutWarning);
+
   // Actions
   const actions = el('div', 'account-actions');
   const refreshBtn = el('button', 'btn btn-sm btn-ghost', '↻ Aggiorna');
@@ -2218,13 +2225,21 @@ function paintAccountPanel(container, result) {
   consoleBtn.title = 'Apri console.anthropic.com (API key, billing, usage API)';
   consoleBtn.addEventListener('click', () => window.claudeAPI.openExternal('https://console.anthropic.com'));
   const logoutBtn = el('button', 'btn btn-sm btn-danger', 'Logout');
-  logoutBtn.title = 'Esegue `claude auth logout`. Per riloggarsi servirà ripetere OAuth da terminale.';
+  logoutBtn.title = '⚠ Logout di sistema: disconnette anche terminale e IDE plugin (storage Keychain condiviso).';
   logoutBtn.addEventListener('click', async () => {
     const ok = await window.claudeAPI.confirmDialog({
-      title:   'Logout da Claude',
-      message: 'Confermi il logout?',
-      detail:  'Verrai disconnesso dall\'account Anthropic. Per accedere di nuovo dovrai eseguire `claude auth login` da terminale.',
-      buttons: ['Annulla', 'Logout'],
+      title:   '⚠ Logout di sistema da Claude',
+      message: 'Il logout disconnette OVUNQUE — non solo da CLACOROO',
+      detail:
+        'Questa azione rimuove le credenziali OAuth dal Keychain macOS, che è lo storage condiviso da tutte le istanze del binario `claude`.\n\n' +
+        'Disconnetterai contemporaneamente:\n' +
+        '  • CLACOROO\n' +
+        '  • Claude Code nel terminale (CLI)\n' +
+        '  • Eventuali plugin IDE (VS Code, JetBrains, ecc.)\n\n' +
+        'Per ri-autenticarti dovrai aprire un terminale ed eseguire:\n' +
+        '    claude auth login\n\n' +
+        'Procedere?',
+      buttons: ['Annulla', 'Sì, logout globale'],
     });
     if (ok !== 1) return;
     logoutBtn.disabled = true;
@@ -2661,7 +2676,7 @@ function renderSettings() {
   const chBtn = el('button', 'btn btn-sm btn-green', '📋 Changelog');
   chBtn.title = 'Mostra storico versioni';
   chBtn.addEventListener('click', () => openChangelogModal());
-  const verVal = el('div', 'settings-row-val', '1.0.32');
+  const verVal = el('div', 'settings-row-val', '1.0.33');
   verRight.appendChild(chBtn);
   verRight.appendChild(verVal);
   verRow.appendChild(verRight);
