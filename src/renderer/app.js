@@ -1737,6 +1737,12 @@ function renderStatsModels(container, data) {
   const total = Object.values(models).reduce((s, u) => s + sumAllTypes(u), 0) || 1;
 
   container.appendChild(el('div', 'list-section-title', 'Token per modello'));
+  // v1.0.43 — Nota esplicativa per chiarire che le % rappresentano la
+  // distribuzione del tuo uso fra modelli (somma = 100%), non una quota o
+  // un limite. Le quote vere sono nelle barre Quote Claude della Dashboard.
+  container.appendChild(el('div', 'models-section-note',
+    'Distribuzione del tuo uso fra i modelli da quando hai iniziato (la somma di tutte le barre fa 100%). ' +
+    'Non è una quota: per le quote sessione/settimana vedi "Quote Claude" in Dashboard o pannello Account.'));
   Object.entries(models)
     .sort((a, b) => sumAllTypes(b[1]) - sumAllTypes(a[1]))
     .forEach(([model, u]) => {
@@ -2943,7 +2949,7 @@ function renderSettings() {
   infoRow.appendChild(infoLeft);
   const infoRight = el('div');
   infoRight.style.cssText = 'display:flex;gap:10px;align-items:center;';
-  const verVal = el('div', 'settings-row-val', '1.0.42');
+  const verVal = el('div', 'settings-row-val', '1.0.43');
   const chBtn = btnWithIcon('btn btn-sm btn-green btn-with-icon', 'changelog', ' Changelog');
   chBtn.title = 'Mostra storico versioni';
   chBtn.addEventListener('click', () => openChangelogModal());

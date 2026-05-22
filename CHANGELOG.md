@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.0.43 — 2026-05-22
+
+- Stats > Modelli: aggiunta nota esplicativa sopra la lista per chiarire che le percentuali rappresentano la distribuzione del proprio uso fra i modelli (somma 100%), non una quota o un limite. Per le quote reali resta il rimando alle barre "Quote Claude" in Dashboard / Account
+
 ## v1.0.42 — 2026-05-22
 
 - Fix: percentuali Token per modello in Stats > Modelli (Opus 4.7 mostrava 24622% al posto di 57.3%). Il bug era un'incoerenza fra numeratore (somma di tutti i tipi: input+output+cache_read+cache_create) e denominatore (`data.totalTokens` che dal v1.0.15 conta solo input+output per allineamento con `claude /stats`). Adesso il totale viene calcolato localmente con tutti i tipi, somma dei 6 modelli = 100%

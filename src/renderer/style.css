@@ -1825,6 +1825,19 @@ body {
   vertical-align: middle;
 }
 
+/* Models section note (v1.0.43) */
+.models-section-note {
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.5;
+  padding: 8px 12px;
+  background: var(--surface2);
+  border-left: 3px solid var(--accent2, #6a9bcc);
+  border-radius: 4px;
+  margin-bottom: 16px;
+  font-style: italic;
+}
+
 /* ── MCP CARDS (v1.0.21) ──────────────────────────────────────────────── */
 .mcp-grid {
   display: grid;
