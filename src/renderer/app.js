@@ -1419,10 +1419,12 @@ function renderMarketplaces() {
     // 0 se vuoto.
     const countBtn = el('button', 'mkt-card-count-btn');
     const cnt = el('span', 'mkt-card-count');
+    // Logica display:
+    //   0 disponibili        → "0"           (marketplace vuoto)
+    //   tutti installati     → "21"          (numero intero)
+    //   altrimenti (0 o parziale installato) → "X/Y"  (es. 0/1, 10/202)
     if (totalAvailable === 0) {
       cnt.textContent = '0';
-    } else if (m.installed === 0) {
-      cnt.textContent = String(totalAvailable);
     } else if (m.installed === totalAvailable) {
       cnt.textContent = String(totalAvailable);
     } else {
@@ -3413,7 +3415,7 @@ function renderSettings() {
   infoRow.appendChild(infoLeft);
   const infoRight = el('div');
   infoRight.style.cssText = 'display:flex;gap:10px;align-items:center;';
-  const verVal = el('div', 'settings-row-val', '1.0.53');
+  const verVal = el('div', 'settings-row-val', '1.0.54');
   const chBtn = btnWithIcon('btn btn-sm btn-green btn-with-icon', 'changelog', ' Changelog');
   chBtn.title = 'Mostra storico versioni';
   chBtn.addEventListener('click', () => openChangelogModal());

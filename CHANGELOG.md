@@ -1,5 +1,13 @@
 # Changelog
 
+## v1.0.54 — 2026-05-22 — Card marketplace: count sempre X/Y se non tutti installati
+
+Fix di logica display: prima un marketplace con 0 installati su N disponibili mostrava solo "N" (ambiguo: poteva sembrare "tutti installati"). Ora la regola è semplice e univoca:
+
+- **Tutti installati**: numero intero (es. "21")
+- **Marketplace vuoto**: "0"
+- **Tutto il resto**: "X/Y" → esplicito anche quando installed=0 (es. "0/1" per `thedotmack`, "0/7" per `replicate` prima di installare nulla)
+
 ## v1.0.53 — 2026-05-22 — Card marketplace: distinzione installati vs disponibili
 
 Fix UX importante: prima la card mostrava solo i plugin **installati** del marketplace, ignorando quelli **disponibili**. Un marketplace appena aggiunto con N plugin ma 0 installati appariva come "0 plugin · inattivo grigio", impossibile da esplorare.
