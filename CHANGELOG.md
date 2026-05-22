@@ -1,5 +1,14 @@
 # Changelog
 
+## v1.0.35 — 2026-05-22
+
+- **Quote sessione e settimana** finalmente visibili in CLACOROO. Tre barre orizzontali (Session 5h · Weekly 7d · Weekly Sonnet) con percentuale e tempo al reset, esattamente come nella modal di Claude Code in VS Code
+- Visibili nel pannello "Account Claude" di Impostazioni e in una nuova sezione "Quote Claude" della Dashboard
+- Le barre cambiano colore in base alla soglia: blu fino all'80%, arancio 80-95%, rosso oltre
+- Bottone "Gestisci usage su claude.ai →" per aprire la dashboard completa
+- I dati vengono letti via `GET /api/oauth/usage` con il token OAuth del macOS Keychain (lo stesso che usa Claude Code). La prima volta macOS chiede "Allow keychain access" — è il flusso standard, dopo "Always Allow" il permesso resta permanente
+- Cache 60s e render ottimistico per zero flicker
+
 ## v1.0.34 — 2026-05-22
 
 - Pannello Account: rimosso il box arancio fisso, sostituito con un tooltip custom che appare al passaggio del mouse sul bottone Logout. Stesso contenuto (avviso che il logout è globale di sistema), ma estetica più pulita

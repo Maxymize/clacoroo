@@ -1453,6 +1453,105 @@ body {
   border-radius: 4px;
   margin-top: 4px;
 }
+/* Usage bars (v1.0.35) — Session 5h / Weekly 7d / Weekly Sonnet */
+.account-usage-section {
+  margin-top: 8px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+.usage-section-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+.usage-loading, .usage-error {
+  font-size: 11px;
+  color: var(--text-muted);
+  padding: 8px 12px;
+  background: var(--surface2);
+  border-radius: 4px;
+}
+.usage-error {
+  color: #f59e0b;
+  border-left: 3px solid #f59e0b;
+  background: rgba(245, 158, 11, .06);
+}
+.usage-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 14px;
+  margin-bottom: 6px;
+}
+.usage-grid-compact {
+  gap: 10px;
+}
+.usage-bar-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.usage-bar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+.usage-bar-label {
+  font-size: 12px;
+  color: var(--text);
+  font-weight: 600;
+}
+.usage-bar-pct {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  font-family: "Inter", -apple-system, sans-serif;
+  font-variant-numeric: tabular-nums;
+}
+.usage-bar-pct-na {
+  color: var(--text-dim);
+  font-weight: 500;
+}
+.usage-bar-track {
+  height: 6px;
+  background: var(--surface2);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.usage-bar-fill {
+  height: 100%;
+  background: #6a9bcc;
+  border-radius: 3px;
+  transition: width .45s ease, background .25s ease;
+}
+.usage-bar-reset {
+  font-size: 10px;
+  color: var(--text-dim);
+}
+.usage-link {
+  background: transparent;
+  border: none;
+  color: var(--accent2, #6a9bcc);
+  cursor: pointer;
+  font-size: 11px;
+  margin-top: 8px;
+  padding: 4px 0;
+  text-align: left;
+  transition: color .15s;
+}
+.usage-link:hover { color: var(--accent); text-decoration: underline; }
+
+.dashboard-usage-section { margin-top: 28px; margin-bottom: 28px; }
+.dashboard-usage-section:empty { display: none; }
+.dashboard-usage-bars {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 14px 16px;
+}
+
 /* Logout tooltip custom (v1.0.34) — appare in hover sopra il bottone */
 .logout-btn-wrap {
   position: relative;

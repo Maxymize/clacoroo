@@ -399,6 +399,14 @@ function renderDashboard() {
   wrap.appendChild(statsSection);
   loadDashboardStats(statsSection, renderToken);
 
+  // v1.0.35 — Usage live (Session / Weekly / Weekly Sonnet)
+  const usageSection = el('div', 'dashboard-usage-section');
+  wrap.appendChild(usageSection);
+  usageSection.appendChild(el('div', 'list-section-title', 'Quote Claude'));
+  const usageBars = el('div', 'dashboard-usage-bars');
+  usageSection.appendChild(usageBars);
+  loadDashboardUsage(usageBars, renderToken);
+
   // Elenco marketplace riassuntivo
   const mktTitle = el('div', 'list-section-title', 'Marketplace');
   wrap.appendChild(mktTitle);
@@ -2192,11 +2200,11 @@ function paintAccountPanel(container, result) {
   infoRow('Auth method', d.authMethod === 'claude.ai' ? 'claude.ai (OAuth)' : d.authMethod || '—');
   infoRow('API provider', d.apiProvider || '—');
 
-  // Quota note (non disponibile via CLI)
-  const note = el('div', 'account-quota-note',
-    'Le quote sessione e settimanale non sono attualmente esposte via CLI di Claude Code. ' +
-    'Per vederle apri Claude Code in modalità interattiva ed esegui /usage.');
-  card.appendChild(note);
+  // v1.0.35 — Usage live (Session 5h, Weekly 7d, Weekly Sonnet) via endpoint
+  // privato Anthropic. Render ottimistico se cache disponibile, swap on update.
+  const usageSection = el('div', 'account-usage-section');
+  card.appendChild(usageSection);
+  loadAccountUsage(usageSection);
 
 
   // Actions
@@ -2312,6 +2320,112 @@ function refreshSidebarAccountPill() {
   pill.title = 'Account: ' + (d.email || '') + ' · click per aprire Impostazioni';
   pill.style.cursor = 'pointer';
   pill.onclick = () => switchToSection('settings');
+}
+
+// v1.0.35 — Usage live tracking. Cache anti-flicker: lastUsageData mantiene
+// l'ultima response valida ed è usata per il render istantaneo a ogni
+// re-mount; il fetch async sostituisce i valori solo quando arrivano dati
+// freschi diversi. Riusabile da pannello Account e Dashboard.
+let lastUsageData = null;
+
+function formatResetTime(isoTimestamp) {
+  if (!isoTimestamp) return null;
+  const target = new Date(isoTimestamp);
+  if (isNaN(target.getTime())) return null;
+  const diffMs = target.getTime() - Date.now();
+  if (diffMs <= 0) return 'a breve';
+  const mins  = Math.round(diffMs / 60000);
+  const hours = Math.round(diffMs / 3600000);
+  const days  = Math.round(diffMs / 86400000);
+  if (days   >= 1) return 'in ' + days  + 'g';
+  if (hours  >= 1) return 'in ' + hours + 'h';
+  return 'in ' + Math.max(1, mins) + 'min';
+}
+
+function buildUsageBar(label, band, color) {
+  const wrap = el('div', 'usage-bar-wrap');
+  wrap.dataset.band = label;
+  const header = el('div', 'usage-bar-header');
+  header.appendChild(el('span', 'usage-bar-label', label));
+  const pctEl = el('span', 'usage-bar-pct');
+  if (band && Number.isFinite(band.utilization)) {
+    pctEl.textContent = Math.round(band.utilization * 100) + '%';
+  } else {
+    pctEl.textContent = '—';
+    pctEl.classList.add('usage-bar-pct-na');
+  }
+  header.appendChild(pctEl);
+  wrap.appendChild(header);
+
+  const track = el('div', 'usage-bar-track');
+  const fill = el('div', 'usage-bar-fill');
+  fill.style.background = color;
+  fill.style.width = band ? (Math.round(band.utilization * 100) + '%') : '0%';
+  // Color shift se vicino alla soglia (>=80% arancio, >=95% rosso)
+  if (band && band.utilization >= 0.95) fill.style.background = '#ef4444';
+  else if (band && band.utilization >= 0.80) fill.style.background = '#f59e0b';
+  track.appendChild(fill);
+  wrap.appendChild(track);
+
+  const reset = el('div', 'usage-bar-reset');
+  const resetTxt = band && band.resetsAt ? 'Si azzera ' + formatResetTime(band.resetsAt) : '';
+  reset.textContent = resetTxt;
+  wrap.appendChild(reset);
+  return wrap;
+}
+
+function paintUsageBars(container, usageData, opts = {}) {
+  const compact = !!opts.compact;
+  container.textContent = '';
+  if (!usageData) {
+    container.appendChild(el('div', 'usage-loading',
+      compact ? 'Caricamento usage…' : 'Caricamento quote sessione/settimana…'));
+    return;
+  }
+  if (!usageData.ok) {
+    const err = el('div', 'usage-error', '⚠ Impossibile leggere usage: ' + (usageData.error || 'errore'));
+    container.appendChild(err);
+    return;
+  }
+  const d = usageData.data || {};
+  if (!compact) {
+    container.appendChild(el('div', 'usage-section-title', 'Usage corrente'));
+  }
+  const grid = el('div', 'usage-grid' + (compact ? ' usage-grid-compact' : ''));
+  grid.appendChild(buildUsageBar('Session (5h)',    d.fiveHour,       '#6a9bcc'));
+  grid.appendChild(buildUsageBar('Weekly (7d)',     d.sevenDay,       '#788c5d'));
+  grid.appendChild(buildUsageBar('Weekly Sonnet',   d.sevenDaySonnet, '#d97757'));
+  container.appendChild(grid);
+
+  if (!compact) {
+    const link = el('button', 'usage-link', 'Gestisci usage su claude.ai →');
+    link.addEventListener('click', () =>
+      window.claudeAPI.openExternal('https://claude.ai/settings/usage'));
+    container.appendChild(link);
+  }
+}
+
+async function loadAccountUsage(container) {
+  // 1. Render ottimistico se abbiamo già dati
+  paintUsageBars(container, lastUsageData);
+  // 2. Fetch fresco; cache server-side 60s evita roundtrip se cambi sezione
+  try {
+    const data = await window.claudeAPI.getUsage({});
+    lastUsageData = data;
+    paintUsageBars(container, data);
+  } catch (e) {
+    if (!lastUsageData) paintUsageBars(container, { ok: false, error: e.message });
+  }
+}
+
+async function loadDashboardUsage(container, token) {
+  paintUsageBars(container, lastUsageData, { compact: true });
+  try {
+    const data = await window.claudeAPI.getUsage({});
+    if (token !== dashboardRenderToken) return;
+    lastUsageData = data;
+    paintUsageBars(container, data, { compact: true });
+  } catch { /* fail silently in dashboard */ }
 }
 
 // v1.0.31 — Guida modalità API key. Per sicurezza CLACOROO non maneggia mai
@@ -2686,7 +2800,7 @@ function renderSettings() {
   const chBtn = el('button', 'btn btn-sm btn-green', '📋 Changelog');
   chBtn.title = 'Mostra storico versioni';
   chBtn.addEventListener('click', () => openChangelogModal());
-  const verVal = el('div', 'settings-row-val', '1.0.34');
+  const verVal = el('div', 'settings-row-val', '1.0.35');
   verRight.appendChild(chBtn);
   verRight.appendChild(verVal);
   verRow.appendChild(verRight);

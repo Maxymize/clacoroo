@@ -41,6 +41,7 @@ const STATS   = require('./lib/stats');
 const MCP     = require('./lib/mcp');
 const ACCOUNT = require('./lib/account');
 const PRICING = require('./lib/pricing');
+const USAGE   = require('./lib/usage');
 
 /* ── CONFIG PATHS ──────────────────────────────────────────────────────── */
 
@@ -573,6 +574,24 @@ ipcMain.handle('get-account', async (_e, { force } = {}) => {
   ACCOUNT_CACHE = await ACCOUNT.getAuthStatus(CLAUDE_BIN);
   ACCOUNT_CACHE_AT = Date.now();
   return ACCOUNT_CACHE;
+});
+
+// v1.0.35 — Pack A v2: usage live (Session/Weekly/Weekly Sonnet) via
+// endpoint privato Anthropic /api/oauth/usage. Stessa rotta usata dal
+// plugin VS Code. Cache 60s: i dati cambiano lentamente (utilization
+// si aggiorna ogni manciata di minuti lato server), evitiamo round-trip
+// keychain + HTTP ad ogni cambio sezione.
+let USAGE_CACHE = null;
+let USAGE_CACHE_AT = 0;
+const USAGE_TTL_MS = 60 * 1000;
+
+ipcMain.handle('get-usage', async (_e, { force } = {}) => {
+  if (!force && USAGE_CACHE && Date.now() - USAGE_CACHE_AT < USAGE_TTL_MS) {
+    return USAGE_CACHE;
+  }
+  USAGE_CACHE = await USAGE.getUsage();
+  USAGE_CACHE_AT = Date.now();
+  return USAGE_CACHE;
 });
 
 ipcMain.handle('account-logout', async () => {

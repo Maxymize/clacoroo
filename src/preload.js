@@ -24,6 +24,7 @@ contextBridge.exposeInMainWorld('claudeAPI', {
   getMcp:               (opts)            => ipcRenderer.invoke('get-mcp',                opts || {}),
   getAccount:           (opts)            => ipcRenderer.invoke('get-account',            opts || {}),
   accountLogout:        ()                => ipcRenderer.invoke('account-logout'),
+  getUsage:             (opts)            => ipcRenderer.invoke('get-usage',              opts || {}),
   getState:           ()                  => ipcRenderer.invoke('get-state'),
   setState:           (patch)             => ipcRenderer.invoke('set-state',          patch),
   checkUpdates:       (force)             => ipcRenderer.invoke('check-updates',     { force: !!force }),
