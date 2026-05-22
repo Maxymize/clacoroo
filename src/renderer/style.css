@@ -1554,6 +1554,43 @@ body {
 .apikey-code-copy:hover { background: var(--accent); color: white; border-color: var(--accent); }
 .apikey-step-btn { margin: 6px 0 12px; }
 
+/* Dots slider (v1.0.32) — stile VS Code Claude plugin per effort level */
+.dots-slider {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+}
+.dots-slider-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  cursor: pointer;
+  transition: background .15s, border-color .15s, transform .12s;
+  padding: 0;
+  display: inline-block;
+}
+.dots-slider-dot:hover {
+  border-color: #6a9bcc;
+  transform: scale(1.2);
+}
+.dots-slider-dot.active {
+  background: #6a9bcc;
+  border-color: #6a9bcc;
+}
+.dots-current-label {
+  font-weight: 400;
+  color: var(--text-muted);
+  font-size: 12px;
+  margin-left: 4px;
+  font-family: "SF Mono", "Fira Code", Menlo, monospace;
+}
+
 /* ── MCP CARDS (v1.0.21) ──────────────────────────────────────────────── */
 .mcp-grid {
   display: grid;

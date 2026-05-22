@@ -1793,6 +1793,52 @@ function renderStatsConfig(container, data) {
         input.appendChild(opt);
       });
       input.value = settings[key] || (opts && opts[0]) || '';
+    } else if (type === 'dots') {
+      // v1.0.32 — slider a pallini stile VS Code Claude plugin
+      const dotsWrap = el('div', 'dots-slider');
+      const values = opts || [];
+      const labelEl = left.querySelector('.settings-row-label');
+      const labelSuffix = el('span', 'dots-current-label');
+      labelEl.appendChild(labelSuffix);
+
+      function refresh(activeIdx, activeValue) {
+        dotsWrap.querySelectorAll('.dots-slider-dot').forEach((d, j) => {
+          d.classList.toggle('active', j <= activeIdx);
+        });
+        labelSuffix.textContent = ' (' + activeValue + ')';
+      }
+
+      const currentValue = settings[key];
+      let activeIdx = values.indexOf(currentValue);
+      if (activeIdx < 0) activeIdx = 0;
+
+      values.forEach((v, i) => {
+        const dot = el('button', 'dots-slider-dot');
+        dot.type = 'button';
+        dot.title = v;
+        dot.dataset.value = v;
+        dot.addEventListener('click', async () => {
+          const previous = settings[key];
+          refresh(i, v);  // ottimistico
+          const r = await window.claudeAPI.updateSettings({ [key]: v });
+          if (r.success) {
+            settings[key] = v;
+            if (statsCache && statsCache.settings) statsCache.settings[key] = v;
+            toast(label + ' → ' + v, 'success');
+          } else {
+            // revert
+            const prevIdx = values.indexOf(previous);
+            refresh(prevIdx >= 0 ? prevIdx : 0, previous || values[0]);
+            toast('Errore: ' + r.error, 'error');
+          }
+        });
+        dotsWrap.appendChild(dot);
+      });
+
+      refresh(activeIdx, values[activeIdx] || currentValue);
+      row.appendChild(dotsWrap);
+      container.appendChild(row);
+      return;
     } else if (type === 'toggle') {
       const toggleWrap = el('label', 'toggle');
       input = el('input');
@@ -1843,9 +1889,9 @@ function renderStatsConfig(container, data) {
   configRow('voiceEnabled', 'Voice', 'toggle');
   configRow('model', 'Modello predefinito', 'select',
     ['default', 'claude-opus-4-7', 'claude-sonnet-4-6', 'claude-haiku-4-5-20251001']);
-  // v1.0.30 — Effort level (intensità del ragionamento). Modifica `effortLevel`
-  // in ~/.claude/settings.json. Possibili valori: low | medium | high | xhigh | max
-  configRow('effortLevel', 'Effort level', 'select',
+  // v1.0.30/32 — Effort level: slider a pallini stile VS Code (5 livelli).
+  // Modifica `effortLevel` in ~/.claude/settings.json. Valori: low | medium | high | xhigh | max
+  configRow('effortLevel', 'Effort', 'dots',
     ['low', 'medium', 'high', 'xhigh', 'max']);
   configRow('theme', 'Tema', 'select', ['auto', 'dark', 'light']);
   configRow('language', 'Lingua', 'select', ['auto', 'en', 'it']);
@@ -2167,7 +2213,7 @@ function paintAccountPanel(container, result) {
   // Link rapidi alle console Anthropic (v1.0.29)
   const claudeBtn = el('button', 'btn btn-sm btn-ghost', '↗ claude.ai');
   claudeBtn.title = 'Apri claude.ai (gestione subscription Max/Pro)';
-  claudeBtn.addEventListener('click', () => window.claudeAPI.openExternal('https://claude.com/settings/profile'));
+  claudeBtn.addEventListener('click', () => window.claudeAPI.openExternal('https://claude.ai/settings/billing'));
   const consoleBtn = el('button', 'btn btn-sm btn-ghost', '↗ Console API');
   consoleBtn.title = 'Apri console.anthropic.com (API key, billing, usage API)';
   consoleBtn.addEventListener('click', () => window.claudeAPI.openExternal('https://console.anthropic.com'));
@@ -2615,7 +2661,7 @@ function renderSettings() {
   const chBtn = el('button', 'btn btn-sm btn-green', '📋 Changelog');
   chBtn.title = 'Mostra storico versioni';
   chBtn.addEventListener('click', () => openChangelogModal());
-  const verVal = el('div', 'settings-row-val', '1.0.31');
+  const verVal = el('div', 'settings-row-val', '1.0.32');
   verRight.appendChild(chBtn);
   verRight.appendChild(verVal);
   verRow.appendChild(verRight);

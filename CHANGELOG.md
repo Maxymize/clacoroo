@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.0.32 — 2026-05-22
+
+- "Effort level" è ora uno slider a 5 pallini blu stile VS Code Claude plugin (low → max). Click sul pallino imposta il livello, gli attivi diventano blu pieno
+- Label dinamico accanto al titolo: "Effort (xhigh)" mostra il livello corrente
+- Fix link "↗ claude.ai" nel pannello Account: ora punta a `https://claude.ai/settings/billing` (era un URL inesistente su claude.com)
+
 ## v1.0.31 — 2026-05-22
 
 - Nuovo bottone "ℹ Modalità API key" nel pannello Account: apre una guida step-by-step (modal) per chi vuole usare un'API key pay-per-use invece della subscription Max/Pro
