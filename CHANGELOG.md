@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.0.61 — 2026-05-22 — Flash modali eliminato (vero questa volta)
+
+Il fix v1.0.60 non era sufficiente. Due cause residue:
+
+1. **Click handler chiamavano `close()` esplicito** prima di aprire il nuovo modal — il `swapModalOverlay` non riusciva mai a "sostituire" perché il vecchio era già rimosso quando il nuovo veniva creato. Rimosse tutte le 4 chiamate `close()` esplicite nei click handler che aprono un nuovo modal: marketplace → plugin, modal marketplace plugin row → contenuto plugin, skill/agent → markdown
+2. **Animation `tourFade .2s`** sul nuovo overlay faceva opacity 0→1, durante la quale la pagina sotto era visibile attraverso il nuovo overlay semi-trasparente. Nuova classe `.md-overlay-instant` aggiunta automaticamente da `swapModalOverlay` quando ci sono overlay esistenti: animation: none → swap istantaneo. Il primo modal aperto da zero mantiene il fade-in morbido
+
 ## v1.0.60 — 2026-05-22 — Niente più flash fra modali consecutivi
 
 Risolto il flash visibile della pagina sottostante quando si passa da un modal all'altro (es. marketplace → "Dettagli" → contenuto plugin, oppure plugin → click skill → markdown).

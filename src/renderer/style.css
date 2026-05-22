@@ -2618,6 +2618,14 @@ body {
 }
 @keyframes tourFade { from { opacity: 0; } to { opacity: 1; } }
 
+/* v1.0.61 — Swap fra modali consecutivi: niente fade-in (causava il
+   "flash" della pagina sotto vista attraverso il nuovo overlay semi-
+   trasparente durante la transizione opacity 0→1). Solo il primo
+   modal aperto mantiene l'animation morbida. */
+.md-overlay.md-overlay-instant {
+  animation: none;
+}
+
 .tour-modal {
   background: var(--surface);
   border: 1px solid var(--border2);

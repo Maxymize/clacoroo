@@ -398,12 +398,16 @@ function btnWithIcon(cls, iconName, label) {
   return b;
 }
 
-// v1.0.60 — Swap atomico fra overlay modali. Appende il nuovo PRIMA di
-// rimuovere i vecchi cosi' l'utente non vede mai assenza di overlay
-// (evita il flash di .2s dovuto alla CSS animation tourFade). Pulisce
-// anche i keydown listener via overlay._close se presente.
+// v1.0.61 — Swap atomico fra overlay modali. Appende il nuovo PRIMA di
+// rimuovere i vecchi e disabilita l'animation tourFade .2s sul nuovo
+// se ci sono overlay esistenti (la fade-in da opacity 0 lasciava
+// vedere la pagina sotto attraverso il nuovo overlay semi-trasparente).
+// Primo open mantiene il fade-in morbido; swap è istantaneo.
 function swapModalOverlay(newOverlay) {
   const existing = Array.from(document.querySelectorAll('.md-overlay'));
+  if (existing.length > 0) {
+    newOverlay.classList.add('md-overlay-instant');
+  }
   document.body.appendChild(newOverlay);
   existing.forEach(o => {
     if (typeof o._close === 'function') o._close();
@@ -908,15 +912,14 @@ function showPluginContentModal(p) {
   // v1.0.56 — Click su skill/agent apre direttamente il modal markdown,
   // saltando il passaggio "vai alla sezione filtrata". Era confondente:
   // la sezione mostrava 1 solo item che bisognava ri-cliccare per il dettaglio.
+  // v1.0.61 — NON chiudo qui: openMarkdownPreview → showMarkdownModal
+  // chiamerà swapModalOverlay() che rimuove questo overlay dopo aver
+  // appeso il nuovo. Niente flash.
   appendModalItemList(content, 'Skills', p.skills, item => {
-    const name = item.name || item;
-    close();
-    openMarkdownPreview(p.fullId, 'skill', name);
+    openMarkdownPreview(p.fullId, 'skill', item.name || item);
   });
   appendModalItemList(content, 'Agents', p.agents, item => {
-    const name = item.name || item;
-    close();
-    openMarkdownPreview(p.fullId, 'agent', name);
+    openMarkdownPreview(p.fullId, 'agent', item.name || item);
   });
 
   if (p.hasMcp) {
@@ -1402,7 +1405,8 @@ async function showMarketplaceContentModal(m) {
     if (local) {
       // Già installato: bottone "Dettagli" che apre il modal plugin
       const detailsBtn = el('button', 'btn btn-sm btn-ghost', 'Dettagli');
-      detailsBtn.addEventListener('click', () => { close(); showPluginContentModal(local); });
+      // v1.0.61 — Lascio che swapModalOverlay gestisca la rimozione: niente flash
+      detailsBtn.addEventListener('click', () => showPluginContentModal(local));
       right.appendChild(detailsBtn);
     } else {
       const installBtn = el('button', 'btn btn-sm btn-primary', 'Installa');
@@ -1449,10 +1453,8 @@ function renderInstalledOnly(container, m) {
     row.appendChild(left);
     const right = el('div', 'mkt-modal-plugin-actions');
     const detailsBtn = el('button', 'btn btn-sm btn-ghost', 'Dettagli');
-    detailsBtn.addEventListener('click', () => {
-      document.querySelector('.md-overlay')?.remove();
-      showPluginContentModal(p);
-    });
+    // v1.0.61 — swapModalOverlay gestisce la transizione senza flash
+    detailsBtn.addEventListener('click', () => showPluginContentModal(p));
     right.appendChild(detailsBtn);
     row.appendChild(right);
     container.appendChild(row);
@@ -3558,7 +3560,7 @@ function renderSettings() {
   infoRow.appendChild(infoLeft);
   const infoRight = el('div');
   infoRight.style.cssText = 'display:flex;gap:10px;align-items:center;';
-  const verVal = el('div', 'settings-row-val', '1.0.60');
+  const verVal = el('div', 'settings-row-val', '1.0.61');
   const chBtn = btnWithIcon('btn btn-sm btn-green btn-with-icon', 'changelog', ' Changelog');
   chBtn.title = 'Mostra storico versioni';
   chBtn.addEventListener('click', () => openChangelogModal());
