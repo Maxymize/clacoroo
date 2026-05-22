@@ -1,5 +1,14 @@
 # Changelog
 
+## v1.0.36 — 2026-05-22
+
+Fix critici alle quote (v1.0.35 mostrava sempre "Token non valido"):
+
+- Header obbligatorio `anthropic-beta: oauth-2025-04-20` aggiunto (era mancante, causa principale del 401)
+- Parsing keychain corretto: il payload è annidato sotto `claudeAiOauth.accessToken`, non flat
+- Refresh token automatico via `POST platform.claude.com/v1/oauth/token` quando il token sta per scadere (entro 5 minuti) o quando la chiamata torna 401
+- Token rinnovato mantenuto SOLO in memoria del processo (CLACOROO non riscrive mai il keychain di Claude Code — sicurezza assoluta delle credenziali)
+
 ## v1.0.35 — 2026-05-22
 
 - **Quote sessione e settimana** finalmente visibili in CLACOROO. Tre barre orizzontali (Session 5h · Weekly 7d · Weekly Sonnet) con percentuale e tempo al reset, esattamente come nella modal di Claude Code in VS Code

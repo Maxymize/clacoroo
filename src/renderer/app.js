@@ -2800,7 +2800,7 @@ function renderSettings() {
   const chBtn = el('button', 'btn btn-sm btn-green', '📋 Changelog');
   chBtn.title = 'Mostra storico versioni';
   chBtn.addEventListener('click', () => openChangelogModal());
-  const verVal = el('div', 'settings-row-val', '1.0.35');
+  const verVal = el('div', 'settings-row-val', '1.0.36');
   verRight.appendChild(chBtn);
   verRight.appendChild(verVal);
   verRow.appendChild(verRight);
