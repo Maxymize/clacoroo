@@ -293,6 +293,7 @@ function render() {
     case 'agents':       renderAgents();      break;
     case 'mcp':          renderMcp();         break;
     case 'stats':        renderStats();       break;
+    case 'config':       renderConfig();      break;
     case 'settings':     renderSettings();    break;
   }
 }
@@ -354,6 +355,21 @@ function renderDashboard() {
     ? mcpCache.servers.filter(s => s.status === 'connected').length + '/' + mcpCache.servers.length
     : '—';
 
+  // v1.0.38 — TOP della dashboard: contesto vivo + quote (ciò che cambia
+  // più frequentemente). Le KPI numeriche e le sezioni elenco vengono dopo.
+  const ctxBar = el('div', 'dashboard-context-section');
+  wrap.appendChild(ctxBar);
+  loadDashboardContextBar(ctxBar, renderToken);
+
+  const usageSection = el('div', 'dashboard-usage-section');
+  wrap.appendChild(usageSection);
+  usageSection.appendChild(el('div', 'list-section-title', 'Quote Claude'));
+  const usageBars = el('div', 'dashboard-usage-bars');
+  usageSection.appendChild(usageBars);
+  loadDashboardUsage(usageBars, renderToken);
+
+  // KPI plugin (stato installazione)
+  wrap.appendChild(el('div', 'list-section-title', 'Statistiche'));
   const kpiGrid = el('div', 'kpi-grid');
   const kpis = [
     { num: active.length,      label: 'Plugin attivi',     color: '#788c5d' },  // global only
@@ -394,18 +410,10 @@ function renderDashboard() {
     })();
   }
 
-  // Stats KPIs + context breakdown (range = 'all')
+  // KPI utilizzo Claude Code (range='all')
   const statsSection = el('div', 'dashboard-stats-section');
   wrap.appendChild(statsSection);
   loadDashboardStats(statsSection, renderToken);
-
-  // v1.0.35 — Usage live (Session / Weekly / Weekly Sonnet)
-  const usageSection = el('div', 'dashboard-usage-section');
-  wrap.appendChild(usageSection);
-  usageSection.appendChild(el('div', 'list-section-title', 'Quote Claude'));
-  const usageBars = el('div', 'dashboard-usage-bars');
-  usageSection.appendChild(usageBars);
-  loadDashboardUsage(usageBars, renderToken);
 
   // Elenco marketplace riassuntivo
   const mktTitle = el('div', 'list-section-title', 'Marketplace');
@@ -495,28 +503,19 @@ function paintCtxBar(container, cb) {
   }));
 }
 
+// v1.0.38 — Dashboard ora rende KPI Claude e context bar in due sezioni
+// separate (context+quote in cima, KPI sotto). paintDashboardStats si
+// limita ai soli KPI; per la context bar c'è paintCtxBar separato.
 function paintDashboardStats(container, data) {
-  const existingBar = container.querySelector('.context-breakdown');
   const existingKpi = container.querySelector('.kpi-grid');
-  if (existingBar && existingKpi) {
-    // Update incrementale: KPI rebuild (sono numeri statici, nessun valore animabile),
-    // barra in-place per animazione fluida
-    const oldKpi = existingKpi;
+  if (existingKpi) {
     const newKpi = buildStatsKpiGrid(data, 'all');
-    oldKpi.replaceWith(newKpi);
-    if (data.contextBreakdown) updateCtxBarInPlace(existingBar, data.contextBreakdown);
+    existingKpi.replaceWith(newKpi);
     return;
   }
   container.textContent = '';
   container.appendChild(el('div', 'list-section-title', 'Utilizzo Claude Code'));
   container.appendChild(buildStatsKpiGrid(data, 'all'));
-  if (data.contextBreakdown) {
-    container.appendChild(el('div', 'list-section-title', 'Stima contesto'));
-    container.appendChild(buildContextBreakdown(data.contextBreakdown, {
-      horizontalLegend: true,
-      hideNote: true,
-    }));
-  }
 }
 
 async function loadDashboardStats(container, token) {
@@ -527,6 +526,16 @@ async function loadDashboardStats(container, token) {
   const data = await fetchStatsSafe();
   if (token !== dashboardRenderToken || !data || !data.cache) return;
   if (data !== prevData) paintDashboardStats(container, data);
+  lastStatsData = data;
+}
+
+// v1.0.38 — Dashboard: context bar in cima, separata dai KPI Claude
+async function loadDashboardContextBar(container, token) {
+  const prevData = lastStatsData;
+  if (prevData && prevData.contextBreakdown) paintCtxBar(container, prevData.contextBreakdown);
+  const data = await fetchStatsSafe();
+  if (token !== dashboardRenderToken || !data || !data.contextBreakdown) return;
+  if (data !== prevData) paintCtxBar(container, data.contextBreakdown);
   lastStatsData = data;
 }
 
@@ -1272,8 +1281,9 @@ async function renderStats() {
   const myToken = ++statsRenderToken;
   const wrap = el('div', 'stats-wrap');
   // Tab strip
-  const tabs = ['overview', 'modelli', 'progetti', 'config'];
-  const tabLabels = { overview: 'Overview', modelli: 'Modelli', progetti: 'Per-progetto', config: 'Config' };
+  // v1.0.38 — 'config' è ora una sezione sidebar autonoma, rimosso da qui
+  const tabs = ['overview', 'modelli', 'progetti'];
+  const tabLabels = { overview: 'Overview', modelli: 'Modelli', progetti: 'Per-progetto' };
   const tabBar = el('div', 'stats-tabs');
   tabs.forEach(t => {
     const btn = el('button', 'stats-tab' + (t === statsActiveTab ? ' active' : ''), tabLabels[t]);
@@ -1301,7 +1311,7 @@ async function renderStats() {
 }
 
 function paintStatsTab(content, data) {
-  if (!data.cache && statsActiveTab !== 'config') {
+  if (!data.cache) {
     content.appendChild(el('div', 'stats-empty',
       'stats-cache.json non disponibile. Claude Code lo crea quando inizi a usarlo: usa la CLI o IDE per qualche sessione e tornerai a vedere statistiche qui.'));
     return;
@@ -1309,7 +1319,6 @@ function paintStatsTab(content, data) {
   if (statsActiveTab === 'overview') renderStatsOverview(content, data);
   else if (statsActiveTab === 'modelli')  renderStatsModels(content, data);
   else if (statsActiveTab === 'progetti') renderStatsProjects(content, data);
-  else if (statsActiveTab === 'config')   renderStatsConfig(content, data);
 }
 
 function formatUsd(amount) {
@@ -1776,7 +1785,19 @@ function renderStatsProjects(container, data) {
     'Messaggi = singole interazioni user/assistant.'));
 }
 
-function renderStatsConfig(container, data) {
+// v1.0.38 — Config promossa a sezione sidebar standalone. La funzione interna
+// renderConfigContent(container, data) rende il body riusabile.
+async function renderConfig() {
+  const wrap = el('div');
+  setContent(wrap);
+  wrap.appendChild(el('div', 'stats-loading', 'Caricamento configurazione…'));
+  const data = await window.claudeAPI.getStats();
+  if (state.section !== 'config') return;  // race-guard se l'utente è andato altrove
+  wrap.textContent = '';
+  renderConfigContent(wrap, data);
+}
+
+function renderConfigContent(container, data) {
   container.appendChild(el('div', 'list-section-title', 'Configurazione Claude Code'));
   const warn = el('div', 'stats-warning',
     'Le modifiche qui sono immediate — equivalenti a `claude /config`. Modifica con cautela: '
@@ -1803,8 +1824,12 @@ function renderStatsConfig(container, data) {
       input.value = settings[key] || (opts && opts[0]) || '';
     } else if (type === 'dots') {
       // v1.0.32 — slider a pallini stile VS Code Claude plugin
+      // v1.0.38 — tooltip custom istantaneo con nomi leggibili
       const dotsWrap = el('div', 'dots-slider');
       const values = opts || [];
+      const displayNames = {
+        low: 'Low', medium: 'Medium', high: 'High', xhigh: 'Extra-high', max: 'Max',
+      };
       const labelEl = left.querySelector('.settings-row-label');
       const labelSuffix = el('span', 'dots-current-label');
       labelEl.appendChild(labelSuffix);
@@ -1813,7 +1838,7 @@ function renderStatsConfig(container, data) {
         dotsWrap.querySelectorAll('.dots-slider-dot').forEach((d, j) => {
           d.classList.toggle('active', j <= activeIdx);
         });
-        labelSuffix.textContent = ' (' + activeValue + ')';
+        labelSuffix.textContent = ' (' + (displayNames[activeValue] || activeValue) + ')';
       }
 
       const currentValue = settings[key];
@@ -1821,10 +1846,13 @@ function renderStatsConfig(container, data) {
       if (activeIdx < 0) activeIdx = 0;
 
       values.forEach((v, i) => {
+        const dotWrap = el('span', 'dots-slider-dot-wrap');
         const dot = el('button', 'dots-slider-dot');
         dot.type = 'button';
-        dot.title = v;
         dot.dataset.value = v;
+        const tip = el('span', 'dots-slider-tooltip', displayNames[v] || v);
+        dotWrap.appendChild(dot);
+        dotWrap.appendChild(tip);
         dot.addEventListener('click', async () => {
           const previous = settings[key];
           refresh(i, v);  // ottimistico
@@ -1840,7 +1868,7 @@ function renderStatsConfig(container, data) {
             toast('Errore: ' + r.error, 'error');
           }
         });
-        dotsWrap.appendChild(dot);
+        dotsWrap.appendChild(dotWrap);
       });
 
       refresh(activeIdx, values[activeIdx] || currentValue);
@@ -2806,7 +2834,7 @@ function renderSettings() {
   const chBtn = el('button', 'btn btn-sm btn-green', '📋 Changelog');
   chBtn.title = 'Mostra storico versioni';
   chBtn.addEventListener('click', () => openChangelogModal());
-  const verVal = el('div', 'settings-row-val', '1.0.37');
+  const verVal = el('div', 'settings-row-val', '1.0.38');
   verRight.appendChild(chBtn);
   verRight.appendChild(verVal);
   verRow.appendChild(verRight);
@@ -2922,7 +2950,7 @@ function fuzzyScore(query, target) {
 function buildPaletteItems() {
   const items = [];
   // Azioni rapide
-  const sections = ['dashboard', 'plugins', 'marketplaces', 'skills', 'agents', 'mcp', 'stats', 'settings'];
+  const sections = ['dashboard', 'plugins', 'marketplaces', 'skills', 'agents', 'mcp', 'stats', 'config', 'settings'];
   sections.forEach(s => items.push({
     kind: 'action', icon: '→',
     label: 'Vai a ' + s.charAt(0).toUpperCase() + s.slice(1),

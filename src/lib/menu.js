@@ -4,7 +4,7 @@ const { app, Menu, shell } = require('electron');
 
 const REPO_URL  = 'https://github.com/Maxymize/clacoroo';
 const ISSUES_URL = REPO_URL + '/issues';
-const SECTIONS  = ['dashboard', 'plugins', 'marketplaces', 'skills', 'agents', 'mcp', 'stats', 'settings'];
+const SECTIONS  = ['dashboard', 'plugins', 'marketplaces', 'skills', 'agents', 'mcp', 'stats', 'config', 'settings'];
 
 function sendToRenderer(mainWindow, channel, payload) {
   if (mainWindow && !mainWindow.isDestroyed()) {

@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.0.38 — 2026-05-22
+
+- Dashboard riorganizzata: in cima ora ci sono "Stima contesto" e "Quote Claude" (le info che cambiano più spesso), seguiti dalle KPI di installazione (Plugin, Marketplace, Skill, ecc.) con il nuovo titolo "Statistiche", poi le KPI "Utilizzo Claude Code"
+- Sezione "Config" promossa a voce di menu autonoma (tra "Stats" e "Impostazioni"), con icona dedicata e accelerator `Cmd+8`. Rimossa dal tab di Stats — è una configurazione, non una statistica
+- Tooltip immediato sopra ogni pallino dell'Effort slider con nome esteso ("Low", "Medium", "High", "Extra-high", "Max")
+
 ## v1.0.37 — 2026-05-22
 
 - Fix: i valori percentuali delle quote ora corrispondono a quelli del plugin VS Code Claude (erano 100× più grandi, es. 1400% al posto di 14%). L'API Anthropic restituisce `utilization` già in percentuale 0..100, non come float 0..1; la moltiplicazione extra era un errore mio
