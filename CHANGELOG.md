@@ -1,5 +1,15 @@
 # Changelog
 
+## v1.0.50 — 2026-05-22
+
+Polish del badge "N plugin" nelle card Marketplace:
+
+- Bordo grigio sempre visibile anche senza hover (era invisibile in stato normale)
+- Background `surface2` discreto sempre visibile per dare consistenza
+- Proporzione numero/label ribilanciata: numero 22px (era 28), label 13px (era 11) — meno sbilanciato, più leggibile
+- Gap di 6px tra numero e "plugin" (era attaccato)
+- Hover: anche la label "plugin" si tinge di arancione CLACOROO assieme al numero, oltre al glow attorno al badge
+
 ## v1.0.49 — 2026-05-22
 
 - Sidebar: invertito ordine Marketplace ↔ Plugin per rispecchiare la gerarchia logica. Marketplace contengono Plugin che contengono Skill/Agent/MCP. Nuovo ordine: Dashboard · Marketplace · Plugin · Skill · Agent · MCP · Stats · Config · Impostazioni

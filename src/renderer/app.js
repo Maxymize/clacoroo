@@ -1183,7 +1183,7 @@ function renderMarketplaces() {
     // Hover effect arancione + glow, niente striscia full-width invadente.
     const countBtn = el('button', 'mkt-card-count-btn');
     const cnt  = el('span', 'mkt-card-count', String(m.plugins.length));
-    const cntL = el('span', 'mkt-card-count-label', ' plugin');
+    const cntL = el('span', 'mkt-card-count-label', 'plugin');
     cnt.style.color = col;
     countBtn.appendChild(cnt);
     countBtn.appendChild(cntL);
@@ -3166,7 +3166,7 @@ function renderSettings() {
   infoRow.appendChild(infoLeft);
   const infoRight = el('div');
   infoRight.style.cssText = 'display:flex;gap:10px;align-items:center;';
-  const verVal = el('div', 'settings-row-val', '1.0.49');
+  const verVal = el('div', 'settings-row-val', '1.0.50');
   const chBtn = btnWithIcon('btn btn-sm btn-green btn-with-icon', 'changelog', ' Changelog');
   chBtn.title = 'Mostra storico versioni';
   chBtn.addEventListener('click', () => openChangelogModal());
