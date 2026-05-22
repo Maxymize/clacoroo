@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.0.28 — 2026-05-22
+
+- Nuovo KPI "Valore API stimato" in Stats e Dashboard: mostra in USD quanto staresti spendendo se pagassi pay-per-use API (sei su Max plan: questo valore è la stima del risparmio della subscription)
+- Calcolo basato sui prezzi pubblici Anthropic (Opus $15/$75 input/output 1M, Sonnet $3/$15, Haiku $0.80/$4, con cache read/write proporzionali)
+- Range Tutto / 30g / 7g supportato (sub-range stimati per proporzione di messaggi)
+
 ## v1.0.27 — 2026-05-21
 
 - Nuovo pannello "Account Claude" in Impostazioni: piano (badge Max / Pro / Team colorato), email, organizzazione, ID org, metodo di autenticazione, provider API

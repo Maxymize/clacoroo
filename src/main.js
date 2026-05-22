@@ -40,6 +40,7 @@ const { readChangelogRaw, parseChangelog } = require('./lib/changelog');
 const STATS   = require('./lib/stats');
 const MCP     = require('./lib/mcp');
 const ACCOUNT = require('./lib/account');
+const PRICING = require('./lib/pricing');
 
 /* ── CONFIG PATHS ──────────────────────────────────────────────────────── */
 
@@ -509,6 +510,14 @@ ipcMain.handle('get-stats', async (_e, { force } = {}) => {
     totalTokens: cache ? STATS.totalTokensFromModelUsage(cache.modelUsage) : 0,
     totalMessages: cache?.totalMessages || (cache?.dailyActivity || []).reduce((s, e) => s + (e.messageCount || 0), 0),
     sessionsReal,
+    cost: {
+      total: cache ? PRICING.costFromModelUsage(cache.modelUsage) : 0,
+      d30:   cache ? PRICING.costForRange(cache.modelUsage, cache.dailyActivity, 30) : 0,
+      d7:    cache ? PRICING.costForRange(cache.modelUsage, cache.dailyActivity, 7)  : 0,
+      perModel: cache ? Object.fromEntries(
+        Object.entries(cache.modelUsage || {}).map(([m, u]) => [m, PRICING.costForUsage(m, u)])
+      ) : {},
+    },
     contextBreakdown: STATS.computeContextBreakdown(CLAUDE_DIR, blockedSet, mcpInfo),
     projects: projects.slice(0, 20).map(key => {
       const t = projectTokens[key] || {};

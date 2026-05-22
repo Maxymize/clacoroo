@@ -1302,6 +1302,14 @@ function paintStatsTab(content, data) {
   else if (statsActiveTab === 'config')   renderStatsConfig(content, data);
 }
 
+function formatUsd(amount) {
+  if (amount == null || isNaN(amount)) return '—';
+  if (amount < 10)    return '$' + amount.toFixed(2);
+  if (amount < 1000)  return '$' + amount.toFixed(0);
+  if (amount < 10000) return '$' + (amount / 1000).toFixed(1) + 'K';
+  return '$' + Math.round(amount / 1000) + 'K';
+}
+
 function fmtNum(n) {
   if (!n) return '0';
   if (n >= 1e9) return (n / 1e9).toFixed(1) + 'B';
@@ -1412,11 +1420,17 @@ function buildStatsKpiGrid(data, range) {
   const mad = kpi.mostActiveDay;
   const madLabel = mad ? new Date(mad.date + 'T00:00:00').toLocaleDateString('it-IT', { day: 'numeric', month: 'short' }) : '—';
 
+  // Costo stimato per range (Pack A v1.0.28)
+  const cost = data.cost || {};
+  const rangeCost = range === '7' ? cost.d7 : range === '30' ? cost.d30 : cost.total;
+  const costLabel = formatUsd(rangeCost);
+
   const grid = el('div', 'kpi-grid stats-kpi-grid');
   [
     { num: fmtNum(kpi.sessions),  label: 'Sessioni',        color: '#d97757' },
     { num: fmtNum(kpi.messages),  label: 'Messaggi',        color: '#e89478' },
     { num: fmtNum(kpi.tokens),    label: 'Token totali',    color: '#6a9bcc' },
+    { num: costLabel,             label: 'Valore\nAPI stimato', color: '#22c55e' },
     { num: activeLabel,           label: 'Giorni attivi',   color: '#788c5d' },
     { num: madLabel,              label: 'Giorno più attivo', color: '#b8c79a' },
     { num: (data.streak || 0) + 'g',     label: 'Serie attuale',   color: '#b8c79a' },
@@ -2458,7 +2472,7 @@ function renderSettings() {
   const chBtn = el('button', 'btn btn-sm btn-green', '📋 Changelog');
   chBtn.title = 'Mostra storico versioni';
   chBtn.addEventListener('click', () => openChangelogModal());
-  const verVal = el('div', 'settings-row-val', '1.0.27');
+  const verVal = el('div', 'settings-row-val', '1.0.28');
   verRight.appendChild(chBtn);
   verRight.appendChild(verVal);
   verRow.appendChild(verRight);
