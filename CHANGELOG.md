@@ -1,5 +1,19 @@
 # Changelog
 
+## v1.0.47 — 2026-05-22
+
+**Polish plugin card**
+
+- Footer (toggle + bottoni icona + Aggiorna/Rimuovi) ora sempre alla base della card, anche se la descrizione è corta (prima poteva finire a metà altezza)
+- Icona occhio ridisegnata: ora si legge davvero come occhio (era ovale ambiguo)
+- Tooltip immediati sui bottoni icona: appaiono subito al passaggio del mouse, niente più attesa di ~2 secondi del tooltip nativo
+
+**Marketplace coerente con plugin**
+
+- Le card marketplace non hanno più il toggle accordion "PLUGIN (N)" inline. Al suo posto un bottone "👁 Vedi N plugin" che apre un modal con la lista cliccabile, stesso stile del modal "Contenuto plugin"
+- Click su un plugin nel modal Marketplace → apre il modal Contenuto plugin del singolo plugin (drill-down)
+- Coerenza UI fra le due sezioni come richiesto
+
 ## v1.0.46 — 2026-05-22
 
 **Plugin card — Vedi contenuto**

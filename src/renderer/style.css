@@ -732,7 +732,10 @@ body {
   overflow: hidden;
   transition: border-color .15s, transform .15s;
   position: relative;
+  display: flex;
+  flex-direction: column;
 }
+.pc-body { flex: 1; }
 .plugin-card::before {
   content: "";
   position: absolute; left: 0; top: 0; bottom: 0;
@@ -814,6 +817,7 @@ body {
   border-top: 1px solid var(--border);
   background: rgba(0,0,0,.18);
   gap: 8px;
+  margin-top: auto;  /* v1.0.47: spinge il footer sempre in fondo alla card */
 }
 
 .pc-actions { display: flex; gap: 6px; }
@@ -1973,10 +1977,79 @@ body {
   padding: 4px 6px;
   min-width: 28px;
   height: 26px;
+  position: relative;
 }
 .btn-icon .inline-icon {
   width: 14px;
   height: 14px;
+}
+
+/* Tooltip immediato custom (v1.0.47) — usato sui btn-icon delle card plugin
+   tramite attribute data-tt; vince sul nativo title (delay ~2s) */
+[data-tt] {
+  position: relative;
+}
+[data-tt]::after {
+  content: attr(data-tt);
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%) translateY(2px);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: 10px;
+  font-weight: 500;
+  padding: 4px 8px;
+  border-radius: 4px;
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity .1s ease, transform .1s ease, visibility 0s linear .1s;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, .4);
+  z-index: 20;
+}
+[data-tt]:hover::after,
+[data-tt]:focus-visible::after {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(0);
+  transition: opacity .1s ease, transform .1s ease, visibility 0s;
+}
+
+/* Bottone "Vedi N plugin" su card marketplace (v1.0.47) */
+.mkt-card-see-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  padding: 10px 16px;
+  background: var(--surface2);
+  border: none;
+  border-top: 1px solid var(--border);
+  color: var(--text);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  transition: background .15s, color .15s;
+}
+.mkt-card-see-btn:hover {
+  background: var(--mkt-color, var(--accent));
+  color: white;
+}
+.mkt-card-see-btn .inline-icon {
+  width: 13px;
+  height: 13px;
+}
+
+/* Badge inline nei plugin item del modal marketplace (v1.0.47) */
+.plugin-content-item-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
 }
 
 /* Models section note (v1.0.43) */

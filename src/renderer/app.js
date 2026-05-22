@@ -323,20 +323,29 @@ const ICONS = {
   upload:    'M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM13.707 5.707a1 1 0 01-1.414 0L11 4.414V12a1 1 0 11-2 0V4.414L7.707 5.707a1 1 0 01-1.414-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 010 1.414z',
   changelog: 'M9 2a1 1 0 000 2h2a1 1 0 100-2H9zM4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z',
   code:      'M12.316 3.051a1 1 0 01.633 1.265l-4 12a1 1 0 11-1.898-.632l4-12a1 1 0 011.265-.633zM5.707 6.293a1 1 0 010 1.414L3.414 10l2.293 2.293a1 1 0 11-1.414 1.414l-3-3a1 1 0 010-1.414l3-3a1 1 0 011.414 0zm8.586 0a1 1 0 011.414 0l3 3a1 1 0 010 1.414l-3 3a1 1 0 11-1.414-1.414L16.586 10l-2.293-2.293a1 1 0 010-1.414z',
-  eye:       'M10 12a2 2 0 100-4 2 2 0 000 4z M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z',
+  // Eye Heroicons-style: bulbo + iride con fill-rule evenodd (path multipli)
+  eye:       [
+    { d: 'M10 12.5a2.5 2.5 0 100-5 2.5 2.5 0 000 5z' },
+    { d: 'M.664 10.59a1.65 1.65 0 010-1.18A10.004 10.004 0 0110 3c4.257 0 7.893 2.66 9.336 6.41.147.381.147.804 0 1.18A10.004 10.004 0 0110 17c-4.257 0-7.893-2.66-9.336-6.41zM14 10a4 4 0 11-8 0 4 4 0 018 0z', fillRule: 'evenodd', clipRule: 'evenodd' },
+  ],
 };
 function svgIcon(name, size = 14) {
-  const d = ICONS[name];
-  if (!d) return null;
+  const def = ICONS[name];
+  if (!def) return null;
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
   svg.setAttribute('viewBox', '0 0 20 20');
   svg.setAttribute('fill', 'currentColor');
   svg.setAttribute('width',  String(size));
   svg.setAttribute('height', String(size));
   svg.setAttribute('class', 'inline-icon');
-  const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-  p.setAttribute('d', d);
-  svg.appendChild(p);
+  const paths = Array.isArray(def) ? def : [{ d: def }];
+  paths.forEach(spec => {
+    const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    p.setAttribute('d', spec.d);
+    if (spec.fillRule) p.setAttribute('fill-rule', spec.fillRule);
+    if (spec.clipRule) p.setAttribute('clip-rule', spec.clipRule);
+    svg.appendChild(p);
+  });
   return svg;
 }
 function btnWithIcon(cls, iconName, label) {
@@ -999,24 +1008,22 @@ function buildPluginCard(p) {
   const actions = el('div', 'pc-actions');
 
   // v1.0.46 — Icone SVG al posto delle emoji (coerenza con la sidebar)
-  // Vedi contenuto (modal con skills/agents/MCP/hooks navigabili)
+  // v1.0.47 — Tooltip data-tt istantanei (no delay 2s del title nativo)
   const detailsBtn = el('button', 'btn btn-sm btn-ghost btn-icon');
-  detailsBtn.title = 'Vedi contenuto del plugin (skill, agent, MCP, hook)';
+  detailsBtn.dataset.tt = 'Vedi contenuto plugin';
   detailsBtn.appendChild(svgIcon('eye'));
   detailsBtn.addEventListener('click', () => showPluginContentModal(p));
 
-  // Apri nel Finder
   const finderBtn = el('button', 'btn btn-sm btn-ghost btn-icon');
-  finderBtn.title = 'Apri sorgente nel Finder';
+  finderBtn.dataset.tt = 'Apri sorgente nel Finder';
   finderBtn.appendChild(svgIcon('folder'));
   finderBtn.addEventListener('click', async () => {
     const r = await window.claudeAPI.openPluginPath(p.fullId);
     if (!r.success) toast('Errore apertura Finder: ' + r.error, 'error');
   });
 
-  // Apri in VS Code
   const codeBtn = el('button', 'btn btn-sm btn-ghost btn-icon');
-  codeBtn.title = 'Apri sorgente in VS Code';
+  codeBtn.dataset.tt = 'Apri sorgente in VS Code';
   codeBtn.appendChild(svgIcon('code'));
   codeBtn.addEventListener('click', async () => {
     const r = await window.claudeAPI.openInEditor(p.fullId);
@@ -1073,6 +1080,88 @@ function buildPluginCard(p) {
 }
 
 /* ── MARKETPLACES ─────────────────────────────────────────────────────── */
+// v1.0.47 — Modal "Plugin del marketplace": stessa modalità del modal
+// Contenuto plugin per coerenza UI. Ogni plugin è cliccabile e apre il
+// modal Contenuto plugin del singolo plugin.
+function showMarketplaceContentModal(m) {
+  if (document.querySelector('.md-overlay')) return;
+  const overlay = el('div', 'md-overlay');
+  const modal = el('div', 'md-modal');
+  modal.setAttribute('role', 'dialog');
+  modal.setAttribute('aria-modal', 'true');
+
+  const header = el('div', 'md-header');
+  const title = el('div', 'md-title');
+  title.appendChild(el('span', 'md-kind-badge md-kind-agent', 'marketplace'));
+  title.appendChild(document.createTextNode(' ' + m.id));
+  const closeBtn = el('button', 'md-close', '×');
+  closeBtn.setAttribute('aria-label', 'Chiudi');
+  header.appendChild(title);
+  header.appendChild(closeBtn);
+
+  const content = el('div', 'md-content');
+
+  // Header info marketplace
+  const info = el('div', 'plugin-content-info');
+  if (m.repo) {
+    const repoLink = el('a', 'plugin-content-mkt', 'github.com/' + m.repo);
+    repoLink.setAttribute('href', '#');
+    repoLink.addEventListener('click', e => {
+      e.preventDefault();
+      window.claudeAPI.openExternal('https://github.com/' + m.repo);
+    });
+    info.appendChild(repoLink);
+  }
+  const meta = el('div', 'plugin-content-desc');
+  meta.textContent = m.plugins.length + ' ' + (m.plugins.length === 1 ? 'plugin' : 'plugin')
+    + ' · ' + (m.autoUpdate ? 'aggiornamento automatico' : 'aggiornamento manuale')
+    + (m.lastUpdated ? ' · ultimo aggiornamento ' + new Date(m.lastUpdated).toLocaleDateString('it-IT') : '');
+  info.appendChild(meta);
+  content.appendChild(info);
+
+  // Lista plugin cliccabile
+  content.appendChild(el('h3', 'plugin-content-section-title', 'Plugin contenuti'));
+  const list = el('div', 'plugin-content-list');
+  m.plugins.forEach(p => {
+    const row = el('button', 'plugin-content-item');
+    row.appendChild(svgIcon('code'));
+    const infoBlock = el('div', 'plugin-content-item-info');
+    infoBlock.appendChild(el('div', 'plugin-content-item-name', p.id + ' · v' + p.version));
+    if (p.description) {
+      infoBlock.appendChild(el('div', 'plugin-content-item-desc', p.description));
+    }
+    // Mini-badge riassuntivi
+    const minibar = el('div', 'plugin-content-item-badges');
+    if (p.skills.length) minibar.appendChild(el('span', 'badge b-skill', p.skills.length + ' skill'));
+    if (p.agents.length) minibar.appendChild(el('span', 'badge b-agent', p.agents.length + ' agent'));
+    if (p.hasMcp)        minibar.appendChild(el('span', 'badge b-mcp', 'MCP'));
+    if (p.hasHooks)      minibar.appendChild(el('span', 'badge b-hook', 'Hook'));
+    if (p.blocked)       minibar.appendChild(el('span', 'badge b-blocked', 'disattivato'));
+    if (minibar.childNodes.length) infoBlock.appendChild(minibar);
+    row.appendChild(infoBlock);
+    const arrow = el('span', 'plugin-content-item-arrow', '→');
+    row.appendChild(arrow);
+    row.addEventListener('click', () => {
+      close();
+      // Apre il modal Contenuto plugin del singolo plugin selezionato
+      showPluginContentModal(p);
+    });
+    list.appendChild(row);
+  });
+  content.appendChild(list);
+
+  function onKey(e) { if (e.key === 'Escape') close(); }
+  function close() { document.removeEventListener('keydown', onKey); overlay.remove(); }
+  closeBtn.addEventListener('click', close);
+  overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+  document.addEventListener('keydown', onKey);
+
+  modal.appendChild(header);
+  modal.appendChild(content);
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
+}
+
 function renderMarketplaces() {
   const wrap = el('div');
 
@@ -1120,35 +1209,14 @@ function renderMarketplaces() {
 
     card.appendChild(body);
 
-    // EXPAND (se ci sono plugin)
+    // v1.0.47 — Bottone "Vedi plugin" che apre modal (rimpiazza il toggle
+    // accordion: stessa metodologia delle card plugin per coerenza)
     if (m.plugins.length > 0) {
-      const toggleBtn = el('button', 'mkt-card-toggle-btn');
-      const arrow = el('span', 'arrow', '▶');
-      toggleBtn.appendChild(arrow);
-      toggleBtn.appendChild(document.createTextNode(' PLUGIN (' + m.plugins.length + ')'));
-
-      const detail = el('div', 'mkt-card-detail');
-      m.plugins.forEach(p => {
-        const row = el('div', 'mkt-plugin-row');
-        row.appendChild(el('span', 'mkt-plugin-row-id', p.id));
-        const badges = el('span');
-        badges.style.cssText = 'display:flex;gap:4px;flex-wrap:wrap;';
-        if (p.skills.length) { const b = el('span','badge b-skill', p.skills.length+' skill'); badges.appendChild(b); }
-        if (p.agents.length) { const b = el('span','badge b-agent', p.agents.length+' agent'); badges.appendChild(b); }
-        if (p.hasMcp)  { badges.appendChild(el('span','badge b-mcp','MCP')); }
-        if (p.blocked) { badges.appendChild(el('span','badge b-blocked','off')); }
-        row.appendChild(badges);
-        if (p.description) row.appendChild(el('span', 'mkt-plugin-row-desc', p.description.slice(0, 55)));
-        detail.appendChild(row);
-      });
-
-      toggleBtn.addEventListener('click', () => {
-        const open = detail.classList.toggle('open');
-        toggleBtn.classList.toggle('open', open);
-      });
-
-      card.appendChild(toggleBtn);
-      card.appendChild(detail);
+      const seeBtn = el('button', 'mkt-card-see-btn');
+      seeBtn.appendChild(svgIcon('eye'));
+      seeBtn.appendChild(document.createTextNode(' Vedi ' + m.plugins.length + ' ' + (m.plugins.length === 1 ? 'plugin' : 'plugin')));
+      seeBtn.addEventListener('click', () => showMarketplaceContentModal(m));
+      card.appendChild(seeBtn);
     }
 
     // Remove button
@@ -3109,7 +3177,7 @@ function renderSettings() {
   infoRow.appendChild(infoLeft);
   const infoRight = el('div');
   infoRight.style.cssText = 'display:flex;gap:10px;align-items:center;';
-  const verVal = el('div', 'settings-row-val', '1.0.46');
+  const verVal = el('div', 'settings-row-val', '1.0.47');
   const chBtn = btnWithIcon('btn btn-sm btn-green btn-with-icon', 'changelog', ' Changelog');
   chBtn.title = 'Mostra storico versioni';
   chBtn.addEventListener('click', () => openChangelogModal());
