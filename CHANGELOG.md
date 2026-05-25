@@ -1,5 +1,17 @@
 # Changelog
 
+## v1.0.75 — 2026-05-25 — Skill/Agent launcher ▶ + shell selector
+
+- [FIX] **Versione: fonte unica di verità** in Impostazioni. Prima il numero era hardcoded come stringa letterale (`'1.0.74'`) e il footer della sidebar leggeva `app.getVersion()` da package.json: dimenticarsi di aggiornare il letterale causava mismatch (es. footer "v1.0.72", Impostazioni "v1.0.75"). Ora entrambi leggono `d.appVersion` (ritornato da `get-data` IPC, sorgente `app.getVersion()` → `package.json`)
+- [FEATURE] **Bottone ▶ "Esegui in terminale"** su ogni card di Skill e Agent (Sezione Skill / Sezione Agent): un click apre il drawer terminale, crea una nuova tab e lancia `claude -p "<skill-name>"` (skill) o `claude -p "Use the <agent-name> agent"` (agent). Per skill/agent con scope locale, la tab parte direttamente dal `cwd` del progetto tracciato; per gli scope globali parte da HOME
+- [FEATURE] **Shell selector** in Impostazioni → nuovo gruppo "Terminale" con dropdown "Shell predefinita": default di sistema (`$SHELL`/`pwsh`/`cmd` per piattaforma) + tutte le shell rilevate da `pty.listShells()`. Su Unix: $SHELL, zsh, bash, fish (path Homebrew + system), sh. Su Win: PowerShell 7 (pwsh), Windows PowerShell, cmd. Su Linux: come Unix
+- [FEATURE] Persistenza `preferredShell` in `state.json`: la scelta sopravvive ai riavvii dell'app. Applicata a TUTTE le nuove tab del terminale (drawer "+" o bottone ▶ skill/agent o `Cmd+\``). Le tab già aperte continuano a usare la shell con cui sono nate
+- [FEATURE] `src/lib/pty.js`: nuova funzione `listShells()` che enumera le shell candidate del sistema con `fs.existsSync` + le ritorna come `[{path,label,kind}]` ordinate per rilevanza piattaforma
+- [FEATURE] IPC `pty:capabilities` esteso: ora include `availableShells: [...]` e `preferredShell` (letti rispettivamente da `PTY.listShells()` e `readState().preferredShell`) — caricati una sola volta all'avvio dell'app, niente roundtrip extra
+- [FEATURE] CSS `.skill-chip-run` 22×22 round button con hover verde Anthropic `#22c55e` scale 1.08, accanto allo scope badge — `stopPropagation` evita di aprire anche il markdown preview cliccando il chip
+- [SECURITY] Il comando passato al terminale (`claude -p "<name>"`) usa virgolette doppie. Il nome di skill/agent è già validato dal regex marketplace upstream (no spazi, no shell metachar) quindi nessuna injection. Vedi `CLAUDE.md` sezione SECURITY
+- [REFACTOR] `termCreateTab(opts)` ora applica `termState.preferredShell` come fallback se `opts.shell` non è specificato — pattern identico a `openTerminalWithCommand()` che già propagava `opts.shell || null`
+
 ## v1.0.74 — 2026-05-25 — Disclaimer Anthropic + brand cleanup MAXYMIZE
 
 - [DOCS] **Disclaimer Anthropic** aggiunto in cima a README.md (inglese) e README.it.md (italiano): CLACOROO è tool indipendente di terze parti, NON affiliato/sponsorizzato/approvato da Anthropic, PBC. Sviluppato autonomamente da MAXYMIZE per facilitare l'uso della CLI ufficiale Claude Code

@@ -1,0 +1,13 @@
+# CLACOROO — funding channels
+# Used by GitHub to render the "Sponsor" banner in the repo sidebar.
+# Docs: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/displaying-a-sponsor-button-in-your-repository
+#
+# Active now:
+custom: ["https://paypal.me/maxymizebusiness"]
+
+# Coming soon (commented until approved / configured):
+# github: [Maxymize]              # awaiting GitHub Sponsors approval (Pack I — TASK.md)
+# buy_me_a_coffee: maxymize       # awaiting BMAC account setup
+# ko_fi: maxymize                 # alternative to BMAC, not planned
+# liberapay: maxymize             # zero-fee alternative, low volume in IT, not planned
+# open_collective: clacoroo       # if project grows with multiple contributors

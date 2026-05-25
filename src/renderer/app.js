@@ -76,6 +76,11 @@ async function init() {
   // render parte con termState.caps=null e l'utente non vede il bottone).
   try {
     termState.caps = await window.claudeAPI.pty.capabilities();
+    // v1.0.75 — carica la shell preferita persistita (se presente). Vale solo
+    // per le NUOVE tab; le tab esistenti restano con la shell con cui sono nate.
+    if (termState.caps && termState.caps.preferredShell) {
+      termState.preferredShell = termState.caps.preferredShell;
+    }
   } catch { /* graceful: pty non disponibile, nessun bottone */ }
   await loadData();
   window.claudeAPI.onConfigChanged(() => {
@@ -1656,6 +1661,7 @@ function renderSkills() {
     chip.appendChild(el('span', 'skill-chip-plugin', item.plugin));
     appendHealthBadge(chip, item.health);
     appendScopeBadge(chip, item);
+    appendRunButton(chip, item, 'skill');
     if (item.scope === 'global') {
       chip.addEventListener('click', () => openMarkdownPreview(item.fullId, 'skill', item.name));
     }
@@ -1684,11 +1690,40 @@ function renderAgents() {
     chip.appendChild(el('span', 'skill-chip-plugin', item.plugin));
     appendHealthBadge(chip, item.health);
     appendScopeBadge(chip, item);
+    appendRunButton(chip, item, 'agent');
     if (item.scope === 'global') {
       chip.addEventListener('click', () => openMarkdownPreview(item.fullId, 'agent', item.name));
     }
     return chip;
   }, item => item.name + ' ' + item.plugin + ' ' + item.mkt + (item.projectName || ''), 'Cerca agent…', 'skill-grid');
+}
+
+// v1.0.75 — Bottone "▶" sulle card di skill/agent. Apre il drawer terminale,
+// crea una nuova tab (cwd = projectPath per scope locale, HOME per globali)
+// ed esegue `claude -p "<name>"` (skill) o `claude -p "Use the <name> agent"`
+// (agent — il claude one-shot ha bisogno di un imperativo per attivarlo).
+// stopPropagation evita di aprire anche il markdown preview cliccando il chip.
+function appendRunButton(chip, item, kind) {
+  if (!termState.caps || !termState.caps.available) return;  // niente pty → niente ▶
+  const btn = el('button', 'skill-chip-run', '▶');
+  btn.type = 'button';
+  btn.title = kind === 'skill'
+    ? 'Esegui in terminale: claude -p "' + item.name + '"'
+    : 'Esegui in terminale: claude -p "Use the ' + item.name + ' agent"';
+  btn.addEventListener('click', (ev) => {
+    ev.stopPropagation();
+    const cwd = item.projectPath || null;  // locale → progetto; globale → HOME default
+    const prompt = kind === 'skill'
+      ? item.name
+      : 'Use the ' + item.name + ' agent';
+    // Comando: claude -p "<prompt>"  (le virgolette doppie sono interpretate
+    // dalla shell, il nome è validato dal regex marketplace quindi nessuna
+    // injection — vedi CLAUDE.md sezione SECURITY).
+    const cmd = 'claude -p "' + prompt + '"';
+    openTerminalWithCommand(cmd, { cwd });
+    toast('Lancio ' + kind + ' "' + item.name + '" nel terminale…', 'info');
+  });
+  chip.appendChild(btn);
 }
 
 function appendScopeBadge(chip, item) {
@@ -3596,6 +3631,38 @@ function renderSettings() {
   edRow.appendChild(edSel);
   gEditor.appendChild(edRow);
 
+  // v1.0.75 — Terminale: shell predefinita per le nuove tab del drawer
+  if (termState.caps && termState.caps.available) {
+    const gTerm = group('Terminale');
+    const shellRow = el('div', 'settings-row');
+    const shellLeft = el('div');
+    shellLeft.appendChild(el('div', 'settings-row-label', 'Shell predefinita'));
+    shellLeft.appendChild(el('div', 'settings-row-desc',
+      'Usata quando apri una nuova tab del terminale o lanci una skill/agent con ▶. Le tab già aperte continuano a usare la shell con cui sono nate.'));
+    shellRow.appendChild(shellLeft);
+
+    const shellSel = el('select', 'config-select');
+    // Opzione "default" = lascia che pty.js decida ($SHELL / pwsh / cmd…)
+    const defOpt = el('option', null, 'Default di sistema (' + (termState.caps.defaultShell || '?') + ')');
+    defOpt.value = '';
+    shellSel.appendChild(defOpt);
+    (termState.caps.availableShells || []).forEach(sh => {
+      const opt = el('option', null, sh.label);
+      opt.value = sh.path;
+      shellSel.appendChild(opt);
+    });
+    shellSel.value = termState.preferredShell || '';
+    shellSel.addEventListener('change', async () => {
+      const v = shellSel.value || null;
+      termState.preferredShell = v;
+      await window.claudeAPI.setState({ preferredShell: v });
+      const lbl = v ? (shellSel.options[shellSel.selectedIndex].textContent) : 'default';
+      toast('Shell predefinita: ' + lbl + ' — vale per le nuove tab', 'success');
+    });
+    shellRow.appendChild(shellSel);
+    gTerm.appendChild(shellRow);
+  }
+
   const g4 = group('Sviluppo plugin');
   const devRow = el('div', 'settings-row');
   const devLeft = el('div');
@@ -3766,7 +3833,10 @@ function renderSettings() {
   infoRow.appendChild(infoLeft);
   const infoRight = el('div');
   infoRight.style.cssText = 'display:flex;gap:10px;align-items:center;';
-  const verVal = el('div', 'settings-row-val', '1.0.74');
+  // v1.0.75 — versione letta da app.getVersion() (package.json) come fonte
+  // unica di verità, così footer sidebar e Impostazioni mostrano sempre lo
+  // stesso valore senza dover sincronizzare manualmente più punti del codice.
+  const verVal = el('div', 'settings-row-val', d.appVersion || _currentAppVersion || '?');
   const chBtn = btnWithIcon('btn btn-sm btn-green btn-with-icon', 'changelog', ' Changelog');
   chBtn.title = 'Mostra storico versioni';
   chBtn.addEventListener('click', () => openChangelogModal());
@@ -4394,11 +4464,12 @@ async function termCreateTab(opts = {}) {
   const id = termPickTabId();
   const body = document.getElementById('terminal-drawer-body');
 
-  // Spawn pty lato main
+  // Spawn pty lato main (v1.0.75: se nessuno shell esplicito, usa la
+  // preferredShell scelta in Impostazioni; null = default di piattaforma)
   const r = await window.claudeAPI.pty.spawn({
     cwd:   opts.cwd   || termState.caps?.defaultCwd,
     title: opts.title || null,
-    shell: opts.shell || null,
+    shell: opts.shell || termState.preferredShell || null,
     cols:  80,
     rows:  24,
   });

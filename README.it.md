@@ -10,6 +10,8 @@ Gestisci plugin, marketplace, skill, agent, MCP server, hook, statistiche, quote
 [![License: AGPL v3+](https://img.shields.io/badge/License-AGPL%20v3+-d97757.svg)](LICENSE)
 [![Version](https://img.shields.io/badge/version-1.0.74-d97757.svg)](CHANGELOG.md)
 
+[![Dona via PayPal](https://img.shields.io/badge/%E2%98%95%20Supporta%20il%20progetto-Dona%20via%20PayPal-d97757?logo=paypal&logoColor=white)](https://paypal.me/maxymizebusiness)
+
 [English README »](README.md) · [🇮🇹 Italiano (questo file)](README.it.md)
 
 </div>
@@ -282,6 +284,22 @@ CLACOROO è distribuito nella speranza che sia utile, ma SENZA ALCUNA GARANZIA; 
 - ❌ **Non puoi** trasformarlo in un prodotto SaaS chiuso senza ridistribuire il codice modificato
 
 Per usi commerciali che non possono rispettare i termini AGPL, è disponibile una licenza commerciale separata su richiesta: scrivi a `info@maxymizebusiness.com`.
+
+---
+
+## ☕ Supporta il progetto
+
+Se CLACOROO ti torna utile nel tuo workflow quotidiano, considera di supportarne lo sviluppo continuo con una donazione una tantum:
+
+[![Dona via PayPal](https://img.shields.io/badge/Dona-PayPal-00457C?logo=paypal&logoColor=white&style=for-the-badge)](https://paypal.me/maxymizebusiness)
+
+Le donazioni finanziano:
+- 🍎 Iscrizione Apple Developer Program (binari firmati + versione Mac App Store)
+- 🛠 Sviluppo continuo, bug fix e nuove feature
+- 📡 Infrastruttura (GitHub Releases, hosting, futuro cloud sync)
+- 💛 Tempo dedicato al supporto della community (issue, PR review, Discord)
+
+CLACOROO **è e resterà sempre gratuito e open source** (AGPL-3.0). Le donazioni sono completamente volontarie e non sbloccano alcuna feature aggiuntiva — è il vero spirito del software libero. Integrazioni **GitHub Sponsors** e **Buy Me a Coffee** in arrivo prossimamente.
 
 ---
 

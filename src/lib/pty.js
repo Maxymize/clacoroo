@@ -72,6 +72,40 @@ function defaultCwd() {
   return os.homedir();
 }
 
+// v1.0.75 — Lista delle shell candidate disponibili sul sistema. Usata dal
+// selettore in Impostazioni per offrire alternative ($SHELL / bash / fish /
+// pwsh ecc.). Ritorna [{path,label,kind}] ordinato per "rilevanza" sulla
+// piattaforma. Le entry sono già verificate con fs.existsSync.
+function listShells() {
+  const out = [];
+  const seen = new Set();
+  const push = (p, label, kind) => {
+    if (!p || seen.has(p)) return;
+    try { if (!fs.existsSync(p)) return; } catch { return; }
+    seen.add(p);
+    out.push({ path: p, label, kind });
+  };
+
+  if (process.platform === 'win32') {
+    push('C:\\Program Files\\PowerShell\\7\\pwsh.exe', 'PowerShell 7 (pwsh)', 'pwsh');
+    push('C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe', 'Windows PowerShell', 'powershell');
+    push(process.env.COMSPEC || 'C:\\Windows\\System32\\cmd.exe', 'Command Prompt (cmd)', 'cmd');
+    // Git-Bash o WSL non sono pty native via node-pty su Win: non li offriamo.
+  } else {
+    if (process.env.SHELL) {
+      const lbl = path.basename(process.env.SHELL) + ' ($SHELL)';
+      push(process.env.SHELL, lbl, 'env');
+    }
+    push('/bin/zsh', 'zsh (/bin/zsh)', 'zsh');
+    push('/bin/bash', 'bash (/bin/bash)', 'bash');
+    push('/usr/local/bin/fish', 'fish (/usr/local/bin/fish)', 'fish');
+    push('/opt/homebrew/bin/fish', 'fish (Homebrew arm64)', 'fish');
+    push('/usr/bin/fish', 'fish (/usr/bin/fish)', 'fish');
+    push('/bin/sh', 'sh (POSIX)', 'sh');
+  }
+  return out;
+}
+
 // Validation: cwd deve esistere ed essere una directory. Il path viene
 // passato come argomento a un binario shell, non a una shell stringa,
 // quindi non c'è injection, ma vogliamo evitare crash da path inesistente.
@@ -198,6 +232,7 @@ module.exports = {
   getLoadError,
   defaultShell,
   defaultCwd,
+  listShells,
   spawn,
   write,
   resize,

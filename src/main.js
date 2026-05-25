@@ -793,6 +793,9 @@ ipcMain.handle('pty:capabilities', async () => ({
   defaultShell: PTY.isAvailable() ? PTY.defaultShell() : null,
   defaultCwd: PTY.defaultCwd(),
   platform: process.platform,
+  // v1.0.75 — lista shell candidate per il selettore in Impostazioni
+  availableShells: PTY.isAvailable() ? PTY.listShells() : [],
+  preferredShell: (readState() || {}).preferredShell || null,
 }));
 
 ipcMain.handle('pty:spawn', async (_e, opts = {}) => {
