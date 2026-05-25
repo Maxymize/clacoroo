@@ -1,5 +1,14 @@
 # Changelog
 
+## v1.0.79 — 2026-05-25 — Install zero-touch: ad-hoc signing automatico + hardened runtime off
+
+Risolto il dialog **"CLACOROO è danneggiato e non può essere aperto"** che bloccava gli utenti che scaricavano il `.dmg` dalla release pubblica. Causa: hardened runtime attivo + nessuna firma → macOS Sequoia lo marca come "corrupt" (vedi build precedenti senza signing). Da v1.0.79 in poi l'utente vede solo il prompt standard Gatekeeper **"Apri app scaricata?"** → click "Apri" → app funziona. Zero comandi `sudo`, zero `codesign` manuale.
+
+- [FEATURE] `build/after-pack.js`: hook electron-builder che applica **firma ad-hoc** (`codesign --force --deep --sign -`) al `.app` appena impacchettato (per ogni arch arm64+x64). Soddisfa il requirement di firma di Gatekeeper senza necessitare un certificato Apple Developer ID
+- [FIX] `package.json` `"hardenedRuntime": true` → `false`: hardened runtime senza firma "vera" notarizzata è il motivo per cui macOS dichiara "damaged". Disabilitarlo permette ad-hoc signing di essere accettato come signing valida
+- [REFACTOR] Rimossi campi `entitlements` + `entitlementsInherit` da `package.json` (irrilevanti senza hardened runtime)
+- [DOCS] README.md/README.it.md: aggiornata sezione "macOS Gatekeeper" — il workaround `sudo xattr` + `sudo codesign` non è più necessario. Eventualmente solo `xattr -cr ~/Downloads/CLACOROO-*.dmg` se il browser ha aggiunto quarantine al container
+
 ## v1.0.78 — 2026-05-25 — Skill/Agent launcher: solo ⎘ copia (rimosso ▶)
 
 Terza iterazione del launcher (dopo v1.0.75 con `claude -p` e v1.0.77 con `claude` interattivo + pre-typing). Il ▶ è stato rimosso definitivamente: per skill/agent con scope **globale** la tab partiva da HOME, quindi claude si avviava senza contesto di progetto — inutile. Aggiungere un picker progetto avrebbe complicato il flusso senza vantaggio reale rispetto al copy. L'utente apre il proprio terminale nel progetto giusto, lancia claude e incolla `/<skill-name>`: CLACOROO elimina solo l'attrito del "qual era il nome esatto?", senza fare assunzioni sul contesto di lavoro.

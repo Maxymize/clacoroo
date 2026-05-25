@@ -1,6 +1,6 @@
 {
   "name": "clacoroo",
-  "version": "1.0.78",
+  "version": "1.0.79",
   "description": "CLACOROO — Claude Code Control Room: pannello visuale per plugin, marketplace, skill e agent",
   "main": "src/main.js",
   "author": {
@@ -26,6 +26,7 @@
     "appId": "com.maxymize.clacoroo",
     "productName": "CLACOROO",
     "copyright": "Copyright © 2026 MAXYMIZE",
+    "afterPack": "./build/after-pack.js",
     "directories": {
       "output": "dist",
       "buildResources": "build"
@@ -63,10 +64,8 @@
       ],
       "icon": "assets/icon.icns",
       "darkModeSupport": true,
-      "hardenedRuntime": true,
+      "hardenedRuntime": false,
       "gatekeeperAssess": false,
-      "entitlements": "build/entitlements.mac.plist",
-      "entitlementsInherit": "build/entitlements.mac.plist",
       "extendInfo": {
         "NSHumanReadableCopyright": "Copyright © 2026 MAXYMIZE",
         "LSUIElement": false
