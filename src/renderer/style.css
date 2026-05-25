@@ -2672,6 +2672,37 @@ body {
   color: var(--text-dim);
   font-style: italic;
 }
+
+/* v1.0.85 — Pack G v2: reconnect type badge sotto status + bottoni azione */
+.mcp-card-reconnect-type {
+  display: flex; align-items: center; gap: 8px;
+  margin-top: 6px;
+  font-size: 10px;
+}
+.mcp-rc-label {
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  font-weight: 700;
+}
+.mcp-rc-type {
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  cursor: help;
+}
+.mcp-rc-type-claude-ai-oauth { background: rgba(106,155,204,.22); color: #9cc1ea; }
+.mcp-rc-type-http-oauth      { background: rgba(167,139,250,.22); color: #c4b5fd; }
+.mcp-rc-type-stdio-wrapper   { background: rgba(120,140,93,.22); color: #b8c79a; }
+
+.mcp-card-actions {
+  display: flex; flex-wrap: wrap; gap: 6px;
+  margin-bottom: 6px;
+}
+.mcp-card-actions .btn { font-size: 11px; padding: 4px 10px; }
 .context-note {
   font-size: 11px;
   color: var(--text-dim);

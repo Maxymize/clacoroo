@@ -704,15 +704,37 @@ ipcMain.handle('get-mcp', async (_e, { force } = {}) => {
   }
   const list = await MCP.runMcpList(CLAUDE_BIN);
   const declarations = MCP.readPluginMcpDeclarations();
+  // v1.0.85 — Pack G v2: arricchisci ogni server con reconnect info per il
+  // tipo di azione di riconnessione consigliata (claude.ai OAuth / HTTP OAuth /
+  // stdio wrapper). Renderer la usa per pittare bottoni contestuali sulle card.
+  const serversEnriched = (list.servers || []).map(srv => ({
+    ...srv,
+    reconnect: MCP.detectReconnectType(srv),
+  }));
   MCP_CACHE = {
     ok: list.ok,
     error: list.error || null,
-    servers: list.servers,
+    servers: serversEnriched,
     declarations,  // utili per arricchire (marketplace name, args, ecc.)
     fetchedAt: Date.now(),
   };
   MCP_CACHE_AT = Date.now();
   return MCP_CACHE;
+});
+
+// v1.0.85 — Pack G v2: cancella entry di un MCP da mcp-needs-auth-cache.json.
+// Operazione safe: NON tocca i token reali (che vivono nel keychain Claude
+// Code o lato server claude.ai), solo il cache locale. Al prossimo `claude
+// mcp list` il cache si ripopola in base allo stato server-side reale.
+ipcMain.handle('mcp:clear-auth-cache', async (_e, { serverId } = {}) => {
+  if (typeof serverId !== 'string' || !serverId) {
+    return { ok: false, error: 'serverId invalido' };
+  }
+  const result = MCP.clearAuthCacheEntry(serverId);
+  if (result.ok) {
+    MCP_CACHE = null; MCP_CACHE_AT = 0;  // invalida cache renderer
+  }
+  return result;
 });
 
 // v1.0.27 — Pack A: account/auth (Claude Max plan). Cache 5min: i dati

@@ -1,5 +1,47 @@
 # Changelog
 
+## v1.0.85 — 2026-05-26 — Pack G v2: MCP reconnect from CLACOROO (3 azioni contestuali per tipo MCP)
+
+Risposta alla richiesta utente: "aggiungere task per riconnettere gli MCP da dentro CLACOROO". Discovery completata, implementazione MVP delle 3 azioni contestuali per ogni server in `Needs Auth`. CLACOROO ora distingue 3 pattern MCP e offre l'azione più adatta a ognuno, sempre con un fallback "↗ Apri in terminale" universale. **Niente manipolazione diretta dei token** (rispettato vincolo "CLACOROO non scrive mai nel keychain di Claude Code") — si agisce solo sul cache locale `mcp-needs-auth-cache.json`.
+
+### Discovery (findings)
+
+- **3 tipi di MCP osservati** sull'installazione reale:
+  1. `claude.ai global` (Drive/Gmail/Calendar) — OAuth server-side, token nel cloud claude.ai. Riautorizzare dal sito
+  2. `plugin HTTP/SSE` (Cloudflare/Supabase/Replicate) — OAuth client-side, callback su porta locale. Si triggera durante sessione `claude` interactive
+  3. `plugin stdio` (neon via mcp-remote, context7 via npx, claude-mem via sh) — processi locali. Se richiedono auth è il wrapper a farlo (es. `mcp-remote` apre OAuth verso server remoto)
+- **Token reali off-limits** per CLACOROO: vivono nel keychain macOS (`security` CLI in modalità system, non scriptable senza permessi profondi) oppure server-side claude.ai. Manipolare = rischio + violazione policy
+- **Cache locale** `~/.claude/mcp-needs-auth-cache.json` contiene SOLO entry "needs auth" con timestamp + id (per claude.ai). È safe rimuovere entry: al prossimo `claude mcp list` Claude Code rifà health-check
+- **`claude mcp` CLI** non espone `reconnect`/`auth`. Il flow OAuth si triggera automaticamente nelle sessioni interactive. Strategia CLACOROO: **facilitare l'accesso al flow** (apri terminale, pre-digita comando, link claude.ai), non sostituirlo
+
+### Backend (`src/lib/mcp.js` + `src/main.js`)
+
+- [FEATURE] **`detectReconnectType(srv)`**: ritorna `{ type, typeLabel, description, actions }` per ogni server, con i 3 tipi mappati sopra. Le azioni hanno `kind` strutturato: `open-url` (apre browser), `open-terminal` (drawer integrato + comando), `clear-cache` (rimuove entry da `mcp-needs-auth-cache.json`)
+- [FEATURE] **`clearAuthCacheEntry(serverId)`**: rimuove l'entry dal cache (operazione safe, non tocca i token reali). Invalida automaticamente la cache MCP renderer per refresh in-place
+- [FEATURE] **IPC `mcp:clear-auth-cache`** + bridge preload `mcpClearAuthCache(serverId)`
+- [FEATURE] **`get-mcp` arricchito**: ogni server ritornato ora include il campo `reconnect` con detection automatica del tipo
+
+### Frontend (`src/renderer/app.js` + `style.css`)
+
+- [FEATURE] **Badge "Reconnect:" sotto status** sulle card MCP non-connected: colore differenziato per tipo (`mcp-rc-type-claude-ai-oauth` blu, `http-oauth` viola, `stdio-wrapper` verde). Tooltip = descrizione lunga del meccanismo
+- [FEATURE] **Footer card MCP** ridisegnato per `status !== 'connected'`: lista bottoni azione (1-2 per server) + descrizione contestuale. Bottoni `btn-primary` (apri URL / apri terminale) + `btn-ghost` (clear cache)
+- [FEATURE] **`runMcpReconnectAction(srv, act)`** dispatcher: routing su `kind` con toast di feedback + re-render automatico per `clear-cache`
+- [FEATURE] **`open-terminal` action**: riusa `openTerminalWithCommand('claude')` già esistente (Pack B v1.0.69) — apre il drawer integrato CLACOROO, nuova tab, lancia `claude` interactive. L'utente vede il prompt OAuth e completa nella TUI ufficiale
+- [STYLE] Nuove classi `.mcp-card-reconnect-type` / `.mcp-rc-label` / `.mcp-rc-type` / `.mcp-card-actions` con palette dedicata per i 3 tipi reconnect
+
+### Non-goals (intenzionali, da NON fare)
+
+- ❌ **Non scriviamo nel keychain Claude Code**: violerebbe il vincolo CLAUDE.md. Per cancellare i token reali l'utente deve usare gli strumenti nativi (Keychain Access / `wrangler logout` / ecc.) — CLACOROO può solo aprire il flow
+- ❌ **Non intercettiamo i callback OAuth con un server HTTP locale**: sarebbe man-in-the-middle del flow Claude Code, fragile e fuori scope
+- ❌ **Non spawniamo `claude mcp auth`** (non esiste): si lancia `claude` interactive nel terminale integrato — Claude Code prompta l'OAuth alla prima chiamata di tool MCP
+
+### Backlog Pack G v2 (resta in TASK.md per v1.0.86+)
+
+- Disable/Enable singolo server senza disabilitare l'intero plugin
+- View tools (mini-client MCP JSON-RPC `tools/list`)
+- Remove user-added server (`claude mcp remove <name>`)
+- Add MCP da CLACOROO (form modal → `claude mcp add`)
+
 ## v1.0.84 — 2026-05-25 — Sidebar icons: refactor completo a Lucide (MIT, self-hosted inline)
 
 Sostituite tutte e 10 le icone della sidebar con il set [Lucide](https://lucide.dev/) (MIT). Le vecchie erano un mix di Heroicons v1 solid (20×20 fill) eterogeneo, con due casi problematici segnalati dall'utente: MCP sembrava "una mutanda" (era un sandwich di archi), Hooks era un mosaico astratto non riconoscibile come uncino.

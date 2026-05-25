@@ -32,6 +32,7 @@ contextBridge.exposeInMainWorld('claudeAPI', {
   getStats:             ()                => ipcRenderer.invoke('get-stats'),
   updateSettings:       (patch)           => ipcRenderer.invoke('update-settings',        patch),
   getMcp:               (opts)            => ipcRenderer.invoke('get-mcp',                opts || {}),
+  mcpClearAuthCache:    (serverId)        => ipcRenderer.invoke('mcp:clear-auth-cache',   { serverId }),
   getAccount:           (opts)            => ipcRenderer.invoke('get-account',            opts || {}),
   accountLogout:        ()                => ipcRenderer.invoke('account-logout'),
   getUsage:             (opts)            => ipcRenderer.invoke('get-usage',              opts || {}),

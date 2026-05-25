@@ -166,10 +166,94 @@ function fastEstimate(blockedFullIds) {
   return { total, connected, needsAuth: needsAuthCount };
 }
 
+// v1.0.85 — Pack G v2: Reconnect MCP from CLACOROO
+//
+// Detection del "tipo di riconnessione" appropriato per ogni MCP server.
+// Strategia distinta per i 3 pattern reali:
+//
+//   1. `claude.ai` global (Drive/Gmail/Calendar): OAuth server-side gestito
+//      da claude.ai. Token vivono nel cloud, l'utente riautorizza dal sito.
+//      Reconnect = aprire claude.ai/settings/connectors nel browser.
+//
+//   2. Plugin HTTP/SSE (Cloudflare/Supabase/...): OAuth client-side. Claude
+//      Code apre il browser su un OAuth flow durante una sessione interactive
+//      e gestisce il callback su una porta locale. CLACOROO non può
+//      intercettare il flow → suggerisce di lanciare `claude` nel terminale
+//      integrato (il prompt OAuth comparirà alla prima invocazione di un tool).
+//
+//   3. Plugin stdio (npx mcp-remote, sh -c node script, ...): processo locale
+//      che parte on-demand. Niente OAuth da fare. Se `needsAuth`, è
+//      tipicamente perché il wrapper (es. mcp-remote) sta facendo OAuth verso
+//      un servizio remoto → stesso pattern del #2.
+//
+// Ritorna sempre un oggetto strutturato { type, description, actions[] }
+// con actions immutabili dal punto di vista renderer (kind + label + payload).
+function detectReconnectType(srv) {
+  if (!srv) return null;
+
+  if (srv.scope === 'builtin') {
+    return {
+      type: 'claude-ai-oauth',
+      typeLabel: 'OAuth claude.ai',
+      description: 'MCP integrato di Claude.ai. La riautorizzazione avviene dal sito web (i token vivono lato server).',
+      actions: [
+        { kind: 'open-url', label: '↗ Riautorizza su claude.ai', url: 'https://claude.ai/settings/connectors' },
+        { kind: 'clear-cache', label: '🚫 Rimuovi da cache "Needs auth"' },
+      ],
+    };
+  }
+
+  if (srv.transport === 'http' || srv.transport === 'sse') {
+    return {
+      type: 'http-oauth',
+      typeLabel: 'OAuth in sessione claude',
+      description: 'Server HTTP/SSE gestito dal plugin. Il flusso OAuth si triggera automaticamente quando lanci `claude` in modalità interactive — segui il prompt nel terminale.',
+      actions: [
+        { kind: 'open-terminal', label: '↗ Apri claude (OAuth interactive)', command: 'claude' },
+        { kind: 'clear-cache', label: '🚫 Rimuovi da cache "Needs auth"' },
+      ],
+    };
+  }
+
+  // stdio: tipicamente non richiede auth. Se è "needsAuth" è perché un wrapper
+  // (mcp-remote / proxy) sta facendo OAuth verso un servizio remoto.
+  return {
+    type: 'stdio-wrapper',
+    typeLabel: 'Wrapper stdio',
+    description: 'Server stdio locale. Se richiede auth, è il wrapper (es. mcp-remote) a fare OAuth — completalo lanciando `claude`.',
+    actions: [
+      { kind: 'open-terminal', label: '↗ Apri claude (per OAuth wrapper)', command: 'claude' },
+      { kind: 'clear-cache', label: '🚫 Rimuovi da cache "Needs auth"' },
+    ],
+  };
+}
+
+// Rimuove l'entry per `serverId` da mcp-needs-auth-cache.json. Al prossimo
+// `claude mcp list` Claude Code rifarà la health-check; se l'utente ha
+// nel frattempo riautorizzato lato server (claude.ai o OAuth plugin), il
+// server tornerà `Connected`, altrimenti tornerà `Needs auth` e il cache
+// si ripopolerà. Operazione safe (non tocca i token reali, solo il cache).
+function clearAuthCacheEntry(serverId) {
+  try {
+    if (!fs.existsSync(NEEDS_AUTH)) return { ok: true, removed: false };
+    const cache = readNeedsAuthCache();
+    if (!Object.prototype.hasOwnProperty.call(cache, serverId)) {
+      return { ok: true, removed: false };
+    }
+    delete cache[serverId];
+    fs.writeFileSync(NEEDS_AUTH, JSON.stringify(cache, null, 0));
+    return { ok: true, removed: true };
+  } catch (e) {
+    return { ok: false, error: e.message };
+  }
+}
+
 module.exports = {
   parseListLine,
   runMcpList,
   readPluginMcpDeclarations,
   readNeedsAuthCache,
   fastEstimate,
+  detectReconnectType,
+  clearAuthCacheEntry,
 };

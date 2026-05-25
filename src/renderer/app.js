@@ -3401,18 +3401,74 @@ function buildMcpCard(srv) {
     body.appendChild(stRow);
   }
 
+  // v1.0.85 — Pack G v2: badge "tipo di riconnessione" sotto status, visibile
+  // solo per server che NON sono connected (per non rumoreggiare il caso ok).
+  if (srv.reconnect && srv.status !== 'connected') {
+    const rcRow = el('div', 'mcp-card-reconnect-type');
+    rcRow.appendChild(el('span', 'mcp-rc-label', 'Reconnect'));
+    const typeBadge = el('span', 'mcp-rc-type mcp-rc-type-' + srv.reconnect.type, srv.reconnect.typeLabel);
+    typeBadge.title = srv.reconnect.description;
+    rcRow.appendChild(typeBadge);
+    body.appendChild(rcRow);
+  }
+
   card.appendChild(body);
 
-  // Footer: placeholder per azioni (v1 sola lettura — vedi TASK Pack G)
+  // v1.0.85 — Footer arricchito con azioni reconnect contestuali per status
+  // !=connected (Pack G v2). Per connected mostra solo nota di sola-lettura.
   const footer = el('div', 'mcp-card-footer');
-  const hint = el('div', 'mcp-card-hint',
-    srv.status === 'needsAuth'
-      ? 'Apri Claude Code o IDE e completa OAuth quando richiesto'
-      : 'Solo lettura · azioni in arrivo');
-  footer.appendChild(hint);
+  if (srv.status === 'connected' || !srv.reconnect) {
+    const hint = el('div', 'mcp-card-hint',
+      srv.status === 'connected'
+        ? 'Connesso · niente azioni necessarie'
+        : 'Solo lettura · azioni in arrivo');
+    footer.appendChild(hint);
+  } else {
+    const actionsWrap = el('div', 'mcp-card-actions');
+    srv.reconnect.actions.forEach(act => {
+      const btn = el('button', 'btn btn-sm');
+      btn.textContent = act.label;
+      // Stile: open-url e open-terminal sono "primari" (accent), clear-cache è "ghost"
+      btn.classList.add(act.kind === 'clear-cache' ? 'btn-ghost' : 'btn-primary');
+      btn.title = act.kind === 'open-url' ? act.url
+        : act.kind === 'open-terminal' ? ('Apre nuovo tab terminale e lancia: ' + act.command)
+        : 'Cancella entry da mcp-needs-auth-cache.json (non tocca i token reali)';
+      btn.addEventListener('click', e => { e.stopPropagation(); runMcpReconnectAction(srv, act); });
+      actionsWrap.appendChild(btn);
+    });
+    footer.appendChild(actionsWrap);
+    const desc = el('div', 'mcp-card-hint', srv.reconnect.description);
+    footer.appendChild(desc);
+  }
   card.appendChild(footer);
 
   return card;
+}
+
+// v1.0.85 — Pack G v2: dispatcher delle 3 azioni reconnect.
+async function runMcpReconnectAction(srv, act) {
+  if (act.kind === 'open-url') {
+    await window.claudeAPI.openExternal(act.url);
+    toast('Apro ' + act.url + ' nel browser', 'info');
+    return;
+  }
+  if (act.kind === 'open-terminal') {
+    // Apre il drawer terminale + nuova tab + lancia `claude` interactive.
+    // Pattern identico a quello del pannello Account (`claude auth login`).
+    await openTerminalWithCommand(act.command);
+    return;
+  }
+  if (act.kind === 'clear-cache') {
+    const r = await window.claudeAPI.mcpClearAuthCache(srv.id);
+    if (!r.ok) { toast('Errore: ' + r.error, 'error'); return; }
+    toast(r.removed
+      ? 'Entry "' + srv.id + '" rimossa dalla cache. Aggiorna stato live per ricontrollare.'
+      : 'Entry non presente in cache (già pulita)', r.removed ? 'success' : 'info');
+    // Invalida cache renderer + re-render
+    mcpCache = null;
+    if (state.section === 'mcp') renderMcp();
+    return;
+  }
 }
 
 /* ── ACCOUNT (v1.0.27, Pack A) ────────────────────────────────────────── */
