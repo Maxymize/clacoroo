@@ -220,6 +220,14 @@ function scanCache() {
         agentHealth[a] = checkMarkdownHealth(path.join(agentsDir, a + '.md'));
       });
 
+      // v1.0.82 — installedAt per ordinamento "Aggiunti di recente" in sezione
+      // Plugin: birthtime della dir cache del plugin (timestamp di prima creazione).
+      let installedAt = '';
+      try {
+        const st = fs.statSync(pluginPath);
+        installedAt = (st.birthtime || st.ctime || st.mtime).toISOString();
+      } catch { /* ignore */ }
+
       const key = `${pluginName}@${mkt}`;
       details[key] = {
         name:        meta.name        || pluginName,
@@ -227,6 +235,7 @@ function scanCache() {
         version:     meta.version     || ver,
         author:      meta.author      || '',
         path:        root,
+        installedAt,
         skills,
         agents,
         skillHealth,

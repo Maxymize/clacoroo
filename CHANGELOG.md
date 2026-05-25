@@ -1,5 +1,21 @@
 # Changelog
 
+## v1.0.82 — 2026-05-25 — Ordinamento universale (Pack L): dropdown sort in Plugin / Skill / Agent / MCP
+
+Replicato in tutte le sezioni a card il pattern di ordinamento già presente in Marketplace dalla v1.0.55, per coerenza UX. Chi impara la dropdown "Ordina:" in una sezione la ritrova ovunque, con preferenza persistita per sezione.
+
+- [FEATURE] **Sezione Plugin**: nuova dropdown "Ordina:" nel countRow con 4 modalità — `name-asc` (A→Z default), `name-desc` (Z→A), `installed-desc` (aggiunti di recente), `installed-asc` (meno di recente). `state.pluginSort` persiste in `state.json`
+- [FEATURE] **Sezione Skill**: dropdown sort con 2 modalità — alfabetico A→Z / Z→A. `state.skillSort` persistito
+- [FEATURE] **Sezione Agent**: identico a Skill — `state.agentSort` persistito
+- [FEATURE] **Sezione MCP**: dropdown sort con 3 modalità — alfabetico A→Z / Z→A + status (`connected` first → `needs-auth` → `disconnected` → resto). `state.mcpSort` persistito
+- [FEATURE] **Backend `scanCache`** (`src/main.js`): aggiunto campo `installedAt` (ISO date da `fs.statSync(pluginPath).birthtime`) ad ogni plugin, per supportare l'ordinamento "Aggiunti di recente" lato renderer senza nuove letture FS
+- [REFACTOR] `src/renderer/app.js`: nuovi helper condivisi `PLUGIN_SORTERS`, `NAME_SORTERS`, `MCP_SORTERS`, `MCP_STATUS_ORDER`, `SORT_OPTIONS` (labels italiani per ogni modalità) + `renderSortDropdown(currentSort, options, onChange)` che genera la `<select>` standard con la stessa estetica di `mkt-sort-*`. Riduce boilerplate fra sezioni
+- [REFACTOR] `renderListSection(items, ...)` accetta nuovo parametro opzionale `sortConfig` (current + options + onChange) renderizzato nell'header — sfruttato da `renderSkills`/`renderAgents`
+- [FIX] `applyPluginFilters` indexing: dopo sort, `state.plugins[i]` non corrispondeva più all'ordine delle card nel grid. Risolto memorizzando l'array ordinato in `state._renderedPlugins` e leggendolo come fonte di verità in `applyPluginFilters`
+- [STYLE] `src/renderer/style.css`: nuove classi `.sort-dropdown-wrap`, `.sort-dropdown-label`, `.sort-dropdown` (clonate da `.mkt-sort-*` con scope generico). Stessa altezza/padding/colori della dropdown Marketplace per consistenza visiva fra le 5 sezioni
+- [PERSISTENCE] `init()` ripristina `pluginSort/skillSort/agentSort/mcpSort` da `state.json` come fa già con `mktSort` (default per ognuno: `name-asc`)
+- [BACKLOG CLOSED] Pack F · "rimuovi ⎘ per-riga + copia globale in modal" segnato come done (era stato implementato in v1.0.81)
+
 ## v1.0.81 — 2026-05-25 — Modal Skill/Agent: copia globale in header (rimosso ⎘ per-riga)
 
 Refactor del bottone copia introdotto in v1.0.78: il `⎘` sulle card di skill/agent copiava solo il nome del chip stesso, già visibile a colpo d'occhio → bassissimo valore. Sostituito con un singolo bottone copia in alto a destra del modal markdown viewer (accanto alla X di chiusura, con margine 16px) che copia l'**intero contenuto** del documento aperto.

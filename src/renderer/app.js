@@ -50,20 +50,86 @@ const state = {
   //   'updated-desc'   aggiornati di recente prima
   //   'updated-asc'    aggiornati meno di recente prima (utile per scoprire stale)
   mktSort: 'default',
+  // v1.0.82 — Pack L: ordinamento Plugin/Skill/Agent/MCP
+  pluginSort: 'name-asc',
+  skillSort:  'name-asc',
+  agentSort:  'name-asc',
+  mcpSort:    'name-asc',
 };
 
 const MKT_SORTERS = {
   'default':      (a, b) => b.available - a.available || b.installed - a.installed,
-  'added-desc':   (a, b) => mktDateValue(b.addedAt) - mktDateValue(a.addedAt),
-  'added-asc':    (a, b) => mktDateValue(a.addedAt) - mktDateValue(b.addedAt),
-  'updated-desc': (a, b) => mktDateValue(b.lastUpdated) - mktDateValue(a.lastUpdated),
-  'updated-asc':  (a, b) => mktDateValue(a.lastUpdated) - mktDateValue(b.lastUpdated),
+  'added-desc':   (a, b) => dateMs(b.addedAt) - dateMs(a.addedAt),
+  'added-asc':    (a, b) => dateMs(a.addedAt) - dateMs(b.addedAt),
+  'updated-desc': (a, b) => dateMs(b.lastUpdated) - dateMs(a.lastUpdated),
+  'updated-asc':  (a, b) => dateMs(a.lastUpdated) - dateMs(b.lastUpdated),
 };
-function mktDateValue(s) { return s ? Date.parse(s) || 0 : 0; }
+function dateMs(s) { return s ? Date.parse(s) || 0 : 0; }
+// Backwards-compat alias (era usato come `mktDateValue`)
+function mktDateValue(s) { return dateMs(s); }
 function applyMktSort() {
   const sorter = MKT_SORTERS[state.mktSort] || MKT_SORTERS['default'];
   state.mktList.sort(sorter);
 }
+
+/* ── v1.0.82 — Pack L: ordinamento universale per Plugin/Skill/Agent/MCP ── */
+const PLUGIN_SORTERS = {
+  'name-asc':       (a, b) => (a.id || '').localeCompare(b.id || ''),
+  'name-desc':      (a, b) => (b.id || '').localeCompare(a.id || ''),
+  'installed-desc': (a, b) => dateMs(b.installedAt) - dateMs(a.installedAt),
+  'installed-asc':  (a, b) => dateMs(a.installedAt) - dateMs(b.installedAt),
+};
+const NAME_SORTERS = {  // skill, agent (name-only)
+  'name-asc':  (a, b) => (a.name || '').localeCompare(b.name || ''),
+  'name-desc': (a, b) => (b.name || '').localeCompare(a.name || ''),
+};
+const MCP_STATUS_ORDER = { connected: 0, needsAuth: 1, error: 2, unknown: 3 };
+const MCP_SORTERS = {
+  'name-asc':   (a, b) => (a.name || '').localeCompare(b.name || ''),
+  'name-desc':  (a, b) => (b.name || '').localeCompare(a.name || ''),
+  'status':     (a, b) => (MCP_STATUS_ORDER[a.status] ?? 9) - (MCP_STATUS_ORDER[b.status] ?? 9)
+                          || (a.name || '').localeCompare(b.name || ''),
+};
+
+// Renderizza una <select> di ordinamento standardizzata. opts: [{key,label},...]
+function renderSortDropdown(currentKey, opts, onChange) {
+  const wrap = el('div', 'sort-dropdown-wrap');
+  wrap.appendChild(el('span', 'sort-dropdown-label', 'Ordina:'));
+  const sel = el('select', 'sort-dropdown');
+  opts.forEach(o => {
+    const opt = document.createElement('option');
+    opt.value = o.key;
+    opt.textContent = o.label;
+    if (o.key === currentKey) opt.selected = true;
+    sel.appendChild(opt);
+  });
+  sel.addEventListener('change', () => onChange(sel.value));
+  wrap.appendChild(sel);
+  return wrap;
+}
+
+// Opzioni standard per sezione (label IT)
+const SORT_OPTIONS = {
+  plugin: [
+    { key: 'name-asc',       label: 'Nome (A → Z)' },
+    { key: 'name-desc',      label: 'Nome (Z → A)' },
+    { key: 'installed-desc', label: 'Installati di recente' },
+    { key: 'installed-asc',  label: 'Installati meno di recente' },
+  ],
+  skill: [
+    { key: 'name-asc',  label: 'Nome (A → Z)' },
+    { key: 'name-desc', label: 'Nome (Z → A)' },
+  ],
+  agent: [
+    { key: 'name-asc',  label: 'Nome (A → Z)' },
+    { key: 'name-desc', label: 'Nome (Z → A)' },
+  ],
+  mcp: [
+    { key: 'name-asc',  label: 'Nome (A → Z)' },
+    { key: 'name-desc', label: 'Nome (Z → A)' },
+    { key: 'status',    label: 'Stato (Connected prima)' },
+  ],
+};
 
 /* ── DOM REFS ─────────────────────────────────────────────────────────── */
 const $ = id => document.getElementById(id);
@@ -105,6 +171,11 @@ async function init() {
     applyMktSort();
     if (state.section === 'marketplaces') render();
   }
+  // v1.0.82 — restore sort preferences per Plugin/Skill/Agent/MCP
+  if (appState.pluginSort && PLUGIN_SORTERS[appState.pluginSort]) state.pluginSort = appState.pluginSort;
+  if (appState.skillSort  && NAME_SORTERS[appState.skillSort])   state.skillSort  = appState.skillSort;
+  if (appState.agentSort  && NAME_SORTERS[appState.agentSort])   state.agentSort  = appState.agentSort;
+  if (appState.mcpSort    && MCP_SORTERS[appState.mcpSort])      state.mcpSort    = appState.mcpSort;
   if (appState.lastSection && appState.lastSection !== 'dashboard') {
     switchToSection(appState.lastSection);
   }
@@ -243,6 +314,7 @@ function processData() {
       hasMcp:      cache.hasMcp      || false,
       hasHooks:    cache.hasHooks    || false,
       hookEvents:  cache.hookEvents  || [],
+      installedAt: cache.installedAt || '',
       blocked:     blocked.has(fullId),
       scope:       'global',
       tokensAlways: tokenInfo?.always_on  || 0,
@@ -825,17 +897,24 @@ function renderPlugins() {
 
   wrap.appendChild(bar);
 
-  // COUNT
+  // COUNT + SORT (v1.0.82)
   const countRow = el('div', 'section-header');
   const countSpan = el('span', 'section-count', '');
   countRow.appendChild(countSpan);
+  countRow.appendChild(renderSortDropdown(state.pluginSort, SORT_OPTIONS.plugin, async (key) => {
+    state.pluginSort = key;
+    await window.claudeAPI.setState({ pluginSort: key });
+    renderPlugins();
+  }));
   wrap.appendChild(countRow);
 
   // GRID
   const grid = el('div', 'cards-grid');
   let visible = 0;
 
-  state.plugins.forEach(p => {
+  const sortedPlugins = [...state.plugins].sort(PLUGIN_SORTERS[state.pluginSort] || PLUGIN_SORTERS['name-asc']);
+  state._renderedPlugins = sortedPlugins;  // usato da applyPluginFilters per indicizzazione corretta
+  sortedPlugins.forEach(p => {
     const card = buildPluginCard(p);
     const show = pluginMatchesFilter(p, f);
     card.style.display = show ? '' : 'none';
@@ -872,9 +951,10 @@ function pluginMatchesFilter(p, f) {
 
 function applyPluginFilters(grid) {
   const f = state.filters.plugins;
+  const arr = state._renderedPlugins || state.plugins;
   let visible = 0;
   grid.querySelectorAll('.plugin-card').forEach((card, i) => {
-    const p = state.plugins[i];
+    const p = arr[i];
     if (!p) return;
     const show = pluginMatchesFilter(p, f);
     card.style.display = show ? '' : 'none';
@@ -1650,7 +1730,7 @@ function renderSkills() {
     const at = s.plugin.lastIndexOf('@');
     return { name: s.name, plugin: s.plugin.slice(0, at), mkt: s.plugin.slice(at + 1), blocked: false, fullId: s.plugin, scope: 'local', projectName: s.projectName, projectPath: s.projectPath };
   });
-  const all = [...globals, ...locals].sort((a, b) => a.name.localeCompare(b.name));
+  const all = [...globals, ...locals].sort(NAME_SORTERS[state.skillSort] || NAME_SORTERS['name-asc']);
 
   renderListSection(all, 'skills', item => {
     const chip = el('div', 'skill-chip' + (item.scope === 'local' ? ' local-scope' : ' clickable') + (item.blocked ? ' blocked' : ''));
@@ -1666,7 +1746,15 @@ function renderSkills() {
       chip.addEventListener('click', () => openMarkdownPreview(item.fullId, 'skill', item.name));
     }
     return chip;
-  }, item => item.name + ' ' + item.plugin + ' ' + item.mkt + (item.projectName || ''), 'Cerca skill…', 'skill-grid');
+  }, item => item.name + ' ' + item.plugin + ' ' + item.mkt + (item.projectName || ''), 'skill-grid', {
+    currentKey: state.skillSort,
+    options: SORT_OPTIONS.skill,
+    onChange: async (key) => {
+      state.skillSort = key;
+      await window.claudeAPI.setState({ skillSort: key });
+      renderSkills();
+    },
+  });
 }
 
 /* ── AGENTS ───────────────────────────────────────────────────────────── */
@@ -1678,7 +1766,7 @@ function renderAgents() {
     const at = a.plugin.lastIndexOf('@');
     return { name: a.name, plugin: a.plugin.slice(0, at), mkt: a.plugin.slice(at + 1), fullId: a.plugin, scope: 'local', projectName: a.projectName, projectPath: a.projectPath };
   });
-  const all = [...globals, ...locals].sort((a, b) => a.name.localeCompare(b.name));
+  const all = [...globals, ...locals].sort(NAME_SORTERS[state.agentSort] || NAME_SORTERS['name-asc']);
 
   renderListSection(all, 'agents', item => {
     const chip = el('div', 'skill-chip' + (item.scope === 'local' ? ' local-scope' : ' clickable'));
@@ -1694,7 +1782,15 @@ function renderAgents() {
       chip.addEventListener('click', () => openMarkdownPreview(item.fullId, 'agent', item.name));
     }
     return chip;
-  }, item => item.name + ' ' + item.plugin + ' ' + item.mkt + (item.projectName || ''), 'Cerca agent…', 'skill-grid');
+  }, item => item.name + ' ' + item.plugin + ' ' + item.mkt + (item.projectName || ''), 'skill-grid', {
+    currentKey: state.agentSort,
+    options: SORT_OPTIONS.agent,
+    onChange: async (key) => {
+      state.agentSort = key;
+      await window.claudeAPI.setState({ agentSort: key });
+      renderAgents();
+    },
+  });
 }
 
 // v1.0.81 — Rimosso `appendRunButton` (era il bottone ⎘ per-riga delle card
@@ -1863,7 +1959,9 @@ function showMarkdownModal(name, kind, content) {
   closeBtn.focus();
 }
 
-function renderListSection(items, key, buildChip, searchFn, gridCls) {
+// v1.0.82 — `sortConfig` opzionale: { currentKey, options, onChange } iniettato
+// nell'header per esporre il dropdown sort (usato da renderSkills/renderAgents).
+function renderListSection(items, key, buildChip, searchFn, gridCls, sortConfig) {
   const f = state.filters[key] || { search: '' };
   const wrap = el('div');
 
@@ -1888,6 +1986,9 @@ function renderListSection(items, key, buildChip, searchFn, gridCls) {
   const hdr = el('div', 'section-header');
   const countEl = el('span', 'section-count', '');
   hdr.appendChild(countEl);
+  if (sortConfig) {
+    hdr.appendChild(renderSortDropdown(sortConfig.currentKey, sortConfig.options, sortConfig.onChange));
+  }
   wrap.appendChild(hdr);
 
   const grid = el('div', gridCls || 'skill-grid');
@@ -2760,10 +2861,15 @@ async function renderMcp() {
 
   wrap.appendChild(bar);
 
-  // Count + refresh button
+  // Count + sort + refresh button (v1.0.82 — sort)
   const headerRow = el('div', 'section-header');
   const countSpan = el('span', 'section-count', '');
   headerRow.appendChild(countSpan);
+  headerRow.appendChild(renderSortDropdown(state.mcpSort, SORT_OPTIONS.mcp, async (key) => {
+    state.mcpSort = key;
+    await window.claudeAPI.setState({ mcpSort: key });
+    renderMcp();
+  }));
   const refreshBtn = el('button', 'btn btn-sm btn-ghost', '↻ Aggiorna stato live');
   refreshBtn.title = 'Esegue `claude mcp list` con health-check (può richiedere qualche secondo)';
   refreshBtn.addEventListener('click', async () => {
@@ -2801,11 +2907,14 @@ async function renderMcp() {
     return;
   }
 
-  const servers = mcpCache.servers || [];
-  if (!servers.length) {
+  const rawServers = mcpCache.servers || [];
+  if (!rawServers.length) {
     grid.appendChild(el('div', 'mcp-empty', 'Nessun MCP server configurato.'));
     return;
   }
+
+  // v1.0.82 — sort applicato secondo state.mcpSort
+  const servers = [...rawServers].sort(MCP_SORTERS[state.mcpSort] || MCP_SORTERS['name-asc']);
 
   let visible = 0;
   servers.forEach(srv => {

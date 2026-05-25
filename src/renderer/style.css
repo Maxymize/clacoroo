@@ -2408,6 +2408,39 @@ body {
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
 }
 
+/* v1.0.82 — Pack L: dropdown sort universale (Plugin/Skill/Agent/MCP).
+   Stesso stile di `.mkt-sort-*` ma con classi generiche `.sort-dropdown-*`. */
+.sort-dropdown-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;  /* spinge a destra del count nel section-header */
+}
+.sort-dropdown-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+.sort-dropdown {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 5px 10px;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  transition: border-color .15s, box-shadow .15s;
+}
+.sort-dropdown:hover { border-color: color-mix(in srgb, var(--accent) 50%, var(--border)); }
+.sort-dropdown:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
 /* Plugin row nel modal Marketplace con Installa/Dettagli (v1.0.52) */
 .mkt-modal-plugin-row {
   display: flex;
