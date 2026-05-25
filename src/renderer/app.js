@@ -2942,7 +2942,10 @@ function paintAccountPanel(container, result) {
   const planBadge = el('span', 'account-plan-badge account-plan-' + (d.subscriptionType || 'unknown'));
   planBadge.textContent = (d.subscriptionType || '—').toUpperCase();
   head.appendChild(planBadge);
-  const status = el('span', 'account-status account-status-ok', '✓ Connesso');
+  // v1.0.69 — Status badge dinamico: parte come "Connesso" (verde) e diventa
+  // "Disconnesso" (rosso) se la call usage ritorna 401/403 (token scaduto +
+  // refresh fallito). In quel caso compare anche un bottone "Login terminale".
+  const status = el('span', 'account-status account-status-ok', '● Connesso');
   head.appendChild(status);
   card.appendChild(head);
 
@@ -2959,11 +2962,32 @@ function paintAccountPanel(container, result) {
   infoRow('Auth method', d.authMethod === 'claude.ai' ? 'claude.ai (OAuth)' : d.authMethod || '—');
   infoRow('API provider', d.apiProvider || '—');
 
+  // v1.0.69 — Pre-creo il bottone "Login terminale" (mostrato solo se token scaduto).
+  // Il callback di loadAccountUsage lo inserisce/rimuove dalle actions in base
+  // allo stato auth reale (401/403 dall'endpoint usage = token irrimediabilmente
+  // scaduto, niente più refresh possibile).
+  const loginBtn = el('button', 'btn btn-sm btn-primary', '↗ Login terminale');
+  loginBtn.title = 'Apre il terminale integrato e lancia `claude auth login`';
+  loginBtn.addEventListener('click', () => openTerminalWithCommand('claude auth login'));
+
   // v1.0.35 — Usage live (Session 5h, Weekly 7d, Weekly Sonnet) via endpoint
   // privato Anthropic. Render ottimistico se cache disponibile, swap on update.
   const usageSection = el('div', 'account-usage-section');
   card.appendChild(usageSection);
-  loadAccountUsage(usageSection);
+  loadAccountUsage(usageSection, (result) => {
+    const authBroken = result && !result.ok && (result.status === 401 || result.status === 403);
+    if (authBroken) {
+      status.className = 'account-status account-status-error';
+      status.textContent = '● Disconnesso';
+      if (loginBtn && !loginBtn.isConnected) actions.insertBefore(loginBtn, refreshBtn);
+    } else {
+      status.className = 'account-status account-status-ok';
+      status.textContent = '● Connesso';
+      if (loginBtn && loginBtn.isConnected) loginBtn.remove();
+    }
+    // Allinea anche la pill sidebar (usa lastUsageData appena aggiornato)
+    refreshSidebarAccountPill();
+  });
 
 
   // Actions
@@ -3064,6 +3088,7 @@ function refreshSidebarAccountPill() {
   const pill = document.getElementById('sidebar-account');
   if (!pill) return;
   pill.textContent = '';
+  pill.classList.remove('sidebar-account-broken');
   if (!accountCache || !accountCache.ok || !accountCache.data || !accountCache.data.loggedIn) {
     pill.style.display = 'none';
     return;
@@ -3076,7 +3101,17 @@ function refreshSidebarAccountPill() {
   emailEl.title = d.email || '';
   pill.appendChild(badge);
   pill.appendChild(emailEl);
-  pill.title = 'Account: ' + (d.email || '') + ' · click per aprire Impostazioni';
+  // v1.0.69 — Se l'ultimo fetch usage è andato in 401/403 evidenzio la pill
+  // (token irrimediabilmente scaduto, l'utente deve rifare login)
+  const broken = lastUsageData && !lastUsageData.ok && (lastUsageData.status === 401 || lastUsageData.status === 403);
+  if (broken) {
+    pill.classList.add('sidebar-account-broken');
+    const warn = el('span', 'sidebar-account-warn', '⚠');
+    pill.appendChild(warn);
+    pill.title = 'Token Claude scaduto — apri Impostazioni per rifare login';
+  } else {
+    pill.title = 'Account: ' + (d.email || '') + ' · click per aprire Impostazioni';
+  }
   pill.style.cursor = 'pointer';
   pill.onclick = () => switchToSection('settings');
 }
@@ -3170,17 +3205,22 @@ function paintUsageBars(container, usageData, opts = {}) {
   }
 }
 
-async function loadAccountUsage(container) {
+async function loadAccountUsage(container, onResult) {
   // 1. Render ottimistico se abbiamo già dati
   paintUsageBars(container, lastUsageData);
   // 2. Fetch fresco; cache server-side 60s evita roundtrip se cambi sezione
+  let data;
   try {
-    const data = await window.claudeAPI.getUsage({});
+    data = await window.claudeAPI.getUsage({});
     lastUsageData = data;
     paintUsageBars(container, data);
   } catch (e) {
-    if (!lastUsageData) paintUsageBars(container, { ok: false, error: e.message });
+    data = { ok: false, error: e.message };
+    if (!lastUsageData) paintUsageBars(container, data);
   }
+  // v1.0.69 — Notifica al chiamante (paintAccountPanel) per aggiornare badge
+  // Connesso↔Disconnesso in base allo status reale (es. 401/403 → token scaduto)
+  if (typeof onResult === 'function') onResult(data);
 }
 
 async function loadDashboardUsage(container, token) {
@@ -3592,7 +3632,7 @@ function renderSettings() {
   infoRow.appendChild(infoLeft);
   const infoRight = el('div');
   infoRight.style.cssText = 'display:flex;gap:10px;align-items:center;';
-  const verVal = el('div', 'settings-row-val', '1.0.68');
+  const verVal = el('div', 'settings-row-val', '1.0.69');
   const chBtn = btnWithIcon('btn btn-sm btn-green btn-with-icon', 'changelog', ' Changelog');
   chBtn.title = 'Mostra storico versioni';
   chBtn.addEventListener('click', () => openChangelogModal());
@@ -4252,6 +4292,28 @@ async function termCreateTab(opts = {}) {
 function termOpenNewTab() {
   if (!termState.open) termSetOpen(true);
   return termCreateTab({});
+}
+
+// v1.0.69 — Apre il drawer, crea una nuova tab in HOME ed esegue un comando.
+// Usato per: bottone "Login terminale" nel pannello Account (claude auth login),
+// future skill launcher (claude -p "<skill>"), ecc.
+async function openTerminalWithCommand(cmd, opts = {}) {
+  if (!termState.caps || !termState.caps.available) {
+    toast('Terminale integrato non disponibile su questa piattaforma', 'error');
+    return null;
+  }
+  if (!termState.open) termSetOpen(true);
+  const tab = await termCreateTab({
+    cwd:   opts.cwd   || termState.caps.defaultCwd,
+    title: opts.title || null,
+    shell: opts.shell || null,
+  });
+  if (!tab) return null;
+  // Aspetta che il pty sia pronto a ricevere input (la shell prima stampa il prompt)
+  setTimeout(() => {
+    try { window.claudeAPI.pty.write(tab.ptyId, cmd + '\r'); } catch {}
+  }, 350);
+  return tab;
 }
 
 function termActivateTab(id) {

@@ -1,5 +1,14 @@
 # Changelog
 
+## v1.0.69 — 2026-05-23 — Pannello Account: status Disconnesso + bottone Login terminale
+
+- [FIX] Pannello Account: status badge resta "Connesso" verde anche quando il token OAuth è scaduto e il refresh è fallito (401/403 da `/api/oauth/usage`)
+- [FEATURE] Status badge dinamico: diventa "● Disconnesso" rosso con pulse quando l'usage call ritorna 401/403
+- [FEATURE] Bottone "↗ Login terminale" appare in Account quando auth è broken: apre il terminale integrato e digita+esegue `claude auth login`
+- [FEATURE] Sidebar pill account: bordo rosso + icona ⚠ pulsante quando token scaduto, tooltip "Token Claude scaduto — apri Impostazioni per rifare login"
+- [FEATURE] Helper `openTerminalWithCommand(cmd, opts)` riutilizzabile per skill launcher (v1.0.70) e altri lanci da UI
+- [REFACTOR] `loadAccountUsage(container, onResult)` accetta callback con il risultato per permettere al pannello di aggiornare badge/bottoni in base allo status auth reale
+
 ## v1.0.68 — 2026-05-23 — Changelog viewer: formato sintetico con badge per categoria
 
 - [FEATURE] Badge colorati per categoria in ogni voce: FEATURE, FIX, IMPROVEMENT, SECURITY, REFACTOR, DOCS, CHORE

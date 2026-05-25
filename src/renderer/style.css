@@ -1501,6 +1501,11 @@ body {
   font-weight: 600;
 }
 .account-status-ok { color: #22c55e; }
+/* v1.0.69 — Stato Disconnesso (token refresh fallito) */
+.account-status-error {
+  color: #ef4444;
+  animation: pulse 1.6s ease-in-out infinite;
+}
 .account-row {
   display: flex;
   justify-content: space-between;
@@ -1753,6 +1758,21 @@ body {
   white-space: nowrap;
   flex: 1;
   min-width: 0;
+}
+/* v1.0.69 — Auth broken: pill rossa con icona warning quando token scaduto */
+.sidebar-account.sidebar-account-broken {
+  border-color: rgba(239, 68, 68, .45);
+  background: rgba(239, 68, 68, .07);
+}
+.sidebar-account.sidebar-account-broken:hover {
+  border-color: #ef4444;
+  background: rgba(239, 68, 68, .12);
+}
+.sidebar-account-warn {
+  flex-shrink: 0;
+  font-size: 12px;
+  color: #ef4444;
+  animation: pulse 1.6s ease-in-out infinite;
 }
 
 /* API key guide modal (v1.0.31) */
