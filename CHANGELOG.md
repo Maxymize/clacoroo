@@ -1,5 +1,17 @@
 # Changelog
 
+## v1.0.84 — 2026-05-25 — Sidebar icons: refactor completo a Lucide (MIT, self-hosted inline)
+
+Sostituite tutte e 10 le icone della sidebar con il set [Lucide](https://lucide.dev/) (MIT). Le vecchie erano un mix di Heroicons v1 solid (20×20 fill) eterogeneo, con due casi problematici segnalati dall'utente: MCP sembrava "una mutanda" (era un sandwich di archi), Hooks era un mosaico astratto non riconoscibile come uncino.
+
+- [STYLE] **Tutte e 10 le icone sostituite** con Lucide stroke style, viewBox 24×24 uniforme: `layout-dashboard` (Dashboard), `store` (Marketplace), `puzzle` (Plugin), `sparkles` (Skill), `bot` (Agent), `plug-2` (MCP — 2 pin verticali + body con cavo, ora riconoscibile come presa), `anchor` (Hooks — occhiello + asta + curva U, riconoscibile come uncino/ancora), `bar-chart-3` (Stats), `sliders-horizontal` (Config), `settings` (Impostazioni gear)
+- [REFACTOR] **CSS centralizzato**: attributi `stroke: currentColor`, `stroke-width: 2`, `stroke-linecap: round`, `stroke-linejoin: round`, `fill: none` spostati in `.nav-icon` invece che ripetuti su ogni `<svg>`. Le icone Lucide nell'HTML hanno solo `viewBox` + path
+- [STYLE] `.nav-icon` width/height **da 16px a 18px** — le Lucide a 24×24 con stroke 2 risultano più "leggere" delle solid Heroicons; +2px riporta il peso visivo allo stesso livello
+- [SECURITY] Nessuna libreria esterna runtime, nessun import. SVG sono inline nell'HTML (preservata la CSP `default-src 'self'`). Bundle invariato (~10 path SVG inline aggiungono ~3KB lordi). Lucide è licenza MIT compatibile con AGPL-3.0
+- [NOTE] Set Lucide self-hosted significa: niente Font Awesome o icon-font CDN, niente attribuzione runtime, freedom di pickare singole icone senza importare tutto il pack
+- [FIX] **Logo README leggibile su dark mode GitHub**: il wordmark `CLA` e `ROO` era in `#141413` (nero Claude), invisibile sul tema scuro di github.com. Aggiunta variante `assets/logo-readme-dark.png` (glyph cream `#faf9f5` + tagline grigio chiaro `#a8a299`) renderizzata da `assets/logo-readme-dark.svg`. README.md e README.it.md ora usano `<picture>` con `<source media="(prefers-color-scheme: dark)">` per servire la variante giusta in automatico. Entrambi i PNG rigenerati a 1080×612 (alta risoluzione per retina display)
+- [DOCS] **README aggiornati con sezione Hooks**: aggiunto blocco "⚓ Hooks (v1.0.83+)" subito dopo MCP Server in README.md e README.it.md, con descrizione della feature browser dedicata (event badges, search, filtri, sort, modal dettagli, KPI Dashboard). KPI installation count aggiornato da 9 a 10 (include "hooks · N plugins")
+
 ## v1.0.83 — 2026-05-25 — Sezione Hooks (Pack K MVP): browser dedicato per gli hook dei plugin
 
 Aggiunta la nuova sezione **Hooks** nella sidebar (fra MCP e Stats). Aggrega in un browser unico tutti gli hook event di tutti i plugin installati (`hooks/hooks.json`) con card per ogni combinazione evento+matcher, badge colorato per tipo evento, ricerca, filtro per evento e per scope, ordinamento configurabile, modal dettagli con JSON copy. Prima questi hook erano visibili solo dentro il modal "Contenuto plugin" — adesso esistono come superficie autonoma per esplorarli globalmente e capire cosa scatta su quale evento.

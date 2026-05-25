@@ -1,6 +1,9 @@
 <div align="center">
 
-<img src="assets/logo-readme.png" width="540" alt="CLACOROO — Claude Code Control Room" />
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/logo-readme-dark.png">
+  <img src="assets/logo-readme.png" width="540" alt="CLACOROO — Claude Code Control Room" />
+</picture>
 
 **Visual control panel for [Claude Code](https://github.com/anthropics/claude-code)**
 Manage plugins, marketplaces, skills, agents, MCP servers, hooks, stats, quotas and API keys with a native desktop UI — no CLI commands to memorize.
@@ -38,7 +41,7 @@ CLACOROO does all this in clicks within a single native desktop app, with live o
 At-a-glance view of what matters:
 - Context estimation: skills (frontmatter index) · system prompt · agents · memory files · MCP servers · free space, against the 200K token window
 - Live Claude quotas: Session (5h) / Weekly (7d) / Weekly Sonnet bars with percentage and reset time
-- 9 installation KPIs (enabled/disabled plugins, marketplaces, skills, agents, MCP connected, health issues, always-on tokens)
+- 10 installation KPIs (enabled/disabled plugins, marketplaces, skills, agents, MCP connected, **hooks · N plugins**, health issues, always-on tokens)
 - 9 Claude Code usage KPIs (sessions, messages, total tokens, estimated API value in USD, active days, streak, peak hour, preferred model)
 
 ### 🏪 Marketplaces
@@ -65,6 +68,15 @@ At-a-glance view of what matters:
 - Filters by status and type (claude.ai global / from plugins)
 - "Refresh live status" button re-runs official Claude Code health check
 - "MCP connected" KPI in Dashboard (X/Y connected)
+
+### ⚓ Hooks (v1.0.83+)
+- Dedicated browser for every hook event configured by installed plugins (`hooks/hooks.json`)
+- Card per event+matcher combo: colored event badge (SessionStart · UserPromptSubmit · Pre/PostToolUse · Stop · SubagentStop · PreCompact · Notification · Setup), matcher regex in monospace, handler preview with `type` / `shell` / `async` / `timeout` badges
+- Full-text search (event/matcher/plugin/command) + multi-chip filters (by event type, by scope)
+- Sort dropdown (event A→Z/Z→A, plugin A→Z/Z→A) with persisted preference
+- Details modal: scrollable full command per handler + one-click "Copy JSON" of the whole hook config
+- "Open `hooks.json`" button reveals the source file with the default editor
+- "Hooks · N plugins" KPI in Dashboard (clickable → navigates to the section)
 
 ### 📊 Stats
 - Overview tab: 8 KPIs + Claude Desktop-style heatmap (52 weeks × 7 days)

@@ -227,9 +227,16 @@ body {
 .nav-item.active { background: var(--accent-soft); color: var(--accent2); }
 
 .nav-icon {
-  width: 16px; height: 16px;
+  width: 18px; height: 18px;
   flex-shrink: 0;
   opacity: .7;
+  /* v1.0.84 — Icone Lucide (MIT, self-hosted inline): stile stroke uniforme,
+     viewBox 24×24. Attributi qui per non ripeterli su ogni <svg> nell'HTML. */
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  fill: none;
 }
 .nav-item.active .nav-icon { opacity: 1; }
 

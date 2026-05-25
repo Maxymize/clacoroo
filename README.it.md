@@ -1,6 +1,9 @@
 <div align="center">
 
-<img src="assets/logo-readme.png" width="540" alt="CLACOROO — Claude Code Control Room" />
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/logo-readme-dark.png">
+  <img src="assets/logo-readme.png" width="540" alt="CLACOROO — Claude Code Control Room" />
+</picture>
 
 **Pannello di controllo visuale per [Claude Code](https://github.com/anthropics/claude-code)**
 Gestisci plugin, marketplace, skill, agent, MCP server, hook, statistiche, quote e API key con una UI desktop nativa — senza memorizzare comandi CLI.
@@ -38,7 +41,7 @@ CLACOROO fa tutto a colpo di click in una sola app desktop nativa, con osservabi
 Vista a colpo d'occhio di ciò che conta:
 - Stima contesto: skills (frontmatter index) · system prompt · agents · memory files · MCP server · spazio libero, su 200K token
 - Quote Claude live: barre Session (5h), Weekly (7d), Weekly Sonnet con percentuale e tempo al reset
-- 9 KPI installazione (plugin attivi/disattivati, marketplace, skill, agent, MCP connessi, health issues, token always-on)
+- 10 KPI installazione (plugin attivi/disattivati, marketplace, skill, agent, MCP connessi, **hook · N plugin**, health issues, token always-on)
 - 9 KPI utilizzo Claude Code (sessioni, messaggi, token totali, valore API stimato, giorni attivi, streak, ora di punta, modello preferito)
 
 ### 🏪 Marketplace
@@ -65,6 +68,15 @@ Vista a colpo d'occhio di ciò che conta:
 - Filtri per stato e tipo (claude.ai globale / dai plugin)
 - Bottone "Aggiorna stato live" rilancia health-check ufficiale Claude Code
 - KPI "MCP connessi" in Dashboard (X/Y connessi)
+
+### ⚓ Hook (v1.0.83+)
+- Browser dedicato per ogni hook event configurato dai plugin installati (`hooks/hooks.json`)
+- Card per combinazione event+matcher: badge evento colorato (SessionStart · UserPromptSubmit · Pre/PostToolUse · Stop · SubagentStop · PreCompact · Notification · Setup), matcher regex in monospace, preview handler con badge `type` / `shell` / `async` / `timeout`
+- Ricerca full-text (event/matcher/plugin/command) + filtri chip multi (per tipo evento, per scope)
+- Sort dropdown (event A→Z/Z→A, plugin A→Z/Z→A) con preferenza persistita
+- Modal dettagli: comando completo per ogni handler scrollabile + bottone "Copia JSON" della config hook intera
+- Bottone "Apri `hooks.json`" rivela il file sorgente con l'editor di default
+- KPI "Hooks · N plugin" in Dashboard (cliccabile → naviga alla sezione)
 
 ### 📊 Stats
 - Tab Overview: 8 KPI + heatmap stile Claude Desktop (52 settimane × 7 giorni)
