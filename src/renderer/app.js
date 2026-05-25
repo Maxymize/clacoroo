@@ -3794,12 +3794,13 @@ function renderSettings() {
   licRow.appendChild(licRight);
   g3.appendChild(licRow);
 
-  // v1.0.74 — Disclaimer Anthropic: CLACOROO è progetto indipendente
+  // v1.0.74 — Disclaimer Anthropic: in fondo alla sezione "Informazioni",
+  // sotto la riga Licenza.
   const disclaimerBox = el('div', 'settings-disclaimer');
   disclaimerBox.appendChild(el('div', 'settings-disclaimer-title', '⚠ Disclaimer'));
   disclaimerBox.appendChild(el('div', 'settings-disclaimer-body',
     'CLACOROO è un tool indipendente di terze parti e NON è affiliato, sponsorizzato né approvato da Anthropic, PBC. È un progetto autonomo sviluppato e mantenuto da MAXYMIZE con il solo scopo di rendere più facile l\'utilizzo della CLI ufficiale Claude Code attraverso un\'interfaccia grafica. "Claude" e "Anthropic" sono marchi registrati di Anthropic, PBC.'));
-  wrap.appendChild(disclaimerBox);
+  g3.appendChild(disclaimerBox);
 
   setContent(wrap);
 }
@@ -4226,6 +4227,7 @@ const termState = {
   open: false,
   height: 280,       // px
   caps: null,        // pty capabilities (default shell, platform, ecc.)
+  preferredShell: null, // v1.0.75 — shell scelta in Impostazioni (null = $SHELL/default)
   saveDebounce: 0,
   busyTimers: new Map(),  // tabId → timeout id (per status dot: arancio ↔ verde)
   cwdPoll: 0,        // setInterval handle per live cwd tracking

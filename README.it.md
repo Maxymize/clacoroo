@@ -16,10 +16,6 @@ Gestisci plugin, marketplace, skill, agent, MCP server, hook, statistiche, quote
 
 ---
 
-> ⚠️ **Disclaimer** — CLACOROO è un **tool indipendente di terze parti** e **non è affiliato, sponsorizzato né approvato da Anthropic, PBC**. È un progetto autonomo sviluppato e mantenuto da **MAXYMIZE** con il solo scopo di rendere più facile l'utilizzo della CLI ufficiale [Claude Code](https://github.com/anthropics/claude-code) attraverso un'interfaccia grafica. "Claude" e "Anthropic" sono marchi registrati di Anthropic, PBC. CLACOROO utilizza i file di configurazione e i comandi CLI di Claude Code senza modificarli.
-
----
-
 ## Cos'è CLACOROO
 
 **CLA**ude **CO**de **CO**ntrol **ROO**m è una app desktop Electron che mette una UI grafica sopra ogni file di configurazione che Claude Code legge in `~/.claude/`. Il `CO` arancio del wordmark si sovrappone fra **Co**de e **Co**ntrol — un piccolo gioco visivo che racconta l'idea: la cabina di regia per Claude Code, gestita dalla mascotte **CLACOROO**, un esserino pixel-art a 4 zampe con un'antenna LED verde (Anthropic Green) accesa.
@@ -286,3 +282,9 @@ CLACOROO è distribuito nella speranza che sia utile, ma SENZA ALCUNA GARANZIA; 
 - ❌ **Non puoi** trasformarlo in un prodotto SaaS chiuso senza ridistribuire il codice modificato
 
 Per usi commerciali che non possono rispettare i termini AGPL, è disponibile una licenza commerciale separata su richiesta: scrivi a `info@maxymizebusiness.com`.
+
+---
+
+## Disclaimer
+
+CLACOROO è un **tool indipendente di terze parti** e **non è affiliato, sponsorizzato né approvato da Anthropic, PBC**. È un progetto autonomo sviluppato e mantenuto da **MAXYMIZE** con il solo scopo di rendere più facile l'utilizzo della CLI ufficiale [Claude Code](https://github.com/anthropics/claude-code) attraverso un'interfaccia grafica. "Claude" e "Anthropic" sono marchi registrati di Anthropic, PBC. CLACOROO utilizza i file di configurazione e i comandi CLI di Claude Code senza modificarli.
