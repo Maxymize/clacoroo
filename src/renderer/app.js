@@ -1662,7 +1662,6 @@ function renderSkills() {
     chip.appendChild(el('span', 'skill-chip-plugin', item.plugin));
     appendHealthBadge(chip, item.health);
     appendScopeBadge(chip, item);
-    appendRunButton(chip, item, 'skill');
     if (item.scope === 'global') {
       chip.addEventListener('click', () => openMarkdownPreview(item.fullId, 'skill', item.name));
     }
@@ -1691,7 +1690,6 @@ function renderAgents() {
     chip.appendChild(el('span', 'skill-chip-plugin', item.plugin));
     appendHealthBadge(chip, item.health);
     appendScopeBadge(chip, item);
-    appendRunButton(chip, item, 'agent');
     if (item.scope === 'global') {
       chip.addEventListener('click', () => openMarkdownPreview(item.fullId, 'agent', item.name));
     }
@@ -1699,41 +1697,11 @@ function renderAgents() {
   }, item => item.name + ' ' + item.plugin + ' ' + item.mkt + (item.projectName || ''), 'Cerca agent…', 'skill-grid');
 }
 
-// v1.0.78 — Un solo bottone "⎘ Copia" sulle card di skill/agent.
-//
-// Storia delle iterazioni:
-//   v1.0.75 → ▶ lanciava `claude -p "<name>"` (sbagliato: -p è one-shot, e
-//             mandare solo il nome come prompt non invoca la skill — claude
-//             lo legge come testo libero)
-//   v1.0.77 → due bottoni: ⎘ copia + ▶ apriva claude interattivo nel drawer
-//             e pre-digitava `/<name>`. Problema: per skill/agent con scope
-//             globale il cwd era HOME, quindi claude partiva senza contesto
-//             di progetto. Aggiungere un picker progetto avrebbe complicato
-//             il flusso senza dare vantaggio reale rispetto al copy.
-//   v1.0.78 → solo ⎘ copia. L'utente sa nel proprio terminale dove lanciare
-//             claude (progetto giusto) e incolla `/<skill-name>`. CLACOROO
-//             elimina solo l'attrito del "qual era il nome esatto della
-//             skill?", senza fare assunzioni sul contesto di lavoro.
-//
-// Copia `/<skill-name>` (skill) o `<agent-name>` (agent). stopPropagation
-// evita di aprire anche il markdown preview cliccando il chip.
-function appendRunButton(chip, item, kind) {
-  const cmdText = kind === 'skill' ? '/' + item.name : item.name;
-
-  const copyBtn = el('button', 'skill-chip-icon-btn skill-chip-copy', '⎘');
-  copyBtn.type = 'button';
-  copyBtn.title = 'Copia "' + cmdText + '" negli appunti';
-  copyBtn.addEventListener('click', async (ev) => {
-    ev.stopPropagation();
-    try {
-      await navigator.clipboard.writeText(cmdText);
-      toast('Copiato "' + cmdText + '" negli appunti', 'success');
-    } catch (e) {
-      toast('Impossibile copiare: ' + e.message, 'error');
-    }
-  });
-  chip.appendChild(copyBtn);
-}
+// v1.0.81 — Rimosso `appendRunButton` (era il bottone ⎘ per-riga delle card
+// skill/agent introdotto in v1.0.78). Copiava solo il nome del chip che è
+// già visibile a colpo d'occhio → bassissimo valore. Il copia "utile" è
+// quello dentro il modal markdown preview che copia l'intero contenuto del
+// documento (vedi `showMarkdownModal` header).
 
 function appendScopeBadge(chip, item) {
   const badge = el('span', 'scope-badge scope-' + item.scope,
@@ -1853,9 +1821,26 @@ function showMarkdownModal(name, kind, content) {
   const kindBadge = el('span', 'md-kind-badge md-kind-' + kind, kind);
   title.appendChild(kindBadge);
   title.appendChild(document.createTextNode(' ' + name));
+
+  // v1.0.81 — Bottone copia globale: copia l'intero contenuto markdown raw
+  // negli appunti. Utile per condividere skill/agent intere o usarle come
+  // base per istruzioni custom. Posizionato accanto al × con margine.
+  const copyAllBtn = el('button', 'md-copy', '⎘ Copia');
+  copyAllBtn.setAttribute('aria-label', 'Copia testo completo negli appunti');
+  copyAllBtn.title = 'Copia il contenuto completo del documento';
+  copyAllBtn.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(content);
+      toast('Testo copiato negli appunti', 'success');
+    } catch (e) {
+      toast('Impossibile copiare: ' + e.message, 'error');
+    }
+  });
+
   const closeBtn = el('button', 'md-close', '×');
   closeBtn.setAttribute('aria-label', 'Chiudi');
   header.appendChild(title);
+  header.appendChild(copyAllBtn);
   header.appendChild(closeBtn);
 
   const contentEl = el('div', 'md-content');

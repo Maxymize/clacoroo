@@ -1109,32 +1109,10 @@ body {
 .skill-chip-plugin { font-size: 10px; color: var(--text-muted); }
 .skill-chip.blocked { opacity: .5; }
 
-/* v1.0.78 — Bottone "⎘ Copia comando" sulle skill/agent chip (semplificato
- * da v1.0.77 che ne aveva due — il ▶ è stato rimosso, vedi commento JS).
- * Icona più luminosa rispetto a v1.0.77: colore --text (non muted) + leggero
- * fill warm di default, così è chiaro che è cliccabile anche a riposo.
- */
-.skill-chip-icon-btn {
-  flex-shrink: 0;
-  width: 22px; height: 22px;
-  display: inline-flex; align-items: center; justify-content: center;
-  background: rgba(255, 246, 232, .06);
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  color: var(--text);
-  font-size: 13px; line-height: 1;
-  cursor: pointer;
-  transition: background .15s, border-color .15s, color .15s, transform .12s;
-  padding: 0;
-}
-.skill-chip-icon-btn:active { transform: scale(.96); }
-
-.skill-chip-copy:hover {
-  background: rgba(106, 155, 204, .22);
-  border-color: var(--accent2, #6a9bcc);
-  color: var(--accent2, #6a9bcc);
-  transform: scale(1.08);
-}
+/* v1.0.81 — Rimosso CSS `.skill-chip-icon-btn`/`.skill-chip-copy` (era il
+   bottone ⎘ per-riga delle card skill/agent, deprecato in v1.0.81 a favore
+   del bottone copia globale nell'header del modal markdown viewer `.md-copy`).
+*/
 
 /* ── SETTINGS ─────────────────────────────────────────────────────────── */
 .settings-group { margin-bottom: 32px; }
@@ -1217,6 +1195,33 @@ body {
   font-family: inherit;
 }
 .md-close:hover { background: var(--surface2); color: var(--text); }
+
+/* v1.0.81 — Bottone copia globale nell'header del modal markdown viewer.
+   Posizionato fra title e × con margine per non essere troppo vicino al close. */
+.md-copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;        /* spinge a destra del title */
+  margin-right: 16px;       /* gap di sicurezza dalla × */
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 11.5px;
+  font-weight: 500;
+  font-family: -apple-system, BlinkMacSystemFont, "Inter", sans-serif;
+  padding: 5px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background .15s, color .15s, border-color .15s;
+  letter-spacing: 0.01em;
+}
+.md-copy:hover {
+  background: var(--accent-soft);
+  color: var(--accent2);
+  border-color: var(--accent2);
+}
+.md-copy:active { transform: scale(.97); }
 
 .md-content {
   padding: 28px 36px;

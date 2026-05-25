@@ -1,5 +1,15 @@
 # Changelog
 
+## v1.0.81 — 2026-05-25 — Modal Skill/Agent: copia globale in header (rimosso ⎘ per-riga)
+
+Refactor del bottone copia introdotto in v1.0.78: il `⎘` sulle card di skill/agent copiava solo il nome del chip stesso, già visibile a colpo d'occhio → bassissimo valore. Sostituito con un singolo bottone copia in alto a destra del modal markdown viewer (accanto alla X di chiusura, con margine 16px) che copia l'**intero contenuto** del documento aperto.
+
+- [REMOVED] `appendRunButton(chip, item, kind)` + relativo CSS `.skill-chip-icon-btn`/`.skill-chip-copy` (era il bottone ⎘ per-riga sulle card skill/agent)
+- [REMOVED] Bottone ⎘ dalle chiamate `renderSkills()` + `renderAgents()` (1 riga rimossa per ciascuna)
+- [FEATURE] Bottone **"⎘ Copia"** nell'header del modal markdown viewer (`showMarkdownModal`): posizionato fra title e ×, con `margin-right: 16px` di safety gap dalla close button. Copia `content` raw (markdown completo) via `navigator.clipboard.writeText()` + toast verde di conferma "Testo copiato negli appunti"
+- [FEATURE] CSS `.md-copy`: stile coerente con design system (background surface + border, hover blu accent2)
+- [IMPROVEMENT] Use case sbloccato: condivisione di skill/agent intere come reference o base per istruzioni custom. Prima richiedeva selezionare manualmente tutto il testo del modal
+
 ## v1.0.80 — 2026-05-25 — Icona app: angoli trasparenti (non più bianchi)
 
 Risolto problema visivo dell'icona dell'app: gli angoli del bounding box 256×256 (fuori dallo squircle nero) erano riempiti di bianco invece di trasparenza. Visibile nel Dock macOS quando l'app è aperta + nel DMG installer + nei thumbnail di Finder.
