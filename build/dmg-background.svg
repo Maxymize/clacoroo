@@ -1,0 +1,170 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="460" viewBox="0 0 720 460">
+  <!-- CLACOROO — DMG installer background v7 (720×460, ampio stile HyperWhisper).
+       Layout: mascotte signature top → wordmark CLACOROO bold pixel-art →
+       tagline → CTA → freccia arancio lunga + icone grandi (128px) in basso. -->
+
+  <defs>
+    <linearGradient id="bgGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%"   stop-color="#fcfaf2"/>
+      <stop offset="50%"  stop-color="#faf3e3"/>
+      <stop offset="100%" stop-color="#f3e8d1"/>
+    </linearGradient>
+    <radialGradient id="glowTR" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"   stop-color="#d97757" stop-opacity="0.22"/>
+      <stop offset="100%" stop-color="#d97757" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glowBL" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"   stop-color="#788c5d" stop-opacity="0.20"/>
+      <stop offset="100%" stop-color="#788c5d" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glowTL" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"   stop-color="#6a9bcc" stop-opacity="0.12"/>
+      <stop offset="100%" stop-color="#6a9bcc" stop-opacity="0"/>
+    </radialGradient>
+    <pattern id="dotsPattern" x="0" y="0" width="22" height="22" patternUnits="userSpaceOnUse">
+      <circle cx="11" cy="11" r="1.2" fill="#d97757" fill-opacity="0.10"/>
+    </pattern>
+
+    <!-- Pixel font glyphs 7×7 BOLD -->
+    <symbol id="g-C" viewBox="0 0 7 7">
+      <rect x="1" y="0" width="5" height="1"/>
+      <rect x="0" y="1" width="2" height="5"/>
+      <rect x="5" y="1" width="2" height="1"/>
+      <rect x="5" y="5" width="2" height="1"/>
+      <rect x="1" y="6" width="5" height="1"/>
+    </symbol>
+    <symbol id="g-L" viewBox="0 0 7 7">
+      <rect x="0" y="0" width="2" height="7"/>
+      <rect x="2" y="5" width="5" height="2"/>
+    </symbol>
+    <symbol id="g-A" viewBox="0 0 7 7">
+      <rect x="1" y="0" width="5" height="1"/>
+      <rect x="0" y="1" width="2" height="6"/>
+      <rect x="5" y="1" width="2" height="6"/>
+      <rect x="2" y="3" width="3" height="1"/>
+    </symbol>
+    <symbol id="g-O" viewBox="0 0 7 7">
+      <rect x="1" y="0" width="5" height="1"/>
+      <rect x="0" y="1" width="2" height="5"/>
+      <rect x="5" y="1" width="2" height="5"/>
+      <rect x="1" y="6" width="5" height="1"/>
+    </symbol>
+    <symbol id="g-R" viewBox="0 0 7 7">
+      <rect x="0" y="0" width="5" height="1"/>
+      <rect x="0" y="1" width="2" height="6"/>
+      <rect x="5" y="1" width="2" height="2"/>
+      <rect x="1" y="3" width="4" height="1"/>
+      <rect x="3" y="4" width="2" height="1"/>
+      <rect x="4" y="5" width="2" height="1"/>
+      <rect x="5" y="6" width="2" height="1"/>
+    </symbol>
+  </defs>
+
+  <!-- Background -->
+  <rect width="720" height="460" fill="url(#bgGrad)"/>
+  <rect width="720" height="460" fill="url(#dotsPattern)"/>
+  <circle cx="720" cy="0"   r="280" fill="url(#glowTR)"/>
+  <circle cx="0"   cy="460" r="280" fill="url(#glowBL)"/>
+  <circle cx="0"   cy="0"   r="180" fill="url(#glowTL)"/>
+
+  <!-- Linee topografiche soft -->
+  <g fill="none" stroke-width="1.4">
+    <path d="M -30 110 Q 130 80, 270 110 T 540 95 T 760 120"  stroke="#d97757" stroke-opacity="0.13"/>
+    <path d="M -30 130 Q 130 100, 270 130 T 540 115 T 760 140" stroke="#d97757" stroke-opacity="0.09"/>
+    <path d="M -30 380 Q 130 410, 270 380 T 540 395 T 760 370" stroke="#788c5d" stroke-opacity="0.11"/>
+    <path d="M -30 400 Q 130 430, 270 400 T 540 415 T 760 390" stroke="#788c5d" stroke-opacity="0.08"/>
+  </g>
+
+  <!-- Pixel decorativi -->
+  <g shape-rendering="crispEdges">
+    <rect x="50"  y="40"  width="4" height="4" fill="#d97757" opacity="0.45"/>
+    <rect x="660" y="40"  width="4" height="4" fill="#6a9bcc" opacity="0.40"/>
+    <rect x="30"  y="380" width="3" height="3" fill="#6a9bcc" opacity="0.40"/>
+    <rect x="680" y="400" width="3" height="3" fill="#d97757" opacity="0.50"/>
+    <rect x="80"  y="430" width="4" height="4" fill="#788c5d" opacity="0.50"/>
+    <rect x="640" y="430" width="3" height="3" fill="#d97757" opacity="0.45"/>
+  </g>
+
+  <!-- Mascotte signature top (centrata a x=360, scale 2.4) -->
+  <g transform="translate(343, 20) scale(2.4)" shape-rendering="crispEdges">
+    <rect x="6" y="0" width="2" height="1" fill="#788c5d"/>
+    <rect x="6" y="1" width="2" height="2" fill="#a8a299"/>
+    <rect x="4" y="3"  width="6"  height="1" fill="#d97757"/>
+    <rect x="2" y="4"  width="10" height="1" fill="#d97757"/>
+    <rect x="1" y="5"  width="12" height="6" fill="#d97757"/>
+    <rect x="2" y="11" width="10" height="1" fill="#d97757"/>
+    <rect x="4" y="12" width="6"  height="1" fill="#d97757"/>
+    <rect x="1"  y="13" width="2" height="2" fill="#d97757"/>
+    <rect x="4"  y="13" width="2" height="2" fill="#d97757"/>
+    <rect x="8"  y="13" width="2" height="2" fill="#d97757"/>
+    <rect x="11" y="13" width="2" height="2" fill="#d97757"/>
+    <g fill="#9a4d35">
+      <rect x="3"  y="3"  width="1" height="1"/>
+      <rect x="10" y="3"  width="1" height="1"/>
+      <rect x="1"  y="4"  width="1" height="1"/>
+      <rect x="12" y="4"  width="1" height="1"/>
+      <rect x="0"  y="5"  width="1" height="6"/>
+      <rect x="13" y="5"  width="1" height="6"/>
+      <rect x="1"  y="11" width="1" height="1"/>
+      <rect x="12" y="11" width="1" height="1"/>
+      <rect x="3"  y="12" width="1" height="1"/>
+      <rect x="10" y="12" width="1" height="1"/>
+    </g>
+    <rect x="3" y="6" width="3" height="3" fill="#141413"/>
+    <rect x="8" y="6" width="3" height="3" fill="#141413"/>
+    <rect x="3" y="6" width="1" height="1" fill="#faf9f5"/>
+    <rect x="8" y="6" width="1" height="1" fill="#faf9f5"/>
+  </g>
+
+  <!-- Wordmark CLACOROO BOLD pixel-art (glyph 7x7 scale 3x = 21px) gap 5.
+       Total = 8*21 + 7*5 = 203. Centro a x=360 → x_start=258.5 (uso 258).
+       Offsets: C=258, L=284, A=310, C=336, O=362, R=388, O=414, O=440 -->
+  <g shape-rendering="crispEdges">
+    <g fill="#141413">
+      <use href="#g-C" x="258" y="80" width="21" height="21"/>
+      <use href="#g-L" x="284" y="80" width="21" height="21"/>
+      <use href="#g-A" x="310" y="80" width="21" height="21"/>
+    </g>
+    <g fill="#d97757">
+      <use href="#g-C" x="336" y="80" width="21" height="21"/>
+      <use href="#g-O" x="362" y="80" width="21" height="21"/>
+    </g>
+    <g fill="#141413">
+      <use href="#g-R" x="388" y="80" width="21" height="21"/>
+      <use href="#g-O" x="414" y="80" width="21" height="21"/>
+      <use href="#g-O" x="440" y="80" width="21" height="21"/>
+    </g>
+  </g>
+
+  <!-- Tagline -->
+  <text x="360" y="135"
+        font-family="-apple-system, BlinkMacSystemFont, 'Inter', sans-serif"
+        font-size="14"
+        font-weight="500"
+        fill="#7a7770"
+        text-anchor="middle"
+        letter-spacing="0.05em">
+    Claude Code Control Room
+  </text>
+
+  <!-- CTA Headline -->
+  <text x="360" y="170"
+        font-family="-apple-system, BlinkMacSystemFont, 'Inter', sans-serif"
+        font-size="17"
+        font-weight="600"
+        fill="#141413"
+        text-anchor="middle"
+        letter-spacing="0">
+    Trascina <tspan fill="#d97757" font-weight="800">CLACOROO</tspan> nella cartella Applications →
+  </text>
+
+  <!-- Freccia lunga arancio centrata.
+       Icone iconSize 128: app x=160 (centro), Apps x=560 (centro).
+       Bbox app: 96..224 (icon edge ~218). Bbox Apps: 496..624.
+       Freccia: x=240 → x=480 (240 wide). Triangolo da 472→500. -->
+  <g>
+    <rect x="240" y="307" width="240" height="8" rx="4" fill="#d97757"/>
+    <polygon points="472,295 502,311 472,327" fill="#d97757"/>
+  </g>
+</svg>

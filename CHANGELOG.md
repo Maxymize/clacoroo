@@ -1,5 +1,18 @@
 # Changelog
 
+## v1.0.72 — 2026-05-25 — DMG installer custom CLACOROO + Press Start 2P sidebar
+
+- [FEATURE] **Installer DMG completamente ridisegnato** 720×460 stile HyperWhisper: finestra ampia, mascotte CLACOROO come signature in alto, wordmark "CLACOROO" BOLD in pixel-art 8-bit (CO arancio brand highlight), tagline "Claude Code Control Room", CTA "Trascina CLACOROO nella cartella Applications →", freccia lunga arancio CLACOROO `#d97757` fra le 2 icone grandi (iconSize 128)
+- [FEATURE] Background SVG vettoriale con palette CLACOROO: gradient cream warm + glow soft sui 3 angoli (TR orange, BL Anthropic green, TL blue), linee topografiche stile Claude, pattern dot grid + pixel decorativi sparsi
+- [FEATURE] **Wordmark pixel-art bold 7×7** disegnato in SVG `<rect>` (glyph C/L/A/O/R definite come `<symbol>` riusate): congruo visivamente con la mascotte pixel-art, peso bold tipografico, embed-free (no font esterno richiesto da librsvg)
+- [FEATURE] Font **Press Start 2P** (SIL OFL) self-hosted in `src/renderer/fonts/PressStart2P-Regular.ttf` + applicato al wordmark sidebar dell'app (size 11px) per coerenza brand con il logo DMG
+- [FEATURE] `build/dmgbuild-settings.py`: configurazione completa Python-based per dmgbuild (window 720×520, iconSize 128, posizioni icone, no toolbar/status/sidebar)
+- [FIX] **Bypass del bug noto electron-builder + macOS Sequoia** (.DS_Store non scritto correttamente, background DMG ignorato): nuovo flow basato su `dmgbuild` (Python + `ds_store` lib) che costruisce il `.DS_Store` deterministicamente, no AppleScript, no Finder dependency. Vedi issue electron-builder #4170 e #9072
+- [FIX] Volume DMG rinominato da "CLACOROO X.Y.Z" a "Install CLACOROO" per evitare cache dimensioni finestra del Finder Sequoia (ricordava window size più piccola)
+- [CHORE] Build-time deps macOS: `librsvg` via Homebrew (per `rsvg-convert` SVG→PNG), `dmgbuild` 1.6+ via pip (`pip install dmgbuild`)
+- [CHORE] Build-time workaround Python: venv 3.12 con `setuptools` (Python 3.14 ha rimosso `distutils`, node-gyp non builda `node-pty` da source senza)
+- [REFACTOR] Comando build full: `PYTHON=/tmp/clacoroo-build-venv/bin/python3 npm_config_python=... npx electron-builder --mac dir` (solo .app, no .dmg interno) + `dmgbuild -s build/dmgbuild-settings.py -D app=<path> "Install CLACOROO" dist/CLACOROO-X.Y.Z-{arch}.dmg` per ogni arch
+
 ## v1.0.71 — 2026-05-23 — Pulizia duplicato Console API + bottoni API key inline
 
 - [REMOVED] Bottone "↗ Console API" dalle account-actions di Impostazioni (duplicato di "↗ Console Anthropic" nel pannello API key)
