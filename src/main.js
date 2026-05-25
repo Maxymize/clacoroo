@@ -146,9 +146,11 @@ function safeReadJson(filePath, fallback) {
 
 let LAST_CACHE = {};
 
-// v1.0.56 — Legge hooks/hooks.json di un plugin e ritorna array di eventi
-// hook coperti (es. ['Setup','SessionStart','UserPromptSubmit']) con il
-// conteggio matcher per ogni evento. Ritorna [] se nessun hook.
+// v1.0.56 — Legge hooks/hooks.json di un plugin e ritorna array di eventi.
+// v1.0.83 — Esteso con `matchers: [{matcher, handlers: [{type,command,async,timeout,shell}]}]`
+// per alimentare la nuova sezione Hooks (browser dedicato come Skills/Agents).
+// I campi legacy `matcherCount` + `handlerCount` restano per compat con i drill-in
+// del modal "Contenuto plugin" già esistenti.
 function readHookEvents(hooksDir) {
   if (!fs.existsSync(hooksDir)) return [];
   const hooksJson = path.join(hooksDir, 'hooks.json');
@@ -156,13 +158,26 @@ function readHookEvents(hooksDir) {
   try {
     const raw = JSON.parse(fs.readFileSync(hooksJson, 'utf8'));
     const events = raw.hooks || {};
-    return Object.entries(events).map(([eventName, matchers]) => ({
-      event: eventName,
-      matcherCount: Array.isArray(matchers) ? matchers.length : 0,
-      handlerCount: Array.isArray(matchers)
-        ? matchers.reduce((s, m) => s + (Array.isArray(m.hooks) ? m.hooks.length : 0), 0)
-        : 0,
-    }));
+    return Object.entries(events).map(([eventName, matchers]) => {
+      const arr = Array.isArray(matchers) ? matchers : [];
+      const detailed = arr.map(m => ({
+        matcher: typeof m.matcher === 'string' ? m.matcher : '',
+        handlers: Array.isArray(m.hooks) ? m.hooks.map(h => ({
+          type:    h.type    || 'command',
+          command: h.command || '',
+          async:   !!h.async,
+          timeout: typeof h.timeout === 'number' ? h.timeout : null,
+          shell:   h.shell || '',
+        })) : [],
+      }));
+      return {
+        event: eventName,
+        matcherCount: arr.length,
+        handlerCount: detailed.reduce((s, m) => s + m.handlers.length, 0),
+        matchers: detailed,
+        sourcePath: hooksJson,
+      };
+    });
   } catch { return []; }
 }
 

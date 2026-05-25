@@ -42,6 +42,7 @@ const state = {
     marketplaces: { search: '' },
     skills:       { search: '' },
     agents:       { search: '' },
+    hooks:        { search: '', event: 'all', scope: 'all' },
   },
   // v1.0.55 — ordinamento marketplace. Valori:
   //   'default'        plugin disponibili desc, poi installati desc
@@ -55,6 +56,8 @@ const state = {
   skillSort:  'name-asc',
   agentSort:  'name-asc',
   mcpSort:    'name-asc',
+  // v1.0.83 — Pack K: ordinamento sezione Hooks
+  hookSort:   'event-asc',
 };
 
 const MKT_SORTERS = {
@@ -89,6 +92,17 @@ const MCP_SORTERS = {
   'name-desc':  (a, b) => (b.name || '').localeCompare(a.name || ''),
   'status':     (a, b) => (MCP_STATUS_ORDER[a.status] ?? 9) - (MCP_STATUS_ORDER[b.status] ?? 9)
                           || (a.name || '').localeCompare(b.name || ''),
+};
+// v1.0.83 — Pack K: sorters per la sezione Hooks
+const HOOK_SORTERS = {
+  'event-asc':   (a, b) => (a.event   || '').localeCompare(b.event || '')
+                          || (a.pluginId || '').localeCompare(b.pluginId || ''),
+  'event-desc':  (a, b) => (b.event   || '').localeCompare(a.event || '')
+                          || (a.pluginId || '').localeCompare(b.pluginId || ''),
+  'plugin-asc':  (a, b) => (a.pluginId || '').localeCompare(b.pluginId || '')
+                          || (a.event || '').localeCompare(b.event || ''),
+  'plugin-desc': (a, b) => (b.pluginId || '').localeCompare(a.pluginId || '')
+                          || (a.event || '').localeCompare(b.event || ''),
 };
 
 // Renderizza una <select> di ordinamento standardizzata. opts: [{key,label},...]
@@ -129,7 +143,31 @@ const SORT_OPTIONS = {
     { key: 'name-desc', label: 'Nome (Z → A)' },
     { key: 'status',    label: 'Stato (Connected prima)' },
   ],
+  hook: [
+    { key: 'event-asc',   label: 'Evento (A → Z)' },
+    { key: 'event-desc',  label: 'Evento (Z → A)' },
+    { key: 'plugin-asc',  label: 'Plugin (A → Z)' },
+    { key: 'plugin-desc', label: 'Plugin (Z → A)' },
+  ],
 };
+
+// v1.0.83 — Palette eventi hook (mappa standard Claude Code → colore badge).
+// Eventi non noti restano grigio neutro.
+const HOOK_EVENT_COLORS = {
+  SessionStart:     '#3b82f6',
+  SessionEnd:       '#2563eb',
+  UserPromptSubmit: '#f59e0b',
+  PreToolUse:       '#a78bfa',
+  PostToolUse:      '#8b5cf6',
+  Stop:             '#ef4444',
+  SubagentStop:     '#dc2626',
+  PreCompact:       '#eab308',
+  Notification:     '#06b6d4',
+  Setup:            '#22c55e',
+};
+function hookEventColor(name) {
+  return HOOK_EVENT_COLORS[name] || '#71717a';
+}
 
 /* ── DOM REFS ─────────────────────────────────────────────────────────── */
 const $ = id => document.getElementById(id);
@@ -176,6 +214,7 @@ async function init() {
   if (appState.skillSort  && NAME_SORTERS[appState.skillSort])   state.skillSort  = appState.skillSort;
   if (appState.agentSort  && NAME_SORTERS[appState.agentSort])   state.agentSort  = appState.agentSort;
   if (appState.mcpSort    && MCP_SORTERS[appState.mcpSort])      state.mcpSort    = appState.mcpSort;
+  if (appState.hookSort   && HOOK_SORTERS[appState.hookSort])    state.hookSort   = appState.hookSort;
   if (appState.lastSection && appState.lastSection !== 'dashboard') {
     switchToSection(appState.lastSection);
   }
@@ -392,7 +431,10 @@ function render() {
     marketplaces:'Marketplace',
     skills:      'Skill',
     agents:      'Agent',
+    mcp:         'MCP',
+    hooks:       'Hooks',
     stats:       'Stats',
+    config:      'Config',
     settings:    'Impostazioni',
   };
   $('topbar-title').textContent = sectionTitles[state.section] || '';
@@ -452,6 +494,7 @@ function render() {
     case 'skills':       renderSkills();      break;
     case 'agents':       renderAgents();      break;
     case 'mcp':          renderMcp();         break;
+    case 'hooks':        renderHooks();       break;
     case 'stats':        renderStats();       break;
     case 'config':       renderConfig();      break;
     case 'settings':     renderSettings();    break;
@@ -558,6 +601,9 @@ function renderDashboard() {
   const allSkills = state.plugins.flatMap(p => p.skills.map(s => ({ skill: s, plugin: p.fullId })));
   const allAgents = state.plugins.flatMap(p => p.agents.map(a => ({ agent: a, plugin: p.fullId })));
   const totalTokens = globals.reduce((s, p) => s + p.tokensAlways, 0);
+  // v1.0.83 — Pack K: KPI hook (combo event+matcher) + plugin che li forniscono
+  const hookList = buildHookList();
+  const hookPluginsCount = new Set(hookList.map(h => h.fullId)).size;
 
   const wrap = el('div');
 
@@ -598,6 +644,8 @@ function renderDashboard() {
     { num: allSkills.length,   label: 'Skill totali',      color: '#e89478' },  // accent2 chiaro
     { num: allAgents.length,   label: 'Agent totali',      color: '#f97316' },
     { num: mcpKpiNum,          label: 'MCP connessi',      color: '#22c55e', kind: 'mcp' },
+    { num: hookList.length,    label: hookPluginsCount ? ('Hooks · ' + hookPluginsCount + ' plugin') : 'Hooks',
+      color: '#a78bfa', kind: 'hooks' },
     { num: totalTokens > 0 ? (Math.round(totalTokens / 100) / 10) + 'K' : '—',
       label: 'Token always-on',  color: '#6a9bcc' },                            // Anthropic blue
     { num: healthErr + healthWarn,
@@ -611,6 +659,12 @@ function renderDashboard() {
     const num = el('div', 'kpi-num', String(k.num));
     const lbl = el('div', 'kpi-label', k.label);
     card.appendChild(num); card.appendChild(lbl);
+    // v1.0.83 — KPI Hooks cliccabile → naviga alla sezione dedicata
+    if (k.kind === 'hooks') {
+      card.style.cursor = 'pointer';
+      card.title = 'Apri la sezione Hooks';
+      card.addEventListener('click', () => switchToSection('hooks'));
+    }
     kpiGrid.appendChild(card);
   });
   wrap.appendChild(kpiGrid);
@@ -1798,6 +1852,315 @@ function renderAgents() {
 // già visibile a colpo d'occhio → bassissimo valore. Il copia "utile" è
 // quello dentro il modal markdown preview che copia l'intero contenuto del
 // documento (vedi `showMarkdownModal` header).
+
+/* ── HOOKS (v1.0.83 — Pack K) ─────────────────────────────────────────── */
+// Aggrega tutti gli hook event di tutti i plugin installati in una lista
+// piatta { event, matcher, handlers, pluginId, mkt, fullId, scope, sourcePath }.
+// Ogni combinazione event+matcher di un plugin diventa una card.
+function buildHookList() {
+  const list = [];
+  state.plugins.forEach(p => {
+    if (!Array.isArray(p.hookEvents)) return;
+    p.hookEvents.forEach(ev => {
+      const matchers = Array.isArray(ev.matchers) && ev.matchers.length
+        ? ev.matchers
+        : [{ matcher: '', handlers: [] }];
+      matchers.forEach(m => {
+        list.push({
+          event:      ev.event,
+          matcher:    m.matcher || '',
+          handlers:   m.handlers || [],
+          pluginId:   p.id,
+          mkt:        p.mkt,
+          fullId:     p.fullId,
+          scope:      p.scope,
+          projectName:p.projectName || '',
+          projectPath:p.projectPath || '',
+          sourcePath: ev.sourcePath || '',
+        });
+      });
+    });
+  });
+  return list;
+}
+
+function renderHooks() {
+  const all  = buildHookList().sort(HOOK_SORTERS[state.hookSort] || HOOK_SORTERS['event-asc']);
+  const f    = state.filters.hooks;
+  const wrap = el('div');
+
+  // Riga 1: search
+  const bar = el('div', 'filter-bar');
+  const sw  = el('div', 'search-wrap');
+  const icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  icon.setAttribute('viewBox', '0 0 20 20'); icon.setAttribute('fill', 'currentColor');
+  const iconPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  iconPath.setAttribute('fill-rule', 'evenodd');
+  iconPath.setAttribute('d', 'M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z');
+  icon.appendChild(iconPath);
+  sw.appendChild(icon);
+  const inp = el('input', 'search-input');
+  inp.setAttribute('placeholder', 'Cerca matcher, command, plugin…');
+  inp.setAttribute('type', 'text');
+  inp.value = f.search;
+  sw.appendChild(inp);
+  bar.appendChild(sw);
+  wrap.appendChild(bar);
+
+  // Riga 2: filtri event + scope
+  const filterRow = el('div', 'hook-filter-row');
+  const events = Array.from(new Set(all.map(h => h.event))).sort();
+  const evWrap = el('div', 'hook-filter-group');
+  evWrap.appendChild(el('span', 'hook-filter-label', 'Evento:'));
+  const evAll = el('button', 'hook-filter-chip' + (f.event === 'all' ? ' active' : ''), 'Tutti');
+  evAll.addEventListener('click', () => { state.filters.hooks.event = 'all'; renderHooks(); });
+  evWrap.appendChild(evAll);
+  events.forEach(e => {
+    const chip = el('button', 'hook-filter-chip' + (f.event === e ? ' active' : ''), e);
+    chip.style.borderColor = hookEventColor(e);
+    if (f.event === e) chip.style.background = hookEventColor(e);
+    chip.addEventListener('click', () => { state.filters.hooks.event = e; renderHooks(); });
+    evWrap.appendChild(chip);
+  });
+  filterRow.appendChild(evWrap);
+
+  const scWrap = el('div', 'hook-filter-group');
+  scWrap.appendChild(el('span', 'hook-filter-label', 'Scope:'));
+  ['all', 'global', 'local'].forEach(key => {
+    const lbl = key === 'all' ? 'Tutti' : (key === 'global' ? 'Globali' : 'Locali');
+    const chip = el('button', 'hook-filter-chip' + (f.scope === key ? ' active' : ''), lbl);
+    chip.addEventListener('click', () => { state.filters.hooks.scope = key; renderHooks(); });
+    scWrap.appendChild(chip);
+  });
+  filterRow.appendChild(scWrap);
+  wrap.appendChild(filterRow);
+
+  // Riga 3: header con count + sort dropdown
+  const hdr = el('div', 'section-header');
+  const countEl = el('span', 'section-count', '');
+  hdr.appendChild(countEl);
+  hdr.appendChild(renderSortDropdown(state.hookSort, SORT_OPTIONS.hook, async (key) => {
+    state.hookSort = key;
+    await window.claudeAPI.setState({ hookSort: key });
+    renderHooks();
+  }));
+  wrap.appendChild(hdr);
+
+  // Grid
+  const grid = el('div', 'hook-grid');
+  const cards = [];
+  all.forEach(item => {
+    const card = buildHookCard(item);
+    grid.appendChild(card);
+    cards.push(card);
+  });
+
+  function applyFilters() {
+    const q = inp.value.toLowerCase();
+    state.filters.hooks.search = q;
+    let visible = 0;
+    cards.forEach((card, i) => {
+      const it = all[i];
+      const matchSearch = !q
+        || it.event.toLowerCase().includes(q)
+        || it.matcher.toLowerCase().includes(q)
+        || it.pluginId.toLowerCase().includes(q)
+        || (it.handlers || []).some(h => (h.command || '').toLowerCase().includes(q));
+      const matchEvent = f.event === 'all' || it.event === f.event;
+      const matchScope = f.scope === 'all' || it.scope === f.scope;
+      const show = matchSearch && matchEvent && matchScope;
+      card.style.display = show ? '' : 'none';
+      if (show) visible++;
+    });
+    countEl.textContent = visible + ' di ' + all.length;
+  }
+
+  inp.addEventListener('input', applyFilters);
+  applyFilters();
+
+  wrap.appendChild(grid);
+
+  if (!all.length) {
+    const empty = el('div', 'empty-state');
+    empty.appendChild(el('p', '', 'Nessun hook trovato. Installa un plugin con `hooks/hooks.json` per popolare questa sezione.'));
+    setContent(empty);
+    return;
+  }
+
+  setContent(wrap);
+  inp.focus();
+}
+
+function buildHookCard(item) {
+  const card = el('div', 'hook-card');
+  card.style.borderLeftColor = hookEventColor(item.event);
+
+  // Header: badge evento colorato + plugin + scope
+  const head = el('div', 'hook-card-head');
+  const evBadge = el('span', 'hook-event-badge', item.event);
+  evBadge.style.background = hookEventColor(item.event);
+  head.appendChild(evBadge);
+  const pluginLine = el('span', 'hook-plugin-line');
+  pluginLine.appendChild(el('span', 'hook-plugin-name', item.pluginId));
+  if (item.mkt) {
+    const dot = el('span', 'hook-plugin-mkt-dot');
+    dot.style.background = mktColor(item.mkt);
+    pluginLine.appendChild(dot);
+    pluginLine.appendChild(el('span', 'hook-plugin-mkt', item.mkt));
+  }
+  head.appendChild(pluginLine);
+  const scopeBadge = el('span', 'scope-badge scope-' + item.scope,
+    item.scope === 'local' ? (item.projectName || 'locale') : 'globale');
+  if (item.projectPath) scopeBadge.title = item.projectPath;
+  head.appendChild(scopeBadge);
+  card.appendChild(head);
+
+  // Matcher (opzionale)
+  if (item.matcher) {
+    const matcherRow = el('div', 'hook-matcher-row');
+    matcherRow.appendChild(el('span', 'hook-matcher-label', 'matcher'));
+    matcherRow.appendChild(el('code', 'hook-matcher-value', item.matcher));
+    card.appendChild(matcherRow);
+  }
+
+  // Handlers preview (max 2 righe, "+N altri" se più)
+  const handlersWrap = el('div', 'hook-handlers');
+  const handlers = item.handlers || [];
+  const visible = handlers.slice(0, 2);
+  visible.forEach(h => {
+    const row = el('div', 'hook-handler-row');
+    const typeBadge = el('span', 'hook-handler-type', h.type || 'command');
+    row.appendChild(typeBadge);
+    if (h.shell) {
+      const shellBadge = el('span', 'hook-handler-shell', h.shell);
+      row.appendChild(shellBadge);
+    }
+    if (h.async) {
+      const asyncBadge = el('span', 'hook-handler-async', 'async');
+      row.appendChild(asyncBadge);
+    }
+    if (typeof h.timeout === 'number') {
+      const timeoutBadge = el('span', 'hook-handler-timeout', h.timeout + 's');
+      row.appendChild(timeoutBadge);
+    }
+    const cmd = el('code', 'hook-handler-cmd', truncate(h.command || '', 140));
+    cmd.title = h.command || '';
+    row.appendChild(cmd);
+    handlersWrap.appendChild(row);
+  });
+  if (handlers.length > visible.length) {
+    const more = el('div', 'hook-handler-more',
+      '+ ' + (handlers.length - visible.length) + ' altro/i — clicca per vedere tutto');
+    handlersWrap.appendChild(more);
+  }
+  card.appendChild(handlersWrap);
+
+  // Footer azioni
+  const foot = el('div', 'hook-card-foot');
+  const detailBtn = el('button', 'btn btn-sm btn-ghost', '⌕ Dettagli');
+  detailBtn.addEventListener('click', e => { e.stopPropagation(); showHookDetailsModal(item); });
+  foot.appendChild(detailBtn);
+  if (item.sourcePath) {
+    const openBtn = el('button', 'btn btn-sm btn-ghost', '📁 Apri hooks.json');
+    openBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      window.claudeAPI.openDirectory(item.sourcePath);
+    });
+    foot.appendChild(openBtn);
+  }
+  card.appendChild(foot);
+
+  card.addEventListener('click', () => showHookDetailsModal(item));
+  return card;
+}
+
+function truncate(s, n) { return s && s.length > n ? s.slice(0, n - 1) + '…' : s; }
+
+function showHookDetailsModal(item) {
+  const overlay = el('div', 'md-overlay');
+  const modal   = el('div', 'md-modal hook-modal');
+
+  const header = el('div', 'md-header');
+  const titleWrap = el('div', 'md-title');
+  const evBadge = el('span', 'hook-event-badge', item.event);
+  evBadge.style.background = hookEventColor(item.event);
+  titleWrap.appendChild(evBadge);
+  titleWrap.appendChild(el('span', 'hook-modal-plugin', item.pluginId + (item.mkt ? ' · ' + item.mkt : '')));
+  header.appendChild(titleWrap);
+
+  const copyBtn = el('button', 'md-copy', '⎘ Copia');
+  copyBtn.title = 'Copia il JSON completo di questa configurazione hook';
+  copyBtn.addEventListener('click', () => {
+    const json = JSON.stringify({
+      event: item.event,
+      matcher: item.matcher,
+      hooks: item.handlers,
+    }, null, 2);
+    navigator.clipboard.writeText(json);
+    toast('JSON hook copiato negli appunti', 'success');
+  });
+  header.appendChild(copyBtn);
+
+  const closeBtn = el('button', 'md-close', '×');
+  closeBtn.title = 'Chiudi (Esc)';
+  header.appendChild(closeBtn);
+
+  modal.appendChild(header);
+
+  const body = el('div', 'md-content hook-modal-body');
+  if (item.matcher) {
+    const row = el('div', 'hook-detail-row');
+    row.appendChild(el('span', 'hook-detail-label', 'Matcher'));
+    row.appendChild(el('code', 'hook-detail-value', item.matcher));
+    body.appendChild(row);
+  }
+  const scopeRow = el('div', 'hook-detail-row');
+  scopeRow.appendChild(el('span', 'hook-detail-label', 'Scope'));
+  scopeRow.appendChild(el('span', '', item.scope === 'local' ? ('locale (' + (item.projectName || item.projectPath) + ')') : 'globale'));
+  body.appendChild(scopeRow);
+
+  const handlersTitle = el('h3', 'hook-detail-title', 'Handlers (' + (item.handlers || []).length + ')');
+  body.appendChild(handlersTitle);
+  (item.handlers || []).forEach((h, i) => {
+    const block = el('div', 'hook-handler-block');
+    const meta = el('div', 'hook-handler-meta');
+    meta.appendChild(el('span', 'hook-handler-idx', '#' + (i + 1)));
+    meta.appendChild(el('span', 'hook-handler-type', h.type || 'command'));
+    if (h.shell) meta.appendChild(el('span', 'hook-handler-shell', 'shell: ' + h.shell));
+    if (h.async) meta.appendChild(el('span', 'hook-handler-async', 'async'));
+    if (typeof h.timeout === 'number') meta.appendChild(el('span', 'hook-handler-timeout', 'timeout: ' + h.timeout + 's'));
+    block.appendChild(meta);
+    const pre = el('pre', 'hook-handler-pre');
+    pre.textContent = h.command || '';
+    block.appendChild(pre);
+    body.appendChild(block);
+  });
+
+  if (item.sourcePath) {
+    const srcRow = el('div', 'hook-detail-row');
+    srcRow.appendChild(el('span', 'hook-detail-label', 'Sorgente'));
+    const link = el('button', 'btn btn-sm btn-ghost', item.sourcePath);
+    link.addEventListener('click', () => window.claudeAPI.openDirectory(item.sourcePath));
+    srcRow.appendChild(link);
+    body.appendChild(srcRow);
+  }
+
+  modal.appendChild(body);
+
+  const close = () => {
+    document.removeEventListener('keydown', onKey);
+    overlay.remove();
+  };
+  function onKey(e) { if (e.key === 'Escape') close(); }
+  closeBtn.addEventListener('click', close);
+  overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+  document.addEventListener('keydown', onKey);
+
+  overlay.appendChild(modal);
+  overlay._close = close;
+  swapModalOverlay(overlay);
+  closeBtn.focus();
+}
 
 function appendScopeBadge(chip, item) {
   const badge = el('span', 'scope-badge scope-' + item.scope,
@@ -4084,7 +4447,7 @@ function fuzzyScore(query, target) {
 function buildPaletteItems() {
   const items = [];
   // Azioni rapide
-  const sections = ['dashboard', 'marketplaces', 'plugins', 'skills', 'agents', 'mcp', 'stats', 'config', 'settings'];
+  const sections = ['dashboard', 'marketplaces', 'plugins', 'skills', 'agents', 'mcp', 'hooks', 'stats', 'config', 'settings'];
   sections.forEach(s => items.push({
     kind: 'action', icon: '→',
     label: 'Vai a ' + s.charAt(0).toUpperCase() + s.slice(1),

@@ -1,5 +1,24 @@
 # Changelog
 
+## v1.0.83 — 2026-05-25 — Sezione Hooks (Pack K MVP): browser dedicato per gli hook dei plugin
+
+Aggiunta la nuova sezione **Hooks** nella sidebar (fra MCP e Stats). Aggrega in un browser unico tutti gli hook event di tutti i plugin installati (`hooks/hooks.json`) con card per ogni combinazione evento+matcher, badge colorato per tipo evento, ricerca, filtro per evento e per scope, ordinamento configurabile, modal dettagli con JSON copy. Prima questi hook erano visibili solo dentro il modal "Contenuto plugin" — adesso esistono come superficie autonoma per esplorarli globalmente e capire cosa scatta su quale evento.
+
+- [FEATURE] **Sidebar entry "Hooks"** con icona dedicata, fra MCP e Stats. `data-section="hooks"` switchabile con click o via spotlight Cmd+K. Aggiornati `sectionTitles`, dispatcher `render()`, lista sezioni Cmd+K
+- [FEATURE] **`renderHooks()`** (`src/renderer/app.js`): genera lista piatta `{event, matcher, handlers, pluginId, mkt, scope, fullId, sourcePath}` aggregando da `state.plugins.hookEvents` (sia global che local). Card responsive con:
+  - **Header**: badge evento colorato (palette `HOOK_EVENT_COLORS` per i 10 event standard Claude Code + grigio fallback) + plugin name + dot color marketplace + scope badge (globale/locale)
+  - **Matcher row** (opzionale): label "matcher" + regex/string in `<code>` monospace accent2
+  - **Handlers preview**: max 2 righe con badge `type`, `shell`, `async`, `timeout` + comando troncato a 140 char (tooltip = full). "+ N altro/i" se ce ne sono di più
+  - **Footer**: bottoni "⌕ Dettagli" + "📁 Apri hooks.json" (apre il file con app default via `shell.openPath`)
+- [FEATURE] **Ricerca + filtri**: search input full-text (cerca su event/matcher/pluginId/command), filtro chip per event (multi-tipo con i colori della palette), filtro chip per scope (Tutti / Globali / Locali). Filtri combinabili in AND
+- [FEATURE] **Sort dropdown**: 4 modalità (`event-asc`/`event-desc`/`plugin-asc`/`plugin-desc`) con persistenza `state.hookSort` in `state.json`. Helper `HOOK_SORTERS` + `SORT_OPTIONS.hook` coerenti con il pattern Pack L
+- [FEATURE] **Modal dettagli hook** (`showHookDetailsModal`): mostra matcher + scope + lista handlers completa con `<pre>` scrollabile per ogni command (utile per claude-mem dove i command sono shell complessi multi-linea). Bottone "⎘ Copia" in header che copia il JSON completo della config hook (event + matcher + hooks array) — pronto da incollare in un `hooks.json` per riusarlo
+- [FEATURE] **KPI Dashboard "Hooks"**: card cliccabile con `num: hookList.length` + sublabel "Hooks · N plugin" (cardinalità dei plugin che forniscono hook). Click → naviga alla sezione Hooks. Colore viola `#a78bfa` (palette PreToolUse)
+- [BACKEND] **`readHookEvents(hooksDir)` esteso** (`src/main.js`): ritorna ora anche `matchers: [{matcher, handlers: [{type, command, async, timeout, shell}]}]` + `sourcePath` (path assoluto del file `hooks.json`). I campi legacy `matcherCount` + `handlerCount` restano per compat con il modal "Contenuto plugin" già esistente (v1.0.56)
+- [STYLE] Nuove classi `.hook-grid`, `.hook-card`, `.hook-event-badge`, `.hook-matcher-row`, `.hook-handler-row`, `.hook-handler-type/-shell/-async/-timeout`, `.hook-handler-cmd/-more`, `.hook-filter-row/-group/-label/-chip`, `.hook-modal/-modal-plugin/-modal-body`, `.hook-detail-row/-label/-value/-title`, `.hook-handler-block/-meta/-pre`. Coerenza visiva con `.skill-grid` + `.scope-badge` esistenti
+- [PERSISTENCE] `state.hookSort` restored in `init()` con default `event-asc`. `state.filters.hooks = {search, event, scope}` per mantenere lo stato di ricerca/filtri attraverso re-render
+- [NOTE] Pack K v1.0.83 implementa il MVP della roadmap (sidebar + lista + filtri + KPI). Le estensioni opzionali (slow-hook indicator, trigger count stimati, overlap warning fra plugin) restano in backlog per v1.0.84+
+
 ## v1.0.82 — 2026-05-25 — Ordinamento universale (Pack L): dropdown sort in Plugin / Skill / Agent / MCP
 
 Replicato in tutte le sezioni a card il pattern di ordinamento già presente in Marketplace dalla v1.0.55, per coerenza UX. Chi impara la dropdown "Ordina:" in una sezione la ritrova ovunque, con preferenza persistita per sezione.
