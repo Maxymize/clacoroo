@@ -8,7 +8,7 @@ Gestisci plugin, marketplace, skill, agent, MCP server, hook, statistiche, quote
 [![Electron](https://img.shields.io/badge/Electron-36-47848F?logo=electron&logoColor=white)](https://www.electronjs.org/)
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20Windows-141413)](#requisiti)
 [![License: AGPL v3+](https://img.shields.io/badge/License-AGPL%20v3+-d97757.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-1.0.74-d97757.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-1.0.76-d97757.svg)](CHANGELOG.md)
 
 **💛 Supporta il progetto:**
 [![Sponsor su GitHub](https://img.shields.io/badge/Sponsor-GitHub-EA4AAA?logo=githubsponsors&logoColor=white)](https://github.com/sponsors/Maxymize)

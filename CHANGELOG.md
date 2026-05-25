@@ -1,5 +1,39 @@
 # Changelog
 
+## v1.0.78 — 2026-05-25 — Skill/Agent launcher: solo ⎘ copia (rimosso ▶)
+
+Terza iterazione del launcher (dopo v1.0.75 con `claude -p` e v1.0.77 con `claude` interattivo + pre-typing). Il ▶ è stato rimosso definitivamente: per skill/agent con scope **globale** la tab partiva da HOME, quindi claude si avviava senza contesto di progetto — inutile. Aggiungere un picker progetto avrebbe complicato il flusso senza vantaggio reale rispetto al copy. L'utente apre il proprio terminale nel progetto giusto, lancia claude e incolla `/<skill-name>`: CLACOROO elimina solo l'attrito del "qual era il nome esatto?", senza fare assunzioni sul contesto di lavoro.
+
+- [REMOVED] Bottone ▶ "Apri claude in terminale" + helper `openTerminalForSkillOrAgent(item, kind, cmdText)` da v1.0.77
+- [IMPROVEMENT] Icona ⎘ più luminosa: `color` passa da `--text-muted` a `--text` + leggero fill warm `rgba(255,246,232,.06)` di default + `font-size` 13px (era 11). A riposo si vede chiaramente che è interattiva, non sembra disabilitata
+- [REFACTOR] `appendRunButton(chip, item, kind)` ora genera un solo `<button>` invece di due. La precondizione `if (!termState.caps.available) return` è stata rimossa: il copy non dipende dal pty, funziona sempre via `navigator.clipboard.writeText()`
+- [KEPT] Shell selector + `preferredShell` in Impostazioni (rimangono utili per le tab manuali del drawer terminale)
+
+## v1.0.77 — 2026-05-25 — Skill/Agent launcher: redesign (⎘ copy + ▶ claude interattivo + pre-typing)
+
+Il flusso v1.0.75 con `claude -p "<name>"` era sbagliato per tre motivi: (1) `-p` è one-shot e chiude la sessione dopo una risposta, (2) mandare solo il nome come prompt NON invoca la skill — claude lo legge come testo libero, (3) la skill in Claude Code si attiva con `/<name>` dentro una sessione **interattiva**, non come argomento CLI. Sostituito da due bottoni per chip:
+
+- [FEATURE] **Bottone ⎘ "Copia comando"** su ogni skill/agent card: copia `/<skill-name>` (skill) o `<agent-name>` (agent) negli appunti via `navigator.clipboard.writeText()`. Permette di incollare il comando in qualsiasi terminale esterno, IDE, o sessione claude già aperta in altra tab. Toast verde di conferma con il testo copiato
+- [FEATURE] **Bottone ▶ "Apri claude in terminale"** (redesigned): apre drawer + nuova tab + lancia `claude` (interattivo, niente `-p`) + dopo 3.5s pre-digita `/<skill-name>` o `<agent-name>` SENZA premere Enter. L'utente vede claude pronto col comando già scritto e decide se inviare o aggiungere contesto. Per skill/agent con scope locale, la tab parte da `cwd = projectPath` (claude legge il progetto corretto); per gli scope globali da HOME
+- [FEATURE] Helper `openTerminalForSkillOrAgent(item, kind, cmdText)` con timing calibrato: 350ms (shell pronta a ricevere `claude`) + 3500ms (claude ha caricato contesto/skills/prompt). Su macchine più lente il testo arriverà durante il loading di claude (no harm done — l'utente può cancellare e ridigitare)
+- [REFACTOR] Helper `appendRunButton(chip, item, kind)` riscritto per generare due `<button>` invece di uno. Stesso pattern in `renderSkills` (chip = `/` + skill) e `renderAgents` (chip = agent name, niente `/` perché in claude code gli agent si mention-ano con nome diretto, non slash)
+- [REFACTOR] CSS: nuova classe base `.skill-chip-icon-btn` (22×22, hover scale 1.08, transizione 150ms) condivisa fra copy/play. Varianti `.skill-chip-copy` (hover blu accent2 `#6a9bcc`) e `.skill-chip-run` (hover verde Anthropic `#22c55e`)
+- [REMOVED] Vecchio bottone v1.0.75 `claude -p "<name>"` + helper `appendRunButton` versione monobottone
+
+## v1.0.76 — 2026-05-25 — Donation channels live (GitHub Sponsors + BMAC + PayPal) + sidebar support buttons
+
+Pack I (Sponsorship & Donations) attivato: tutti e 3 i canali di donazione sono ora live e integrati ovunque.
+
+- [FEATURE] **Sidebar footer "Supporta CLACOROO"** sempre visibile in ogni pagina dell'app (sotto la riga versione/update status): 3 mini-bottoni 💖 (GitHub Sponsors) · ☕ (Buy Me a Coffee) · 💳 (PayPal). Click → `shell.openExternal` apre il canale nel browser di sistema. Hover con colori brand del canale (rosa GitHub, giallo BMAC, blu PayPal). Border-top tratteggiato per separazione visiva dalla status row
+- [FEATURE] `.github/FUNDING.yml` con i 3 canali attivi: `github: [Maxymize]` + `buy_me_a_coffee: maxymize` + `custom: ["https://paypal.me/maxymizebusiness"]` → attiva il bottone "❤ Sponsor" nativo nella sidebar del repo GitHub con dropdown a 3 opzioni
+- [FEATURE] **README.md + README.it.md header**: nuova riga "💛 Support the project / Supporta il progetto" con 3 badge affiancati (colori nativi GitHub/BMAC/PayPal) subito sotto i badge tecnici (Electron, License, Version)
+- [FEATURE] **Sezione dedicata "Support the project / Supporta il progetto"** nei due README estesa con 3 badge "for-the-badge" grandi affiancati + tabella "Which channel should you choose?" che spiega quando preferire GitHub Sponsors (dev ricorrenti, GitHub matching 12 mesi) vs BMAC (creator/micro-donazioni) vs PayPal (utenti tradizionali/IT)
+- [REFACTOR] `src/renderer/app.js`: nuova function `attachSupportButtons()` chiamata in `init()` dopo `setupNav()`. URL dei canali letti da attributo `data-url` nell'HTML (no hardcode nel JS)
+- [REFACTOR] `src/renderer/index.html`: nuovo blocco `<div class="sidebar-support">` dentro `.sidebar-footer` con 3 `<button>` accessibili (title + aria-label per ogni canale)
+- [REFACTOR] `src/renderer/style.css`: nuove classi `.sidebar-support`, `.sidebar-support-label`, `.sidebar-support-btn` con varianti hover per canale (`.ssb-github`, `.ssb-bmac`, `.ssb-paypal`)
+- [DOCS] Documento strategia `docs/strategia-lancio/doc-tecnico_strategia-lancio-clacoroo.html` include già la sezione "Pack monetizzazione complementari" che descrive la strategia di donazione multi-canale (v1.0.65)
+- [SECURITY] Nessuna modifica alla CSP: i 3 button usano `data-url` letto via `dataset.url` e passato a `window.claudeAPI.openExternal()` (IPC esistente). Niente innerHTML, niente eval, niente CDN
+
 ## v1.0.75 — 2026-05-25 — Skill/Agent launcher ▶ + shell selector
 
 - [FIX] **Versione: fonte unica di verità** in Impostazioni. Prima il numero era hardcoded come stringa letterale (`'1.0.74'`) e il footer della sidebar leggeva `app.getVersion()` da package.json: dimenticarsi di aggiornare il letterale causava mismatch (es. footer "v1.0.72", Impostazioni "v1.0.75"). Ora entrambi leggono `d.appVersion` (ritornato da `get-data` IPC, sorgente `app.getVersion()` → `package.json`)

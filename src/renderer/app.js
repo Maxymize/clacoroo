@@ -71,6 +71,7 @@ const $ = id => document.getElementById(id);
 /* ── INIT ─────────────────────────────────────────────────────────────── */
 async function init() {
   setupNav();
+  attachSupportButtons();
   // v1.0.67 — Carica caps pty PRIMA del primo render, così il bottone
   // "Terminale" appare nel topbar fin dal primo paint (altrimenti il
   // render parte con termState.caps=null e l'utente non vede il bottone).
@@ -1698,32 +1699,40 @@ function renderAgents() {
   }, item => item.name + ' ' + item.plugin + ' ' + item.mkt + (item.projectName || ''), 'Cerca agent…', 'skill-grid');
 }
 
-// v1.0.75 — Bottone "▶" sulle card di skill/agent. Apre il drawer terminale,
-// crea una nuova tab (cwd = projectPath per scope locale, HOME per globali)
-// ed esegue `claude -p "<name>"` (skill) o `claude -p "Use the <name> agent"`
-// (agent — il claude one-shot ha bisogno di un imperativo per attivarlo).
-// stopPropagation evita di aprire anche il markdown preview cliccando il chip.
+// v1.0.78 — Un solo bottone "⎘ Copia" sulle card di skill/agent.
+//
+// Storia delle iterazioni:
+//   v1.0.75 → ▶ lanciava `claude -p "<name>"` (sbagliato: -p è one-shot, e
+//             mandare solo il nome come prompt non invoca la skill — claude
+//             lo legge come testo libero)
+//   v1.0.77 → due bottoni: ⎘ copia + ▶ apriva claude interattivo nel drawer
+//             e pre-digitava `/<name>`. Problema: per skill/agent con scope
+//             globale il cwd era HOME, quindi claude partiva senza contesto
+//             di progetto. Aggiungere un picker progetto avrebbe complicato
+//             il flusso senza dare vantaggio reale rispetto al copy.
+//   v1.0.78 → solo ⎘ copia. L'utente sa nel proprio terminale dove lanciare
+//             claude (progetto giusto) e incolla `/<skill-name>`. CLACOROO
+//             elimina solo l'attrito del "qual era il nome esatto della
+//             skill?", senza fare assunzioni sul contesto di lavoro.
+//
+// Copia `/<skill-name>` (skill) o `<agent-name>` (agent). stopPropagation
+// evita di aprire anche il markdown preview cliccando il chip.
 function appendRunButton(chip, item, kind) {
-  if (!termState.caps || !termState.caps.available) return;  // niente pty → niente ▶
-  const btn = el('button', 'skill-chip-run', '▶');
-  btn.type = 'button';
-  btn.title = kind === 'skill'
-    ? 'Esegui in terminale: claude -p "' + item.name + '"'
-    : 'Esegui in terminale: claude -p "Use the ' + item.name + ' agent"';
-  btn.addEventListener('click', (ev) => {
+  const cmdText = kind === 'skill' ? '/' + item.name : item.name;
+
+  const copyBtn = el('button', 'skill-chip-icon-btn skill-chip-copy', '⎘');
+  copyBtn.type = 'button';
+  copyBtn.title = 'Copia "' + cmdText + '" negli appunti';
+  copyBtn.addEventListener('click', async (ev) => {
     ev.stopPropagation();
-    const cwd = item.projectPath || null;  // locale → progetto; globale → HOME default
-    const prompt = kind === 'skill'
-      ? item.name
-      : 'Use the ' + item.name + ' agent';
-    // Comando: claude -p "<prompt>"  (le virgolette doppie sono interpretate
-    // dalla shell, il nome è validato dal regex marketplace quindi nessuna
-    // injection — vedi CLAUDE.md sezione SECURITY).
-    const cmd = 'claude -p "' + prompt + '"';
-    openTerminalWithCommand(cmd, { cwd });
-    toast('Lancio ' + kind + ' "' + item.name + '" nel terminale…', 'info');
+    try {
+      await navigator.clipboard.writeText(cmdText);
+      toast('Copiato "' + cmdText + '" negli appunti', 'success');
+    } catch (e) {
+      toast('Impossibile copiare: ' + e.message, 'error');
+    }
   });
-  chip.appendChild(btn);
+  chip.appendChild(copyBtn);
 }
 
 function appendScopeBadge(chip, item) {
@@ -4231,6 +4240,21 @@ function renderUpdateBanner(info) {
   // Insert sotto la topbar
   const topbar = document.querySelector('.topbar');
   if (topbar) topbar.insertAdjacentElement('afterend', banner);
+}
+
+/* ── SIDEBAR SUPPORT BUTTONS (v1.0.76) ───────────────────────────────── */
+// 3 mini-bottoni di donazione (GitHub Sponsors, BMAC, PayPal) sempre
+// visibili nel footer del sidebar. URL letti da data-url nell'HTML.
+// Aperti via shell.openExternal nel browser di sistema.
+function attachSupportButtons() {
+  document.querySelectorAll('.sidebar-support-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const url = btn.dataset.url;
+      if (url) window.claudeAPI.openExternal(url);
+    });
+  });
 }
 
 /* ── STATUS / FOOTER (v1.0.62) ────────────────────────────────────────── */

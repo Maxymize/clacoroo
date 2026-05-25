@@ -309,6 +309,50 @@ body {
 .status-dot.loading  { background: var(--yellow); animation: pulse 1s infinite; }
 .status-dot.outdated { background: #f59e0b; box-shadow: 0 0 6px #f59e0b; animation: pulse 1.6s infinite; }
 
+/* v1.0.76 — Sidebar Support: 3 mini-bottoni di donazione sempre visibili
+   nel footer sidebar (sotto la riga status/versione). Apertura via
+   shell.openExternal verso GitHub Sponsors / Buy Me a Coffee / PayPal. */
+.sidebar-support {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--border);
+  font-size: 10px;
+}
+.sidebar-support-label {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 600;
+  color: var(--text-muted);
+  opacity: 0.7;
+  margin-right: 2px;
+  flex-shrink: 0;
+}
+.sidebar-support-btn {
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 3px 6px;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  transition: transform .15s, background .15s, border-color .15s;
+  color: inherit;
+  -webkit-app-region: no-drag;
+}
+.sidebar-support-btn:hover {
+  transform: translateY(-1px);
+  border-color: var(--border2);
+}
+.sidebar-support-btn:active {
+  transform: translateY(0);
+}
+.sidebar-support-btn.ssb-github:hover { background: rgba(234, 74, 170, 0.18); }
+.sidebar-support-btn.ssb-bmac:hover   { background: rgba(255, 221, 0, 0.22); }
+.sidebar-support-btn.ssb-paypal:hover { background: rgba(0, 119, 200, 0.20); }
+
 /* v1.0.62 — Bottone "Update" inline accanto al numero versione quando
    è disponibile una release più recente (lucina arancio). Click apre
    la pagina di download della release su shell.openExternal. */
@@ -1065,27 +1109,32 @@ body {
 .skill-chip-plugin { font-size: 10px; color: var(--text-muted); }
 .skill-chip.blocked { opacity: .5; }
 
-/* v1.0.75 — Bottone ▶ "Esegui in terminale" sulle skill/agent chip */
-.skill-chip-run {
+/* v1.0.78 — Bottone "⎘ Copia comando" sulle skill/agent chip (semplificato
+ * da v1.0.77 che ne aveva due — il ▶ è stato rimosso, vedi commento JS).
+ * Icona più luminosa rispetto a v1.0.77: colore --text (non muted) + leggero
+ * fill warm di default, così è chiaro che è cliccabile anche a riposo.
+ */
+.skill-chip-icon-btn {
   flex-shrink: 0;
   width: 22px; height: 22px;
   display: inline-flex; align-items: center; justify-content: center;
-  background: transparent;
+  background: rgba(255, 246, 232, .06);
   border: 1px solid var(--border);
   border-radius: 4px;
-  color: var(--text-muted);
-  font-size: 9px; line-height: 1;
+  color: var(--text);
+  font-size: 13px; line-height: 1;
   cursor: pointer;
   transition: background .15s, border-color .15s, color .15s, transform .12s;
   padding: 0;
 }
-.skill-chip-run:hover {
-  background: rgba(34, 197, 94, .15);
-  border-color: var(--green, #22c55e);
-  color: var(--green, #22c55e);
+.skill-chip-icon-btn:active { transform: scale(.96); }
+
+.skill-chip-copy:hover {
+  background: rgba(106, 155, 204, .22);
+  border-color: var(--accent2, #6a9bcc);
+  color: var(--accent2, #6a9bcc);
   transform: scale(1.08);
 }
-.skill-chip-run:active { transform: scale(.96); }
 
 /* ── SETTINGS ─────────────────────────────────────────────────────────── */
 .settings-group { margin-bottom: 32px; }
