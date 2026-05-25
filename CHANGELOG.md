@@ -1,9 +1,12 @@
 # Changelog
 
-## v1.0.74 — 2026-05-25 — Disclaimer Anthropic (README + Impostazioni)
+## v1.0.74 — 2026-05-25 — Disclaimer Anthropic + brand cleanup MAXYMIZE
 
-- [DOCS] **Disclaimer Anthropic** aggiunto in cima a README.md (inglese) e README.it.md (italiano): CLACOROO è tool indipendente di terze parti, NON affiliato/sponsorizzato/approvato da Anthropic, PBC. Sviluppato autonomamente da MAXYMIZE BUSINESS per facilitare l'uso della CLI ufficiale Claude Code
+- [DOCS] **Disclaimer Anthropic** aggiunto in cima a README.md (inglese) e README.it.md (italiano): CLACOROO è tool indipendente di terze parti, NON affiliato/sponsorizzato/approvato da Anthropic, PBC. Sviluppato autonomamente da MAXYMIZE per facilitare l'uso della CLI ufficiale Claude Code
 - [FEATURE] Box disclaimer in fondo alla sezione Impostazioni dell'app (sotto Informazioni e Licenza): stesso messaggio + CSS warning-style giallo/ambra con border-left accent
+- [REFACTOR] Brand name semplificato in tutto il codice: `MAXYMIZE BUSINESS (Maximilian Giurastante)` → `MAXYMIZE` in tutti i file (README, CLAUDE.md, TASK.md, package.json copyright + NSHumanReadableCopyright, header SPDX di tutti i sorgenti, doc-tecnico_handoff.html, About panel macOS). Email contact `info@maxymizebusiness.com` invariata
+- [DOCS] README hero logo aggiornato: ora include l'icona ufficiale dell'app (icon_256x256.png con squircle nero + mascotte) sopra al wordmark CLACOROO pixel-art, congruo con look DMG installer
+- [DOCS] `assets/icon-app-256.png` aggiunto + `assets/logo-readme.svg` aggiornato con `<image>` riferimento all'icona
 
 ## v1.0.73 — 2026-05-25 — README + about panel polish
 
@@ -90,7 +93,7 @@
 
 ## v1.0.66 — 2026-05-22 — Cleanup residui MIT + gitignore strategia personale
 
-- [DOCS] `CLAUDE.md` riga 4: "Open source MIT" → "Open source AGPL-3.0-or-later, copyright © 2026 MAXYMIZE BUSINESS"
+- [DOCS] `CLAUDE.md` riga 4: "Open source MIT" → "Open source AGPL-3.0-or-later, copyright © 2026 MAXYMIZE"
 - [DOCS] `docs/doc-tecnico_handoff.html`: KPI licenza `MIT` → `AGPL-3.0+`, file-tree comment LICENSE aggiornato
 - [CHORE] `.gitignore`: aggiunto `docs/strategia-lancio/` (materiale strategico personale non pubblicabile)
 
@@ -101,7 +104,7 @@
 - [FEATURE] About dialog: nuova riga "Licenza" in Impostazioni → Informazioni con bottone "Testo licenza" → gnu.org/licenses/agpl-3.0
 - [DOCS] `LICENSE`: testo verbatim AGPL-3.0 ufficiale (661 righe) per match SPDX automatico GitHub Licensee
 - [DOCS] `README.md`: badge License `AGPL v3+`, sezione "Licenza" riscritta con spiegazione in italiano (puoi/devi/non puoi) + nota dual licensing
-- [DOCS] `package.json`: `"license": "AGPL-3.0-or-later"` (SPDX moderno future-proof), copyright + `NSHumanReadableCopyright` allineati a MAXYMIZE BUSINESS
+- [DOCS] `package.json`: `"license": "AGPL-3.0-or-later"` (SPDX moderno future-proof), copyright + `NSHumanReadableCopyright` allineati a MAXYMIZE
 
 ## v1.0.64 — 2026-05-22 — Fix cache update stale dopo aggiornamento + nota Gatekeeper
 

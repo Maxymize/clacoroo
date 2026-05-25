@@ -1,6 +1,6 @@
 /*
  * CLACOROO — Claude Code Control Room
- * Copyright (C) 2026 MAXYMIZE BUSINESS (Maximilian Giurastante <info@maxymizebusiness.com>)
+ * Copyright (C) 2026 MAXYMIZE <info@maxymizebusiness.com>
  * SPDX-License-Identifier: AGPL-3.0-or-later
  *
  * This program is free software: you can redistribute it and/or modify it under

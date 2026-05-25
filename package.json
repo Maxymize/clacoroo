@@ -25,7 +25,7 @@
   "build": {
     "appId": "com.maxymize.clacoroo",
     "productName": "CLACOROO",
-    "copyright": "Copyright © 2026 MAXYMIZE BUSINESS (Maximilian Giurastante)",
+    "copyright": "Copyright © 2026 MAXYMIZE",
     "directories": {
       "output": "dist",
       "buildResources": "build"
@@ -68,7 +68,7 @@
       "entitlements": "build/entitlements.mac.plist",
       "entitlementsInherit": "build/entitlements.mac.plist",
       "extendInfo": {
-        "NSHumanReadableCopyright": "Copyright © 2026 MAXYMIZE BUSINESS (Maximilian Giurastante)",
+        "NSHumanReadableCopyright": "Copyright © 2026 MAXYMIZE",
         "LSUIElement": false
       },
       "identity": null

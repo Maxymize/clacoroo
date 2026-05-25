@@ -16,7 +16,7 @@ Gestisci plugin, marketplace, skill, agent, MCP server, hook, statistiche, quote
 
 ---
 
-> ⚠️ **Disclaimer** — CLACOROO è un **tool indipendente di terze parti** e **non è affiliato, sponsorizzato né approvato da Anthropic, PBC**. È un progetto autonomo sviluppato e mantenuto da **MAXYMIZE BUSINESS** (Maximilian Giurastante) con il solo scopo di rendere più facile l'utilizzo della CLI ufficiale [Claude Code](https://github.com/anthropics/claude-code) attraverso un'interfaccia grafica. "Claude" e "Anthropic" sono marchi registrati di Anthropic, PBC. CLACOROO utilizza i file di configurazione e i comandi CLI di Claude Code senza modificarli.
+> ⚠️ **Disclaimer** — CLACOROO è un **tool indipendente di terze parti** e **non è affiliato, sponsorizzato né approvato da Anthropic, PBC**. È un progetto autonomo sviluppato e mantenuto da **MAXYMIZE** con il solo scopo di rendere più facile l'utilizzo della CLI ufficiale [Claude Code](https://github.com/anthropics/claude-code) attraverso un'interfaccia grafica. "Claude" e "Anthropic" sono marchi registrati di Anthropic, PBC. CLACOROO utilizza i file di configurazione e i comandi CLI di Claude Code senza modificarli.
 
 ---
 
@@ -271,7 +271,7 @@ Versionamento: solo l'ultima cifra `1.0.xx` (vedi [`CLAUDE.md`](CLAUDE.md) per l
 
 **GNU Affero General Public License v3.0 or later (AGPL-3.0-or-later)**
 
-Copyright © 2026 **MAXYMIZE BUSINESS** (Maximilian Giurastante &lt;info@maxymizebusiness.com&gt;)
+Copyright © 2026 **MAXYMIZE** (Maximilian Giurastante &lt;info@maxymizebusiness.com&gt;)
 
 CLACOROO è software libero: puoi ridistribuirlo e/o modificarlo secondo i termini della GNU Affero General Public License come pubblicata dalla Free Software Foundation, versione 3 della licenza o (a tua scelta) qualsiasi versione successiva.
 

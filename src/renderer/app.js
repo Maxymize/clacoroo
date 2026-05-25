@@ -1,6 +1,6 @@
 /*
  * CLACOROO — Claude Code Control Room
- * Copyright (C) 2026 MAXYMIZE BUSINESS (Maximilian Giurastante <info@maxymizebusiness.com>)
+ * Copyright (C) 2026 MAXYMIZE <info@maxymizebusiness.com>
  * SPDX-License-Identifier: AGPL-3.0-or-later
  *
  * This program is free software: you can redistribute it and/or modify it under
@@ -3775,11 +3775,11 @@ function renderSettings() {
   infoRow.appendChild(infoRight);
   g3.appendChild(infoRow);
 
-  // v1.0.65 — Riga Licenza: AGPL-3.0-or-later + copyright MAXYMIZE BUSINESS
+  // v1.0.65 — Riga Licenza: AGPL-3.0-or-later + copyright MAXYMIZE
   const licRow = el('div', 'settings-row');
   const licLeft = el('div');
   licLeft.appendChild(el('div', 'settings-row-label', 'Licenza'));
-  licLeft.appendChild(el('div', 'settings-row-desc', '© 2026 MAXYMIZE BUSINESS (Maximilian Giurastante)'));
+  licLeft.appendChild(el('div', 'settings-row-desc', '© 2026 MAXYMIZE'));
   licRow.appendChild(licLeft);
   const licRight = el('div');
   licRight.style.cssText = 'display:flex;gap:10px;align-items:center;';
@@ -3798,7 +3798,7 @@ function renderSettings() {
   const disclaimerBox = el('div', 'settings-disclaimer');
   disclaimerBox.appendChild(el('div', 'settings-disclaimer-title', '⚠ Disclaimer'));
   disclaimerBox.appendChild(el('div', 'settings-disclaimer-body',
-    'CLACOROO è un tool indipendente di terze parti e NON è affiliato, sponsorizzato né approvato da Anthropic, PBC. È un progetto autonomo sviluppato e mantenuto da MAXYMIZE BUSINESS con il solo scopo di rendere più facile l\'utilizzo della CLI ufficiale Claude Code attraverso un\'interfaccia grafica. "Claude" e "Anthropic" sono marchi registrati di Anthropic, PBC.'));
+    'CLACOROO è un tool indipendente di terze parti e NON è affiliato, sponsorizzato né approvato da Anthropic, PBC. È un progetto autonomo sviluppato e mantenuto da MAXYMIZE con il solo scopo di rendere più facile l\'utilizzo della CLI ufficiale Claude Code attraverso un\'interfaccia grafica. "Claude" e "Anthropic" sono marchi registrati di Anthropic, PBC.'));
   wrap.appendChild(disclaimerBox);
 
   setContent(wrap);

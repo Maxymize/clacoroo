@@ -1,6 +1,6 @@
 /*
  * CLACOROO — Claude Code Control Room
- * Copyright (C) 2026 MAXYMIZE BUSINESS (Maximilian Giurastante <info@maxymizebusiness.com>)
+ * Copyright (C) 2026 MAXYMIZE <info@maxymizebusiness.com>
  * SPDX-License-Identifier: AGPL-3.0-or-later
  *
  * lib/term.js — Wrapper xterm.js per il drawer terminale (Pack B v1.0.67).
