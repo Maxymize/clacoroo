@@ -52,6 +52,7 @@ const ACCOUNT = require('./lib/account');
 const PRICING = require('./lib/pricing');
 const USAGE   = require('./lib/usage');
 const PTY     = require('./lib/pty');
+const APIKEY  = require('./lib/apikey');
 
 /* ── CONFIG PATHS ──────────────────────────────────────────────────────── */
 
@@ -826,6 +827,13 @@ ipcMain.handle('pty:list', async () => PTY.list());
 ipcMain.handle('pty:cwd', async (_e, { id }) => ({ cwd: PTY.getCwd(id) }));
 
 app.on('before-quit', () => PTY.killAll());
+
+ipcMain.handle('apikey:status',      async ()       => APIKEY.status());
+ipcMain.handle('apikey:test',        async (_e, k)  => APIKEY.testConnection(k));
+ipcMain.handle('apikey:testStored',  async ()       => APIKEY.testStored());
+ipcMain.handle('apikey:activate',    async (_e, k)  => APIKEY.activate(k));
+ipcMain.handle('apikey:deactivate',  async ()       => APIKEY.deactivate());
+ipcMain.handle('apikey:reconfigure', async ()       => APIKEY.reconfigure());
 
 // B4 — Notifiche native (mostrate solo se l'app non è in focus)
 ipcMain.handle('show-notification', async (_e, { title, body }) => {

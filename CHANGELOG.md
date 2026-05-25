@@ -1,5 +1,27 @@
 # Changelog
 
+## v1.0.70 — 2026-05-23 — API key Claude: input + storage cifrato cross-platform
+
+- [FEATURE] Nuovo pannello "API key Claude" in Impostazioni: input + test + salvataggio sicuro + rimozione, no più shell editing
+- [FEATURE] Storage cifrato cross-platform: macOS Keychain via `security`, Linux libsecret via `secret-tool` (fallback file 600), Windows DPAPI via PowerShell
+- [FEATURE] Integrazione ufficiale `apiKeyHelper` di Claude Code: genera script helper in `~/.claude-control-room/scripts/get-api-key.{sh,cmd}` con chmod 700 e scrive il path in `~/.claude/settings.json`
+- [FEATURE] Bottone "Test connessione": valida la chiave via `GET https://api.anthropic.com/v1/models` (200 = OK con count modelli, 401 = invalida, 403 = senza permessi)
+- [FEATURE] "Test connessione" anche su chiave già salvata via `testStored` (decifratura lato main, chiave mai esposta al renderer)
+- [FEATURE] Bottoni Sostituisci + Rimuovi (con conferma + cleanup completo: keychain entry + script + settings.json)
+- [FEATURE] Warning UI quando storage non cifrato (Linux senza libsecret-tools): suggerisce `sudo apt install libsecret-tools`
+- [REMOVED] Vecchia guida `.zshrc` `showApiKeyGuideModal()`: sostituita dal pannello autonomo (eliminate ~80 righe + CSS associato)
+- [SECURITY] Chiave mai loggata, mai mostrata in chiaro nel renderer (display masked `sk-ant-…xxxx` con ultime 4 char), mai trasmessa via rete da CLACOROO (solo `api.anthropic.com` per test)
+- [SECURITY] Script helper chmod 700 (read/exec solo utente owner), service Keychain separato da Claude Code (`com.maxymize.clacoroo.apikey` vs `Claude Code-credentials`)
+- [SECURITY] Validation regex stretta `/^sk-ant-[A-Za-z0-9_-]{10,}$/` prima di toccare Keychain/DPAPI (anti shell-injection nel branch PowerShell)
+- [FEATURE] IPC `apikey:reconfigure`: rigenera helper script + scrive `apiKeyHelper` in settings.json senza richiedere reinserimento chiave
+- [IMPROVEMENT] Status sidecar `apikey.last4` (chmod 600): `status()` mostra le ultime 4 cifre senza decifrare la chiave (evita spawn PowerShell su Win + Keychain prompt su macOS ad ogni open Impostazioni)
+- [IMPROVEMENT] `hasSecretTool()` memoizzato a module-load (no `which secret-tool` spawn ripetuti su Linux)
+- [IMPROVEMENT] `CLAUDE_CONFIG_DIR` env var onorato (allineato a `usage.js`/`mcp.js`): supporta utenti che spostano la config Claude Code fuori da `~/.claude`
+- [FIX] Renderer: `setInline(node, ...)` parametro rinominato da `el` per evitare shadow del helper globale `el()`
+- [FIX] Renderer: rimossa branch morta `process?.platform` nel dialog Rimuovi (in contextIsolation `process` non esiste lato renderer)
+- [FIX] `https.request` test connessione: aggiunto `req.setTimeout(10000)` esplicito (non bastava `opts.timeout` per garantire hard ceiling sul handshake TLS)
+- [REFACTOR] `makeReplaceBtn` / `makeReconfigureBtn`: estratto helper `renderApiKeyForm(container)` + nuovo IPC; eliminato hack del repaint con status finto
+
 ## v1.0.69 — 2026-05-23 — Pannello Account: status Disconnesso + bottone Login terminale
 
 - [FIX] Pannello Account: status badge resta "Connesso" verde anche quando il token OAuth è scaduto e il refresh è fallito (401/403 da `/api/oauth/usage`)

@@ -3058,15 +3058,9 @@ function paintAccountPanel(container, result) {
       logoutBtn.textContent = 'Logout';
     }
   });
-  // v1.0.31 — Pulsante guida API key (sicurezza: CLACOROO NON gestisce la chiave)
-  const apiKeyBtn = el('button', 'btn btn-sm btn-ghost', 'ℹ Modalità API key');
-  apiKeyBtn.title = 'Guida per usare un\'API key invece della subscription';
-  apiKeyBtn.addEventListener('click', () => showApiKeyGuideModal());
-
   actions.appendChild(refreshBtn);
   actions.appendChild(claudeBtn);
   actions.appendChild(consoleBtn);
-  actions.appendChild(apiKeyBtn);
   actions.appendChild(logoutWrap);
   card.appendChild(actions);
 
@@ -3081,6 +3075,232 @@ async function loadAccountPanel(container) {
   accountCache = data;
   paintAccountPanel(container, data);
   refreshSidebarAccountPill();
+}
+
+/* ── PANNELLO API KEY (Anthropic) ─────────────────────────────────────
+ * Storage cross-platform cifrato (macOS Keychain / Linux libsecret / Win
+ * DPAPI), integrazione via `apiKeyHelper` in settings.json. La chiave intera
+ * non passa MAI dal main al renderer: solo `last4` per il masking. */
+
+async function loadApiKeyPanel(container) {
+  container.textContent = '';
+  container.appendChild(el('div', 'account-loading', 'Caricamento stato API key…'));
+  try {
+    const status = await window.claudeAPI.apiKey.status();
+    paintApiKeyPanel(container, status);
+  } catch (e) {
+    container.textContent = '';
+    container.appendChild(el('div', 'account-error', 'Errore: ' + e.message));
+  }
+}
+
+function paintApiKeyPanel(container, status) {
+  container.textContent = '';
+  const card = el('div', 'apikey-card');
+
+  // Header con badge stato
+  const head = el('div', 'apikey-head');
+  const badge = el('span', 'apikey-status-badge ' + (status.present ? 'apikey-status-active' : 'apikey-status-empty'));
+  badge.textContent = status.present ? '● Attiva' : '○ Non configurata';
+  head.appendChild(badge);
+  if (!status.secureStorage) {
+    const warn = el('span', 'apikey-storage-warn', '⚠ Storage non cifrato');
+    warn.title = 'Installa `libsecret-tools` per attivare la crittografia';
+    head.appendChild(warn);
+  }
+  card.appendChild(head);
+
+  // Descrizione
+  card.appendChild(el('div', 'apikey-desc',
+    'Configura una chiave API Anthropic come alternativa alla subscription claude.ai. ' +
+    'CLACOROO la salva in modo sicuro nel ' + status.backend +
+    ' e la espone a Claude Code tramite il meccanismo ufficiale `apiKeyHelper`.'));
+
+  if (status.present) {
+    // Stato: chiave configurata
+    const info = el('div', 'apikey-info');
+    infoLine(info, 'Chiave', status.masked || '—');
+    infoLine(info, 'Storage', status.backend);
+    infoLine(info, 'Helper script', status.helperPath, true);
+    if (!status.helperConfigured) {
+      info.appendChild(el('div', 'apikey-warn',
+        '⚠ Il campo `apiKeyHelper` in settings.json non corrisponde. Clicca "Riconfigura" per allineare.'));
+    }
+    card.appendChild(info);
+
+    const actions = el('div', 'apikey-actions');
+    actions.appendChild(makeTestBtn(container));
+    actions.appendChild(makeReplaceBtn(container));
+    if (!status.helperConfigured) actions.appendChild(makeReconfigureBtn(container));
+    actions.appendChild(makeRemoveBtn(container));
+    card.appendChild(actions);
+  } else {
+    // Stato: nessuna chiave — mostra form input
+    appendApiKeyForm(card, container);
+  }
+
+  // Link console Anthropic
+  const consoleBtn = el('button', 'btn btn-sm btn-ghost apikey-console-link', '↗ Console Anthropic (gestisci API keys)');
+  consoleBtn.addEventListener('click', () =>
+    window.claudeAPI.openExternal('https://console.anthropic.com/settings/keys'));
+  card.appendChild(consoleBtn);
+
+  container.appendChild(card);
+}
+
+function infoLine(parent, label, value, mono) {
+  const r = el('div', 'apikey-info-row');
+  r.appendChild(el('span', 'apikey-info-lbl', label));
+  const val = el('span', 'apikey-info-val' + (mono ? ' apikey-info-mono' : ''));
+  val.textContent = value;
+  r.appendChild(val);
+  parent.appendChild(r);
+}
+
+function appendApiKeyForm(card, container) {
+  const form = el('div', 'apikey-form');
+  form.appendChild(el('div', 'apikey-form-label', 'Incolla la tua chiave Anthropic (inizia con `sk-ant-`):'));
+
+  const input = el('input', 'apikey-input');
+  input.type = 'password';
+  input.placeholder = 'sk-ant-••••••••••••••••••••••••••••••••';
+  input.autocomplete = 'off';
+  input.spellcheck = false;
+  form.appendChild(input);
+
+  const showWrap = el('label', 'apikey-show-wrap');
+  const showChk = el('input');
+  showChk.type = 'checkbox';
+  showChk.addEventListener('change', () => { input.type = showChk.checked ? 'text' : 'password'; });
+  showWrap.appendChild(showChk);
+  showWrap.appendChild(document.createTextNode(' Mostra'));
+  form.appendChild(showWrap);
+
+  const actions = el('div', 'apikey-actions');
+  const testBtn = el('button', 'btn btn-sm btn-ghost', 'Test connessione');
+  const saveBtn = el('button', 'btn btn-sm btn-primary', 'Salva chiave');
+
+  const statusInline = el('div', 'apikey-inline-status');
+
+  testBtn.addEventListener('click', async () => {
+    const k = input.value.trim();
+    if (!k) return setInline(statusInline, 'Inserisci una chiave', 'error');
+    testBtn.disabled = saveBtn.disabled = true;
+    testBtn.textContent = 'Test in corso…';
+    setInline(statusInline, '', '');
+    const r = await window.claudeAPI.apiKey.test(k);
+    testBtn.disabled = saveBtn.disabled = false;
+    testBtn.textContent = 'Test connessione';
+    if (r.ok) {
+      setInline(statusInline, `✓ Chiave valida${r.modelCount ? ` · ${r.modelCount} modelli accessibili` : ''}`, 'ok');
+    } else {
+      setInline(statusInline, '✗ ' + (r.error || 'Errore'), 'error');
+    }
+  });
+
+  saveBtn.addEventListener('click', async () => {
+    const k = input.value.trim();
+    if (!k) return setInline(statusInline, 'Inserisci una chiave', 'error');
+    testBtn.disabled = saveBtn.disabled = true;
+    saveBtn.textContent = 'Salvataggio…';
+    const r = await window.claudeAPI.apiKey.activate(k);
+    if (r.ok) {
+      input.value = '';
+      toast('API key attivata' + (r.warning ? ` (${r.warning})` : ''), 'success');
+      await loadApiKeyPanel(container);
+    } else {
+      testBtn.disabled = saveBtn.disabled = false;
+      saveBtn.textContent = 'Salva chiave';
+      setInline(statusInline, '✗ ' + (r.error || 'Errore salvataggio'), 'error');
+    }
+  });
+
+  actions.appendChild(testBtn);
+  actions.appendChild(saveBtn);
+  form.appendChild(actions);
+  form.appendChild(statusInline);
+  card.appendChild(form);
+}
+
+function setInline(node, text, kind) {
+  node.textContent = text;
+  node.className = 'apikey-inline-status' + (kind ? ' apikey-inline-' + kind : '');
+}
+
+function renderApiKeyForm(container) {
+  container.textContent = '';
+  const card = el('div', 'apikey-card');
+  card.appendChild(el('div', 'apikey-desc',
+    'Incolla una nuova chiave per attivarla (sostituisce l\'eventuale chiave già salvata).'));
+  appendApiKeyForm(card, container);
+  container.appendChild(card);
+}
+
+function makeTestBtn() {
+  const btn = el('button', 'btn btn-sm btn-ghost', 'Test connessione');
+  btn.title = 'Verifica che la chiave salvata sia valida (GET /v1/models)';
+  btn.addEventListener('click', async () => {
+    btn.disabled = true;
+    btn.textContent = 'Test in corso…';
+    const r = await window.claudeAPI.apiKey.testStored();
+    btn.disabled = false;
+    btn.textContent = 'Test connessione';
+    if (r.ok) toast(`✓ Chiave valida · ${r.modelCount || '?'} modelli accessibili`, 'success');
+    else toast('✗ ' + (r.error || 'Errore'), 'error');
+  });
+  return btn;
+}
+
+function makeReplaceBtn(container) {
+  const btn = el('button', 'btn btn-sm btn-ghost', '↻ Sostituisci');
+  btn.title = 'Inserisci una nuova chiave (sostituisce quella corrente)';
+  btn.addEventListener('click', () => renderApiKeyForm(container));
+  return btn;
+}
+
+function makeReconfigureBtn(container) {
+  const btn = el('button', 'btn btn-sm btn-ghost', '⚙ Riconfigura helper');
+  btn.title = 'Riallinea il campo apiKeyHelper di settings.json al path corretto (senza reinserire la chiave)';
+  btn.addEventListener('click', async () => {
+    btn.disabled = true;
+    btn.textContent = 'Riconfiguro…';
+    const r = await window.claudeAPI.apiKey.reconfigure();
+    if (r.ok) {
+      toast('Helper apiKeyHelper riconfigurato', 'success');
+      await loadApiKeyPanel(container);
+    } else {
+      btn.disabled = false;
+      btn.textContent = '⚙ Riconfigura helper';
+      toast('Errore riconfigurazione: ' + (r.error || 'sconosciuto'), 'error');
+    }
+  });
+  return btn;
+}
+
+function makeRemoveBtn(container) {
+  const btn = el('button', 'btn btn-sm btn-danger', 'Rimuovi');
+  btn.title = 'Rimuove la chiave dal Keychain e il campo apiKeyHelper da settings.json';
+  btn.addEventListener('click', async () => {
+    const ok = await window.claudeAPI.confirmDialog({
+      title:   'Rimuovere la API key Claude?',
+      message: 'La chiave verrà eliminata dallo storage sicuro e il campo `apiKeyHelper` rimosso da settings.json.',
+      detail:  'Claude Code tornerà a usare l\'OAuth subscription (se configurata). Per re-attivare la chiave dovrai reinserirla qui.',
+      buttons: ['Annulla', 'Sì, rimuovi'],
+    });
+    if (ok !== 1) return;
+    btn.disabled = true;
+    btn.textContent = '…';
+    const r = await window.claudeAPI.apiKey.deactivate();
+    if (r.ok) {
+      toast('API key rimossa', 'success');
+      await loadApiKeyPanel(container);
+    } else {
+      btn.disabled = false;
+      btn.textContent = 'Rimuovi';
+      toast('Errore: ' + (r.error || 'sconosciuto'), 'error');
+    }
+  });
+  return btn;
 }
 
 // Pill account nella sidebar (sotto Recenti, sopra Footer) — sempre visibile
@@ -3233,95 +3453,6 @@ async function loadDashboardUsage(container, token) {
   } catch { /* fail silently in dashboard */ }
 }
 
-// v1.0.31 — Guida modalità API key. Per sicurezza CLACOROO non maneggia mai
-// la chiave: mostriamo solo istruzioni per impostarla nel proprio shell profile,
-// così la chiave resta esclusivamente sul sistema dell'utente.
-function showApiKeyGuideModal() {
-  // v1.0.60 — Il guard del double-open è gestito da swapModalOverlay() a fine funzione
-  const overlay = el('div', 'md-overlay');
-  const modal   = el('div', 'md-modal');
-  modal.setAttribute('role', 'dialog');
-  modal.setAttribute('aria-modal', 'true');
-
-  const header = el('div', 'md-header');
-  const title  = el('div', 'md-title');
-  title.appendChild(el('span', 'md-kind-badge md-kind-skill', 'guida'));
-  title.appendChild(document.createTextNode(' Modalità API key'));
-  const closeBtn = el('button', 'md-close', '×');
-  closeBtn.setAttribute('aria-label', 'Chiudi');
-  header.appendChild(title);
-  header.appendChild(closeBtn);
-
-  const content = el('div', 'md-content');
-
-  function p(text) { content.appendChild(el('p', null, text)); }
-  function h(text) { content.appendChild(el('h3', null, text)); }
-  function note(text, kind) {
-    const n = el('div', 'apikey-note apikey-note-' + (kind || 'info'), text);
-    content.appendChild(n);
-  }
-  function codeBlock(label, snippet) {
-    const wrap = el('div', 'apikey-code-wrap');
-    const lbl = el('div', 'apikey-code-label', label);
-    const pre = el('div', 'apikey-code-block');
-    const code = el('code', null, snippet);
-    pre.appendChild(code);
-    const copyBtn = el('button', 'apikey-code-copy', '⧉ Copia');
-    copyBtn.addEventListener('click', async () => {
-      try {
-        await navigator.clipboard.writeText(snippet);
-        toast('Copiato', 'success');
-      } catch { toast('Impossibile copiare', 'error'); }
-    });
-    wrap.appendChild(lbl);
-    wrap.appendChild(pre);
-    wrap.appendChild(copyBtn);
-    content.appendChild(wrap);
-  }
-
-  note('⚡ Sicurezza prima di tutto: CLACOROO NON salva, legge o trasmette mai la tua API key. La chiave resta esclusivamente nel tuo shell profile, accessibile solo al tuo utente macOS.', 'security');
-
-  h('Quando usare la modalità API key');
-  p('Se non hai una subscription Claude Max/Pro/Team e vuoi usare i tuoi crediti API pay-per-use, oppure se vuoi forzare l\'uso di un\'API key specifica (es. per un progetto con billing separato).');
-
-  h('Step 1 — Ottieni una chiave');
-  p('Vai sulla console Anthropic, crea o copia una chiave esistente. Le chiavi iniziano con sk-ant-…');
-  const consoleBtn = el('button', 'btn btn-sm btn-primary apikey-step-btn', '↗ Apri console.anthropic.com');
-  consoleBtn.addEventListener('click', () => window.claudeAPI.openExternal('https://console.anthropic.com/settings/keys'));
-  content.appendChild(consoleBtn);
-
-  h('Step 2 — Aggiungila al tuo shell profile');
-  p('Aggiungi questa riga al file di configurazione della tua shell. Sostituisci sk-ant-xxxx con la tua chiave reale.');
-  codeBlock('Per Zsh (default su macOS recente):', 'echo \'export ANTHROPIC_API_KEY="sk-ant-xxxx"\' >> ~/.zshrc');
-  codeBlock('Per Bash (es. Linux o macOS legacy):', 'echo \'export ANTHROPIC_API_KEY="sk-ant-xxxx"\' >> ~/.bashrc');
-
-  h('Step 3 — Ricarica la shell');
-  p('Chiudi e riapri il terminale, oppure esegui:');
-  codeBlock('Zsh:',  'source ~/.zshrc');
-  codeBlock('Bash:', 'source ~/.bashrc');
-
-  h('Step 4 — Verifica');
-  p('Esegui in terminale:');
-  codeBlock('Verifica auth:', 'claude auth status --json');
-  p('Dovresti vedere "authMethod" cambiare a "api" e "apiProvider" che resta "firstParty".');
-
-  note('💡 Nota: questa modalità sostituisce l\'OAuth della subscription. Se vuoi tornare alla subscription Max/Pro, rimuovi la riga export dal profile, ricarica la shell, e ri-esegui claude auth login.', 'info');
-
-  note('🔒 Perché non un campo di input qui? Salvare la chiave in CLACOROO significherebbe scriverla in un file leggibile, oppure usare macOS Keychain. Entrambi gli approcci aggiungono complessità e nuovi vettori di rischio. Lo shell profile è il modo standard e più sicuro: niente intermediari.', 'security');
-
-  function onKey(e) { if (e.key === 'Escape') close(); }
-  function close() { document.removeEventListener('keydown', onKey); overlay.remove(); }
-  closeBtn.addEventListener('click', close);
-  overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
-  document.addEventListener('keydown', onKey);
-
-  modal.appendChild(header);
-  modal.appendChild(content);
-  overlay.appendChild(modal);
-  overlay._close = close;
-  swapModalOverlay(overlay);
-}
-
 // All'avvio carica l'account pill anche se l'utente non visita Impostazioni
 async function bootSidebarAccount() {
   try {
@@ -3363,6 +3494,11 @@ function renderSettings() {
   const accountWrap = el('div', 'settings-account-wrap');
   gAccount.appendChild(accountWrap);
   loadAccountPanel(accountWrap);
+
+  const gApiKey = group('API key Claude');
+  const apiKeyWrap = el('div', 'apikey-panel-wrap');
+  gApiKey.appendChild(apiKeyWrap);
+  loadApiKeyPanel(apiKeyWrap);
 
   const g1 = group('Percorsi');
   row(g1, 'Cartella Claude Code', 'Directory di configurazione globale', d.claudeDir);
@@ -3632,7 +3768,7 @@ function renderSettings() {
   infoRow.appendChild(infoLeft);
   const infoRight = el('div');
   infoRight.style.cssText = 'display:flex;gap:10px;align-items:center;';
-  const verVal = el('div', 'settings-row-val', '1.0.69');
+  const verVal = el('div', 'settings-row-val', '1.0.70');
   const chBtn = btnWithIcon('btn btn-sm btn-green btn-with-icon', 'changelog', ' Changelog');
   chBtn.title = 'Mostra storico versioni';
   chBtn.addEventListener('click', () => openChangelogModal());

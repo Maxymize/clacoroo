@@ -1775,64 +1775,134 @@ body {
   animation: pulse 1.6s ease-in-out infinite;
 }
 
-/* API key guide modal (v1.0.31) */
-.apikey-note {
-  padding: 10px 14px;
-  border-radius: 6px;
+/* v1.0.70 — Pannello "API key Claude" in Impostazioni
+ * (rimossa la vecchia guida modale `.zshrc` — vedi v1.0.31). */
+.apikey-card {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.apikey-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.apikey-status-badge {
   font-size: 12px;
-  line-height: 1.5;
-  margin: 10px 0;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 99px;
 }
-.apikey-note-security {
-  background: rgba(34, 197, 94, .08);
-  border-left: 3px solid #22c55e;
+.apikey-status-active {
+  background: rgba(120, 140, 93, .18);
+  color: #b8c79a;
+  border: 1px solid rgba(120, 140, 93, .35);
+}
+.apikey-status-empty {
+  background: var(--surface2);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+}
+.apikey-storage-warn {
+  font-size: 11px;
+  color: #f59e0b;
+  margin-left: auto;
+  cursor: help;
+}
+.apikey-desc {
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--text-muted);
+}
+.apikey-info {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.apikey-info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  font-size: 12px;
+}
+.apikey-info-lbl {
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+.apikey-info-val {
+  color: var(--text);
+  text-align: right;
+  word-break: break-all;
+}
+.apikey-info-mono {
+  font-family: "SF Mono", "Fira Code", Menlo, monospace;
+  font-size: 11px;
+  color: var(--accent2);
+}
+.apikey-warn {
+  margin-top: 6px;
+  padding: 6px 10px;
+  background: rgba(245, 158, 11, .08);
+  border-left: 3px solid #f59e0b;
+  border-radius: 4px;
+  font-size: 11.5px;
   color: var(--text);
 }
-.apikey-note-info {
-  background: rgba(106, 155, 204, .08);
-  border-left: 3px solid #6a9bcc;
-  color: var(--text);
+.apikey-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
-.apikey-code-wrap {
+.apikey-form-label {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.apikey-input {
+  width: 100%;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 6px;
-  padding: 10px 12px;
-  margin: 8px 0;
-  position: relative;
-}
-.apikey-code-label {
-  font-size: 10px;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: .05em;
-  font-weight: 600;
-  margin-bottom: 4px;
-}
-.apikey-code-block {
-  background: var(--surface2);
-  border-radius: 4px;
   padding: 8px 10px;
-  overflow-x: auto;
+  color: var(--text);
   font-family: "SF Mono", "Fira Code", Menlo, monospace;
   font-size: 12px;
-  color: var(--text);
+  outline: none;
 }
-.apikey-code-copy {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  background: var(--surface2);
-  border: 1px solid var(--border);
+.apikey-input:focus { border-color: var(--accent); }
+.apikey-show-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
   color: var(--text-muted);
-  padding: 3px 8px;
-  border-radius: 4px;
+  user-select: none;
   cursor: pointer;
-  font-size: 10px;
-  transition: all .15s;
 }
-.apikey-code-copy:hover { background: var(--accent); color: white; border-color: var(--accent); }
-.apikey-step-btn { margin: 6px 0 12px; }
+.apikey-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.apikey-inline-status {
+  font-size: 11.5px;
+  min-height: 16px;
+}
+.apikey-inline-ok { color: #22c55e; }
+.apikey-inline-error { color: #ef4444; }
+.apikey-console-link {
+  align-self: flex-start;
+  margin-top: 2px;
+}
+.apikey-panel-wrap { display: block; }
 
 /* Dots slider (v1.0.32) — stile VS Code Claude plugin per effort level */
 .dots-slider {

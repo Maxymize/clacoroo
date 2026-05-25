@@ -44,6 +44,15 @@ contextBridge.exposeInMainWorld('claudeAPI', {
   applySnapshot:      (preview)           => ipcRenderer.invoke('apply-snapshot',     preview),
   showNotification:   (title, body)       => ipcRenderer.invoke('show-notification',  { title, body }),
 
+  apiKey: {
+    status:      ()    => ipcRenderer.invoke('apikey:status'),
+    test:        (k)   => ipcRenderer.invoke('apikey:test', k),
+    testStored:  ()    => ipcRenderer.invoke('apikey:testStored'),
+    activate:    (k)   => ipcRenderer.invoke('apikey:activate', k),
+    deactivate:  ()    => ipcRenderer.invoke('apikey:deactivate'),
+    reconfigure: ()    => ipcRenderer.invoke('apikey:reconfigure'),
+  },
+
   // v1.0.67 — Pack B: Terminale integrato
   pty: {
     capabilities: ()                       => ipcRenderer.invoke('pty:capabilities'),
