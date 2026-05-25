@@ -10,9 +10,12 @@ Gestisci plugin, marketplace, skill, agent, MCP server, hook, statistiche, quote
 [![License: AGPL v3+](https://img.shields.io/badge/License-AGPL%20v3+-d97757.svg)](LICENSE)
 [![Version](https://img.shields.io/badge/version-1.0.74-d97757.svg)](CHANGELOG.md)
 
-[![Dona via PayPal](https://img.shields.io/badge/%E2%98%95%20Supporta%20il%20progetto-Dona%20via%20PayPal-d97757?logo=paypal&logoColor=white)](https://paypal.me/maxymizebusiness)
+**💛 Supporta il progetto:**
+[![Sponsor su GitHub](https://img.shields.io/badge/Sponsor-GitHub-EA4AAA?logo=githubsponsors&logoColor=white)](https://github.com/sponsors/Maxymize)
+[![Buy Me a Coffee](https://img.shields.io/badge/Offrimi_un-Caff%C3%A8-FFDD00?logo=buymeacoffee&logoColor=black)](https://buymeacoffee.com/maxymize)
+[![Dona via PayPal](https://img.shields.io/badge/Dona-PayPal-00457C?logo=paypal&logoColor=white)](https://paypal.me/maxymizebusiness)
 
-[English README »](README.md) · [🇮🇹 Italiano (questo file)](README.it.md)
+[🇬🇧](README.md) · 🇮🇹
 
 </div>
 
@@ -289,17 +292,28 @@ Per usi commerciali che non possono rispettare i termini AGPL, è disponibile un
 
 ## ☕ Supporta il progetto
 
-Se CLACOROO ti torna utile nel tuo workflow quotidiano, considera di supportarne lo sviluppo continuo con una donazione una tantum:
+Se CLACOROO ti torna utile nel tuo workflow quotidiano, considera di supportarne lo sviluppo continuo. Scegli il canale che preferisci — vanno tutti a finanziare lo stesso progetto:
 
-[![Dona via PayPal](https://img.shields.io/badge/Dona-PayPal-00457C?logo=paypal&logoColor=white&style=for-the-badge)](https://paypal.me/maxymizebusiness)
+[![Sponsor su GitHub](https://img.shields.io/badge/Sponsor_su-GitHub-EA4AAA?logo=githubsponsors&logoColor=white&style=for-the-badge)](https://github.com/sponsors/Maxymize)
+[![Buy Me a Coffee](https://img.shields.io/badge/Offrimi_un-Caff%C3%A8-FFDD00?logo=buymeacoffee&logoColor=black&style=for-the-badge)](https://buymeacoffee.com/maxymize)
+[![Dona via PayPal](https://img.shields.io/badge/Dona_via-PayPal-00457C?logo=paypal&logoColor=white&style=for-the-badge)](https://paypal.me/maxymizebusiness)
 
-Le donazioni finanziano:
+### Quale canale scegliere?
+
+| Canale | Ideale per | Note |
+|---|---|---|
+| 💖 **GitHub Sponsors** | Developer attivi su GitHub, supporto ricorrente mensile | 0% commissioni, GitHub raddoppia 1:1 le donazioni nei primi 12 mesi |
+| ☕ **Buy Me a Coffee** | Micro-donazioni una tantum, audience creator/community | UX familiare "offrimi un caffè", supporta anche membership ricorrenti |
+| 💳 **PayPal** | Utenti tradizionali / italiani, aziende, chiunque abbia già un conto PayPal | Nessun nuovo account da creare, trasferimento immediato |
+
+### A cosa servono le donazioni
+
 - 🍎 Iscrizione Apple Developer Program (binari firmati + versione Mac App Store)
 - 🛠 Sviluppo continuo, bug fix e nuove feature
 - 📡 Infrastruttura (GitHub Releases, hosting, futuro cloud sync)
 - 💛 Tempo dedicato al supporto della community (issue, PR review, Discord)
 
-CLACOROO **è e resterà sempre gratuito e open source** (AGPL-3.0). Le donazioni sono completamente volontarie e non sbloccano alcuna feature aggiuntiva — è il vero spirito del software libero. Integrazioni **GitHub Sponsors** e **Buy Me a Coffee** in arrivo prossimamente.
+CLACOROO **è e resterà sempre gratuito e open source** (AGPL-3.0). Le donazioni sono completamente volontarie e non sbloccano alcuna feature aggiuntiva — è il vero spirito del software libero.
 
 ---
 
