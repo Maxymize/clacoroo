@@ -1,48 +1,130 @@
 <div align="center">
 
-<img src="src/renderer/clacoroo.svg" width="120" alt="CLACOROO mascotte" style="image-rendering: pixelated;" />
+<img src="assets/logo-readme.png" width="540" alt="CLACOROO — Claude Code Control Room" />
 
-# CLACOROO
-
-**CLA**ude **CO**de Cont**RO**l **ROO**m
-
-Pannello di controllo visuale per [Claude Code](https://github.com/anthropics/claude-code) — gestisci plugin, marketplace, skill, agent e hook con una UI desktop nativa, senza memorizzare comandi CLI.
+**Visual control panel for [Claude Code](https://github.com/anthropics/claude-code)**
+Manage plugins, marketplaces, skills, agents, MCP servers, hooks, stats, quotas and API keys with a native desktop UI — no CLI commands to memorize.
 
 [![Electron](https://img.shields.io/badge/Electron-36-47848F?logo=electron&logoColor=white)](https://www.electronjs.org/)
-[![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20Windows-141413)](#requisiti)
+[![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20Windows-141413)](#requirements)
 [![License: AGPL v3+](https://img.shields.io/badge/License-AGPL%20v3+-d97757.svg)](LICENSE)
 [![Version](https://img.shields.io/badge/version-1.0.72-d97757.svg)](CHANGELOG.md)
+
+**English (this file)** · [🇮🇹 Leggimi in Italiano »](README.it.md)
 
 </div>
 
 ---
 
-## Cos'è CLACOROO
+## What is CLACOROO
 
-Il nome è un acronimo giocoso: il `CO` si sovrappone tra **Co**de e **Co**ntrol. La mascotte ufficiale è **CLACOROO**, un esserino pixel a 4 zampe ispirato a Clawd di Anthropic ma con un'antenna a LED verde — è lui che gestisce la regia 🎛.
+**CLA**ude **CO**de Cont**RO**l **ROO**m is an Electron desktop app that puts a graphical UI on top of every configuration file Claude Code reads from `~/.claude/`. The orange `CO` in the wordmark overlaps between **Co**de and **Co**ntrol — a small visual pun for what it does: a regia booth for Claude Code, mascotted by **CLACOROO**, a pixel-art 4-legged creature with a green LED antenna (Anthropic Green) glowing on top.
 
-Prima di CLACOROO, l'unico modo per gestire plugin e marketplace di Claude Code era usare i comandi CLI `claude plugins ...` o editare manualmente i JSON in `~/.claude/plugins/`. CLACOROO offre una GUI nativa per fare tutto a colpo di click.
+Before CLACOROO, managing Claude Code plugins, marketplaces, skills, agents, MCP servers, hooks and configuration required:
+- Memorizing and typing CLI commands `claude plugins enable/disable/install/update ...`
+- Hand-editing JSON files scattered across `~/.claude/`
+- Opening Claude Code interactive TUI to check quotas, account, usage
 
-## Cosa fa
+CLACOROO does all this in clicks within a single native desktop app, with live observability, while keeping full security of the original OAuth credentials (never overwritten).
 
-| Sezione | Funzionalità |
-|---|---|
-| 🏠 **Dashboard** | KPI a colpo d'occhio: plugin attivi/disattivati, marketplace, skill e agent totali, token always-on |
-| 🧩 **Plugin** | Toggle enable/disable · update · uninstall · ricerca full-text · filtri per stato e marketplace |
-| 🏪 **Marketplace** | Card espandibili con i plugin contenuti · aggiungi nuovi · install plugin · aggiornamento · rimozione |
-| ⚡ **Skill** | Browser ricercabile su tutte le skill installate globalmente |
-| 🤖 **Agent** | Browser ricercabile su tutti gli agent installati globalmente |
-| 📟 **Terminale** | Drawer in basso multi-tab con xterm.js + node-pty: zsh/bash/pwsh, persistenza tab fra riavvii, status dot live, cwd tracking — apri con `Cmd+\`` |
-| ⚙️ **Impostazioni** | Percorsi rilevati, statistiche, configurazione manuale binario `claude` |
+## Key features
 
-**Auto-refresh**: la UI si aggiorna sola quando i file di configurazione di Claude Code cambiano (`fs.watch`), senza dover riavviare l'app.
+### 🏠 Dashboard
+At-a-glance view of what matters:
+- Context estimation: skills (frontmatter index) · system prompt · agents · memory files · MCP servers · free space, against the 200K token window
+- Live Claude quotas: Session (5h) / Weekly (7d) / Weekly Sonnet bars with percentage and reset time
+- 9 installation KPIs (enabled/disabled plugins, marketplaces, skills, agents, MCP connected, health issues, always-on tokens)
+- 9 Claude Code usage KPIs (sessions, messages, total tokens, estimated API value in USD, active days, streak, peak hour, preferred model)
 
-## Requisiti
+### 🏪 Marketplaces
+- List of registered marketplaces with `X/Y installed` count for each
+- Expandable cards with "Marketplace plugins" modal showing every plugin (installed or available)
+- **Add Marketplace** from the panel: source input (GitHub shorthand `user/repo` · git URL · local path)
+- **Install Plugin** directly from the marketplace modal with token cost preview
+- Update/remove marketplace · 5 sort modes (recently added, recently updated, etc.)
 
-- **Node.js** 18+ e **npm** — [nodejs.org](https://nodejs.org)
-- **Claude Code** CLI installato e raggiungibile (`claude` nel `PATH`) — [installazione](https://docs.anthropic.com/claude-code)
+### 🧩 Plugins
+- Single toggle enable/disable · update · uninstall
+- Full-text search with filters by status and marketplace
+- "Plugin content" modal: header with id/marketplace/version, numeric summary (skills/agents/MCP/hooks/tok), clickable list of skills and agents, detailed hook events (with matcher/handler count), "Open in Finder" and "Open in editor" buttons (VS Code · Cursor · Antigravity · System)
+- Scope badge `global` (blue) / `local: project-name` (green) — multi-project support
 
-## Avvio rapido
+### ⚡ Skills · 🤖 Agents
+- Searchable browser for all skills and agents (global + tracked projects)
+- Click a skill opens inline markdown viewer (DOM-based, no innerHTML)
+- ⚠ "Health issue" badge on skills/agents with missing or malformed frontmatter
+
+### 🛠 MCP Servers
+- List all configured MCP servers with Connected / Needs Auth / Error status
+- Marketplace-style cards for each server with transport (HTTP / stdio / SSE), URL/command, origin
+- Filters by status and type (claude.ai global / from plugins)
+- "Refresh live status" button re-runs official Claude Code health check
+- "MCP connected" KPI in Dashboard (X/Y connected)
+
+### 📊 Stats
+- Overview tab: 8 KPIs + Claude Desktop-style heatmap (52 weeks × 7 days)
+- Models tab: token bars per model (input/output/cache) + daily histogram with per-model tooltip
+- Per-project tab: project list with sessions, messages, aggregated tokens + KPI-style design
+- Filters All / 30d / 7d for all KPIs (aligned with `claude /stats`)
+
+### ⚙ Standalone Config
+- Visual editor for `~/.claude/settings.json`: model, theme (including dark-daltonized/light-ansi), response language, Always Thinking, Voice (nested `voice.enabled` field), Effort 5-dots slider (low → max)
+- Instant updates + live reload settings from filesystem watcher
+
+### 🔐 Claude Account + API key
+- Account panel with plan badge (Max / Pro / Team), email, organization, org ID, auth method, API provider
+- Live status badge: 🟢 Connected / 🔴 Disconnected (when OAuth token expires and refresh fails 401/403)
+- **"↗ Terminal login"** button appears automatically when auth is broken — opens the integrated CLACOROO terminal and runs `claude auth login`
+- Cross-platform session/weekly quotas (macOS Keychain / Linux file fallback / Windows file fallback)
+- Dedicated **Claude API key** (alternative to OAuth subscription): input + connection test + cross-platform encrypted storage (macOS Keychain · Linux libsecret/file 600 · Windows DPAPI) + official `apiKeyHelper` integration with Claude Code via chmod 700 helper script + `settings.json` write
+
+### 📟 Integrated Terminal (Pack B v1.0.67+)
+- Multi-tab bottom drawer (xterm.js + node-pty)
+- Status dot per tab: 🟢 idle / 🟠 busy / 🔴 dead (based on onData activity)
+- Tab label = short cwd (`~`, `~/Dev`, `~/…/clacoroo`) with 3s live polling (lsof on macOS, `/proc/<pid>/cwd` on Linux)
+- Tab persistence across restarts (drawer height + tab list with saved cwd)
+- Shortcuts: `Cmd+\`` toggle drawer · `Cmd+T` new tab
+- CLACOROO theme: orange cursor, bg `#0d0c0b`, Anthropic palette for ANSI colors
+
+### ⚡ Soft auto-update
+- Check at startup + every 24h via GitHub Releases API
+- Sidebar footer: 🟢 green dot / 🟠 orange dot + inline "UPDATE" button
+- Sticky topbar banner "New version X.Y.Z available"
+- Click → opens release page in browser, no in-app download/install (silent updates require Apple Developer ID + notarization)
+
+### 🎨 UX polish
+- Global command palette `Cmd+K` (fuzzy search plugin/skill/agent/marketplace/actions)
+- "Recents" sidebar with latest activity timeline
+- Always-visible account pill in sidebar (plan badge + email)
+- macOS native notifications on plugin actions (only when app is not in focus)
+- In-app changelog viewer with category color badges (FEATURE/FIX/IMPROVEMENT/SECURITY/REFACTOR/DOCS/CHORE)
+- UI auto-refresh when `~/.claude/` files change externally (`fs.watchFile`)
+
+## Auto-refresh
+The UI updates itself when Claude Code config files change (`fs.watchFile` cross-platform), no manual restart required.
+
+## Requirements
+
+- **Node.js** 18+ and **npm** — [nodejs.org](https://nodejs.org)
+- **Claude Code** CLI installed and reachable (`claude` in `PATH`) — [Claude Code installation](https://docs.anthropic.com/claude-code)
+
+## Installation
+
+### From pre-built release (macOS)
+
+Go to [Releases](https://github.com/Maxymize/clacoroo/releases) and download:
+- `CLACOROO-X.Y.Z-arm64.dmg` for Apple Silicon Mac (M1/M2/M3/M4)
+- `CLACOROO-X.Y.Z-x64.dmg` for Intel Mac
+
+Open the `.dmg`, drag CLACOROO into your Applications folder.
+
+> **macOS Gatekeeper workaround** (until the binary is signed with Apple Developer ID + notarization, see Pack E in [TASK.md](TASK.md)):
+> ```bash
+> sudo xattr -cr /Applications/CLACOROO.app
+> sudo codesign --force --deep --sign - /Applications/CLACOROO.app
+> ```
+
+### From source (all platforms)
 
 ```bash
 git clone https://github.com/Maxymize/clacoroo.git
@@ -51,125 +133,152 @@ npm install
 npm start
 ```
 
-## Build distribuibile
+To generate distributable packages:
 
 ```bash
-# macOS .dmg (arm64 + x64)
+# macOS .dmg (arm64 + x64) — requires librsvg via brew + dmgbuild via pip
 npm run build
 
-# Tutte le piattaforme (richiede toolchain corrispondente)
-npm run dist
+# Windows .exe (NSIS + portable) — requires Win toolchain or build from Windows
+npm run build:win
+
+# Linux .AppImage + .deb + .rpm — requires build from Linux for node-pty rebuild
+npm run build:linux
 ```
 
-L'output viene generato in `dist/`.
+Output is generated in `dist/`.
 
-## Come funziona
+## How it works
 
-CLACOROO auto-rileva la directory di configurazione di Claude Code:
+CLACOROO auto-detects Claude Code's config directory:
 
 | OS | Path |
 |---|---|
 | macOS / Linux | `~/.claude/` |
 | Windows | `%APPDATA%\Claude\` |
 
-**Lettura** (diretta da filesystem):
-- `installed_plugins.json` — plugin installati (formato v2 con chiavi `"plugin@marketplace"`)
-- `blocklist.json` — plugin disabilitati
-- `known_marketplaces.json` — marketplace registrati
-- `cache/` — sorgenti plugin con skill (subdirectory) e agent (file `.md`)
+**Read** (directly from filesystem):
+- `installed_plugins.json` — installed plugins (v2 format with `"plugin@marketplace"` keys)
+- `blocklist.json` — disabled plugins
+- `known_marketplaces.json` — registered marketplaces
+- `settings.json` — configuration (model, theme, voice, language, enabled plugins)
+- `cache/` — plugin sources with skills (subdirectories) and agents (`.md` files)
+- `stats-cache.json` — heatmap, tokens per model, total sessions, streak
+- `projects/<proj>/<session>.jsonl` — per-turn usage (input/output/cache tokens)
 
-**Scrittura** (mai diretta sui JSON, sempre via CLI):
+**Write** (never directly to plugin JSONs, always via CLI):
 - `claude plugins enable|disable|uninstall|update <id>`
 - `claude plugins marketplace add|remove|update <name>`
+- `claude plugins install <plugin>@<marketplace>`
 
-Funziona offline dopo l'installazione. Tutti i dati sono locali.
+`settings.json` is modified directly (safe operation, atomic write + filesystem watcher for re-sync).
 
-## Architettura
+Works fully offline after install. All data is local. CLACOROO **never overwrites** Claude Code's Keychain (it reads OAuth credentials for quotas, but doesn't modify them).
+
+## Architecture
 
 ```
 src/
-├── main.js        ← processo Electron principale: I/O config, IPC, CLI
-├── preload.js     ← bridge sicuro contextBridge → window.claudeAPI
+├── main.js              ← Electron main process: I/O, IPC, CLI, fs.watch
+├── preload.js           ← Secure contextBridge → window.claudeAPI
+├── lib/
+│   ├── account.js       ← Claude account info via `claude auth status --json`
+│   ├── apikey.js        ← API key encrypted storage cross-platform (Keychain/libsecret/DPAPI)
+│   ├── changelog.js     ← Synthetic parser with badge categories
+│   ├── markdown.js      ← Markdown → DOM (no innerHTML)
+│   ├── mcp.js           ← MCP server health check
+│   ├── menu.js          ← Native macOS application menu
+│   ├── pricing.js       ← API value estimation in USD (Anthropic public prices)
+│   ├── pty.js           ← Pseudo-terminal manager (node-pty)
+│   ├── snapshot.js      ← Export/import .clacoroo snapshot
+│   ├── state.js         ← state.json + activity log persistence
+│   ├── stats.js         ← Token aggregation, heatmap, per-project
+│   ├── updater.js       ← Soft auto-update via GitHub Releases API
+│   └── usage.js         ← OAuth quotas + token refresh
 └── renderer/
-    ├── index.html   ← shell SPA (sidebar + content)
-    ├── style.css    ← design system CLACOROO (palette Claude-inspired)
-    ├── app.js       ← logica SPA: state → loadData → render
-    └── clacoroo.svg ← mascotte pixel-art (solo <rect>)
+    ├── index.html       ← SPA shell (sidebar + content)
+    ├── style.css        ← CLACOROO design system
+    ├── app.js           ← SPA logic: state → loadData → render
+    ├── clacoroo.svg     ← Pixel-art mascot (just <rect>)
+    ├── clacoroo-blink.svg ← Blink variant (animation)
+    ├── fonts/           ← Inter + Source Serif 4 + Press Start 2P (self-hosted)
+    ├── lib/
+    │   └── term.js      ← xterm.js wrapper for drawer tabs
+    └── vendor/
+        └── xterm/       ← xterm.js + 2 addons vendored (no CDN)
 ```
 
-Documento di handoff tecnico completo: [`docs/doc-tecnico_handoff.html`](docs/doc-tecnico_handoff.html).
+Full technical handoff doc: [`docs/doc-tecnico_handoff.html`](docs/doc-tecnico_handoff.html).
 
-## Sicurezza
+## Security
 
-CLACOROO segue le best practice Electron moderne:
+CLACOROO follows modern Electron best practices:
 
-- ✅ `contextBridge` con `contextIsolation: true` e `nodeIntegration: false`
-- ✅ Tutte le chiamate CLI usano `execFile` con array di argomenti (zero rischio shell injection)
-- ✅ ID plugin e nomi marketplace validati con regex prima di qualsiasi chiamata
-- ✅ CSP rigida: solo risorse `'self'`, nessun CDN remoto (font, librerie, immagini)
-- ✅ Dipendenze runtime ridotte al minimo: solo `node-pty` (terminale integrato) + `@xterm/xterm` & 2 addon (renderer). Zero framework UI
-
-### Build non firmato — workaround Gatekeeper (macOS)
-
-Finché CLACOROO non viene firmato con Apple Developer ID + notarization, i `.dmg` distribuiti sono **non firmati**. macOS bloccherà l'avvio con "*CLACOROO è danneggiato e non può essere aperto*". Workaround dopo l'install in `/Applications`:
-
-```bash
-sudo xattr -cr /Applications/CLACOROO.app
-sudo codesign --force --deep --sign - /Applications/CLACOROO.app
-```
-
-Cosa fa: rimuove l'attributo `com.apple.quarantine` che macOS mette ai file scaricati da Internet, poi applica una firma **ad-hoc** (placeholder) che soddisfa il requisito hardened runtime. Una volta firmati e notarizzati con Apple Developer ID (~ $99/anno, vedi Pack E in [`TASK.md`](TASK.md)), il workaround non sarà più necessario.
+- ✅ `contextBridge` with `contextIsolation: true`, `nodeIntegration: false`, `sandbox: true`
+- ✅ All CLI calls use `execFile` with argument arrays (zero shell injection risk)
+- ✅ Plugin IDs, marketplace names, source URLs validated with regex before any call
+- ✅ DOM construction with `createElement` + `textContent`, never `innerHTML` with dynamic data
+- ✅ Strict CSP: `default-src 'self'`, `script-src 'self'`, `style-src 'self' 'unsafe-inline'`, `font-src 'self'`, `img-src 'self' data:` — no remote CDN
+- ✅ Claude API key (pay-per-use mode): cross-platform encrypted storage (macOS Keychain · Linux libsecret · Windows DPAPI), key never logged or shown in plain text in the renderer, helper script chmod 700, dedicated Keychain service `com.maxymize.clacoroo.apikey` (separated from Claude Code's)
+- ✅ Soft auto-update: reads GitHub Releases API, no auto-install (silent updates require signing)
+- ✅ Single-instance lock + `setWindowOpenHandler` blocks popups + `will-navigate` blocks external navigation
+- ✅ Runtime dependencies minimized: just `node-pty` (terminal) + `@xterm/xterm` & 2 addons (renderer)
 
 ## Brand
 
-CLACOROO usa una palette ispirata a Claude (Anthropic) ma differenziata:
+CLACOROO uses a palette inspired by Claude (Anthropic) but distinct:
 
-| Token | Hex | Uso |
+| Token | Hex | Use |
 |---|---|---|
-| Claude Orange | `#d97757` | Accent primario, brand mark, CTA |
-| Claude Dark | `#141413` | Background principale |
+| Claude Orange | `#d97757` | Primary accent, brand mark, CTA |
+| Claude Dark | `#141413` | Main background |
 | Surface | `#1e1c1a` | Card, sidebar |
-| Cream | `#faf9f5` | Testo principale |
-| Anthropic Green | `#788c5d` | LED mascotte, status success |
-| Anthropic Blue | `#6a9bcc` | Accent secondario |
+| Cream | `#faf9f5` | Primary text |
+| Anthropic Green | `#788c5d` | Mascot LED, success status |
+| Anthropic Blue | `#6a9bcc` | Secondary accent |
 
-La mascotte CLACOROO è disegnata interamente con `<rect>` SVG (zero path / zero curve), pixel-art retro come Clawd ma con un'antenna LED verde "control room online" che la distingue.
+The CLACOROO mascot is drawn entirely with SVG `<rect>` (zero path / zero curves), retro pixel-art like Clawd but with a green LED antenna "control room online" that sets it apart.
 
-## Stack
+Self-hosted fonts (SIL OFL):
+- **Inter** — UI, brand, KPIs
+- **Source Serif 4** — markdown body
+- **Press Start 2P** — CLACOROO wordmark (sidebar + DMG installer)
 
-Electron 36 · Vanilla JS · `contextBridge` · `execFile` · `fs.watch` · electron-builder
+## Tech stack
+
+**Electron 36** · **Vanilla JS** (no framework) · **Node.js 18+** · `contextBridge` + `contextIsolation` · `execFile` (no shell) · `fs.watchFile` for auto-refresh · **node-pty** + **@xterm/xterm** for integrated terminal · **dmgbuild** (Python) for DMG installer · **electron-builder** for packaging
 
 ## Roadmap
 
-Vedi [`TASK.md`](TASK.md) per il piano completo:
+See [`TASK.md`](TASK.md) for the full plan.
 
-- **v1.0.03** — Browse + install plugin da marketplace, form add marketplace, token cost breakdown
-- **v1.0.04** — Variant mascotte (blink, wave), app icon `.icns/.ico`, build `.dmg`
-- **v1.0.05** — Tray icon, GitHub Releases con auto-update
+In progress:
+- **Pack B** extensions — Inline skill launcher (▶ button on each skill runs `claude -p "<skill>"` in the terminal)
+- **Pack C** — Insights + analytics (token cost per plugin, top-N chart, dependency tree)
+- **Pack D** — Light theme + UI language switch
+- **Pack E** — Full-auto distribution (Apple Developer ID, notarization, electron-updater, multi-OS CI/CD)
 
-## Contribuire
+## Contributing
 
-Repo privato per ora. PR e issue gestiti direttamente con il manutentore.
+Commit convention: message prefixed with version, e.g. `v1.0.72 — description`.
+Versioning: only the last digit `1.0.xx` (see [`CLAUDE.md`](CLAUDE.md) for full rules).
 
-Convenzione commit: messaggio prefissato con la versione, es. `v1.0.03 — descrizione`.
-Versionamento: solo l'ultima cifra `1.0.xx` (vedi [`CLAUDE.md`](CLAUDE.md) per le regole complete).
-
-## Licenza
+## License
 
 **GNU Affero General Public License v3.0 or later (AGPL-3.0-or-later)**
 
 Copyright © 2026 **MAXYMIZE BUSINESS** (Maximilian Giurastante &lt;info@maxymizebusiness.com&gt;)
 
-CLACOROO è software libero: puoi ridistribuirlo e/o modificarlo secondo i termini della GNU Affero General Public License come pubblicata dalla Free Software Foundation, versione 3 della licenza o (a tua scelta) qualsiasi versione successiva.
+CLACOROO is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
 
-CLACOROO è distribuito nella speranza che sia utile, ma SENZA ALCUNA GARANZIA; senza nemmeno la garanzia implicita di COMMERCIABILITÀ o IDONEITÀ PER UN PARTICOLARE SCOPO. Vedi la GNU Affero General Public License per maggiori dettagli — testo completo in [`LICENSE`](LICENSE) o su [gnu.org/licenses/agpl-3.0](https://www.gnu.org/licenses/agpl-3.0).
+CLACOROO is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details — full text in [`LICENSE`](LICENSE) or at [gnu.org/licenses/agpl-3.0](https://www.gnu.org/licenses/agpl-3.0).
 
-### Cosa significa AGPL-3.0 in pratica
+### What AGPL-3.0 means in practice
 
-- ✅ **Puoi** usarlo, copiarlo, modificarlo e ridistribuirlo gratuitamente
-- ✅ **Puoi** usarlo in progetti personali e commerciali interni
-- ⚠️ **Devi** rilasciare con la stessa licenza qualsiasi opera derivata che distribuisci
-- ⚠️ **Devi** rendere disponibile il codice sorgente se offri CLACOROO (o un derivato) come servizio di rete accessibile a terzi
-- ❌ **Non puoi** trasformarlo in un prodotto SaaS chiuso senza ridistribuire il codice modificato
+- ✅ **You can** use, copy, modify and redistribute it for free
+- ✅ **You can** use it in personal and internal commercial projects
+- ⚠️ **You must** release any derivative work you distribute under the same license
+- ⚠️ **You must** make the source code available if you offer CLACOROO (or a derivative) as a network service accessible to third parties
+- ❌ **You cannot** turn it into a closed SaaS product without redistributing the modified code
 
-Per usi commerciali che non possono rispettare i termini AGPL, è disponibile una licenza commerciale separata su richiesta: scrivi a `info@maxymizebusiness.com`.
+For commercial use that cannot meet AGPL terms, a separate commercial license is available on request: write to `info@maxymizebusiness.com`.

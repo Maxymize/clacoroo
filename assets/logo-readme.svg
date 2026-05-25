@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="220" viewBox="0 0 600 220">
+  <!-- CLACOROO — README hero logo (mascotte top + wordmark pixel-art).
+       Bg transparent: lavora bene su sfondo light/dark di GitHub README.
+       Wordmark stesso glyph 7×7 BOLD del DMG installer (consistency brand). -->
+
+  <defs>
+    <!-- Pixel font glyphs 7×7 BOLD (Press Start 2P inspired) -->
+    <symbol id="g-C" viewBox="0 0 7 7">
+      <rect x="1" y="0" width="5" height="1"/>
+      <rect x="0" y="1" width="2" height="5"/>
+      <rect x="5" y="1" width="2" height="1"/>
+      <rect x="5" y="5" width="2" height="1"/>
+      <rect x="1" y="6" width="5" height="1"/>
+    </symbol>
+    <symbol id="g-L" viewBox="0 0 7 7">
+      <rect x="0" y="0" width="2" height="7"/>
+      <rect x="2" y="5" width="5" height="2"/>
+    </symbol>
+    <symbol id="g-A" viewBox="0 0 7 7">
+      <rect x="1" y="0" width="5" height="1"/>
+      <rect x="0" y="1" width="2" height="6"/>
+      <rect x="5" y="1" width="2" height="6"/>
+      <rect x="2" y="3" width="3" height="1"/>
+    </symbol>
+    <symbol id="g-O" viewBox="0 0 7 7">
+      <rect x="1" y="0" width="5" height="1"/>
+      <rect x="0" y="1" width="2" height="5"/>
+      <rect x="5" y="1" width="2" height="5"/>
+      <rect x="1" y="6" width="5" height="1"/>
+    </symbol>
+    <symbol id="g-R" viewBox="0 0 7 7">
+      <rect x="0" y="0" width="5" height="1"/>
+      <rect x="0" y="1" width="2" height="6"/>
+      <rect x="5" y="1" width="2" height="2"/>
+      <rect x="1" y="3" width="4" height="1"/>
+      <rect x="3" y="4" width="2" height="1"/>
+      <rect x="4" y="5" width="2" height="1"/>
+      <rect x="5" y="6" width="2" height="1"/>
+    </symbol>
+  </defs>
+
+  <!-- Mascotte CLACOROO centrata in alto (x=300), scale 3.5 = 49×56 -->
+  <g transform="translate(275, 10) scale(3.5)" shape-rendering="crispEdges">
+    <rect x="6" y="0" width="2" height="1" fill="#788c5d"/>
+    <rect x="6" y="1" width="2" height="2" fill="#a8a299"/>
+    <rect x="4" y="3"  width="6"  height="1" fill="#d97757"/>
+    <rect x="2" y="4"  width="10" height="1" fill="#d97757"/>
+    <rect x="1" y="5"  width="12" height="6" fill="#d97757"/>
+    <rect x="2" y="11" width="10" height="1" fill="#d97757"/>
+    <rect x="4" y="12" width="6"  height="1" fill="#d97757"/>
+    <rect x="1"  y="13" width="2" height="2" fill="#d97757"/>
+    <rect x="4"  y="13" width="2" height="2" fill="#d97757"/>
+    <rect x="8"  y="13" width="2" height="2" fill="#d97757"/>
+    <rect x="11" y="13" width="2" height="2" fill="#d97757"/>
+    <g fill="#9a4d35">
+      <rect x="3"  y="3"  width="1" height="1"/>
+      <rect x="10" y="3"  width="1" height="1"/>
+      <rect x="1"  y="4"  width="1" height="1"/>
+      <rect x="12" y="4"  width="1" height="1"/>
+      <rect x="0"  y="5"  width="1" height="6"/>
+      <rect x="13" y="5"  width="1" height="6"/>
+      <rect x="1"  y="11" width="1" height="1"/>
+      <rect x="12" y="11" width="1" height="1"/>
+      <rect x="3"  y="12" width="1" height="1"/>
+      <rect x="10" y="12" width="1" height="1"/>
+    </g>
+    <rect x="3" y="6" width="3" height="3" fill="#141413"/>
+    <rect x="8" y="6" width="3" height="3" fill="#141413"/>
+    <rect x="3" y="6" width="1" height="1" fill="#faf9f5"/>
+    <rect x="8" y="6" width="1" height="1" fill="#faf9f5"/>
+  </g>
+
+  <!-- Wordmark CLACOROO BOLD pixel-art. Glyph 28×28 (scale 4× da 7×7) + gap 6px.
+       Width = 8*28 + 7*6 = 266. Centro x=300 → start x=167. -->
+  <g shape-rendering="crispEdges">
+    <g fill="#141413">
+      <use href="#g-C" x="167" y="150" width="28" height="28"/>
+      <use href="#g-L" x="201" y="150" width="28" height="28"/>
+      <use href="#g-A" x="235" y="150" width="28" height="28"/>
+    </g>
+    <g fill="#d97757">
+      <use href="#g-C" x="269" y="150" width="28" height="28"/>
+      <use href="#g-O" x="303" y="150" width="28" height="28"/>
+    </g>
+    <g fill="#141413">
+      <use href="#g-R" x="337" y="150" width="28" height="28"/>
+      <use href="#g-O" x="371" y="150" width="28" height="28"/>
+      <use href="#g-O" x="405" y="150" width="28" height="28"/>
+    </g>
+  </g>
+
+  <!-- Tagline -->
+  <text x="300" y="200"
+        font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, sans-serif"
+        font-size="13"
+        font-weight="500"
+        fill="#7a7770"
+        text-anchor="middle"
+        letter-spacing="0.05em">
+    CLAude COde ContROl ROom
+  </text>
+</svg>
