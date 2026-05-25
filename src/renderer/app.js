@@ -3592,7 +3592,7 @@ function renderSettings() {
   infoRow.appendChild(infoLeft);
   const infoRight = el('div');
   infoRight.style.cssText = 'display:flex;gap:10px;align-items:center;';
-  const verVal = el('div', 'settings-row-val', '1.0.67');
+  const verVal = el('div', 'settings-row-val', '1.0.68');
   const chBtn = btnWithIcon('btn btn-sm btn-green btn-with-icon', 'changelog', ' Changelog');
   chBtn.title = 'Mostra storico versioni';
   chBtn.addEventListener('click', () => openChangelogModal());
@@ -3888,40 +3888,39 @@ async function openChangelogModal() {
 
   const body = el('div', 'changelog-body');
 
+  // v1.0.68 — Render sintetico: badge colorati per categoria + one-liner
   versions.forEach((v, idx) => {
     const card = el('div', 'changelog-card' + (idx === 0 ? ' current' : ''));
+
     const cardHead = el('div', 'changelog-card-head');
     const verBadge = el('span', 'changelog-version-badge', 'v' + v.version);
-    const dateLbl = el('span', 'changelog-date', v.date);
+    cardHead.appendChild(verBadge);
     if (idx === 0) {
       const currentLbl = el('span', 'changelog-current-tag', 'attuale');
-      cardHead.appendChild(verBadge);
       cardHead.appendChild(currentLbl);
-    } else {
-      cardHead.appendChild(verBadge);
     }
+    const dateLbl = el('span', 'changelog-date', v.date);
     cardHead.appendChild(dateLbl);
     card.appendChild(cardHead);
 
-    v.sections.forEach(sec => {
-      if (sec.title) {
-        const secTitle = el('div', 'changelog-section-title', sec.title);
-        card.appendChild(secTitle);
-      }
-      if (sec.notes && sec.notes.length) {
-        const note = el('p', 'changelog-note', sec.notes.join(' '));
-        card.appendChild(note);
-      }
-      if (sec.items.length) {
-        const ul = el('ul', 'changelog-items');
-        sec.items.forEach(item => {
-          const li = el('li');
-          inlineNodes(item).forEach(n => li.appendChild(n));
-          ul.appendChild(li);
-        });
-        card.appendChild(ul);
-      }
-    });
+    if (v.title) {
+      const titleEl = el('div', 'changelog-version-title', v.title);
+      card.appendChild(titleEl);
+    }
+
+    if (v.items && v.items.length) {
+      const list = el('ul', 'changelog-items');
+      v.items.forEach(item => {
+        const li = el('li', 'changelog-item');
+        const badge = el('span', 'changelog-badge changelog-badge-' + item.type.toLowerCase(), item.type);
+        li.appendChild(badge);
+        const txt = el('span', 'changelog-item-text');
+        inlineNodes(item.text).forEach(n => txt.appendChild(n));
+        li.appendChild(txt);
+        list.appendChild(li);
+      });
+      card.appendChild(list);
+    }
 
     body.appendChild(card);
   });

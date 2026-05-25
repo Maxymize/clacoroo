@@ -1,607 +1,458 @@
 # Changelog
 
+## v1.0.68 — 2026-05-23 — Changelog viewer: formato sintetico con badge per categoria
+
+- [FEATURE] Badge colorati per categoria in ogni voce: FEATURE, FIX, IMPROVEMENT, SECURITY, REFACTOR, DOCS, CHORE
+- [IMPROVEMENT] Viewer changelog ridisegnato: una riga per item, drop sezioni e paragrafi di prosa
+- [REFACTOR] `parseChangelog` riscritto: estrae badge `[TYPE]` da bullet, separa correttamente date e title della release
+- [REFACTOR] `src/renderer/app.js` `openChangelogModal()` semplificato: render flat con badge + testo, niente più section header
+- [DOCS] CHANGELOG.md interamente riscritto in formato Conventional Commits-style con badge `[FEATURE]/[FIX]/...`
+
 ## v1.0.67 — 2026-05-22 — Pack B foundation: Terminale integrato (drawer + multi-tab + live cwd)
 
-Implementata la foundation del **Pack B — Terminale integrato + One-click launcher**: drawer fisso in basso, multi-tab, persistenza completa fra riavvii, dot di stato e tracking live della directory.
+- [FEATURE] Terminale integrato: drawer fisso in basso multi-tab con xterm.js + node-pty
+- [FEATURE] Persistenza terminalDrawer in `state.json` (open/height/tabs/activeTabId, restore automatico al riavvio)
+- [FEATURE] Status dot per tab: verde idle / arancio busy (pulse) / rosso dead
+- [FEATURE] Label tab = cwd corto (`~`, `~/Sviluppo`, `~/…/clacoroo`) con live polling 3s via lsof (macOS) / `/proc/<pid>/cwd` (Linux)
+- [FEATURE] Bottone "▣ Terminale" nel topbar + shortcut globale `Cmd+\`` apri/chiudi, `Cmd+T` nuova tab
+- [FEATURE] Drawer ridimensionabile drag handle 6px, range altezza 140–800px
+- [FEATURE] IPC pty: `pty:capabilities|spawn|input|resize|kill|list|cwd` + eventi push `pty:data` e `pty:exit`
+- [FEATURE] Cleanup automatico sessioni shell su `app.before-quit` (`PTY.killAll()`)
+- [SECURITY] Validation cwd (deve esistere) / cols (2–1000) / rows (2–500) / shell prima dello spawn pty
+- [SECURITY] Spawn solo via `node-pty` (array args, no shell stringa) → zero rischio injection
+- [CHORE] Deps runtime aggiunte: `node-pty` 1.1.0 (prebuilds darwin+win), `@xterm/xterm` 6.0.0, `@xterm/addon-fit`, `@xterm/addon-web-links`
+- [CHORE] `scripts/fix-node-pty-perms.js` postinstall hook: chmod +x `spawn-helper` (i tarball npm non preservano bit eseguibile su macOS)
+- [CHORE] `package.json` `asarUnpack: ['node_modules/node-pty/**/*']` per native module unpacked in produzione
 
-### Architettura
+## v1.0.66 — 2026-05-22 — Cleanup residui MIT + gitignore strategia personale
 
-**Nuove dipendenze runtime** (rompe il "zero runtime deps" precedente, scelta consapevole per il valore della feature):
-- `node-pty` 1.1.0 — pseudo-terminale nativo (prebuilds darwin arm64+x64 e win32 arm64+x64, no rebuild necessario)
-- `@xterm/xterm` 6.0.0 — render terminale in canvas/DOM
-- `@xterm/addon-fit` 0.11.0 — auto-resize cols/rows
-- `@xterm/addon-web-links` 0.12.0 — URL cliccabili nell'output → `shell.openExternal`
-
-**File nuovi**:
-- `src/lib/pty.js` — manager sessioni pty cross-platform: `spawn / write / resize / kill / killAll / list / setHandlers / getCwd`. Validazione `cwd`/`cols`/`rows` + detect default shell (`$SHELL` su Unix, `pwsh.exe`/`cmd.exe` su Win)
-- `src/renderer/lib/term.js` — wrapper xterm.js per tab con palette CLACOROO (cursor orange, background `#0d0c0b`, fg cream, accenti Anthropic green/blue)
-- `src/renderer/vendor/xterm/` — xterm.js + 2 addon + CSS vendored localmente (no path node_modules in renderer, evita gotchas asar/CSP)
-- `scripts/fix-node-pty-perms.js` — postinstall hook che applica `chmod +x` allo `spawn-helper` di node-pty (i tarball npm non preservano il bit eseguibile su macOS, causando `posix_spawnp failed` al primo spawn)
-
-**`package.json`**:
-- `"postinstall": "node scripts/fix-node-pty-perms.js"` — automatic per ogni `npm install`
-- `"asarUnpack": ["node_modules/node-pty/**/*"]` — native module + spawn-helper devono restare unpacked perché eseguibili
-
-### UI
-
-- **Drawer fisso in basso** di `.main-area`, sotto la `.content-area`. Altezza ridimensionabile trascinando il bordo superiore (handle 6px), range 140–800px
-- **Bottone "▣ Terminale"** nel topbar (visibile solo se pty disponibile su questa piattaforma) + shortcut globale `Cmd+\``
-- **Tab bar** stile editor IDE: tab attiva si fonde col corpo nero del drawer + top stripe arancio CLACOROO; tab inattive come "card warm" `#2a2622` con bordi arrotondati. Hover state esplicito
-- **Status dot per tab** (8px circle prima della label):
-  - 🟢 `idle` (verde Anthropic `#788c5d`) — shell idle, prompt pronto
-  - 🟠 `busy` (arancio CLACOROO `#d97757` + pulse 1s) — dati in arrivo nei ultimi 400ms (comando in esecuzione)
-  - 🔴 `dead` (rosso `#ef4444`) — processo terminato
-- **Label tab = cwd corto** invece di "zsh": `~` per home, `~/Sviluppo` per primi 2 livelli, `~/…/clacoroo` per path profondi. Tooltip mostra `shell • full-path`
-- **Live cwd tracking**: polling 3s sul tab attivo via `lsof -p <pid> -a -d cwd -Fn` (macOS) / `readlink /proc/<pid>/cwd` (Linux). Quando l'utente fa `cd`, la label si aggiorna entro 3s. Polling fermato quando drawer chiuso per non sprecare CPU. Windows skipato (richiederebbe Win32 API)
-- **Bottoni header drawer**: `+` nuova tab (`Cmd+T` quando drawer aperto), `×` chiudi drawer
-
-### Persistenza
-
-Nuova chiave `terminalDrawer` in `~/.claude-control-room/state.json`:
-```json
-{
-  "open": true,
-  "height": 320,
-  "activeTabId": "t9k3z2a",
-  "tabs": [
-    { "id": "t9k3z2a", "cwd": "/Users/.../clacoroo", "title": "zsh", "shell": "/bin/zsh" }
-  ]
-}
-```
-
-Al reload dell'app: ripristina altezza + stato aperto/chiuso + ricrea tutte le tab con il cwd salvato. Restart automatico delle sessioni shell.
-
-### IPC nuovi
-
-`pty:capabilities` (returns `{available, loadError, defaultShell, defaultCwd, platform}`) · `pty:spawn` · `pty:input` (one-way send per stdin) · `pty:resize` · `pty:kill` · `pty:list` · `pty:cwd`. Eventi push dal main: `pty:data` (chunk stdout) · `pty:exit` (exitCode + signal). Cleanup su `app.before-quit` via `PTY.killAll()`.
-
-### Sicurezza
-
-- Tutti gli spawn passano per `node-pty` (no shell stringa, sempre array args) → zero rischio injection
-- `cwd` validato: deve esistere ed essere una directory, altrimenti fallback HOME
-- `cols`/`rows` validati range 2–1000 / 2–500
-- `env` passato esplicitamente con override `TERM=xterm-256color` (no leakage extra)
-- `contextIsolation` + `sandbox` invariati: il renderer non ha accesso diretto al filesystem o ai child processes
-
-### Note cross-platform
-
-- macOS: testato in dev (Mac mini arm64, zsh)
-- Linux: codice cross-platform pronto ma serve rebuild node-pty da source (prebuilds Linux assenti, Python 3.12+ ha rimosso `distutils` → workaround `pip install setuptools` o Python 3.11)
-- Windows: codice include ConPTY-aware path + URL handler `C:\` → `/C:/`. Test pianificato quando l'utente attiverà UTM VM
-
-### Prossimo (v1.0.68)
-
-- Bottone `▶` su ogni skill/agent → apre drawer + crea/seleziona tab + esegue `claude -p "<name>"` nel terminale principale
-- Shell selector in Impostazioni
-- Lancio rapido `claude` nel progetto tracciato attivo
-
-## v1.0.66 — 2026-05-22 — Cleanup residui MIT in CLAUDE.md e doc-tecnico_handoff.html
-
-Follow-up alla v1.0.65 (switch licenza AGPL-3.0). Aggiornati i due file di documentazione interna che ancora citavano "MIT":
-
-- `CLAUDE.md` riga 4 (sezione `## Project`): "Open source MIT" → "Open source **AGPL-3.0-or-later**, copyright © 2026 MAXYMIZE BUSINESS (Maximilian Giurastante)"
-- `docs/doc-tecnico_handoff.html`:
-  - KPI box licenza: `MIT` → `AGPL-3.0+`
-  - File-tree comment `LICENSE — MIT, © 2026 Maximilian Giurastante` → `LICENSE — AGPL-3.0-or-later, © 2026 MAXYMIZE BUSINESS (Maximilian Giurastante)`
-
-Sweep completato: l'unico altro residuo "MIT" è in `package-lock.json` (campi `license` delle dipendenze npm — corretto, NON da modificare) e in `src/renderer/fonts/SourceSerif4-LICENSE.md` (la propria licenza del font Source Serif, indipendente).
+- [DOCS] `CLAUDE.md` riga 4: "Open source MIT" → "Open source AGPL-3.0-or-later, copyright © 2026 MAXYMIZE BUSINESS"
+- [DOCS] `docs/doc-tecnico_handoff.html`: KPI licenza `MIT` → `AGPL-3.0+`, file-tree comment LICENSE aggiornato
+- [CHORE] `.gitignore`: aggiunto `docs/strategia-lancio/` (materiale strategico personale non pubblicabile)
 
 ## v1.0.65 — 2026-05-22 — Switch licenza da MIT a AGPL-3.0-or-later
 
-Cambio di licenza significativo in vista del lancio pubblico open source su GitHub: da **MIT** a **GNU Affero General Public License v3.0 or later**. Motivazione strategica: AGPL protegge il progetto da fork commerciali che lo trasformerebbero in un SaaS chiuso senza ridistribuire il codice modificato. Il modello business pianificato — community gratuita + corso a pagamento in italiano — non dipende dalla vendita diretta dell'app, quindi AGPL è la scelta naturale.
-
-**File modificati:**
-- `LICENSE` → testo verbatim AGPL-3.0 ufficiale scaricato da `gnu.org/licenses/agpl-3.0.txt` (661 righe) — garantisce match SPDX automatico con GitHub Licensee
-- `package.json` → `"license": "AGPL-3.0-or-later"` (identificativo SPDX moderno con `-or-later` per essere future-proof rispetto a future versioni AGPL). `copyright` e `NSHumanReadableCopyright` (macOS bundle) aggiornati a `Copyright © 2026 MAXYMIZE BUSINESS (Maximilian Giurastante)`
-- `README.md` → badge License da `MIT` a `AGPL v3+`. Sezione "Licenza" riscritta con spiegazione in italiano di cosa significa AGPL in pratica (puoi/devi/non puoi) + nota su licenza commerciale separata su richiesta (`info@maxymizebusiness.com`) per uso "dual licensing"
-- `src/main.js`, `src/preload.js`, `src/renderer/app.js` → aggiunto header standard AGPL con `SPDX-License-Identifier: AGPL-3.0-or-later` (prassi FSF + REUSE)
-- `src/renderer/app.js` `renderSettings()` → nuova riga "Licenza" nel pannello Impostazioni → Informazioni che mostra `AGPL-3.0-or-later` + copyright MAXYMIZE BUSINESS + bottone "Testo licenza" che apre `gnu.org/licenses/agpl-3.0` nel browser via `shell.openExternal`
-
-**Cosa cambia per chi usa CLACOROO:**
-- ✅ Uso personale e interno aziendale → invariato
-- ✅ Modifiche al codice → permesse, ma se distribuite devono restare AGPL
-- ⚠️ Offrirlo come servizio di rete a terzi (es. SaaS) → obbligo di rendere disponibile il codice modificato
-- ❌ Trasformarlo in un prodotto commerciale chiuso → vietato senza licenza commerciale separata
-
-Su GitHub la licenza sarà rilevata automaticamente al primo push (Licensee gem fa match col testo SPDX verbatim) e comparirà nella sidebar del repo come "GNU Affero General Public License v3.0 or later".
-
-Documento strategico completo che ha portato a questa decisione: `docs/strategia-lancio/doc-tecnico_strategia-lancio-clacoroo.html` (sezione "AGPL-3.0 vs MIT — il trade-off").
+- [REFACTOR] Switch licenza progetto da MIT a AGPL-3.0-or-later (protezione contro fork commerciali chiusi)
+- [FEATURE] Header SPDX-License-Identifier in `src/main.js`, `src/preload.js`, `src/renderer/app.js`
+- [FEATURE] About dialog: nuova riga "Licenza" in Impostazioni → Informazioni con bottone "Testo licenza" → gnu.org/licenses/agpl-3.0
+- [DOCS] `LICENSE`: testo verbatim AGPL-3.0 ufficiale (661 righe) per match SPDX automatico GitHub Licensee
+- [DOCS] `README.md`: badge License `AGPL v3+`, sezione "Licenza" riscritta con spiegazione in italiano (puoi/devi/non puoi) + nota dual licensing
+- [DOCS] `package.json`: `"license": "AGPL-3.0-or-later"` (SPDX moderno future-proof), copyright + `NSHumanReadableCopyright` allineati a MAXYMIZE BUSINESS
 
 ## v1.0.64 — 2026-05-22 — Fix cache update stale dopo aggiornamento + nota Gatekeeper
 
-**Bug fix** soft auto-update: il footer mostrava ancora "Aggiornamento disponibile" anche dopo aver effettivamente aggiornato l'app. Causa: il check-updates rispettava il cooldown di 1h e restituiva la cache (`lastUpdateResult`) salvata quando l'app era alla versione precedente, senza accorgersi che la `current` cached non corrispondeva più alla versione reale.
-
-Fix in `src/main.js`: prima di restituire il risultato cached, confronta `cached.current` con `app.getVersion()`. Se diverso → cache invalidata, forza un check fresh. Output corretto: footer 🟢 verde dopo update, banner topbar sparisce.
-
-Trovato durante il test end-to-end della v1.0.63: detect + download + install funzionano tutti, ma la lucina restava arancio finché non si forzava un `Controlla aggiornamenti`.
-
-**README**: aggiunta nota sul workaround Gatekeeper (`xattr -cr` + `codesign --sign -`) per i build non firmati distribuiti come .dmg — necessario finché non si applica Apple Developer ID + notarization (vedi Pack E in TASK.md).
+- [FIX] Footer mostrava ancora "Aggiornamento disponibile" dopo aver effettivamente aggiornato l'app: cache `lastUpdateResult` non veniva invalidata se `cached.current !== app.getVersion()`
+- [FIX] Confronto `cached.current` vs versione reale prima di restituire cache cooldown — se diverso forza un check fresh
+- [DOCS] README: nuova sezione "Build non firmato — workaround Gatekeeper" con comandi `xattr -cr` + `codesign --sign -`
+- [DOCS] Documentato perché serve il workaround (hardened runtime + identity:null) finché non si applica Apple Developer ID + notarization
 
 ## v1.0.63 — 2026-05-22 — Release test full end-to-end soft auto-update
 
-Versione di test per verificare il flusso completo del soft auto-update: detect (footer + topbar banner) → click UPDATE → download `.dmg` → install → app aggiornata. Include `.dmg` (arm64 + x64) come asset in GitHub Releases per permettere il download reale dall'UI di un'installazione precedente.
+- [CHORE] Bump version tag-only per generare release pubblica con `.dmg` arm64+x64 come asset
+- [CHORE] Test end-to-end completo: detect aggiornamento → click UPDATE → download `.dmg` reale → install in `/Applications`
 
-Nessun cambiamento al codice rispetto a v1.0.62 — bump version solo per generare il tag e creare la release con asset binari.
+## v1.0.62 — 2026-05-22 — Footer sidebar: versione corrente + indicatore Update
 
-## v1.0.62 — 2026-05-22 — Footer sidebar: versione + indicatore update
+- [FEATURE] Footer sidebar mostra dinamicamente `v1.0.xx` letta da `app.getVersion()` via `appVersion` nel `get-data` IPC
+- [FEATURE] Indicatore stato aggiornamento nel footer: verde = aggiornato, arancio + pulse = nuova release disponibile
+- [FEATURE] Bottone "UPDATE" arancio inline accanto al numero versione quando c'è update (apre release page nel browser)
+- [IMPROVEMENT] Sostituito il count plugin con la versione nel footer (decisione UX: la versione è informazione più importante)
 
-Il footer in basso a sinistra del sidebar ora mostra dinamicamente la versione corrente dell'app (es. `v1.0.62`) invece del count plugin. La versione è letta da `app.getVersion()` di Electron via `appVersion` nel `get-data` IPC, così resta sempre allineata al package.json senza hardcode.
+## v1.0.61 — 2026-05-22 — Flash modali eliminato definitivamente
 
-**Indicatore stato aggiornamento**:
-- 🟢 **Verde** = sei sulla versione più recente
-- 🟠 **Arancio + pulse** = nuova release disponibile su GitHub. Appare anche un bottone "**Update**" arancio inline accanto al numero versione che apre la pagina di download nel browser (`shell.openExternal`)
-
-Il check sfrutta il sistema soft auto-update esistente (GitHub Releases API), già attivato al boot + ogni 24h. Quando rileva una nuova versione: aggiorna lucina footer + mostra banner sticky in topbar (come prima).
-
-## v1.0.61 — 2026-05-22 — Flash modali eliminato (vero questa volta)
-
-Il fix v1.0.60 non era sufficiente. Due cause residue:
-
-1. **Click handler chiamavano `close()` esplicito** prima di aprire il nuovo modal — il `swapModalOverlay` non riusciva mai a "sostituire" perché il vecchio era già rimosso quando il nuovo veniva creato. Rimosse tutte le 4 chiamate `close()` esplicite nei click handler che aprono un nuovo modal: marketplace → plugin, modal marketplace plugin row → contenuto plugin, skill/agent → markdown
-2. **Animation `tourFade .2s`** sul nuovo overlay faceva opacity 0→1, durante la quale la pagina sotto era visibile attraverso il nuovo overlay semi-trasparente. Nuova classe `.md-overlay-instant` aggiunta automaticamente da `swapModalOverlay` quando ci sono overlay esistenti: animation: none → swap istantaneo. Il primo modal aperto da zero mantiene il fade-in morbido
+- [FIX] Rimossi 4 `close()` espliciti nei click handler che aprono un nuovo modal (impedivano allo `swapModalOverlay` di funzionare)
+- [FIX] Aggiunta classe `.md-overlay-instant` per disabilitare l'animation fade-in durante lo swap modal → modal (no flash della pagina sottostante)
 
 ## v1.0.60 — 2026-05-22 — Niente più flash fra modali consecutivi
 
-Risolto il flash visibile della pagina sottostante quando si passa da un modal all'altro (es. marketplace → "Dettagli" → contenuto plugin, oppure plugin → click skill → markdown).
+- [FIX] Nuovo helper `swapModalOverlay(newOverlay)` che appende il nuovo overlay PRIMA di rimuovere il vecchio (atomico in singolo paint del browser)
+- [REFACTOR] Pattern swap applicato a tutti i 5 modal (Plugin / Marketplace add / Marketplace content / Markdown / API key guide)
+- [REFACTOR] Rimossi guard `if (document.querySelector('.md-overlay')) return;` ora superflui
 
-**Causa**: la classe `.md-overlay` ha `animation: tourFade .2s ease` (fade-in). Il pattern precedente era `close()` (rimuovi vecchio) → `show()` (crea nuovo), con un gap di ~50ms in mezzo durante il quale non c'era nessun overlay → si vedeva la pagina sotto + la nuova animazione di fade-in.
+## v1.0.59 — 2026-05-22 — Cross-platform: editor URL handler su Windows/Linux
 
-**Fix**: nuovo helper `swapModalOverlay(newOverlay)` che **appende il nuovo PRIMA di rimuovere il vecchio** (atomico nel singolo paint del browser). L'utente non vede mai assenza di overlay, e la nuova animation è coperta dal vecchio overlay che viene rimosso subito dopo. Applicato a tutti i 5 modal (`.md-overlay`): Plugin / Marketplace add / Marketplace content / Markdown / API key guide.
-
-In bonus: rimossi i guard `if (document.querySelector('.md-overlay')) return;` ora superflui — lo swap gestisce naturalmente i double-open.
-
-## v1.0.59 — 2026-05-22 — Cross-platform: editor URL handler funzionante su Win/Linux
-
-Audit cross-platform del selettore editor:
-
-- **Path normalization Windows**: `toEditorUriPath()` converte `C:\Users\foo\...` in `/C:/Users/foo/...` (forward slash + leading slash) come richiesto dagli URL handler di VS Code / Cursor / Antigravity su Win
-- **Error messages platform-aware**: il toast di errore include un hint specifico per OS (macOS: "verifica in /Applications", Win: "verifica installer URL protocol", Linux: comando `xdg-mime` per query del protocol handler)
-- **shell.openPath** già cross-platform: Finder su macOS, Explorer su Win, file manager registrato su Linux (Nautilus/Dolphin/Files)
-- **URL protocols** (`vscode://`, `cursor://`, `antigravity://`) sono registrati dagli installer degli editor su tutte e 3 le piattaforme
-
-Aggiunto in TASK.md un **disclaimer cross-platform always-on** in cima: per ogni nuova feature va sempre verificato il comportamento su Win/Linux, con checklist (path separator, shell-specific commands, URL encoding, credential storage, file system case-sensitivity).
+- [FIX] Path normalization Windows: `toEditorUriPath()` converte `C:\Users\foo\...` in `/C:/Users/foo/...` per URL handler vscode/cursor/antigravity
+- [IMPROVEMENT] Error message platform-aware: hint specifico per OS (macOS: `/Applications`, Win: installer URL protocol, Linux: `xdg-mime`)
+- [DOCS] Aggiunta regola "CROSS-PLATFORM ALWAYS-ON" in cima a TASK.md come principio di sviluppo
 
 ## v1.0.58 — 2026-05-22 — Editor esterno: aggiunto Antigravity
 
-- Aggiunto **Antigravity** (Google) come quarta opzione del selettore "Editor predefinito" in Impostazioni
-- Schema URL: `antigravity://file/...` (segue la convenzione dei fork VS Code-like)
-- Lista completa ora: VS Code · Cursor · Antigravity · Sistema (default OS)
+- [FEATURE] Aggiunto Antigravity (Google) come quarta opzione del selettore editor in Impostazioni
+- [FEATURE] Schema URL `antigravity://file/...` registrato lato app
 
 ## v1.0.57 — 2026-05-22 — Selettore editor esterno configurabile
 
-Nuovo gruppo "Editor esterno" in Impostazioni con select per scegliere quale editor aprire quando si clicca "Apri in editor" su una plugin card o nel modal Contenuto plugin:
-
-- **Visual Studio Code** (`vscode://file/...`)
-- **Cursor** (`cursor://file/...` — è fork di VS Code, supporta lo stesso schema)
-- **Sistema (default OS)** — apre con l'app predefinita registrata per le cartelle
-
-Prima era hardcoded VS Code, ora la scelta è persistita in `state.json` come `preferredEditor`.
-
-Per ora il bottone apre sempre la **cartella del plugin** (es. `~/.claude/plugins/cache/.../plugin/`). L'apertura di file specifici sarà gestita più avanti quando integreremo un editor di testo inline in CLACOROO.
+- [FEATURE] Nuovo gruppo "Editor esterno" in Impostazioni con select VS Code · Cursor · Sistema (default OS)
+- [FEATURE] Preferenza persistita in `state.json` come `preferredEditor`
+- [IMPROVEMENT] Prima era hardcoded VS Code, ora scelta utente
 
 ## v1.0.56 — 2026-05-22 — Modal plugin: hook dettagliati + apri sorgente + skip sezione
 
-**Hook visibili**
-
-Il modal "Contenuto plugin" ora mostra l'elenco degli hook event coperti dal plugin (Setup / SessionStart / UserPromptSubmit / PreToolUse / ecc.), con per ciascuno il conteggio matcher e handler. La lista è letta dal `hooks/hooks.json` del plugin via nuova `readHookEvents()` in main.js.
-
-**Click skill/agent → modal markdown diretto**
-
-Prima: click su una skill nel modal plugin → si chiudeva il modal → si andava alla sezione Skill con filtro pre-applicato → l'utente doveva ri-cliccare sull'unico risultato per aprire il dettaglio markdown. Tre passaggi per arrivare al contenuto.
-
-Adesso: click su una skill/agent nel modal plugin → si chiude il modal plugin → si apre **direttamente** il modal markdown con il contenuto. Un solo passaggio.
-
-**Bottoni Apri sorgente nel modal**
-
-Aggiunti in fondo al modal Contenuto plugin: "📁 Apri nel Finder" e "📝 Apri in editor". Prima la nota faceva riferimento a bottoni che non c'erano nel modal stesso (erano solo sulle plugin card).
+- [FEATURE] Elenco hook event nel modal plugin con conteggio matcher/handler per ciascuno (Setup, SessionStart, UserPromptSubmit, ecc.)
+- [FEATURE] Bottoni "📁 Apri nel Finder" + "📝 Apri in editor" anche nel modal "Contenuto plugin"
+- [IMPROVEMENT] Click skill/agent nel modal plugin apre direttamente il markdown viewer (un passaggio invece di tre)
 
 ## v1.0.55 — 2026-05-22 — Ordinamento marketplace (5 modalità)
 
-Nuovo selector "Ordina:" nella header della sezione Marketplace con 5 modalità:
-
-- **Predefinito** (default attuale: plugin disponibili desc, poi installati desc)
-- **Aggiunti di recente** — birthtime della directory marketplace desc
-- **Aggiunti meno di recente** — birthtime asc
-- **Aggiornati di recente** — `lastUpdated` desc
-- **Aggiornati meno di recente** — `lastUpdated` asc · utile per scoprire marketplace stale e cliccare "Aggiorna"
-
-La preferenza viene **persistita** in `state.json` (`mktSort`) e ripristinata al riavvio.
-
-Backend:
-- `readMarketplaceAddedAt(id)` legge `birthtime` (con fallback ctime/mtime) della directory marketplace
-- `_addedAt` esposto come ISO string in `marketplacesNorm`
-- Stato `mktList[i].addedAt`
+- [FEATURE] Nuovo selector "Ordina:" sezione Marketplace con 5 modalità (predefinito, aggiunti recenti/meno recenti, aggiornati recenti/meno recenti)
+- [FEATURE] Preferenza ordinamento persistita in `state.json` (`mktSort`)
+- [FEATURE] Lettura `birthtime`/`ctime`/`mtime` directory marketplace per "Aggiunti di recente"
 
 ## v1.0.54 — 2026-05-22 — Card marketplace: count sempre X/Y se non tutti installati
 
-Fix di logica display: prima un marketplace con 0 installati su N disponibili mostrava solo "N" (ambiguo: poteva sembrare "tutti installati"). Ora la regola è semplice e univoca:
-
-- **Tutti installati**: numero intero (es. "21")
-- **Marketplace vuoto**: "0"
-- **Tutto il resto**: "X/Y" → esplicito anche quando installed=0 (es. "0/1" per `thedotmack`, "0/7" per `replicate` prima di installare nulla)
+- [FIX] Marketplace con 0 installati su N disponibili mostrava solo "N" (ambiguo). Ora regola univoca: tutti installati → "N", marketplace vuoto → "0", parziale → "X/Y"
 
 ## v1.0.53 — 2026-05-22 — Card marketplace: distinzione installati vs disponibili
 
-Fix UX importante: prima la card mostrava solo i plugin **installati** del marketplace, ignorando quelli **disponibili**. Un marketplace appena aggiunto con N plugin ma 0 installati appariva come "0 plugin · inattivo grigio", impossibile da esplorare.
-
-- Backend: nuova lettura `readMarketplacePluginCount(id)` in `readAllData()` che legge il `marketplace.json` di ciascun marketplace configurato (sincrono, ~1ms)
-- State arricchito: `mktList[i]` ora ha `available` (totale dichiarato) e `installed` (già presenti in `state.plugins`)
-- Card mostra:
-  - "N" se installati == disponibili o se zero installati
-  - "X/Y" se installati parzialmente (es. "2/15")
-  - Grigio "inactive" solo se `available === 0` (marketplace vuoto / malformato)
-- Tooltip differenziato: "Vedi e installa plugin" se mancano installazioni, "Vedi plugin installati" se completo
-- Ordinamento marketplace ora per `available` desc, poi `installed` desc
+- [FEATURE] Card marketplace mostra plugin installati vs disponibili (legge `marketplace.json` reale, non solo `installed_plugins.json`)
+- [FEATURE] State `mktList[i]` arricchito con `available` (totale dichiarato) e `installed` (presenti)
+- [IMPROVEMENT] Tooltip differenziato: "Vedi e installa plugin" se mancanze, "Vedi plugin installati" se completo
+- [IMPROVEMENT] Ordinamento marketplace per `available` desc, poi `installed` desc
 
 ## v1.0.52 — 2026-05-22 — Pack H step 2: Install plugin dal marketplace
 
-- Modal "Plugin del marketplace" ora mostra **tutti** i plugin del marketplace (non solo gli installati): legge il `marketplace.json` reale del marketplace via nuovo IPC `getMarketplaceDetail`
-- Badge verde "✓ installato" sui plugin già presenti
-- Per i plugin NON installati: bottone **"Installa"** che chiede conferma e esegue `claude plugins install <name>@<marketplace>`
-- Per i plugin già installati: bottone "Dettagli" che apre il modal Contenuto plugin (drill-down)
-- Header del modal mostra ora "X/Y installati" + aggiornamento info
-- Notifica desktop su installazione riuscita, refresh automatico delle liste
+- [FEATURE] Modal "Plugin del marketplace" mostra tutti i plugin (installati + disponibili) via nuovo IPC `getMarketplaceDetail`
+- [FEATURE] Bottone "Installa" sui plugin non installati con preview costo token + conferma prima dell'esecuzione
+- [FEATURE] Esecuzione `claude plugins install <name>@<marketplace>` via execFile array (sicuro)
+- [FEATURE] Auto-refresh post-install + notifica desktop + activity log
+- [FEATURE] Bottone "Dettagli" sui plugin già installati apre il modal Contenuto plugin (drill-down)
 
 ## v1.0.51 — 2026-05-22 — Pack H step 1: Add Marketplace dal pannello
 
-- Nuovo bottone "+ Marketplace" nella topbar della sezione Marketplace (contestuale: prende il posto di "+ Progetto" solo qui)
-- Modal "Aggiungi marketplace" con input source, validazione e helper esplicativo sui formati accettati:
-  - Shorthand GitHub: `user/repo` (es. `thedotmack/claude-mem`)
-  - URL git: `https://github.com/user/repo[.git]`
-  - Path locale assoluto
-- Submit esegue `claude plugins marketplace add <source>` via IPC sicuro (execFile array, no shell)
-- Toast + auto-refresh della lista marketplace su successo, errore inline su fallimento
-- Activity log registra ogni aggiunta
+- [FEATURE] Bottone "+ Marketplace" nella topbar della sezione Marketplace (contestuale)
+- [FEATURE] Modal "Aggiungi marketplace" con input source + helper esplicativo (shorthand GitHub / URL git / path locale)
+- [FEATURE] Esecuzione `claude plugins marketplace add <source>` via execFile array
+- [FEATURE] Activity log registra ogni aggiunta
+- [SECURITY] Validation regex `validMarketplaceSource()` prima della CLI (no shell injection)
 
-## v1.0.50 — 2026-05-22
+## v1.0.50 — 2026-05-22 — Polish badge "N plugin" card Marketplace
 
-Polish del badge "N plugin" nelle card Marketplace:
+- [IMPROVEMENT] Bordo grigio del badge "N plugin" sempre visibile (era invisibile in stato normale)
+- [IMPROVEMENT] Proporzione numero/label ribilanciata: numero 22px (era 28), label 13px (era 11) — più leggibile
+- [IMPROVEMENT] Hover: label "plugin" si tinge di arancione assieme al numero
 
-- Bordo grigio sempre visibile anche senza hover (era invisibile in stato normale)
-- Background `surface2` discreto sempre visibile per dare consistenza
-- Proporzione numero/label ribilanciata: numero 22px (era 28), label 13px (era 11) — meno sbilanciato, più leggibile
-- Gap di 6px tra numero e "plugin" (era attaccato)
-- Hover: anche la label "plugin" si tinge di arancione CLACOROO assieme al numero, oltre al glow attorno al badge
+## v1.0.49 — 2026-05-22 — Sidebar: ordine gerarchico Marketplace prima di Plugin
 
-## v1.0.49 — 2026-05-22
+- [IMPROVEMENT] Invertito ordine Marketplace ↔ Plugin per riflettere gerarchia logica (Marketplace contengono Plugin contengono Skill/Agent/MCP)
+- [IMPROVEMENT] Aggiornati accelerator `Cmd+1..9` e entry command palette per il nuovo ordine
 
-- Sidebar: invertito ordine Marketplace ↔ Plugin per rispecchiare la gerarchia logica. Marketplace contengono Plugin che contengono Skill/Agent/MCP. Nuovo ordine: Dashboard · Marketplace · Plugin · Skill · Agent · MCP · Stats · Config · Impostazioni
-- Aggiornati gli accelerator Cmd+1..9 e le entry nella command palette per riflettere il nuovo ordine
+## v1.0.48 — 2026-05-22 — Pulizia striscia "Vedi N plugin" + numero cliccabile
 
-## v1.0.48 — 2026-05-22
+- [IMPROVEMENT] Rimossa striscia full-width gialla "Vedi N plugin" dalle card Marketplace (estetica più coerente)
+- [FEATURE] Numero "N plugin" della card ora cliccabile direttamente con hover arancione + glow
+- [FEATURE] Tooltip immediato sul numero ("Vedi lista plugin") con sistema `data-tt`
 
-- Marketplace card: rimossa la striscia full-width "Vedi N plugin" colorata (era invadente e non coerente con l'estetica generale)
-- Il numero "N plugin" già presente nella card è ora cliccabile direttamente: hover diventa arancione CLACOROO con glow morbido attorno
-- Click sul "N plugin" apre la stessa modal della lista plugin
-- Tooltip immediato sul numero ("Vedi lista plugin") riusando il sistema `data-tt`
+## v1.0.47 — 2026-05-22 — Polish UI plugin card + marketplace coerente
 
-## v1.0.47 — 2026-05-22
+- [IMPROVEMENT] Footer plugin card (toggle + bottoni + Aggiorna/Rimuovi) sempre alla base anche con descrizione corta
+- [IMPROVEMENT] Icona occhio ridisegnata (era ovale ambiguo, ora si legge come occhio)
+- [IMPROVEMENT] Tooltip immediati `data-tt` sui bottoni icona (no più attesa 2s tooltip nativo)
+- [REFACTOR] Card marketplace: rimosso toggle accordion "PLUGIN (N)", sostituito con bottone "👁 Vedi N plugin" che apre modal coerente con Contenuto plugin
 
-**Polish plugin card**
+## v1.0.46 — 2026-05-22 — Plugin card: icone SVG + modal Contenuto plugin
 
-- Footer (toggle + bottoni icona + Aggiorna/Rimuovi) ora sempre alla base della card, anche se la descrizione è corta (prima poteva finire a metà altezza)
-- Icona occhio ridisegnata: ora si legge davvero come occhio (era ovale ambiguo)
-- Tooltip immediati sui bottoni icona: appaiono subito al passaggio del mouse, niente più attesa di ~2 secondi del tooltip nativo
+- [FEATURE] Nuovo bottone occhio (icona SVG) accanto a Finder/editor: apre modal "Contenuto plugin"
+- [FEATURE] Modal mostra header, summary numerico (skills/agents/MCP/hook/tok), lista cliccabile di skill e agent
+- [FEATURE] Click skill nel modal → switch sezione Skills con filtro pre-applicato; click agent → switch Agents
+- [FEATURE] Bottone "↗ Vai a MCP" per plugin che esportano MCP server
+- [FEATURE] Badge "N skill / N agent / MCP / Hook" cliccabili: aprono lo stesso modal
+- [IMPROVEMENT] Tooltip esplicativo sul badge "tok" (significato dei token always-on)
+- [REFACTOR] Emoji 📁 📝 sostituite con icone SVG inline (folder + code)
 
-**Marketplace coerente con plugin**
+## v1.0.45 — 2026-05-22 — Per-progetto Stats: design + filtro
 
-- Le card marketplace non hanno più il toggle accordion "PLUGIN (N)" inline. Al suo posto un bottone "👁 Vedi N plugin" che apre un modal con la lista cliccabile, stesso stile del modal "Contenuto plugin"
-- Click su un plugin nel modal Marketplace → apre il modal Contenuto plugin del singolo plugin (drill-down)
-- Coerenza UI fra le due sezioni come richiesto
+- [IMPROVEMENT] Stats > Per-progetto: design KPI-style (valore Inter 18px bold + label uppercase) invece di pillole ovali
+- [FEATURE] Filtro progetti fantasma (0 sessioni + 0 messaggi + 0 token) per nascondere directory transient
+- [DOCS] Legenda chiarita: count "sessioni" = file `.jsonl` riprendibili, non totale storico
 
-## v1.0.46 — 2026-05-22
+## v1.0.44 — 2026-05-22 — Tooltip istogramma: clamp dentro finestra
 
-**Plugin card — Vedi contenuto**
+- [FIX] Tooltip "Token giornalieri" in Stats > Modelli non esce più dalla finestra: flip a sinistra del cursore se a destra manca spazio, clamp su tutti i bordi
 
-- Nuovo bottone occhio (👁 → icona SVG) accanto a Finder ed editor: apre un modal con il contenuto completo del plugin (skills, agents, MCP, hook)
-- Badge "N skill", "N agent", "MCP", "Hook" sono ora cliccabili: aprono lo stesso modal
-- Nel modal ogni skill/agent è cliccabile → apre la sezione Skill / Agent con filtro pre-applicato sul nome
-- Per i plugin con MCP server: bottone "↗ Vai a MCP" che porta direttamente alla sezione MCP
+## v1.0.43 — 2026-05-22 — Nota esplicativa percentuali Modelli
 
-**Tooltip sul badge "tok"**
+- [DOCS] Stats > Modelli: nota sopra la lista chiarisce che le percentuali rappresentano la distribuzione del proprio uso (somma 100%), non quota/limite
 
-- Hover sul badge "N tok" mostra ora il significato: "Token always-on stimati: peso aggiunto al context window di Claude Code da questo plugin a prescindere dall'utilizzo attivo. Fonte: plugin-catalog-cache.json"
+## v1.0.42 — 2026-05-22 — Fix percentuali Token per modello
 
-**Icone**
+- [FIX] Token per modello in Stats: Opus 4.7 mostrava 24622% al posto di 57.3% (denominatore incoerente input+output vs numeratore totale tipi)
+- [FIX] Totale ricalcolato localmente con tutti i tipi (input+output+cache_read+cache_create), somma 6 modelli = 100%
 
-- Sostituite tutte le emoji 📁 📝 nei plugin card con icone SVG inline coerenti con la sidebar (folder + code), riusando il helper `svgIcon()`/`btnWithIcon()`
+## v1.0.41 — 2026-05-22 — Niente flicker reload Config
 
-## v1.0.45 — 2026-05-22
+- [IMPROVEMENT] Cambio toggle/select/slider in Config non fa più reload pagina con 1-2s di lag
+- [IMPROVEMENT] Apertura Config istantanea se i dati sono in cache (no spinner "Caricamento configurazione…")
+- [REFACTOR] UI aggiornata ottimisticamente al click; quando filesystem watch rileva nostra stessa modifica saltiamo re-render
 
-- Stats > Per-progetto: design più professionale. Le metriche non sono più mostrate in pillole ovali, ma come colonne con valore grande + label sotto (stile KPI). Hover effect blu sulla card
-- Filtrati i "progetti fantasma" con 0 sessioni e 0 token (tipicamente directory aperte in Claude Code senza interazioni significative, es. cowork plugin transient)
-- Legenda aggiornata: chiarito che il count "sessioni" si riferisce ai file di sessione ancora riprendibili (`claude --continue`), non al numero totale di volte che si è aperto Claude Code nel progetto
+## v1.0.40 — 2026-05-22 — Cleanup Impostazioni + fix Voice toggle
 
-## v1.0.44 — 2026-05-22
+- [FIX] Voice toggle: scrive ora `voice.enabled` (nested) come da schema ufficiale, invece di `voiceEnabled` top-level (Claude Code lo ignorava)
+- [FIX] Lingua risposte: opzioni cambiate da codici ISO (`en`/`it`) a nomi capitalized (`English`, `Italian`, ecc.) accettati dallo schema
+- [FEATURE] Tema Claude Code: aggiunte opzioni mancanti (`dark-daltonized`, `light-daltonized`, `dark-ansi`, `light-ansi`)
+- [IMPROVEMENT] Impostazioni → Informazioni compattata in una sola riga (nome + piattaforma + versione + bottone Changelog)
+- [REFACTOR] Rimossa sezione "Statistiche" duplicata da Impostazioni (già in Dashboard e Stats)
+- [REFACTOR] Emoji 📁 📋 ⤓ ⤒ sostituite con icone SVG coerenti alla sidebar
 
-- Fix: il tooltip dell'istogramma "Token giornalieri" in Stats > Modelli non esce più dalla finestra quando si passa il mouse sulle barre a destra. Il tooltip ora flippa a sinistra del cursore se a destra non c'è spazio, e viene clampato dentro il contenitore anche sopra/sotto
+## v1.0.39 — 2026-05-22 — Quote sessione/settimana cross-platform
 
-## v1.0.43 — 2026-05-22
+- [FEATURE] Quote sessione/settimana funzionano ora anche su Windows e Linux: legge token OAuth dal file fallback `~/.claude/.credentials.json`
+- [IMPROVEMENT] Messaggi di errore distinguono causa per piattaforma (Keychain/file/Credential Manager)
 
-- Stats > Modelli: aggiunta nota esplicativa sopra la lista per chiarire che le percentuali rappresentano la distribuzione del proprio uso fra i modelli (somma 100%), non una quota o un limite. Per le quote reali resta il rimando alle barre "Quote Claude" in Dashboard / Account
+## v1.0.38 — 2026-05-22 — Riorganizzazione Dashboard + Config standalone
 
-## v1.0.42 — 2026-05-22
+- [IMPROVEMENT] Dashboard riorganizzata: in cima "Stima contesto" e "Quote Claude" (info che cambiano più spesso), poi KPI installazione "Statistiche", poi KPI "Utilizzo Claude Code"
+- [FEATURE] Sezione "Config" promossa a voce sidebar autonoma con icona + accelerator `Cmd+8` (rimossa dal tab Stats)
+- [IMPROVEMENT] Tooltip immediato sopra ogni pallino dell'Effort slider con nome esteso
 
-- Fix: percentuali Token per modello in Stats > Modelli (Opus 4.7 mostrava 24622% al posto di 57.3%). Il bug era un'incoerenza fra numeratore (somma di tutti i tipi: input+output+cache_read+cache_create) e denominatore (`data.totalTokens` che dal v1.0.15 conta solo input+output per allineamento con `claude /stats`). Adesso il totale viene calcolato localmente con tutti i tipi, somma dei 6 modelli = 100%
+## v1.0.37 — 2026-05-22 — Fix percentuali quote (display 1400%)
 
-## v1.0.41 — 2026-05-22
+- [FIX] Percentuali quote ora corrispondono al plugin VS Code Claude (erano 100× più grandi, es. 1400% al posto di 14%)
+- [FIX] API Anthropic restituisce `utilization` già in scala 0–100, non come float 0–1; rimossa moltiplicazione errata
+- [IMPROVEMENT] Clamp di sicurezza [0, 100] contro transienti API
 
-- Sezione Config: cambiare un'opzione (toggle, select, slider) non fa più "ricaricare" la pagina con 1-2 secondi di lag. La UI è già aggiornata ottimisticamente al click, e quando il filesystem watch rileva la nostra stessa modifica saltiamo il re-render
-- Apertura della sezione Config: se i dati sono già in cache vediamo subito il pannello senza spinner "Caricamento configurazione…"
+## v1.0.36 — 2026-05-22 — Fix critici quote OAuth
 
-## v1.0.40 — 2026-05-22
+- [FIX] Header obbligatorio `anthropic-beta: oauth-2025-04-20` aggiunto (causa principale del 401 in v1.0.35)
+- [FIX] Parsing keychain corretto: payload annidato sotto `claudeAiOauth.accessToken`, non flat
+- [FEATURE] Refresh token automatico via `POST platform.claude.com/v1/oauth/token` se token in scadenza (entro 5min) o su 401
+- [SECURITY] Token rinnovato SOLO in memoria del processo: CLACOROO non riscrive mai il keychain di Claude Code
 
-**Impostazioni**
+## v1.0.35 — 2026-05-22 — Quote sessione/settimana visibili
 
-- Rimossa la sezione "Statistiche" duplicata (numeri plugin/skill/agent già visibili in Dashboard e Stats)
-- Sezione "Informazioni" compattata in una sola riga: nome app + piattaforma in chiaro (macOS / Windows / Linux invece del tecnico `darwin`) + numero versione + bottone Changelog
-- Emoji 📁 📋 ⤓ ⤒ sostituite con icone SVG coerenti allo stile della sidebar (cartella, documento, freccia download/upload)
+- [FEATURE] Quote sessione e settimana visibili in CLACOROO: 3 barre (Session 5h · Weekly 7d · Weekly Sonnet) con percentuale + tempo al reset
+- [FEATURE] Visibili in pannello "Account Claude" di Impostazioni e nuova sezione "Quote Claude" della Dashboard
+- [FEATURE] Colore barra in base alla soglia: blu fino all'80%, arancio 80–95%, rosso oltre
+- [FEATURE] Bottone "Gestisci usage su claude.ai →"
+- [FEATURE] Lettura via `GET /api/oauth/usage` con token OAuth del macOS Keychain
+- [IMPROVEMENT] Cache 60s + render ottimistico per zero flicker
 
-**Configurazione (fix corretti dopo verifica dello schema ufficiale di Claude Code)**
+## v1.0.34 — 2026-05-22 — Logout: tooltip custom invece di box arancio
 
-- **Voice**: il toggle ora scrive `voice.enabled` (nested) come da schema ufficiale, invece del campo top-level `voiceEnabled` che Claude Code ignorava silenziosamente
-- **Always Thinking**: descrizione aggiornata — è una modalità interna del modello, l'effetto non è visibile in UI ma si nota nella qualità delle risposte
-- **Tema (Claude Code)**: aggiunte le opzioni mancanti (`dark-daltonized`, `light-daltonized`, `dark-ansi`, `light-ansi`). Label e descrizione chiariscono che si applica alla TUI Claude Code (terminale + IDE), non a CLACOROO
-- **Lingua risposte**: opzioni cambiate da codici ISO (`en/it`, che Claude non riconosce) a nomi capitalized accettati dallo schema (`English`, `Italian`, `Spanish`, `French`, `German`, `Portuguese`, `Japanese`, `Chinese`). Cambia la lingua delle **risposte di Claude**, non la lingua di CLACOROO
+- [IMPROVEMENT] Tooltip stilizzato su hover bottone Logout (card + freccia + lista istanze impattate) invece del box arancio fisso
+- [REFACTOR] Estetica pannello Account più pulita
 
-## v1.0.39 — 2026-05-22
+## v1.0.33 — 2026-05-22 — Avviso esplicito Logout globale
 
-- Quote sessione/settimana ora funzionano anche su **Windows** e **Linux** (prima solo macOS): CLACOROO legge il token OAuth dal file di fallback `~/.claude/.credentials.json` che Claude Code usa quando Keychain/Credential Manager non sono disponibili
-- macOS: invariato (Keychain principale, file come emergency fallback)
-- Linux: legge solo dal file (Claude Code non usa Secret Service nel binario ufficiale)
-- Windows: legge dal file (Credential Manager via API native è TODO — la maggior parte degli utenti Win ha comunque il file plaintext perché Credential Manager non sempre riesce a salvare blob lunghi)
-- Messaggi di errore ora distinguono la causa per piattaforma
+- [FEATURE] Box arancio "⚠ Il logout disconnette OVUNQUE (CLACOROO + CLI + IDE)" già visibile prima del click
+- [IMPROVEMENT] Dialog di conferma riscritto con dettaglio macOS Keychain condiviso
+- [IMPROVEMENT] Bottone "Sì, logout globale" invece del generico "Logout"
 
-## v1.0.38 — 2026-05-22
+## v1.0.32 — 2026-05-22 — Effort level slider 5 pallini
 
-- Dashboard riorganizzata: in cima ora ci sono "Stima contesto" e "Quote Claude" (le info che cambiano più spesso), seguiti dalle KPI di installazione (Plugin, Marketplace, Skill, ecc.) con il nuovo titolo "Statistiche", poi le KPI "Utilizzo Claude Code"
-- Sezione "Config" promossa a voce di menu autonoma (tra "Stats" e "Impostazioni"), con icona dedicata e accelerator `Cmd+8`. Rimossa dal tab di Stats — è una configurazione, non una statistica
-- Tooltip immediato sopra ogni pallino dell'Effort slider con nome esteso ("Low", "Medium", "High", "Extra-high", "Max")
+- [FEATURE] "Effort level" come slider a 5 pallini blu stile VS Code Claude plugin (low → max), click imposta livello
+- [FEATURE] Label dinamico accanto al titolo ("Effort (xhigh)") mostra il livello corrente
+- [FIX] Link "↗ claude.ai" nel pannello Account: ora punta a `https://claude.ai/settings/billing` (era URL inesistente su claude.com)
 
-## v1.0.37 — 2026-05-22
+## v1.0.31 — 2026-05-22 — Guida modalità API key (nessun salvataggio)
 
-- Fix: i valori percentuali delle quote ora corrispondono a quelli del plugin VS Code Claude (erano 100× più grandi, es. 1400% al posto di 14%). L'API Anthropic restituisce `utilization` già in percentuale 0..100, non come float 0..1; la moltiplicazione extra era un errore mio
-- Clamp di sicurezza a [0, 100] per evitare display oltre 100% in caso di transienti API
+- [FEATURE] Bottone "ℹ Modalità API key" nel pannello Account: guida step-by-step per chi vuole usare API key pay-per-use
+- [SECURITY] CLACOROO NON salva, legge o trasmette mai la chiave: la guida mostra come impostarla in `.zshrc`/`.bashrc` e copia comandi in clipboard
 
-## v1.0.36 — 2026-05-22
+## v1.0.30 — 2026-05-22 — Effort level in Config tab
 
-Fix critici alle quote (v1.0.35 mostrava sempre "Token non valido"):
+- [FEATURE] Tab Config: selettore "Effort level" (low/medium/high/xhigh/max) modifica `effortLevel` di `settings.json` istantaneamente
 
-- Header obbligatorio `anthropic-beta: oauth-2025-04-20` aggiunto (era mancante, causa principale del 401)
-- Parsing keychain corretto: il payload è annidato sotto `claudeAiOauth.accessToken`, non flat
-- Refresh token automatico via `POST platform.claude.com/v1/oauth/token` quando il token sta per scadere (entro 5 minuti) o quando la chiamata torna 401
-- Token rinnovato mantenuto SOLO in memoria del processo (CLACOROO non riscrive mai il keychain di Claude Code — sicurezza assoluta delle credenziali)
+## v1.0.29 — 2026-05-22 — Pill account in sidebar + bottoni accesso rapido
 
-## v1.0.35 — 2026-05-22
+- [FEATURE] Pill account sempre visibile in sidebar (badge piano + email, sotto Recenti, sopra Stato), click apre Impostazioni
+- [FEATURE] Pannello Account: bottoni "↗ claude.ai" (subscription) + "↗ Console API" (billing, API keys, usage)
 
-- **Quote sessione e settimana** finalmente visibili in CLACOROO. Tre barre orizzontali (Session 5h · Weekly 7d · Weekly Sonnet) con percentuale e tempo al reset, esattamente come nella modal di Claude Code in VS Code
-- Visibili nel pannello "Account Claude" di Impostazioni e in una nuova sezione "Quote Claude" della Dashboard
-- Le barre cambiano colore in base alla soglia: blu fino all'80%, arancio 80-95%, rosso oltre
-- Bottone "Gestisci usage su claude.ai →" per aprire la dashboard completa
-- I dati vengono letti via `GET /api/oauth/usage` con il token OAuth del macOS Keychain (lo stesso che usa Claude Code). La prima volta macOS chiede "Allow keychain access" — è il flusso standard, dopo "Always Allow" il permesso resta permanente
-- Cache 60s e render ottimistico per zero flicker
+## v1.0.28 — 2026-05-22 — KPI "Valore API stimato" in USD
 
-## v1.0.34 — 2026-05-22
+- [FEATURE] Nuovo KPI "Valore API stimato" in Stats e Dashboard: USD se pagassi pay-per-use (stima risparmio Max plan)
+- [FEATURE] Calcolo basato sui prezzi pubblici Anthropic (Opus, Sonnet, Haiku con cache read/write proporzionali)
+- [FEATURE] Range Tutto / 30g / 7g (sub-range stimati per proporzione di messaggi)
 
-- Pannello Account: rimosso il box arancio fisso, sostituito con un tooltip custom che appare al passaggio del mouse sul bottone Logout. Stesso contenuto (avviso che il logout è globale di sistema), ma estetica più pulita
-- Tooltip stilizzato in card con freccia, titolo arancio "⚠ Logout di sistema", lista delle istanze impattate e nota su come ri-autenticarsi
+## v1.0.27 — 2026-05-21 — Pannello Account Claude in Impostazioni
 
-## v1.0.33 — 2026-05-22
+- [FEATURE] Nuovo pannello "Account Claude": piano (badge Max/Pro/Team colorato), email, org, ID org, auth method, API provider
+- [FEATURE] Bottoni "Aggiorna" e "Logout" con conferma esplicita
+- [IMPROVEMENT] Cache 5 minuti per non rilanciare `claude auth status` a ogni apertura sezione
 
-- Avviso esplicito sul Logout: ora il pannello Account mostra un box arancio "⚠ Il logout disconnette OVUNQUE (CLACOROO + CLI terminale + plugin IDE)" già prima di cliccare il bottone
-- Dialog di conferma riscritto con dettaglio chiaro sullo storage condiviso (macOS Keychain) e la lista delle istanze che si disconnetteranno
-- Bottone "Sì, logout globale" invece del generico "Logout" nel dialog
-- Tooltip del bottone aggiornato con il warning
+## v1.0.26 — 2026-05-21 — Card KPI: glow morbido invece di linea colorata
 
-## v1.0.32 — 2026-05-22
+- [IMPROVEMENT] Card KPI: rimossa linea colorata top, sostituita con glow morbido che avvolge la card e si intensifica in hover
+- [IMPROVEMENT] Bordo card tinto del colore di accent ma desaturato per coerenza palette dark
 
-- "Effort level" è ora uno slider a 5 pallini blu stile VS Code Claude plugin (low → max). Click sul pallino imposta il livello, gli attivi diventano blu pieno
-- Label dinamico accanto al titolo: "Effort (xhigh)" mostra il livello corrente
-- Fix link "↗ claude.ai" nel pannello Account: ora punta a `https://claude.ai/settings/billing` (era un URL inesistente su claude.com)
+## v1.0.25 — 2026-05-21 — Card KPI compatte + spacing Dashboard
 
-## v1.0.31 — 2026-05-22
+- [IMPROVEMENT] Card KPI più compatte: padding ridotto, numero 26px (era 32), griglia min-width 140px (era 160)
+- [IMPROVEMENT] Dashboard: spazio aggiuntivo tra "Marketplace" e "MCP server" per leggibilità
 
-- Nuovo bottone "ℹ Modalità API key" nel pannello Account: apre una guida step-by-step (modal) per chi vuole usare un'API key pay-per-use invece della subscription Max/Pro
-- Sicurezza assoluta: CLACOROO NON salva, legge o trasmette mai la tua chiave. La guida ti mostra come impostarla nel tuo `.zshrc` / `.bashrc` (lo standard più sicuro), e copia i comandi in clipboard
+## v1.0.24 — 2026-05-21 — Sezione MCP server in Dashboard
 
-## v1.0.30 — 2026-05-22
+- [FEATURE] Nuova sezione "MCP server" sotto "Marketplace" in Dashboard con chip cliccabili (dot colorato per stato)
+- [REFACTOR] Sezione MCP: rimossi link cliccabili su URL (endpoint MCP non sono pagine web), resta solo bottone copia
 
-- Tab Config (Stats): nuovo selettore "Effort level" (low / medium / high / xhigh / max) — modifica `effortLevel` di `~/.claude/settings.json` istantaneamente, equivalente a `claude --effort <level>`. Posizionato accanto a Modello predefinito
+## v1.0.23 — 2026-05-21 — Stima contesto: nuovo segmento MCP server
 
-## v1.0.29 — 2026-05-22
+- [FEATURE] Barra "Stima contesto" include nuovo segmento MCP servers (colore ciano) accanto a Skills/System prompt/Agents/Memory/Free
+- [FEATURE] Stima ~400 token per MCP server connesso (mediana osservata sui plugin ufficiali)
+- [FEATURE] Aggiornamento real-time quando attivi/disattivi plugin con MCP server
+- [REFACTOR] Cache MCP invalidata automaticamente ad ogni cambio plugin
 
-- Pill account sempre visibile nella sidebar (badge piano + email, sotto Recenti, sopra Stato). Click apre le Impostazioni
-- Pannello Account: due nuovi bottoni di accesso rapido — "↗ claude.ai" (gestione subscription) e "↗ Console API" (billing, API keys, usage)
+## v1.0.22 — 2026-05-21 — Polish sezione MCP
 
-## v1.0.28 — 2026-05-22
+- [IMPROVEMENT] Filtri MCP: divisore verticale fra tipo (claude.ai / plugin) e stato
+- [FEATURE] Bottone copy negli appunti su ogni card MCP per URL/comando
+- [FEATURE] URL HTTP/SSE cliccabili: si aprono nel browser di sistema (utile per OAuth dei server "Needs Auth")
 
-- Nuovo KPI "Valore API stimato" in Stats e Dashboard: mostra in USD quanto staresti spendendo se pagassi pay-per-use API (sei su Max plan: questo valore è la stima del risparmio della subscription)
-- Calcolo basato sui prezzi pubblici Anthropic (Opus $15/$75 input/output 1M, Sonnet $3/$15, Haiku $0.80/$4, con cache read/write proporzionali)
-- Range Tutto / 30g / 7g supportato (sub-range stimati per proporzione di messaggi)
+## v1.0.21 — 2026-05-21 — Pack G: Sezione MCP server
 
-## v1.0.27 — 2026-05-21
+- [FEATURE] Nuova sezione "MCP" in sidebar: lista tutti gli MCP server configurati con stato Connected/Needs Auth/Errore
+- [FEATURE] Card stile Marketplace per ogni server (nome, origine, transport, URL/comando, badge stato)
+- [FEATURE] Filtri per stato e tipo (claude.ai / dai plugin)
+- [FEATURE] Bottone "Aggiorna stato live" rilancia health-check ufficiale
+- [FEATURE] KPI "MCP connessi" in Dashboard (X/Y)
 
-- Nuovo pannello "Account Claude" in Impostazioni: piano (badge Max / Pro / Team colorato), email, organizzazione, ID org, metodo di autenticazione, provider API
-- Bottoni "Aggiorna" e "Logout" — il logout chiede conferma prima di disconnettere
-- Le quote sessione/settimanale al momento non sono esposte dalla CLI di Claude Code: per vederle apri Claude Code interattivo ed esegui `/usage` (avvisato nel pannello)
-- Cache 5 minuti per non rilanciare `claude auth status` a ogni apertura della sezione
+## v1.0.20 — 2026-05-21 — Stima contesto: animazione fluida segmenti
 
-## v1.0.26 — 2026-05-21
+- [FIX] Barra "Stima contesto" non sparisce più quando attivi/disattivi plugin: segmenti animano fino al nuovo valore (era flash bianco ~1s)
+- [REFACTOR] Aggiornamento in-place dei valori senza ricostruire DOM, transizione CSS su width
 
-- Card KPI: rimossa la linea colorata in alto, sostituita con un glow morbido del colore di accent che avvolge tutta la card (e si intensifica leggermente in hover)
-- Bordo della card tinto del colore di accent ma desaturato, in modo coerente con la palette dark
+## v1.0.19 — 2026-05-21 — Stima contesto in pagina Plugin + live update
 
-## v1.0.25 — 2026-05-21
+- [FEATURE] Barra "Stima contesto" anche in cima alla pagina Plugin
+- [FEATURE] Tutte le barre aggiornano dinamicamente su attivazione/disattivazione/update/rimozione plugin
+- [REFACTOR] Cache statistiche invalidata sia post-azione plugin sia su modifica esterna di `settings.json`
 
-- Dashboard: spazio aggiuntivo tra le sezioni "Marketplace" e "MCP server" per migliorarne la leggibilità
-- Card KPI più compatte: padding ridotto, numero principale 26px (era 32px), griglia con larghezza minima 140px (era 160px) — più informazioni a colpo d'occhio senza scroll
+## v1.0.18 — 2026-05-21 — KPI Utilizzo Claude Code in Dashboard
 
-## v1.0.24 — 2026-05-21
+- [FEATURE] Dashboard arricchita con 9 KPI di "Utilizzo Claude Code" (Sessioni, Messaggi, Token, Giorni attivi, Giorno più attivo, Streak, Ora di punta, Modello preferito)
+- [FEATURE] Barra "Stima contesto" in Dashboard con legenda orizzontale compatta
+- [REFACTOR] Statistiche condivise fra Dashboard e Stats (no doppio I/O)
 
-- Dashboard: nuova sezione "MCP server" subito sotto "Marketplace" con chip cliccabili (dot colorato per stato), click porta alla sezione MCP
-- Sezione MCP: rimossi link cliccabili sull'URL e icona apri-in-browser (gli endpoint MCP non sono pagine web). Resta solo il bottone "copia negli appunti"
+## v1.0.17 — 2026-05-21 — KPI Modello preferito: nome esteso
 
-## v1.0.23 — 2026-05-21
+- [IMPROVEMENT] "Modello preferito" mostra nome esteso (`Opus 4.7`, `Sonnet 4.6`) invece di abbreviato
+- [IMPROVEMENT] Etichetta KPI estesa "Modello Preferito" su due righe (era troncata)
 
-- La barra "Stima contesto" include ora un nuovo segmento **MCP servers** (colore ciano) accanto a Skills, System prompt, Agents, Memory files e Free space
-- Stima ~400 token per ogni MCP server connesso (mediana osservata sui plugin del catalogo ufficiale; il valore reale varia col numero di tool esposti)
-- La barra si aggiorna in tempo reale quando attivi o disattivi un plugin che porta con sé degli MCP server: vedi visualmente quanto contesto liberi
-- Cache MCP invalidata automaticamente ad ogni cambio plugin (`installed_plugins.json` / `settings.json` modificati o azione plugin riuscita)
-- Il calcolo è applicato ovunque la barra è presente: Dashboard, sezione Plugin, sezione Stats
+## v1.0.16 — 2026-05-21 — Fix KPI Sessioni: count reale .jsonl
 
-## v1.0.22 — 2026-05-21
+- [FIX] KPI "Sessioni" conta i file `.jsonl` reali in `~/.claude/projects/` (era sottostimato dalla cache aggregata)
+- [IMPROVEMENT] Filtri 30g/7g applicano count reale per data modifica file (allineato a `claude /stats`)
 
-- Sezione MCP: i filtri per tipo (claude.ai / Dai plugin) sono ora visivamente separati dai filtri di stato con un divisore verticale
-- Bottone copy negli appunti su ogni card MCP per URL o comando
-- URL HTTP / SSE cliccabili direttamente: si aprono nel browser di sistema (utile per OAuth dei server "Needs Auth")
-- Icona dedicata ↗ accanto agli URL per aprirli senza dover cliccare sul testo
+## v1.0.15 — 2026-05-21 — Allineamento dati con `claude /stats`
 
-## v1.0.21 — 2026-05-21
+- [FIX] "Token totali": somma solo input+output (era ~400× più alto includendo cache_read che è gratis)
+- [FEATURE] Filtri Tutto / 30g / 7g applicano anche ai KPI (non solo alla heatmap)
+- [FEATURE] Nuovo KPI "Giorno più attivo" (data con più messaggi nel range)
+- [IMPROVEMENT] "Giorni attivi" mostra ratio `attivi/totali` quando range 30g/7g (es. "18/30")
+- [IMPROVEMENT] "Modello preferito" per range 30g/7g ricalcolato dal periodo, non all-time
 
-- Nuova sezione "MCP" in sidebar: lista tutti gli MCP server configurati con stato Connected / Needs Auth / Errore
-- Card stile Marketplace per ogni server: nome, origine (claude.ai globale oppure plugin), transport (HTTP / stdio / SSE), URL o comando, badge stato colorato
-- Filtri per stato (Tutti / Connected / Needs Auth / Errore) e per tipo (claude.ai / Dai plugin)
-- Bottone "Aggiorna stato live" che rilancia il health-check ufficiale di Claude Code
-- KPI "MCP connessi" aggiunto alla Dashboard (X/Y connessi)
-- Solo lettura in questa versione: azioni come Reconnect, Clear auth, Disable, View tools sono pianificate per le prossime release
+## v1.0.14 — 2026-05-21 — Heatmap stile Claude Desktop + 8 KPI
 
-## v1.0.20 — 2026-05-21
+- [FEATURE] Heatmap ridisegnata stile Claude Desktop: 52 settimane × 7 giorni (anno intero), label mesi, tooltip dettagliato
+- [FEATURE] 8 KPI sopra heatmap (Sessioni, Messaggi, Token, Giorni attivi, Streak, Ora di punta, Modello preferito)
+- [FEATURE] Filtri "Tutto / 30g / 7g" per periodo heatmap
+- [FIX] Stima contesto realistica: per skill/agent conta solo frontmatter YAML (era 417%, ora < 100%)
+- [DOCS] Nota chiarificatrice: "Per skill/agent conta solo il frontmatter — il body viene caricato solo quando invocata"
 
-- La barra "Stima contesto" non sparisce più quando attivi o disattivi un plugin: i segmenti si animano in modo fluido fino al nuovo valore (era un flash bianco di ~1 secondo)
-- Aggiornamento in-place dei valori senza ricostruire il DOM; transizione CSS sulla larghezza dei segmenti
-- Render ottimistico con i dati precedenti al cambio sezione, swap morbido quando arrivano i nuovi
+## v1.0.13 — 2026-05-21 — Heatmap GitHub style + Stima contesto
 
-## v1.0.19 — 2026-05-21
+- [FEATURE] Heatmap attività stile GitHub contribution graph (13 settimane × 7 giorni, label mesi, legenda intensità)
+- [FEATURE] Nuova "Stima contesto" stile `claude /context`: barra orizzontale System prompt/Memory/Skills/Agents, fill su 200k
+- [FEATURE] Istogramma giornaliero token con tooltip per-modello (top 3)
+- [FEATURE] Tab Per-progetto: aggiunto count messaggi e nota chiarificatrice
+- [FIX] Toggle Always Thinking/Voice nel Config tab non si resetta più dopo 1s (cache invalidata su cambio settings.json)
 
-- Barra "Stima contesto" aggiunta anche in cima alla pagina Plugin
-- Tutte le barre di stima contesto si aggiornano dinamicamente quando attivi, disattivi, aggiorni o rimuovi un plugin — vedi in tempo reale quanto contesto liberi o occupi
-- Cache statistiche invalidata sia dopo le azioni plugin sia ogni volta che `~/.claude/settings.json` cambia (anche dall'esterno)
+## v1.0.12 — 2026-05-21 — Sezione Stats (4 tab)
 
-## v1.0.18 — 2026-05-21
+- [FEATURE] Nuova sezione "Stats" con 4 tab: Overview (KPI + heatmap 90gg), Modelli (barre token + istogramma), Per-progetto (lista progetti con sessioni e token), Config (editor visuale settings.json)
+- [FEATURE] Heatmap stile GitHub contribution graph con palette CLACOROO
+- [IMPROVEMENT] Caching server-side 60s + client-side per zero re-I/O su cambio tab
+- [REFACTOR] Path progetti decodificato leggendo `cwd` dei file JSONL (più affidabile del decode ambiguo dir)
 
-- Dashboard arricchita con i 9 KPI di "Utilizzo Claude Code" (Sessioni, Messaggi, Token totali, Giorni attivi, Giorno più attivo, Serie attuale, Serie più lunga, Ora di punta, Modello preferito) — visione "Tutto", senza filtri di range
-- Aggiunta in Dashboard la barra "Stima contesto" con legenda in linea orizzontale sotto la barra, per restare compatta verticalmente
-- Le statistiche caricate sono condivise con la sezione Stats (no doppio I/O)
+## v1.0.11 — 2026-05-21 — Scope locale/globale: progetti tracciati
 
-## v1.0.17 — 2026-05-21
+- [FEATURE] Tracking progetti: CLACOROO mostra anche plugin/skill/agent installati nel `.claude/` locale di ciascun progetto tracciato
+- [FEATURE] Bottone "+ Progetto" in topbar per aggiungere progetto
+- [FEATURE] Sezione Impostazioni "Progetti tracciati" per gestire lista
+- [FEATURE] Badge "globale" (blu) / "locale: nome-progetto" (verde) su ogni plugin/skill/agent
+- [FEATURE] Auto-refresh su modifica `.claude/plugins/installed_plugins.json` dei progetti
 
-- KPI "Modello preferito" mostra ora il nome esteso `Opus 4.7` / `Sonnet 4.6` (era abbreviato a `opus` / `sonnet`)
-- Etichetta del KPI tornata estesa: `Modello Preferito` su due righe (era troncata a `Modello pref.`)
+## v1.0.10 — 2026-05-21 — Command palette Cmd+K + Changelog viewer + Sidebar recenti
 
-## v1.0.16 — 2026-05-21
+- [FEATURE] Command palette globale: `Cmd+K` per cercare/aprire plugin/skill/agent/marketplace + azioni rapide
+- [FEATURE] Changelog viewer integrato: bottone "📋 Changelog" in Impostazioni con schede colorate per versione
+- [FEATURE] Sidebar arricchita con sezione "Recenti" (ultime attività eseguite, click per saltare al contesto)
 
-- KPI "Sessioni" ora conta i file `.jsonl` reali nella cartella `~/.claude/projects/` invece di dipendere dalla cache aggregata (che era sottostimata di qualche unità)
-- I filtri 30g / 7g applicano il count reale filtrando i file per data di modifica, allineando il valore mostrato a quello di `claude /stats`
+## v1.0.09 — 2026-05-21 — Soft auto-update via GitHub Releases API
 
-## v1.0.15 — 2026-05-21
+- [FEATURE] Check automatico aggiornamenti all'avvio + ogni 24h via GitHub Releases API
+- [FEATURE] Banner topbar quando esce nuova versione con bottone "Apri pagina download"
+- [FEATURE] Sezione Impostazioni → Aggiornamenti con check manuale e toggle auto-check
+- [FEATURE] Possibilità "Ricorda più tardi" o "Salta questa versione" (state persistente)
+- [DOCS] Soft update: nessun download/install in-app, solo notifica + link al `.dmg`
 
-Allineate le statistiche al comando `claude /stats` ufficiale:
+## v1.0.08 — 2026-05-21 — Mascotte ridisegnata + about panel pulito
 
-- "Token totali" ora corrisponde a quello di Claude: somma solo input+output (era ~400× più alto perché includeva erroneamente il cache_read, che è gratis e non viene conteggiato)
-- Filtri Tutto / 30g / 7g ora applicano anche ai KPI (non solo alla heatmap): Sessioni, Messaggi, Token e Giorni attivi cambiano in base al range scelto
-- Nuovo KPI "Giorno più attivo": mostra la data con più messaggi nel range
-- "Giorni attivi" ora mostra il ratio `attivi/totali` quando il range è 30g o 7g (come Claude /stats: "18/30")
-- "Modello preferito" per range 30g/7g: ricalcolato dai dati del periodo, non più all-time
+- [IMPROVEMENT] Mascotte ridisegnata: testa più tonda, 4 zampette ben definite, occhi grandi con highlight
+- [IMPROVEMENT] Antenna in grigio caldo, visibile sullo sfondo scuro
+- [IMPROVEMENT] Sotto il logo CLACOROO appare la versione estesa "CLAude-code COntrol ROom"
+- [IMPROVEMENT] About panel pulito con copyright aggiornato
+- [CHORE] Icona app rigenerata con la nuova mascotte
 
-## v1.0.14 — 2026-05-21
+## v1.0.07 — 2026-05-21 — Sicurezza hardening + UX nativa desktop
 
-- Heatmap ridisegnata stile Claude Desktop: 52 settimane × 7 giorni (anno intero), label mesi in basso, tooltip flottante che mostra "Lunedì 21 maggio 2026 · 1.234 messaggi" al passaggio del mouse (era un "?" senza info)
-- 8 KPI sopra heatmap: Sessioni, Messaggi, Token totali, Giorni attivi, Serie attuale, Serie più lunga, Ora di punta, Modello preferito
-- Filtri "Tutto / 30g / 7g" per scegliere il periodo della heatmap
-- Stima contesto realistica: per skill/agent conta solo il frontmatter YAML (indice di discovery), non il body completo. Esclude plugin disabilitati. Aggiunge "Free space" alla barra. Il valore non sfora più il 100% (era 417%)
-- Nota chiarificatrice: "Per skill/agent conta solo il frontmatter — il body viene caricato solo quando invocata"
+- [SECURITY] `sandbox: true` esplicito in `BrowserWindow.webPreferences`
+- [SECURITY] `setWindowOpenHandler` blocca popup, ridirige `https?:` a `shell.openExternal`
+- [SECURITY] `webContents.on('will-navigate')` blocca navigazioni esterne
+- [SECURITY] `app.requestSingleInstanceLock()` + handler `second-instance` (early return)
+- [FEATURE] Application menu nativo macOS con accesso a tutte le sezioni
+- [FEATURE] Shortcut tastiera: `Cmd+R` refresh, `Cmd+Q` quit, `Cmd+,` Impostazioni, `Cmd+1..6` switch sezione
+- [FEATURE] About panel con info versione e link al repository
+- [FEATURE] Notifiche native macOS su enable/disable/update/uninstall plugin (solo se app non in focus)
+- [FEATURE] Persistenza `windowBounds` + `lastSection` in `~/.claude-control-room/state.json`
 
-## v1.0.13 — 2026-05-21
+## v1.0.06 — 2026-05-21 — Tipografia Anthropic-inspired
 
-- Heatmap attività ridisegnata in stile GitHub contribution graph (13 settimane × 7 giorni) con label mesi e legenda intensità
-- Nuova "Stima contesto" stile `claude /context`: barra orizzontale con segmenti System prompt / Memory files / Skills / Agents, percentuale fill su 200k, lettura reale dei file installati
-- Istogramma giornaliero token: tooltip personalizzato segue il mouse con dettaglio per-modello (top 3)
-- Tab Per-progetto: aggiunto conteggio messaggi e nota chiarificatrice ("1 sessione = 1 apertura di Claude Code, può contenere migliaia di messaggi")
-- Fix: toggle Always Thinking / Voice nel Config tab non si resetta più dopo 1 secondo (cache stats invalidata correttamente quando settings.json cambia)
+- [FEATURE] Inter variable (SIL OFL) self-hosted per UI/brand/KPI
+- [FEATURE] Source Serif 4 variable (SIL OFL) self-hosted per markdown body
+- [FIX] Icona Dock e nome app personalizzati anche in modalità sviluppo
+- [SECURITY] CSP estesa con `font-src 'self'` esplicito
+- [DOCS] LICENSE + NOTICE per font bundled (richiesto SIL OFL)
 
-## v1.0.12 — 2026-05-21
+## v1.0.05 — 2026-05-20 — Sette idee feature locali (goal mode)
 
-- Nuova sezione "Stats" nella sidebar con 4 tab:
-  - **Overview**: KPI (token totali, sessioni, streak, giorni attivi) e heatmap attività ultimi 90 giorni
-  - **Modelli**: barre token per modello (input/output/cache) e istogramma giornaliero ultimi 30 giorni
-  - **Per-progetto**: lista progetti Claude Code con sessioni e token aggregati, path reale via lettura JSONL
-  - **Config**: editor visuale per modificare al volo `~/.claude/settings.json` (modello, tema, lingua, Always Thinking, Voice)
-- Heatmap stile GitHub contribution graph, colori palette CLACOROO
-- Caching server-side 60s + caching client-side per evitare re-IO ad ogni cambio tab
-- Path progetti decodificato leggendo il campo `cwd` dei file JSONL (più affidabile del decode ambiguo della directory)
+- [FEATURE] Bottoni "Apri nel Finder" / "Apri in editor" su ogni plugin card
+- [FEATURE] Activity log `~/.claude-control-room/activity-log.json` con sub-section Dashboard
+- [FEATURE] Plugin Validator (`claude plugins validate <path>`) in Impostazioni
+- [FEATURE] Onboarding tour first-run con 5 step + bottone Riavvia in Impostazioni
+- [FEATURE] Health check skill/agent: badge ⚠ su frontmatter mancante/malformato + KPI Dashboard
+- [FEATURE] Export/import snapshot `.clacoroo` (marketplaces + plugin + blocklist)
+- [FEATURE] Visualizzatore SKILL.md/agent.md inline (modal markdown DOM-based)
+- [FIX] `enabledPlugins` di `~/.claude/settings.json` è la fonte di verità (non `blocklist.json`)
+- [FIX] `fs.watchFile` (polling) sostituisce `fs.watch` per affidabilità cross-platform
+- [REFACTOR] Estratti `src/lib/markdown.js`, `state.js`, `snapshot.js`
 
-## v1.0.11 — 2026-05-21
+## v1.0.04 — 2026-05-20 — Packaging cross-platform (.dmg/.exe/.AppImage)
 
-- Scope locale/globale: CLACOROO ora può tracciare i progetti che usi e mostrare anche i plugin/skill/agent installati nel loro `.claude/` locale
-- Nuovo bottone "+ Progetto" in alto a destra per aggiungere progetti da tracciare
-- Sezione Impostazioni → "Progetti tracciati" per gestire la lista (vedi/rimuovi)
-- Badge "globale" (blu) / "locale: nome-progetto" (verde) su ogni plugin, skill e agent
-- Item locali sono read-only (la CLI `claude plugins` opera solo a livello globale)
-- Auto-refresh quando il file `.claude/plugins/installed_plugins.json` di un progetto cambia
+- [FEATURE] Pacchetto distribuibile macOS (.dmg arm64 + x64), Windows (.exe NSIS + portable), Linux (.AppImage + .deb + .rpm)
+- [FEATURE] App icon personalizzata con mascotte CLACOROO
+- [FEATURE] macOS hardened runtime + dark mode support nativo
+- [FEATURE] Windows NSIS: `oneClick: false`, `allowToChangeInstallationDirectory: true`, `asInvoker` (no admin)
+- [FEATURE] Linux desktop entry con category Development/Utility
 
-## v1.0.10 — 2026-05-21
+## v1.0.02 — 2026-05-19 — Rebrand CLACOROO + identità visiva Claude
 
-- Nuova command palette globale: premi `Cmd+K` per cercare e aprire plugin, skill, agent, marketplace o eseguire azioni rapide
-- Viewer changelog integrato: nuovo bottone `📋 Changelog` in Impostazioni mostra lo storico versioni in schede colorate
-- Sidebar arricchita: sezione "Recenti" con le ultime attività eseguite, click per saltare al contesto
+- [FEATURE] Rebrand a CLACOROO con identità visiva ispirata a Claude (Anthropic)
+- [FEATURE] Palette arancione caldo + neutri caldi Claude (`#d97757` accent)
+- [FEATURE] Mascotte pixel-art (SVG `<rect>` only) integrata in sidebar e loading screen
+- [FEATURE] Logo "CLACOROO" con "CO" arancione (sovrapposizione Code/Control)
+- [FEATURE] Animazione `mascotBob` nel loading screen
+- [DOCS] README riscritto in italiano con etimologia + sezione brand
 
-## v1.0.09 — 2026-05-21
+## v1.0.01 — 2026-05-19 — Prima release: foundation
 
-- Controllo automatico aggiornamenti: l'app verifica all'avvio se è disponibile una nuova release
-- Banner in alto quando esce una nuova versione, con accesso diretto al download
-- Nuova sezione Impostazioni → Aggiornamenti con check manuale e attivazione/disattivazione del controllo automatico
-- Possibilità di saltare versioni specifiche o rimandare la notifica
-
-## v1.0.08 — 2026-05-21
-
-- Mascotte ridisegnata: testa più tonda, 4 zampette ben definite, occhi grandi e dolci con highlight
-- Antenna ora in grigio caldo, ben visibile sullo sfondo scuro
-- Sotto il logo CLACOROO appare la versione estesa "CLAude-code COntrol ROom"
-- About panel pulito con copyright aggiornato
-- Icona app rigenerata con la nuova mascotte
-
-## v1.0.07 — 2026-05-21
-
-- Sicurezza rinforzata: renderer in sandbox, blocco popup, gestione single-instance
-- Menu app nativo macOS con accesso a tutte le sezioni
-- Shortcut tastiera: `Cmd+R` ricarica, `Cmd+Q` esci, `Cmd+,` impostazioni, `Cmd+1..6` cambia sezione
-- About panel con info versione e link al repository
-- Notifiche native macOS quando attivi/disattivi/aggiorni un plugin
-- L'app ricorda dimensione finestra e ultima sezione aperta
-
-## v1.0.06 — 2026-05-21
-
-- Nuovi font ispirati allo stile di Anthropic Claude per familiarità visiva
-- Inter per UI, Source Serif per i contenuti lunghi
-- Font self-hosted: nessuna risorsa esterna, compatibile cross-platform
-
-## v1.0.05 — 2026-05-20
-
-- Bottoni "Apri nel Finder" / "Apri in VS Code" su ogni plugin card
-- Registro attività in Dashboard: vedi cosa hai fatto di recente
-- Plugin Validator: verifica plugin in sviluppo prima di pubblicarli
-- Tour di benvenuto al primo avvio (riavviabile da Impostazioni)
-- Health check su skill e agent: badge ⚠ se ci sono problemi nel frontmatter
-- Esporta/importa snapshot configurazione: utile per backup o migrazione su altro Mac
-- Visualizzatore SKILL.md / agent.md inline: clicca per leggere il contenuto
-
-## v1.0.04 — 2026-05-20
-
-- Pacchetto distribuibile per macOS (.dmg), Windows (.exe) e Linux (.AppImage / .deb / .rpm)
-- App icon personalizzata con la mascotte CLACOROO
-- macOS hardened runtime + dark mode support nativo
-
-## v1.0.02 — 2026-05-19
-
-- Rebrand a CLACOROO con identità visiva ispirata a Claude (Anthropic)
-- Palette arancione caldo e mascotte pixel-art
-- Logo "CLACOROO" con il "CO" arancione (sovrapposizione Code/Control)
-- Animazione mascotte nel loading screen
-
-## v1.0.01 — 2026-05-19
-
-- Prima release: gestione visuale di plugin, marketplace, skill e agent di Claude Code
-- Dashboard con KPI di sintesi
-- Toggle attiva/disattiva plugin, aggiornamenti e rimozioni
-- Auto-refresh quando i file di configurazione cambiano esternamente
-- Architettura sicura: contextBridge, sandbox renderer, validazione input
+- [FEATURE] Gestione visuale di plugin, marketplace, skill e agent di Claude Code
+- [FEATURE] Dashboard con KPI di sintesi (plugin attivi/disattivati, marketplace, skill/agent totali)
+- [FEATURE] Toggle enable/disable plugin, update e uninstall via CLI `claude plugins`
+- [FEATURE] Sezione Marketplace, Skill, Agent: browser ricercabile
+- [FEATURE] Impostazioni: percorsi rilevati, statistiche, configurazione manuale binario `claude`
+- [FEATURE] Auto-refresh quando file di configurazione cambiano esternamente
+- [FEATURE] Toast notification per feedback azioni
+- [SECURITY] Architettura sicura: `contextBridge` + `contextIsolation: true` + `nodeIntegration: false`
+- [SECURITY] `execFile` con array args (zero shell injection)
+- [SECURITY] Validazione regex su `pluginId` e `marketplaceName` prima della CLI
+- [DOCS] Documento di handoff tecnico (`docs/doc-tecnico_handoff.html`)

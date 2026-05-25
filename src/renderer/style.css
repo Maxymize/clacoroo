@@ -549,43 +549,35 @@ body {
   background: var(--accent);
   color: #fff;
 }
-.changelog-section-title {
+/* v1.0.68 — Titolo riassuntivo della versione (sotto l'header) */
+.changelog-version-title {
   font-family: "Inter", -apple-system, sans-serif;
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--text);
-  margin-top: 12px;
-  margin-bottom: 6px;
-  text-transform: uppercase;
-  letter-spacing: .04em;
-}
-.changelog-note {
-  font-family: "Source Serif 4", Georgia, serif;
   font-size: 13px;
+  font-weight: 600;
   color: var(--text-muted);
-  line-height: 1.6;
-  margin-bottom: 8px;
+  margin: -4px 0 12px 0;
+  line-height: 1.4;
 }
+
 .changelog-items {
   list-style: none;
   padding-left: 0;
   margin-bottom: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
-.changelog-items li {
+.changelog-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
   font-size: 13px;
   line-height: 1.55;
   color: var(--text);
-  padding: 4px 0 4px 18px;
-  position: relative;
+  padding: 4px 0;
 }
-.changelog-items li::before {
-  content: "→";
-  position: absolute;
-  left: 0;
-  color: var(--accent);
-  font-weight: 700;
-}
-.changelog-items li code {
+.changelog-item-text { flex: 1; min-width: 0; }
+.changelog-item-text code {
   font-family: "SF Mono", "Fira Code", monospace;
   font-size: 11.5px;
   background: var(--surface2);
@@ -594,7 +586,35 @@ body {
   border-radius: 4px;
   color: var(--accent2);
 }
-.changelog-items li strong { color: var(--accent2); font-weight: 700; }
+.changelog-item-text strong { color: var(--accent2); font-weight: 700; }
+
+/* v1.0.68 — Badge colorati per categoria (Conventional Commits style) */
+.changelog-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  min-width: 88px;
+  height: 20px;
+  padding: 0 8px;
+  margin-top: 1px;
+  border-radius: 4px;
+  font-family: "Inter", -apple-system, sans-serif;
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: #fff;
+  user-select: none;
+}
+.changelog-badge-feature     { background: #788c5d; }
+.changelog-badge-fix         { background: #ef4444; }
+.changelog-badge-improvement { background: #d97757; }
+.changelog-badge-security    { background: #f59e0b; color: #1a1815; }
+.changelog-badge-refactor    { background: #6a9bcc; }
+.changelog-badge-docs        { background: #5e5b54; }
+.changelog-badge-chore       { background: #3d3a35; color: #b0aea5; }
+.changelog-badge-other       { background: transparent; color: var(--text-muted); border: 1px solid var(--border); }
 
 /* ── UPDATE BANNER (v1.0.09) ──────────────────────────────────────────── */
 .update-banner {

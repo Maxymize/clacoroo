@@ -22,42 +22,54 @@ function readChangelogRaw() {
   catch { return null; }
 }
 
-// Parsing: ## vX.Y.Z — YYYY-MM-DD → version block con sections (### Title) e bullets (- item)
+// v1.0.68 — Parser sintetico per changelog professionale.
+// Formato atteso per ogni release:
+//   ## vX.Y.Z — YYYY-MM-DD — Titolo riassuntivo opzionale
+//
+//   - [FEATURE] Descrizione one-liner
+//   - [FIX] Bug fix sintetico
+//   - [IMPROVEMENT] Miglioramento di esistente
+//   - [SECURITY] Hardening o vulnerability fix
+//   - [REFACTOR] Refactor/cleanup interno
+//   - [DOCS] Cambiamenti documentazione
+//   - [CHORE] Deps bump / build / build config
+//
+// Items senza badge vengono classificati come `OTHER`.
+// Section headers (### Title) e paragrafi prosa sono IGNORATI dal parser
+// (legacy entries: vengono semplicemente skipati, l'output rimane pulito).
+const VALID_BADGES = new Set(['FEATURE','FIX','IMPROVEMENT','SECURITY','REFACTOR','DOCS','CHORE']);
+
 function parseChangelog(content) {
   if (!content) return [];
   const lines = content.split(/\r?\n/);
   const versions = [];
   let current = null;
-  let currentSection = null;
 
   for (const line of lines) {
-    const ver = line.match(/^##\s+(v?[\d.]+)\s*(?:—|-)\s*(.+?)\s*$/);
+    // Header versione: cattura version, date (YYYY-MM-DD) e title opzionale
+    const ver = line.match(/^##\s+v?(\d+\.\d+\.\d+)\s*(?:—|-|–)\s*(\d{4}-\d{2}-\d{2})(?:\s*(?:—|-|–)\s*(.+?))?\s*$/);
     if (ver) {
       if (current) versions.push(current);
-      current = { version: ver[1].replace(/^v/, ''), date: ver[2], sections: [] };
-      currentSection = null;
+      current = {
+        version: ver[1],
+        date: ver[2],
+        title: (ver[3] || '').trim(),
+        items: [],
+      };
       continue;
     }
     if (!current) continue;
-    const sec = line.match(/^###\s+(.+?)\s*$/);
-    if (sec) {
-      currentSection = { title: sec[1], items: [] };
-      current.sections.push(currentSection);
-      continue;
-    }
+    // Skip section headers (### …) e tutto il resto che non sia un bullet
+    if (line.startsWith('#')) continue;
     const bullet = line.match(/^\s*-\s+(.+?)\s*$/);
-    if (bullet) {
-      if (!currentSection) {
-        currentSection = { title: '', items: [] };
-        current.sections.push(currentSection);
-      }
-      currentSection.items.push(bullet[1]);
-      continue;
-    }
-    // Paragrafi liberi sotto una sezione: accumula nel testo dell'ultima section (note)
-    if (line.trim() && currentSection && !line.startsWith('#')) {
-      if (!currentSection.notes) currentSection.notes = [];
-      currentSection.notes.push(line.trim());
+    if (!bullet) continue;
+    const text = bullet[1];
+    // Estrai badge [TYPE] in testa, altrimenti OTHER
+    const badge = text.match(/^\[([A-Z]+)\]\s*(.+)$/);
+    if (badge && VALID_BADGES.has(badge[1])) {
+      current.items.push({ type: badge[1], text: badge[2].trim() });
+    } else {
+      current.items.push({ type: 'OTHER', text });
     }
   }
   if (current) versions.push(current);
