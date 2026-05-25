@@ -1898,10 +1898,6 @@ body {
 }
 .apikey-inline-ok { color: #22c55e; }
 .apikey-inline-error { color: #ef4444; }
-.apikey-console-link {
-  align-self: flex-start;
-  margin-top: 2px;
-}
 .apikey-panel-wrap { display: block; }
 
 /* Dots slider (v1.0.32) — stile VS Code Claude plugin per effort level */

@@ -3002,13 +3002,10 @@ function paintAccountPanel(container, result) {
     refreshSidebarAccountPill();
   });
 
-  // Link rapidi alle console Anthropic (v1.0.29)
+  // Link rapido alla console claude.ai (gestione subscription)
   const claudeBtn = el('button', 'btn btn-sm btn-ghost', '↗ claude.ai');
   claudeBtn.title = 'Apri claude.ai (gestione subscription Max/Pro)';
   claudeBtn.addEventListener('click', () => window.claudeAPI.openExternal('https://claude.ai/settings/billing'));
-  const consoleBtn = el('button', 'btn btn-sm btn-ghost', '↗ Console API');
-  consoleBtn.title = 'Apri console.anthropic.com (API key, billing, usage API)';
-  consoleBtn.addEventListener('click', () => window.claudeAPI.openExternal('https://console.anthropic.com'));
   // Logout con tooltip custom hover (warning esplicito, niente box invadente)
   const logoutWrap = el('div', 'logout-btn-wrap');
   const logoutBtn = el('button', 'btn btn-sm btn-danger', 'Logout');
@@ -3060,7 +3057,6 @@ function paintAccountPanel(container, result) {
   });
   actions.appendChild(refreshBtn);
   actions.appendChild(claudeBtn);
-  actions.appendChild(consoleBtn);
   actions.appendChild(logoutWrap);
   card.appendChild(actions);
 
@@ -3117,7 +3113,6 @@ function paintApiKeyPanel(container, status) {
     ' e la espone a Claude Code tramite il meccanismo ufficiale `apiKeyHelper`.'));
 
   if (status.present) {
-    // Stato: chiave configurata
     const info = el('div', 'apikey-info');
     infoLine(info, 'Chiave', status.masked || '—');
     infoLine(info, 'Storage', status.backend);
@@ -3133,19 +3128,21 @@ function paintApiKeyPanel(container, status) {
     actions.appendChild(makeReplaceBtn(container));
     if (!status.helperConfigured) actions.appendChild(makeReconfigureBtn(container));
     actions.appendChild(makeRemoveBtn(container));
+    actions.appendChild(makeConsoleBtn());
     card.appendChild(actions);
   } else {
-    // Stato: nessuna chiave — mostra form input
     appendApiKeyForm(card, container);
   }
 
-  // Link console Anthropic
-  const consoleBtn = el('button', 'btn btn-sm btn-ghost apikey-console-link', '↗ Console Anthropic (gestisci API keys)');
-  consoleBtn.addEventListener('click', () =>
-    window.claudeAPI.openExternal('https://console.anthropic.com/settings/keys'));
-  card.appendChild(consoleBtn);
-
   container.appendChild(card);
+}
+
+function makeConsoleBtn() {
+  const btn = el('button', 'btn btn-sm btn-ghost', '↗ Console Anthropic');
+  btn.title = 'Apri console.anthropic.com/settings/keys per creare/gestire le API keys';
+  btn.addEventListener('click', () =>
+    window.claudeAPI.openExternal('https://console.anthropic.com/settings/keys'));
+  return btn;
 }
 
 function infoLine(parent, label, value, mono) {
@@ -3217,6 +3214,7 @@ function appendApiKeyForm(card, container) {
 
   actions.appendChild(testBtn);
   actions.appendChild(saveBtn);
+  actions.appendChild(makeConsoleBtn());
   form.appendChild(actions);
   form.appendChild(statusInline);
   card.appendChild(form);
@@ -3768,7 +3766,7 @@ function renderSettings() {
   infoRow.appendChild(infoLeft);
   const infoRight = el('div');
   infoRight.style.cssText = 'display:flex;gap:10px;align-items:center;';
-  const verVal = el('div', 'settings-row-val', '1.0.70');
+  const verVal = el('div', 'settings-row-val', '1.0.71');
   const chBtn = btnWithIcon('btn btn-sm btn-green btn-with-icon', 'changelog', ' Changelog');
   chBtn.title = 'Mostra storico versioni';
   chBtn.addEventListener('click', () => openChangelogModal());

@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.0.71 — 2026-05-23 — Pulizia duplicato Console API + bottoni API key inline
+
+- [REMOVED] Bottone "↗ Console API" dalle account-actions di Impostazioni (duplicato di "↗ Console Anthropic" nel pannello API key)
+- [IMPROVEMENT] Bottone "↗ Console Anthropic" spostato dentro la stessa riga di Test+Salva nel form API key (in branch chiave attiva sta vicino agli altri action button), invece di stare su una riga separata
+- [REFACTOR] Estratto helper `makeConsoleBtn()` riusato sia nel form (chiave non configurata) sia nella vista azioni (chiave attiva)
+- [REMOVED] CSS `.apikey-console-link` (margine ad-hoc non più necessario con layout flex unificato)
+
 ## v1.0.70 — 2026-05-23 — API key Claude: input + storage cifrato cross-platform
 
 - [FEATURE] Nuovo pannello "API key Claude" in Impostazioni: input + test + salvataggio sicuro + rimozione, no più shell editing
