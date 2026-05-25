@@ -8,7 +8,7 @@ Gestisci plugin, marketplace, skill, agent, MCP server, hook, statistiche, quote
 [![Electron](https://img.shields.io/badge/Electron-36-47848F?logo=electron&logoColor=white)](https://www.electronjs.org/)
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20Windows-141413)](#requisiti)
 [![License: AGPL v3+](https://img.shields.io/badge/License-AGPL%20v3+-d97757.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-1.0.72-d97757.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-1.0.73-d97757.svg)](CHANGELOG.md)
 
 [English README »](README.md) · [🇮🇹 Italiano (questo file)](README.it.md)
 
@@ -18,7 +18,7 @@ Gestisci plugin, marketplace, skill, agent, MCP server, hook, statistiche, quote
 
 ## Cos'è CLACOROO
 
-**CLA**ude **CO**de Cont**RO**l **ROO**m è una app desktop Electron che mette una UI grafica sopra ogni file di configurazione che Claude Code legge in `~/.claude/`. Il `CO` arancio del wordmark si sovrappone fra **Co**de e **Co**ntrol — un piccolo gioco visivo che racconta l'idea: la cabina di regia per Claude Code, gestita dalla mascotte **CLACOROO**, un esserino pixel-art a 4 zampe con un'antenna LED verde (Anthropic Green) accesa.
+**CLA**ude **CO**de **CO**ntrol **ROO**m è una app desktop Electron che mette una UI grafica sopra ogni file di configurazione che Claude Code legge in `~/.claude/`. Il `CO` arancio del wordmark si sovrappone fra **Co**de e **Co**ntrol — un piccolo gioco visivo che racconta l'idea: la cabina di regia per Claude Code, gestita dalla mascotte **CLACOROO**, un esserino pixel-art a 4 zampe con un'antenna LED verde (Anthropic Green) accesa.
 
 Prima di CLACOROO, gestire plugin, marketplace, skill, agent, MCP server, hook e configurazione di Claude Code richiedeva di:
 - Memorizzare e digitare comandi CLI `claude plugins enable/disable/install/update ...`

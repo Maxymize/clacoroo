@@ -98,7 +98,7 @@ function setupAboutPanel() {
     version: 'CLAude-code COntrol ROom',
     copyright: '© 2026 MAXYMIZE',
     website: REPO_URL,
-    credits: 'Pannello di controllo visuale per gestire plugin, marketplace, skill e agent di Claude Code.\n\nIl nome è la fusione di CLAude-code + COntrol + ROom (il CO si sovrappone tra Code e Control).',
+    credits: 'Pannello di controllo visuale per gestire plugin, marketplace, skill e agent di Claude Code.',
   });
 }
 

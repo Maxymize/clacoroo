@@ -1,5 +1,13 @@
 # Changelog
 
+## v1.0.73 — 2026-05-25 — README + about panel polish
+
+- [FEATURE] **README.md inglese** (default GitHub) interamente riscritto con tutte le feature v1.0.01-v1.0.72 organizzate per area (Dashboard/Marketplaces/Plugins/Skills/Agents/MCP/Stats/Config/Account+API key/Terminal/Auto-update/UX), sezioni Security, Brand, Architecture, License AGPL-3.0
+- [FEATURE] **README.it.md** italiano completo con stesso layout + cross-link bidirezionale dalla intestazione di entrambi
+- [FEATURE] `assets/logo-readme.svg` + PNG: hero logo per README con mascotte pixel-art top + wordmark CLACOROO BOLD 7×7 (CO arancio) + tagline, congruo con DMG installer
+- [FIX] Acronimo CLACOROO corretto in CLAUDE.md + README: "CLAude COde Cont**RO**l ROom" → "CLA**ude** CO**de** CO**ntrol** ROO**m**" (4 sillabe, non 3)
+- [IMPROVEMENT] About panel macOS: rimossa frase "Il nome è la fusione di CLAude-code + COntrol + ROom..." dalla sezione credits (info non rilevante per gli utenti)
+
 ## v1.0.72 — 2026-05-25 — DMG installer custom CLACOROO + Press Start 2P sidebar
 
 - [FEATURE] **Installer DMG completamente ridisegnato** 720×460 stile HyperWhisper: finestra ampia, mascotte CLACOROO come signature in alto, wordmark "CLACOROO" BOLD in pixel-art 8-bit (CO arancio brand highlight), tagline "Claude Code Control Room", CTA "Trascina CLACOROO nella cartella Applications →", freccia lunga arancio CLACOROO `#d97757` fra le 2 icone grandi (iconSize 128)

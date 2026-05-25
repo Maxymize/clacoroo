@@ -8,7 +8,7 @@ Manage plugins, marketplaces, skills, agents, MCP servers, hooks, stats, quotas 
 [![Electron](https://img.shields.io/badge/Electron-36-47848F?logo=electron&logoColor=white)](https://www.electronjs.org/)
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20Windows-141413)](#requirements)
 [![License: AGPL v3+](https://img.shields.io/badge/License-AGPL%20v3+-d97757.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-1.0.72-d97757.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-1.0.73-d97757.svg)](CHANGELOG.md)
 
 **English (this file)** · [🇮🇹 Leggimi in Italiano »](README.it.md)
 
@@ -18,7 +18,7 @@ Manage plugins, marketplaces, skills, agents, MCP servers, hooks, stats, quotas 
 
 ## What is CLACOROO
 
-**CLA**ude **CO**de Cont**RO**l **ROO**m is an Electron desktop app that puts a graphical UI on top of every configuration file Claude Code reads from `~/.claude/`. The orange `CO` in the wordmark overlaps between **Co**de and **Co**ntrol — a small visual pun for what it does: a regia booth for Claude Code, mascotted by **CLACOROO**, a pixel-art 4-legged creature with a green LED antenna (Anthropic Green) glowing on top.
+**CLA**ude **CO**de **CO**ntrol **ROO**m is an Electron desktop app that puts a graphical UI on top of every configuration file Claude Code reads from `~/.claude/`. The orange `CO` in the wordmark overlaps between **Co**de and **Co**ntrol — a small visual pun for what it does: a regia booth for Claude Code, mascotted by **CLACOROO**, a pixel-art 4-legged creature with a green LED antenna (Anthropic Green) glowing on top.
 
 Before CLACOROO, managing Claude Code plugins, marketplaces, skills, agents, MCP servers, hooks and configuration required:
 - Memorizing and typing CLI commands `claude plugins enable/disable/install/update ...`
