@@ -1,5 +1,15 @@
 # Changelog
 
+## v1.0.80 — 2026-05-25 — Icona app: angoli trasparenti (non più bianchi)
+
+Risolto problema visivo dell'icona dell'app: gli angoli del bounding box 256×256 (fuori dallo squircle nero) erano riempiti di bianco invece di trasparenza. Visibile nel Dock macOS quando l'app è aperta + nel DMG installer + nei thumbnail di Finder.
+
+- [FIX] `assets/icon-source.svg` → `build/icon.iconset/*.png` rigenerati con `rsvg-convert -b "none"` (background trasparente esplicito). Tool precedente aveva applicato fill bianco di default
+- [FIX] `assets/icon.icns` rigenerato da iconset corretto via `iconutil -c icns`. Include 10 dimensioni standard (16, 32, 128, 256, 512 + @2x ciascuna), tutte con angoli alpha=0
+- [FIX] `assets/icon.png` (1024×1024, usato per Win/Linux build target) rigenerato con trasparenza
+- [FIX] `assets/icon-app-256.png` + `assets/logo-readme.png` (hero del README) rigenerati con trasparenza
+- [IMPROVEMENT] Risultato: nel Dock macOS l'icona appare con squircle nero pulito senza halo bianco quando l'app è aperta. Nel DMG installer l'icona drag-and-drop ha angoli trasparenti coerenti con la mascotte CLACOROO
+
 ## v1.0.79 — 2026-05-25 — Install zero-touch: ad-hoc signing automatico + hardened runtime off
 
 Risolto il dialog **"CLACOROO è danneggiato e non può essere aperto"** che bloccava gli utenti che scaricavano il `.dmg` dalla release pubblica. Causa: hardened runtime attivo + nessuna firma → macOS Sequoia lo marca come "corrupt" (vedi build precedenti senza signing). Da v1.0.79 in poi l'utente vede solo il prompt standard Gatekeeper **"Apri app scaricata?"** → click "Apri" → app funziona. Zero comandi `sudo`, zero `codesign` manuale.
