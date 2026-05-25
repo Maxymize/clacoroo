@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.0.74 — 2026-05-25 — Disclaimer Anthropic (README + Impostazioni)
+
+- [DOCS] **Disclaimer Anthropic** aggiunto in cima a README.md (inglese) e README.it.md (italiano): CLACOROO è tool indipendente di terze parti, NON affiliato/sponsorizzato/approvato da Anthropic, PBC. Sviluppato autonomamente da MAXYMIZE BUSINESS per facilitare l'uso della CLI ufficiale Claude Code
+- [FEATURE] Box disclaimer in fondo alla sezione Impostazioni dell'app (sotto Informazioni e Licenza): stesso messaggio + CSS warning-style giallo/ambra con border-left accent
+
 ## v1.0.73 — 2026-05-25 — README + about panel polish
 
 - [FEATURE] **README.md inglese** (default GitHub) interamente riscritto con tutte le feature v1.0.01-v1.0.72 organizzate per area (Dashboard/Marketplaces/Plugins/Skills/Agents/MCP/Stats/Config/Account+API key/Terminal/Auto-update/UX), sezioni Security, Brand, Architecture, License AGPL-3.0

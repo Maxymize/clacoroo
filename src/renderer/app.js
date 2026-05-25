@@ -3766,7 +3766,7 @@ function renderSettings() {
   infoRow.appendChild(infoLeft);
   const infoRight = el('div');
   infoRight.style.cssText = 'display:flex;gap:10px;align-items:center;';
-  const verVal = el('div', 'settings-row-val', '1.0.73');
+  const verVal = el('div', 'settings-row-val', '1.0.74');
   const chBtn = btnWithIcon('btn btn-sm btn-green btn-with-icon', 'changelog', ' Changelog');
   chBtn.title = 'Mostra storico versioni';
   chBtn.addEventListener('click', () => openChangelogModal());
@@ -3793,6 +3793,13 @@ function renderSettings() {
   licRight.appendChild(licBtn);
   licRow.appendChild(licRight);
   g3.appendChild(licRow);
+
+  // v1.0.74 — Disclaimer Anthropic: CLACOROO è progetto indipendente
+  const disclaimerBox = el('div', 'settings-disclaimer');
+  disclaimerBox.appendChild(el('div', 'settings-disclaimer-title', '⚠ Disclaimer'));
+  disclaimerBox.appendChild(el('div', 'settings-disclaimer-body',
+    'CLACOROO è un tool indipendente di terze parti e NON è affiliato, sponsorizzato né approvato da Anthropic, PBC. È un progetto autonomo sviluppato e mantenuto da MAXYMIZE BUSINESS con il solo scopo di rendere più facile l\'utilizzo della CLI ufficiale Claude Code attraverso un\'interfaccia grafica. "Claude" e "Anthropic" sono marchi registrati di Anthropic, PBC.'));
+  wrap.appendChild(disclaimerBox);
 
   setContent(wrap);
 }

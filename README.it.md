@@ -8,11 +8,15 @@ Gestisci plugin, marketplace, skill, agent, MCP server, hook, statistiche, quote
 [![Electron](https://img.shields.io/badge/Electron-36-47848F?logo=electron&logoColor=white)](https://www.electronjs.org/)
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20Windows-141413)](#requisiti)
 [![License: AGPL v3+](https://img.shields.io/badge/License-AGPL%20v3+-d97757.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-1.0.73-d97757.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-1.0.74-d97757.svg)](CHANGELOG.md)
 
 [English README »](README.md) · [🇮🇹 Italiano (questo file)](README.it.md)
 
 </div>
+
+---
+
+> ⚠️ **Disclaimer** — CLACOROO è un **tool indipendente di terze parti** e **non è affiliato, sponsorizzato né approvato da Anthropic, PBC**. È un progetto autonomo sviluppato e mantenuto da **MAXYMIZE BUSINESS** (Maximilian Giurastante) con il solo scopo di rendere più facile l'utilizzo della CLI ufficiale [Claude Code](https://github.com/anthropics/claude-code) attraverso un'interfaccia grafica. "Claude" e "Anthropic" sono marchi registrati di Anthropic, PBC. CLACOROO utilizza i file di configurazione e i comandi CLI di Claude Code senza modificarli.
 
 ---
 

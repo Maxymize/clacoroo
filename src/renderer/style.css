@@ -3207,3 +3207,25 @@ body {
 .terminal-tab-pane .xterm .xterm-viewport {
   background: #0d0c0b !important;
 }
+
+/* v1.0.74 — Disclaimer Anthropic in fondo a Impostazioni */
+.settings-disclaimer {
+  margin-top: 24px;
+  padding: 14px 18px;
+  background: rgba(245, 158, 11, 0.06);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  border-left: 3px solid #f59e0b;
+  border-radius: 8px;
+  font-size: 11.5px;
+  line-height: 1.55;
+}
+.settings-disclaimer-title {
+  font-weight: 700;
+  color: #f59e0b;
+  font-size: 12px;
+  margin-bottom: 6px;
+  letter-spacing: 0.02em;
+}
+.settings-disclaimer-body {
+  color: var(--text-muted);
+}
