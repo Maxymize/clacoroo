@@ -959,34 +959,34 @@ function renderDashboard() {
 
   const usageSection = el('div', 'dashboard-usage-section');
   wrap.appendChild(usageSection);
-  usageSection.appendChild(sectionTitle('Quote Claude', 'gauge'));
+  usageSection.appendChild(sectionTitle(t('section.quoteClaude'), 'gauge'));
   const usageBars = el('div', 'dashboard-usage-bars');
   usageSection.appendChild(usageBars);
   loadDashboardUsage(usageBars, renderToken);
 
   // KPI plugin (stato installazione)
-  wrap.appendChild(sectionTitle('Statistiche', 'bar-chart-3'));
+  wrap.appendChild(sectionTitle(t('section.statistiche'), 'bar-chart-3'));
   const kpiGrid = el('div', 'kpi-grid');
   const kpis = [
-    { num: active.length,      label: 'Plugin attivi',     color: '#788c5d' },  // global only
-    { num: disabled.length,    label: 'Disattivati',       color: '#ef4444' },
-    { num: locals.length,      label: 'Plugin locali',     color: '#b8c79a' },  // verde Anthropic chiaro
-    { num: state.mktList.length, label: 'Marketplace',     color: '#d97757' },  // CLACOROO orange
-    { num: allSkills.length,   label: 'Skill totali',      color: '#e89478' },  // accent2 chiaro
-    { num: allAgents.length,   label: 'Agent totali',      color: '#f97316' },
-    { num: mcpKpiNum,          label: 'MCP connessi',      color: '#22c55e', kind: 'mcp' },
-    { num: hookList.length,    label: hookPluginsCount ? ('Hooks · ' + hookPluginsCount + ' plugin') : 'Hooks',
+    { num: active.length,      label: t('kpi.pluginActive'),   color: '#788c5d' },  // global only
+    { num: disabled.length,    label: t('kpi.pluginDisabled'), color: '#ef4444' },
+    { num: locals.length,      label: t('kpi.pluginLocal'),    color: '#b8c79a' },  // verde Anthropic chiaro
+    { num: state.mktList.length, label: t('kpi.marketplace'),  color: '#d97757' },  // CLACOROO orange
+    { num: allSkills.length,   label: t('kpi.skillTotal'),     color: '#e89478' },  // accent2 chiaro
+    { num: allAgents.length,   label: t('kpi.agentTotal'),     color: '#f97316' },
+    { num: mcpKpiNum,          label: t('kpi.mcpConnected'),   color: '#22c55e', kind: 'mcp' },
+    { num: hookList.length,    label: hookPluginsCount ? t('kpi.hooksPlugins', { n: hookPluginsCount }) : t('kpi.hooks'),
       color: '#a78bfa', kind: 'hooks' },
     // v1.0.87 — KPI condizionale: mostrato solo se ci sono hook con dep mancanti
     ...(hookMissingDepsCount > 0 ? [{
       num: hookMissingDepsCount,
-      label: 'Hook con dep mancanti',
+      label: t('kpi.hooksMissingDeps'),
       color: '#f59e0b', kind: 'hooks-warn',
     }] : []),
     { num: totalTokens > 0 ? (Math.round(totalTokens / 100) / 10) + 'K' : '—',
-      label: 'Token always-on',  color: '#6a9bcc' },                            // Anthropic blue
+      label: t('kpi.tokensAlways'),  color: '#6a9bcc' },                            // Anthropic blue
     { num: healthErr + healthWarn,
-      label: healthErr ? 'Health issues' : (healthWarn ? 'Warning' : 'Health'),
+      label: healthErr ? t('kpi.healthIssues') : (healthWarn ? t('kpi.healthWarning') : t('kpi.health')),
       color: healthErr ? '#ef4444' : (healthWarn ? '#f59e0b' : '#788c5d') },
   ];
   kpis.forEach(k => {
@@ -1001,8 +1001,8 @@ function renderDashboard() {
     if (k.kind === 'hooks' || k.kind === 'hooks-warn') {
       card.style.cursor = 'pointer';
       card.title = k.kind === 'hooks-warn'
-        ? 'Apri Hooks per vedere quali tool CLI sono mancanti'
-        : 'Apri la sezione Hooks';
+        ? t('kpi.hooksWarnTooltip')
+        : t('kpi.hooksTooltip');
       card.addEventListener('click', () => switchToSection('hooks'));
     }
     kpiGrid.appendChild(card);
@@ -1037,12 +1037,12 @@ function renderDashboard() {
 
   // 1. Marketplace
   renderDashboardSection({
-    container: wrap, title: 'Marketplace', iconName: 'store', targetSection: 'marketplaces',
+    container: wrap, title: t('section.marketplaceTitle'), iconName: 'store', targetSection: 'marketplaces',
     items: state.mktList,
     getTimestamp: m => Date.parse(m.addedAt || m.lastUpdated || '') || 0,
     buildChip: (m) => {
       const chip = el('div', 'skill-chip clickable');
-      chip.title = 'Apri la sezione Marketplace';
+      chip.title = t('chip.openSection', { name: t('section.marketplaceTitle') });
       chip.style.borderLeftColor = mktColor(m.id);
       const dot = el('span');
       dot.style.cssText = 'width:8px;height:8px;border-radius:50%;flex-shrink:0;background:' + mktColor(m.id);
@@ -1056,13 +1056,13 @@ function renderDashboard() {
 
   // 2. Plugin
   renderDashboardSection({
-    container: wrap, title: 'Plugin', iconName: 'puzzle', targetSection: 'plugins',
+    container: wrap, title: t('section.pluginTitle'), iconName: 'puzzle', targetSection: 'plugins',
     items: state.plugins,
     getTimestamp: p => Date.parse(p.installedAt || '') || 0,
-    emptyText: 'Nessun plugin installato.',
+    emptyText: t('empty.noPlugin'),
     buildChip: (p) => {
       const chip = el('div', 'skill-chip clickable' + (p.blocked ? ' blocked' : ''));
-      chip.title = 'Apri la sezione Plugin';
+      chip.title = t('chip.openSection', { name: t('section.pluginTitle') });
       chip.style.borderLeftColor = mktColor(p.mkt);
       const dot = el('span');
       dot.style.cssText = 'width:8px;height:8px;border-radius:50%;flex-shrink:0;background:' + mktColor(p.mkt);
@@ -1079,13 +1079,13 @@ function renderDashboard() {
     (p.skills || []).map(s => ({ name: s, plugin: p.id, mkt: p.mkt, fullId: p.fullId, installedAt: p.installedAt }))
   );
   renderDashboardSection({
-    container: wrap, title: 'Skill', iconName: 'sparkles', targetSection: 'skills',
+    container: wrap, title: t('section.skillTitle'), iconName: 'sparkles', targetSection: 'skills',
     items: allSkillItems,
     getTimestamp: s => Date.parse(s.installedAt || '') || 0,
-    emptyText: 'Nessuna skill disponibile.',
+    emptyText: t('empty.noSkill'),
     buildChip: (s) => {
       const chip = el('div', 'skill-chip clickable');
-      chip.title = 'Apri la sezione Skill';
+      chip.title = t('chip.openSection', { name: t('section.skillTitle') });
       chip.style.borderLeftColor = mktColor(s.mkt);
       const dot = el('span');
       dot.style.cssText = 'width:8px;height:8px;border-radius:50%;flex-shrink:0;background:' + mktColor(s.mkt);
@@ -1102,13 +1102,13 @@ function renderDashboard() {
     (p.agents || []).map(a => ({ name: a, plugin: p.id, mkt: p.mkt, fullId: p.fullId, installedAt: p.installedAt }))
   );
   renderDashboardSection({
-    container: wrap, title: 'Agent', iconName: 'bot', targetSection: 'agents',
+    container: wrap, title: t('section.agentTitle'), iconName: 'bot', targetSection: 'agents',
     items: allAgentItems,
     getTimestamp: a => Date.parse(a.installedAt || '') || 0,
-    emptyText: 'Nessun agent disponibile.',
+    emptyText: t('empty.noAgent'),
     buildChip: (a) => {
       const chip = el('div', 'skill-chip clickable');
-      chip.title = 'Apri la sezione Agent';
+      chip.title = t('chip.openSection', { name: t('section.agentTitle') });
       chip.style.borderLeftColor = '#f97316';
       const dot = el('span');
       dot.style.cssText = 'width:8px;height:8px;border-radius:50%;flex-shrink:0;background:#f97316';
@@ -1132,13 +1132,13 @@ function renderDashboard() {
   state.plugins.forEach(p => { installedAtMap[p.fullId] = p.installedAt; });
   allHookItems.forEach(h => { h.installedAt = installedAtMap[h.fullId] || ''; });
   renderDashboardSection({
-    container: wrap, title: 'Hooks', iconName: 'anchor', targetSection: 'hooks',
+    container: wrap, title: t('section.hooksTitle'), iconName: 'anchor', targetSection: 'hooks',
     items: allHookItems,
     getTimestamp: h => Date.parse(h.installedAt || '') || 0,
-    emptyText: 'Nessun hook configurato dai plugin installati.',
+    emptyText: t('empty.noHooks'),
     buildChip: (h) => {
       const chip = el('div', 'skill-chip clickable');
-      chip.title = 'Apri la sezione Hooks';
+      chip.title = t('chip.openSection', { name: t('section.hooksTitle') });
       const evColor = hookEventColor(h.event);
       chip.style.borderLeftColor = evColor;
       const dot = el('span');
@@ -1152,7 +1152,7 @@ function renderDashboard() {
   });
 
   // Attività recenti (idea #4)
-  const actTitle = sectionTitle('Attività recenti', 'rotate-cw');
+  const actTitle = sectionTitle(t('section.attivitaRecenti'), 'rotate-cw');
   wrap.appendChild(actTitle);
   const actContainer = el('div', 'activity-list');
   wrap.appendChild(actContainer);
@@ -1212,7 +1212,7 @@ function paintCtxBar(container, cb) {
     return;
   }
   container.textContent = '';
-  container.appendChild(sectionTitle('Stima contesto', 'eye'));
+  container.appendChild(sectionTitle(t('section.stimaContesto'), 'eye'));
   container.appendChild(buildContextBreakdown(cb, {
     horizontalLegend: true,
     hideNote: true,
@@ -1230,7 +1230,7 @@ function paintDashboardStats(container, data) {
     return;
   }
   container.textContent = '';
-  container.appendChild(sectionTitle('Utilizzo Claude Code', 'bar-chart-3'));
+  container.appendChild(sectionTitle(t('section.utilizzoClaude'), 'bar-chart-3'));
   container.appendChild(buildStatsKpiGrid(data, 'all'));
 }
 
@@ -1299,7 +1299,7 @@ function renderTokenBudgetSection(container, plugins, opts = {}) {
 
   // Title row con dropdown modello a destra
   const titleRow = el('div', 'token-budget-title-row');
-  titleRow.appendChild(sectionTitle('Plugin per peso (context window)', 'gauge'));
+  titleRow.appendChild(sectionTitle(t('section.pluginPerPeso'), 'gauge'));
   const modelSwitch = el('div', 'token-budget-model-switch');
   modelSwitch.appendChild(el('span', 'token-budget-model-label', 'Modello:'));
   const sel = el('select', 'token-budget-model-select');
@@ -1544,7 +1544,7 @@ function renderDashboardSection({ container, title, items, buildChip, targetSect
 
 function paintDashboardMcpChips(container, servers) {
   container.textContent = '';
-  container.appendChild(sectionTitle('MCP server', 'plug-2'));
+  container.appendChild(sectionTitle(t('section.mcpServerTitle'), 'plug-2'));
   if (!servers || !servers.length) {
     container.appendChild(el('div', 'mcp-empty', 'Nessun MCP server configurato.'));
     return;
@@ -4075,16 +4075,15 @@ function renderStatsOverview(container, data) {
   container.appendChild(buildStatsKpiGrid(data, statsRange));
 
   // Heatmap (range dinamico)
-  const title = statsRange === '7'  ? 'Attività · ultimi 7 giorni'
-              : statsRange === '30' ? 'Attività · ultimi 30 giorni'
-              : 'Attività · ultime 52 settimane';
+  const HEATMAP_TITLE_KEY = { '7': 'section.attivita7g', '30': 'section.attivita30g' };
+  const title = t(HEATMAP_TITLE_KEY[statsRange] || 'section.attivita52sett');
   container.appendChild(sectionTitle(title, 'bar-chart-3'));
   container.appendChild(buildHeatmap(c.dailyActivity || [], statsRange));
 
   // Context breakdown realistico
   const cb = data.contextBreakdown;
   if (cb) {
-    container.appendChild(sectionTitle('Stima contesto · stile claude /context', 'eye'));
+    container.appendChild(sectionTitle(t('section.stimaContestoStile'), 'eye'));
     container.appendChild(buildContextBreakdown(cb));
   }
 

@@ -38,7 +38,11 @@ window.LOCALES.en = {
     utilizzoClaude:     'Claude Code Usage',
     pluginPerPeso:      'Plugins by weight (context window)',
     stimaContesto:      'Context estimate',
+    stimaContestoStile: 'Context estimate · claude /context style',
     attivitaRecenti:    'Recent activity',
+    attivita7g:         'Activity · last 7 days',
+    attivita30g:        'Activity · last 30 days',
+    attivita52sett:     'Activity · last 52 weeks',
     marketplaceTitle:   'Marketplaces',
     pluginTitle:        'Plugins',
     skillTitle:         'Skills',
@@ -64,6 +68,8 @@ window.LOCALES.en = {
     healthWarning:   'Warnings',
     health:          'Health',
     hooksMissingDeps:'Hooks with missing deps',
+    hooksTooltip:    'Open the Hooks section',
+    hooksWarnTooltip:'Open Hooks to see which CLI tools are missing',
   },
 
   // Badge / Status
@@ -114,6 +120,11 @@ window.LOCALES.en = {
     seeAll:        'See all',
     details:       'Details',
     tools:         'Tools',
+  },
+
+  // Chip nelle sezioni riassuntive (Dashboard)
+  chip: {
+    openSection: 'Open the {name} section',
   },
 
   // View switcher

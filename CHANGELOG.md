@@ -1,5 +1,31 @@
 # Changelog
 
+## v1.0.112 — 2026-05-26 — Pack N (Phase 2 batch 1): section titles JS + KPI Dashboard + summary chips
+
+Continuazione Pack N. Migrate a `t()` tutte le 11 `sectionTitle()` rese dinamicamente in JS + 10 KPI labels Dashboard + tooltip card Hooks + 5 sezioni riassuntive Dashboard (title + emptyText + tooltip chip).
+
+### Locales — 11 nuove key
+
+- [FEATURE] `section.stimaContestoStile` ("Stima contesto · stile claude /context")
+- [FEATURE] `section.attivita7g` / `section.attivita30g` / `section.attivita52sett` — varianti dinamiche del titolo heatmap in Stats
+- [FEATURE] `kpi.hooksTooltip` / `kpi.hooksWarnTooltip` — tooltip card Hooks Dashboard
+- [FEATURE] `chip.openSection` ("Apri la sezione {name}") — interpolazione `{name}` da riusare su tutti i chip Dashboard summary (5 sezioni)
+- Specchiate in `en.js` con stessa shape
+
+### Migrazione
+
+- [REFACTOR] **11 section title** migrati da string letterale a `t()`: Quote Claude, Statistiche, Attività recenti, Stima contesto, Utilizzo Claude Code, Plugin per peso, MCP server, Marketplace/Plugin/Skill/Agent/Hooks (dashboard summary), + heatmap title Stats (lookup table su HEATMAP_TITLE_KEY) + Stima contesto · stile claude /context
+- [REFACTOR] **10 KPI labels Dashboard**: Plugin attivi / Disattivati / Plugin locali / Marketplace / Skill totali / Agent totali / MCP connessi / Hooks · N plugin / Hook con dep mancanti / Token always-on / Health issues|Warning|Health
+- [REFACTOR] **2 tooltip card Hooks** (kpi click navigation)
+- [REFACTOR] **5 sezioni Dashboard summary** (renderDashboardSection): title + emptyText + chip tooltip "Apri la sezione X" con interpolazione `{name}`
+- [QUALITY] Heatmap title in Stats: ternary chain a 3 vie sostituito da lookup table `HEATMAP_TITLE_KEY` + fallback default (più conforme alle simplify rules)
+
+### Coverage
+
+- Dashboard: praticamente 100% delle stringhe statiche migrate (resta solo testo embedded in funzioni helper non ancora toccate come `loadDashboardUsage`/`loadDashboardStats`/`loadDashboardMcp`)
+- Stats: heatmap title e context breakdown title migrati; KPI Stats + filtri range + context breakdown labels in batch 2
+- Altre sezioni (Plugin/Marketplace/Skill/Agent/MCP/Hooks/Settings): da migrare in v1.0.113+
+
 ## v1.0.111 — 2026-05-26 — Simplify pass post-Pack N Phase 1
 
 Cleanup di qualità sull'infrastruttura i18n appena introdotta, dopo `/simplify` (3 review agents: reuse / quality / efficiency). Nessun cambiamento funzionale per l'utente — l'app si comporta identica a v1.0.110.
