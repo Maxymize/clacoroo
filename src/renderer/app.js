@@ -70,6 +70,15 @@ const LUCIDE_ICONS = {
   // v1.0.102 — Migrate da svgIcon legacy a Lucide
   'code':        '<polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>',
   'upload':      '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/>',
+  // v1.0.108 — Icone Lucide per i section title della Dashboard (stesso set della sidebar)
+  'store':       '<path d="M2 7h20"/><path d="M4 4v3"/><path d="M20 4v3"/><path d="M5 22V11"/><path d="M19 22V11"/><path d="M5 11h14"/><path d="M9 22v-6h6v6"/>',
+  'puzzle':      '<path d="M19.439 7.85c-.049.322.059.648.289.878l1.568 1.568c.47.47.706 1.087.706 1.704s-.235 1.233-.706 1.704l-1.611 1.611a.98.98 0 0 1-.837.276c-.47-.07-.802-.48-.968-.925a2.501 2.501 0 1 0-3.214 3.214c.446.166.855.497.925.968a.979.979 0 0 1-.276.837l-1.61 1.61a2.404 2.404 0 0 1-1.705.707 2.402 2.402 0 0 1-1.704-.706l-1.568-1.568a1.026 1.026 0 0 0-.877-.29c-.493.074-.84.504-1.02.968a2.5 2.5 0 1 1-3.237-3.237c.464-.18.894-.527.967-1.02a1.026 1.026 0 0 0-.289-.877l-1.568-1.568A2.402 2.402 0 0 1 1.998 12c0-.617.236-1.234.706-1.704L4.23 8.77c.24-.24.581-.353.917-.303.515.077.877.528 1.073 1.01a2.5 2.5 0 1 0 3.259-3.259c-.482-.196-.933-.558-1.01-1.073-.05-.336.062-.676.303-.917l1.525-1.525A2.402 2.402 0 0 1 12 2c.617 0 1.234.236 1.704.706l1.568 1.568c.23.23.556.338.877.29.493-.074.84-.504 1.02-.968a2.5 2.5 0 1 1 3.237 3.237c-.464.18-.894.527-.967 1.02Z"/>',
+  'sparkles':    '<path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/><path d="M4 17v2"/><path d="M5 18H3"/>',
+  'bot':         '<path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/>',
+  'plug-2':      '<path d="M9 2v6"/><path d="M15 2v6"/><path d="M12 17v3"/><path d="M5 8h14"/><path d="M6 11V8h12v3a6 6 0 0 1-12 0Z"/>',
+  'anchor':      '<circle cx="12" cy="5" r="3"/><line x1="12" y1="22" x2="12" y2="8"/><path d="M5 12H2a10 10 0 0 0 20 0h-3"/>',
+  'bar-chart-3': '<path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/>',
+  'gauge':       '<path d="m12 14 4-4"/><path d="M3.34 19a10 10 0 1 1 17.32 0"/>',
 };
 
 /**
@@ -112,6 +121,18 @@ function spanWithIcon(cls, iconName, label) {
   span.appendChild(icon(iconName));
   span.appendChild(document.createTextNode(label));
   return span;
+}
+
+/**
+ * v1.0.108 — Helper sectionTitle(text, iconName): costruisce un
+ * `<div class="list-section-title">` con icona Lucide a sinistra + testo.
+ * Standardizza tutti i title di sezione Dashboard (e altre pagine).
+ */
+function sectionTitle(text, iconName) {
+  const t = el('div', 'list-section-title');
+  if (iconName) t.appendChild(icon(iconName));
+  t.appendChild(document.createTextNode(text));
+  return t;
 }
 
 /* ── STATE ────────────────────────────────────────────────────────────── */
@@ -843,13 +864,13 @@ function renderDashboard() {
 
   const usageSection = el('div', 'dashboard-usage-section');
   wrap.appendChild(usageSection);
-  usageSection.appendChild(el('div', 'list-section-title', 'Quote Claude'));
+  usageSection.appendChild(sectionTitle('Quote Claude', 'gauge'));
   const usageBars = el('div', 'dashboard-usage-bars');
   usageSection.appendChild(usageBars);
   loadDashboardUsage(usageBars, renderToken);
 
   // KPI plugin (stato installazione)
-  wrap.appendChild(el('div', 'list-section-title', 'Statistiche'));
+  wrap.appendChild(sectionTitle('Statistiche', 'bar-chart-3'));
   const kpiGrid = el('div', 'kpi-grid');
   const kpis = [
     { num: active.length,      label: 'Plugin attivi',     color: '#788c5d' },  // global only
@@ -921,7 +942,7 @@ function renderDashboard() {
 
   // 1. Marketplace
   renderDashboardSection({
-    container: wrap, title: 'Marketplace', targetSection: 'marketplaces',
+    container: wrap, title: 'Marketplace', iconName: 'store', targetSection: 'marketplaces',
     items: state.mktList,
     getTimestamp: m => Date.parse(m.addedAt || m.lastUpdated || '') || 0,
     buildChip: (m) => {
@@ -940,7 +961,7 @@ function renderDashboard() {
 
   // 2. Plugin
   renderDashboardSection({
-    container: wrap, title: 'Plugin', targetSection: 'plugins',
+    container: wrap, title: 'Plugin', iconName: 'puzzle', targetSection: 'plugins',
     items: state.plugins,
     getTimestamp: p => Date.parse(p.installedAt || '') || 0,
     emptyText: 'Nessun plugin installato.',
@@ -963,7 +984,7 @@ function renderDashboard() {
     (p.skills || []).map(s => ({ name: s, plugin: p.id, mkt: p.mkt, fullId: p.fullId, installedAt: p.installedAt }))
   );
   renderDashboardSection({
-    container: wrap, title: 'Skill', targetSection: 'skills',
+    container: wrap, title: 'Skill', iconName: 'sparkles', targetSection: 'skills',
     items: allSkillItems,
     getTimestamp: s => Date.parse(s.installedAt || '') || 0,
     emptyText: 'Nessuna skill disponibile.',
@@ -986,7 +1007,7 @@ function renderDashboard() {
     (p.agents || []).map(a => ({ name: a, plugin: p.id, mkt: p.mkt, fullId: p.fullId, installedAt: p.installedAt }))
   );
   renderDashboardSection({
-    container: wrap, title: 'Agent', targetSection: 'agents',
+    container: wrap, title: 'Agent', iconName: 'bot', targetSection: 'agents',
     items: allAgentItems,
     getTimestamp: a => Date.parse(a.installedAt || '') || 0,
     emptyText: 'Nessun agent disponibile.',
@@ -1016,7 +1037,7 @@ function renderDashboard() {
   state.plugins.forEach(p => { installedAtMap[p.fullId] = p.installedAt; });
   allHookItems.forEach(h => { h.installedAt = installedAtMap[h.fullId] || ''; });
   renderDashboardSection({
-    container: wrap, title: 'Hooks', targetSection: 'hooks',
+    container: wrap, title: 'Hooks', iconName: 'anchor', targetSection: 'hooks',
     items: allHookItems,
     getTimestamp: h => Date.parse(h.installedAt || '') || 0,
     emptyText: 'Nessun hook configurato dai plugin installati.',
@@ -1036,7 +1057,7 @@ function renderDashboard() {
   });
 
   // Attività recenti (idea #4)
-  const actTitle = el('div', 'list-section-title', 'Attività recenti');
+  const actTitle = sectionTitle('Attività recenti', 'rotate-cw');
   wrap.appendChild(actTitle);
   const actContainer = el('div', 'activity-list');
   wrap.appendChild(actContainer);
@@ -1096,7 +1117,7 @@ function paintCtxBar(container, cb) {
     return;
   }
   container.textContent = '';
-  container.appendChild(el('div', 'list-section-title', 'Stima contesto'));
+  container.appendChild(sectionTitle('Stima contesto', 'eye'));
   container.appendChild(buildContextBreakdown(cb, {
     horizontalLegend: true,
     hideNote: true,
@@ -1114,7 +1135,7 @@ function paintDashboardStats(container, data) {
     return;
   }
   container.textContent = '';
-  container.appendChild(el('div', 'list-section-title', 'Utilizzo Claude Code'));
+  container.appendChild(sectionTitle('Utilizzo Claude Code', 'bar-chart-3'));
   container.appendChild(buildStatsKpiGrid(data, 'all'));
 }
 
@@ -1159,38 +1180,52 @@ function formatTokenSize(n) {
 // Top-N bar chart orizzontale per always-on tokens + colonna on-invoke.
 // Mostra solo plugin globali attivi (no locali, no blocked). Sorted desc.
 // Cliccando "Vedi tutti" si apre il modal con tabella completa.
-function renderTokenBudgetSection(container, plugins) {
+// v1.0.108 — opts.mode: 'compact' (Dashboard, Top 5, una riga title) o 'full'
+// (Stats Overview, Top 30 + colonne extra). Layout invariato per Dashboard.
+function renderTokenBudgetSection(container, plugins, opts = {}) {
+  const mode = opts.mode || 'compact';
   const eligible = (plugins || []).filter(p => p.scope === 'global' && !p.blocked && (p.tokensAlways > 0 || p.tokensInvoke > 0));
-  if (!eligible.length) return;  // niente da mostrare, skip
+  if (!eligible.length) return;
 
-  container.appendChild(el('div', 'list-section-title', 'Plugin per peso (context window)'));
+  container.appendChild(sectionTitle('Plugin per peso (context window)', 'gauge'));
 
-  // Sort desc per tokensAlways (più impattante: pesa sempre)
   const sorted = [...eligible].sort((a, b) => (b.tokensAlways || 0) - (a.tokensAlways || 0));
-  const TOP_N = 10;
+  const TOP_N = mode === 'full' ? 30 : 5;
   const top = sorted.slice(0, TOP_N);
   const maxAlways = top.reduce((m, p) => Math.max(m, p.tokensAlways || 0), 1);
   const totalAlways = sorted.reduce((s, p) => s + (p.tokensAlways || 0), 0);
   const totalInvoke = sorted.reduce((s, p) => s + (p.tokensInvoke || 0), 0);
 
-  // Summary line in alto
+  // Summary line
   const summary = el('div', 'token-budget-summary');
   summary.appendChild(el('span', 'token-budget-total-label', 'Totale always-on:'));
   summary.appendChild(el('strong', 'token-budget-total-val', formatTokenSize(totalAlways) + ' tok'));
   summary.appendChild(el('span', 'token-budget-sub', '· ' + sorted.length + ' plugin attivi · on-invoke potenziale ' + formatTokenSize(totalInvoke) + ' tok'));
+  // In full mode mostra anche % del context window 200K
+  if (mode === 'full') {
+    const pctCtx = ((totalAlways / 200000) * 100).toFixed(1);
+    summary.appendChild(el('span', 'token-budget-sub', '· ' + pctCtx + '% del context window (200K)'));
+  }
   container.appendChild(summary);
 
-  // Bar chart: una riga per plugin, larghezza barra proporzionale a tokensAlways/maxAlways
-  const list = el('div', 'token-budget-list');
-  top.forEach(p => {
+  // Bar chart
+  const list = el('div', 'token-budget-list' + (mode === 'full' ? ' token-budget-list-full' : ''));
+  top.forEach((p, idx) => {
     const row = el('div', 'token-budget-row');
     row.title = p.id + ' (' + p.mkt + ')\nalways-on: ' + (p.tokensAlways || 0) + ' tok\non-invoke: ' + (p.tokensInvoke || 0) + ' tok';
+    // Rank (solo full mode)
+    if (mode === 'full') {
+      row.appendChild(el('span', 'token-budget-rank-inline', '#' + (idx + 1)));
+    }
     // Name
     const nameWrap = el('div', 'token-budget-name');
     const dot = el('span', 'token-budget-dot');
     dot.style.background = mktColor(p.mkt);
     nameWrap.appendChild(dot);
     nameWrap.appendChild(el('span', 'token-budget-name-text', p.id));
+    if (mode === 'full') {
+      nameWrap.appendChild(el('span', 'token-budget-name-mkt', p.mkt));
+    }
     row.appendChild(nameWrap);
     // Bar always-on
     const barCol = el('div', 'token-budget-bar-col');
@@ -1201,7 +1236,7 @@ function renderTokenBudgetSection(container, plugins) {
     row.appendChild(barCol);
     // Value always
     row.appendChild(el('span', 'token-budget-val-always', formatTokenSize(p.tokensAlways) + ' tok'));
-    // Value invoke (smaller, muted)
+    // Value invoke
     const invoke = el('span', 'token-budget-val-invoke');
     invoke.textContent = '+' + formatTokenSize(p.tokensInvoke || 0) + ' on-invoke';
     row.appendChild(invoke);
@@ -1302,8 +1337,8 @@ function showTokenBudgetModal(plugins) {
 // + 20° chip "Vedi tutte (N)" colorato accent CLACOROO che porta alla sezione.
 // Tutti gli items vengono ordinati per recency (getTimestamp desc). Se < 20
 // items, il "Vedi tutte" è comunque l'ultimo riquadro per coerenza UX.
-function renderDashboardSection({ container, title, items, buildChip, targetSection, getTimestamp, emptyText }) {
-  container.appendChild(el('div', 'list-section-title', title));
+function renderDashboardSection({ container, title, items, buildChip, targetSection, getTimestamp, emptyText, iconName }) {
+  container.appendChild(sectionTitle(title, iconName));
   if (!items || !items.length) {
     container.appendChild(el('div', 'mcp-empty', emptyText || 'Nessun elemento.'));
     return;
@@ -1330,7 +1365,7 @@ function renderDashboardSection({ container, title, items, buildChip, targetSect
 
 function paintDashboardMcpChips(container, servers) {
   container.textContent = '';
-  container.appendChild(el('div', 'list-section-title', 'MCP server'));
+  container.appendChild(sectionTitle('MCP server', 'plug-2'));
   if (!servers || !servers.length) {
     container.appendChild(el('div', 'mcp-empty', 'Nessun MCP server configurato.'));
     return;
@@ -3864,15 +3899,18 @@ function renderStatsOverview(container, data) {
   const title = statsRange === '7'  ? 'Attività · ultimi 7 giorni'
               : statsRange === '30' ? 'Attività · ultimi 30 giorni'
               : 'Attività · ultime 52 settimane';
-  container.appendChild(el('div', 'list-section-title', title));
+  container.appendChild(sectionTitle(title, 'bar-chart-3'));
   container.appendChild(buildHeatmap(c.dailyActivity || [], statsRange));
 
   // Context breakdown realistico
   const cb = data.contextBreakdown;
   if (cb) {
-    container.appendChild(el('div', 'list-section-title', 'Stima contesto · stile claude /context'));
+    container.appendChild(sectionTitle('Stima contesto · stile claude /context', 'eye'));
     container.appendChild(buildContextBreakdown(cb));
   }
+
+  // v1.0.108 — Pack C: token budget plugin completo (Top 30 + rank + mkt)
+  renderTokenBudgetSection(container, state.plugins, { mode: 'full' });
 }
 
 function contextCats(cb) {

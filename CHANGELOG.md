@@ -1,5 +1,33 @@
 # Changelog
 
+## v1.0.108 — 2026-05-26 — Section title con icona Lucide + spacing uniforme + Token budget compatto in Dashboard, completo in Stats
+
+Tre fix Dashboard dal feedback utente:
+
+### Section titles: icona + font + spacing uniforme
+
+- [STYLE] **`.list-section-title`** ridisegnato: font da `11px` a `13px`, `margin-top: 28px` (era 0, ogni sezione era troppo vicina alla precedente), `margin-bottom: 12px` (era 10). Con `:first-child { margin-top: 0; }` per la prima sezione. Risultato: distanze uniformi fra TUTTE le sezioni in Dashboard
+- [FEATURE] **`sectionTitle(text, iconName)`** helper: costruisce `<div class="list-section-title">` con icona Lucide a sinistra + testo. Sostituisce il pattern `el('div', 'list-section-title', text)` in tutta l'app
+- [FEATURE] **Icone Lucide nei section title Dashboard** (stesso set della sidebar):
+  - Quote Claude → `gauge`
+  - Statistiche → `bar-chart-3`
+  - Utilizzo Claude Code → `bar-chart-3`
+  - Plugin per peso → `gauge`
+  - Marketplace → `store` · Plugin → `puzzle` · Skill → `sparkles` · Agent → `bot` · MCP server → `plug-2` · Hooks → `anchor`
+  - Stima contesto → `eye` · Attività recenti → `rotate-cw`
+- [FEATURE] **Aggiunte 8 icone Lucide a `LUCIDE_ICONS`**: `store`, `puzzle`, `sparkles`, `bot`, `plug-2`, `anchor`, `bar-chart-3`, `gauge`
+- [STYLE] `.list-section-title .inline-icon` con `width: 16px`, `opacity: 0.85`, `color: var(--text-muted)` per coerenza con il testo title
+- [REFACTOR] **`renderDashboardSection` accetta `iconName`** opzionale (passato da renderDashboard per tutte le 6 sezioni)
+- [REFACTOR] Migrate altri 5 title hardcoded a `sectionTitle()` in `renderStatsOverview` (Heatmap, Stima contesto)
+
+### Token budget: compatto in Dashboard, completo in Stats Overview
+
+- [REFACTOR] **`renderTokenBudgetSection(container, plugins, {mode})`** accetta nuovo parametro `mode`:
+  - `'compact'` (default, Dashboard): Top 5 plugin, layout standard
+  - `'full'` (Stats Overview): Top 30 plugin + colonna rank `#1, #2, ...` + name suffix con marketplace + % del context window 200K nel summary
+- [FEATURE] **Token budget in Stats Overview**: nuova sezione `Plugin per peso` aggiunta in fondo alla tab Overview (`renderStatsOverview`). Stessa logica di Dashboard ma con dataset esteso e più colonne
+- [STYLE] Nuova classe `.token-budget-list-full` con grid template a 5 colonne (rank + name+mkt + bar + always + invoke); `.token-budget-rank-inline` + `.token-budget-name-mkt` per le info extra del full mode
+
 ## v1.0.107 — 2026-05-26 — Pack C: Token cost breakdown per plugin (Top-N + modal full table)
 
 Prima feature del **Pack C — Insight + analytics**. Nuova sezione "Plugin per peso" in Dashboard che mostra Top-10 plugin globali attivi ordinati per token always-on (peso fisso nel context window). Click sulla riga o sul bottone "Vedi tutti" apre un modal con tabella completa di tutti i plugin attivi.

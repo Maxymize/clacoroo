@@ -1372,14 +1372,28 @@ body {
 
 /* ── SKILL / AGENT LIST ───────────────────────────────────────────────── */
 .list-section { margin-bottom: 24px; }
+/* v1.0.108 — font 13px (era 11px) + spacing uniforme top/bottom 28/12 (era
+   solo bottom 10) per separare meglio le sezioni in Dashboard. Quando
+   usato come prima child di un container niente margin-top extra. */
 .list-section-title {
-  font-size: 11px; font-weight: 700; text-transform: uppercase;
+  font-size: 13px; font-weight: 700; text-transform: uppercase;
   letter-spacing: .08em; color: var(--text-muted);
-  margin-bottom: 10px;
+  margin-top: 28px;
+  margin-bottom: 12px;
   display: flex; align-items: center; gap: 8px;
 }
+.list-section-title:first-child { margin-top: 0; }
 .list-section-title::after {
   content: ""; flex: 1; height: 1px; background: var(--border);
+}
+/* Icona Lucide accanto al titolo (stesso set della sidebar). */
+.list-section-title .inline-icon {
+  width: 16px; height: 16px;
+  margin: 0;
+  vertical-align: 0;
+  color: var(--text-muted);
+  flex-shrink: 0;
+  opacity: 0.85;
 }
 
 .skill-grid {
@@ -1669,6 +1683,21 @@ body {
   cursor: pointer;
   font-size: 12px;
   transition: background .15s, border-color .15s;
+}
+/* v1.0.108 — Modalità "full" per Stats Overview: colonna rank + mkt name */
+.token-budget-list-full .token-budget-row {
+  grid-template-columns: 34px minmax(180px, 260px) 1fr auto auto;
+}
+.token-budget-rank-inline {
+  font-family: "SF Mono", "Fira Code", Menlo, monospace;
+  color: var(--text-dim);
+  font-size: 11px;
+  font-weight: 700;
+}
+.token-budget-name-mkt {
+  color: var(--text-muted);
+  font-size: 10px;
+  margin-left: 6px;
 }
 .token-budget-row:hover {
   background: var(--surface2);
