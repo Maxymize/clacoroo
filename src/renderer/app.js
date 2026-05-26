@@ -67,6 +67,9 @@ const LUCIDE_ICONS = {
   'list':        '<line x1="8" x2="21" y1="6" y2="6"/><line x1="8" x2="21" y1="12" y2="12"/><line x1="8" x2="21" y1="18" y2="18"/><line x1="3" x2="3.01" y1="6" y2="6"/><line x1="3" x2="3.01" y1="12" y2="12"/><line x1="3" x2="3.01" y1="18" y2="18"/>',
   // v1.0.99 — Editor markdown inline (skill/agent)
   'pencil':      '<path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/>',
+  // v1.0.102 — Migrate da svgIcon legacy a Lucide
+  'code':        '<polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>',
+  'upload':      '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/>',
 };
 
 /**
@@ -229,9 +232,36 @@ function renderViewSwitcher(section, currentMode, onChange) {
 
 // Helper: switch del view mode di una sezione + persist + re-render
 async function setViewMode(section, mode) {
+  // Guard: no-op se invariato (evita render + setState inutili)
+  if (state.viewMode[section] === mode) return;
   state.viewMode[section] = mode;
   await window.claudeAPI.setState({ viewMode: state.viewMode });
   render();
+}
+
+// Helper: chiave canonical per state.modifiedFiles (era reinventata in 2+ siti)
+function modifiedFileKey(kind, fullId, name) { return kind + ':' + fullId + ':' + name; }
+
+// Helper: aggiunge un badge "modificato" a un node se l'item è stato editato
+// localmente. Estratto per evitare duplicazione fra buildSkillAgentCard e Chip.
+function appendModifiedBadge(parent, item, kind, mode) {
+  if (!isLocallyModified(item, kind)) return;
+  const ts = state.modifiedFiles[modifiedFileKey(kind, item.fullId, item.name)];
+  const tsStr = ts ? new Date(ts).toLocaleString('it-IT') : '';
+  if (mode === 'chip') {
+    const modIcon = icon('pencil');
+    modIcon.classList.add('chip-modified-icon');
+    modIcon.style.cssText = 'width:11px;height:11px;color:#fbbf24;margin-left:4px;';
+    if (tsStr) modIcon.setAttribute('aria-label', 'Modificato localmente ' + tsStr);
+    parent.appendChild(modIcon);
+    return;
+  }
+  const modBadge = el('span', 'browse-card-modified');
+  modBadge.appendChild(icon('pencil'));
+  modBadge.appendChild(document.createTextNode('modificato'));
+  if (tsStr) modBadge.title = 'Modificato localmente il ' + tsStr +
+    '\n\nLa modifica verrà sovrascritta al prossimo `claude plugins update ' + item.fullId + '`.';
+  parent.appendChild(modBadge);
 }
 
 // Renderizza una <select> di ordinamento standardizzata. opts: [{key,label},...]
@@ -525,6 +555,9 @@ function processData() {
   const catalog = raw.catalog.plugins || {};
   const localData = raw.localData || { localPlugins: [], localSkills: [], localAgents: [] };
 
+  // v1.0.102 — Invalida memoize hooks list ad ogni reload dati
+  state._hookListCache = null;
+
   state.trackedProjects = raw.trackedProjects || [];
   state.localPlugins    = localData.localPlugins;
   state.localSkills     = localData.localSkills;
@@ -725,47 +758,10 @@ function el(tag, cls, txt) {
   return e;
 }
 
-// SVG icon helper (v1.0.40) — sostituisce le emoji nei bottoni con icone
-// coerenti allo stile della nav sidebar (Heroicons-like 20x20).
-const ICONS = {
-  folder:    'M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6z',
-  document:  'M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z',
-  download:  'M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 9.293a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z',
-  upload:    'M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM13.707 5.707a1 1 0 01-1.414 0L11 4.414V12a1 1 0 11-2 0V4.414L7.707 5.707a1 1 0 01-1.414-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 010 1.414z',
-  changelog: 'M9 2a1 1 0 000 2h2a1 1 0 100-2H9zM4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z',
-  code:      'M12.316 3.051a1 1 0 01.633 1.265l-4 12a1 1 0 11-1.898-.632l4-12a1 1 0 011.265-.633zM5.707 6.293a1 1 0 010 1.414L3.414 10l2.293 2.293a1 1 0 11-1.414 1.414l-3-3a1 1 0 010-1.414l3-3a1 1 0 011.414 0zm8.586 0a1 1 0 011.414 0l3 3a1 1 0 010 1.414l-3 3a1 1 0 11-1.414-1.414L16.586 10l-2.293-2.293a1 1 0 010-1.414z',
-  // Eye Heroicons-style: bulbo + iride con fill-rule evenodd (path multipli)
-  eye:       [
-    { d: 'M10 12.5a2.5 2.5 0 100-5 2.5 2.5 0 000 5z' },
-    { d: 'M.664 10.59a1.65 1.65 0 010-1.18A10.004 10.004 0 0110 3c4.257 0 7.893 2.66 9.336 6.41.147.381.147.804 0 1.18A10.004 10.004 0 0110 17c-4.257 0-7.893-2.66-9.336-6.41zM14 10a4 4 0 11-8 0 4 4 0 018 0z', fillRule: 'evenodd', clipRule: 'evenodd' },
-  ],
-};
-function svgIcon(name, size = 14) {
-  const def = ICONS[name];
-  if (!def) return null;
-  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-  svg.setAttribute('viewBox', '0 0 20 20');
-  svg.setAttribute('fill', 'currentColor');
-  svg.setAttribute('width',  String(size));
-  svg.setAttribute('height', String(size));
-  svg.setAttribute('class', 'inline-icon');
-  const paths = Array.isArray(def) ? def : [{ d: def }];
-  paths.forEach(spec => {
-    const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-    p.setAttribute('d', spec.d);
-    if (spec.fillRule) p.setAttribute('fill-rule', spec.fillRule);
-    if (spec.clipRule) p.setAttribute('clip-rule', spec.clipRule);
-    svg.appendChild(p);
-  });
-  return svg;
-}
-function btnWithIcon(cls, iconName, label) {
-  const b = el('button', cls);
-  const ic = svgIcon(iconName);
-  if (ic) b.appendChild(ic);
-  b.appendChild(document.createTextNode(label));
-  return b;
-}
+// v1.0.102 — Rimosso blocco legacy svgIcon/ICONS/btnWithIcon (heroicons-like)
+// che shadowava le definizioni Lucide v1.0.95 quando referenziato dopo riga
+// 762. Tutte le 6 chiamate `svgIcon('xxx')` migrate a `icon('xxx')` (Lucide).
+// Vedi src/renderer/app.js linee 38-110 per la versione attiva.
 
 // v1.0.61 — Swap atomico fra overlay modali. Appende il nuovo PRIMA di
 // rimuovere i vecchi e disabilita l'animation tourFade .2s sul nuovo
@@ -1257,7 +1253,7 @@ function appendModalItemList(content, sectionTitle, items, onClick, extraRender)
   const list = el('div', 'plugin-content-list');
   items.forEach(item => {
     const row = el('button', 'plugin-content-item');
-    row.appendChild(svgIcon('code'));
+    row.appendChild(icon('code'));
     const info = el('div', 'plugin-content-item-info');
     info.appendChild(el('div', 'plugin-content-item-name', item.name || item.id || item));
     if (item.description) info.appendChild(el('div', 'plugin-content-item-desc', item.description));
@@ -1342,7 +1338,7 @@ function showPluginContentModal(p) {
       const list = el('div', 'plugin-content-list');
       p.hookEvents.forEach(h => {
         const row = el('div', 'plugin-content-item plugin-content-item-static');
-        row.appendChild(svgIcon('code'));
+        row.appendChild(icon('code'));
         const info = el('div', 'plugin-content-item-info');
         info.appendChild(el('div', 'plugin-content-item-name', h.event));
         const detailLine = el('div', 'plugin-content-item-desc',
@@ -1542,12 +1538,12 @@ function buildPluginCard(p) {
 
   const detailsBtn = el('button', 'btn btn-sm btn-ghost btn-icon');
   detailsBtn.dataset.tt = 'Vedi contenuto plugin';
-  detailsBtn.appendChild(svgIcon('eye'));
+  detailsBtn.appendChild(icon('eye'));
   detailsBtn.addEventListener('click', () => showPluginContentModal(p));
 
   const finderBtn = el('button', 'btn btn-sm btn-ghost btn-icon');
   finderBtn.dataset.tt = 'Apri sorgente nel Finder';
-  finderBtn.appendChild(svgIcon('folder'));
+  finderBtn.appendChild(icon('folder-open'));
   finderBtn.addEventListener('click', async () => {
     const r = await window.claudeAPI.openPluginPath(p.fullId);
     if (!r.success) toast('Errore apertura Finder: ' + r.error, 'error');
@@ -1555,7 +1551,7 @@ function buildPluginCard(p) {
 
   const codeBtn = el('button', 'btn btn-sm btn-ghost btn-icon');
   codeBtn.dataset.tt = 'Apri sorgente in VS Code';
-  codeBtn.appendChild(svgIcon('code'));
+  codeBtn.appendChild(icon('code'));
   codeBtn.addEventListener('click', async () => {
     const r = await window.claudeAPI.openInEditor(p.fullId);
     if (!r.success) toast('Errore apertura VS Code: ' + r.error, 'error');
@@ -2369,15 +2365,7 @@ function buildSkillAgentChip(item, kind) {
   chip.appendChild(el('span', 'skill-chip-plugin', item.plugin));
   appendHealthBadge(chip, item.health);
   appendScopeBadge(chip, item);
-  // v1.0.100 — Icona pencil mini se file editato localmente
-  if (isLocallyModified(item, kind)) {
-    const modIcon = icon('pencil');
-    modIcon.classList.add('chip-modified-icon');
-    modIcon.style.cssText = 'width:11px;height:11px;color:#fbbf24;margin-left:4px;';
-    const ts = state.modifiedFiles[kind + ':' + item.fullId + ':' + item.name];
-    if (ts) modIcon.setAttribute('aria-label', 'Modificato localmente ' + new Date(ts).toLocaleString('it-IT'));
-    chip.appendChild(modIcon);
-  }
+  appendModifiedBadge(chip, item, kind, 'chip');
   if (item.scope === 'global') {
     chip.addEventListener('click', () => openMarkdownPreview(item.fullId, kind, item.name));
   }
@@ -2388,8 +2376,7 @@ function buildSkillAgentChip(item, kind) {
 // Cross-check con state.modifiedFiles (popolato dal save dell'editor inline).
 function isLocallyModified(item, kind) {
   if (!item.fullId) return false;
-  const key = kind + ':' + item.fullId + ':' + item.name;
-  return !!(state.modifiedFiles && state.modifiedFiles[key]);
+  return !!(state.modifiedFiles && state.modifiedFiles[modifiedFileKey(kind, item.fullId, item.name)]);
 }
 
 // v1.0.96 — Pack M: builder card "vista ampia" per skill/agent.
@@ -2431,7 +2418,6 @@ function buildSkillAgentCard(item, kind) {
     hb.appendChild(icon('triangle-alert'));
     hb.appendChild(document.createTextNode(item.health.status === 'err' ? 'health: errore' : 'health: warning'));
     const issues = item.health.issues || [];
-    const kindLabel = (item.kind || (item.scope === 'local' ? 'item' : '')); // unused, placeholder
     hb.title = 'Problemi rilevati nel frontmatter del file .md (manifest dell\'agent/skill):\n\n'
       + issues.map(i => '  • ' + i).join('\n')
       + '\n\nQuesto è un errore del manifest del plugin (autore), non un problema della tua installazione.\n\n'
@@ -2444,16 +2430,7 @@ function buildSkillAgentCard(item, kind) {
   if (item.blocked) {
     badgeRow.appendChild(el('span', 'browse-card-blocked', 'disabilitato'));
   }
-  // v1.0.100 — Badge "modificato" se l'utente ha editato localmente il file .md
-  if (isLocallyModified(item, kind)) {
-    const modBadge = el('span', 'browse-card-modified');
-    modBadge.appendChild(icon('pencil'));
-    modBadge.appendChild(document.createTextNode('modificato'));
-    const ts = state.modifiedFiles[kind + ':' + item.fullId + ':' + item.name];
-    if (ts) modBadge.title = 'Modificato localmente il ' + new Date(ts).toLocaleString('it-IT') +
-      '\n\nLa modifica verrà sovrascritta al prossimo `claude plugins update ' + item.fullId + '`.';
-    badgeRow.appendChild(modBadge);
-  }
+  appendModifiedBadge(badgeRow, item, kind, 'card');
   body.appendChild(badgeRow);
   card.appendChild(body);
 
@@ -2507,7 +2484,13 @@ function missingDepsForHook(item) {
 // Aggrega tutti gli hook event di tutti i plugin installati in una lista
 // piatta { event, matcher, handlers, pluginId, mkt, fullId, scope, sourcePath }.
 // Ogni combinazione event+matcher di un plugin diventa una card.
+//
+// v1.0.102 — Memoized: state.plugins è immutabile fra loadData() — un'unica
+// computazione per ciclo dati. processData() invalida la cache settando
+// state._hookListCache = null. Usata sia da renderHooks che da renderDashboard
+// (KPI "Hooks · N plugin") che prima ricomputava la lista identica.
 function buildHookList() {
+  if (state._hookListCache) return state._hookListCache;
   const list = [];
   state.plugins.forEach(p => {
     if (!Array.isArray(p.hookEvents)) return;
@@ -2531,6 +2514,7 @@ function buildHookList() {
       });
     });
   });
+  state._hookListCache = list;
   return list;
 }
 
@@ -3259,8 +3243,7 @@ function showMarkdownModal(name, kind, content, fullId) {
       toast('File salvato — ricordati che verrà sovrascritto al prossimo `claude plugins update`', 'success');
       // v1.0.100 — Marca il file come modificato localmente per mostrare badge
       // sulla card skill/agent. Persisted in state.json.
-      const key = kind + ':' + fullId + ':' + name;
-      state.modifiedFiles[key] = new Date().toISOString();
+      state.modifiedFiles[modifiedFileKey(kind, fullId, name)] = new Date().toISOString();
       try { await window.claudeAPI.setState({ modifiedFiles: state.modifiedFiles }); } catch {}
       switchToPreview();
       // Trigger reload dati per re-check health + re-render card con badge
@@ -4471,16 +4454,14 @@ function buildMcpCard(srv) {
   } else {
     const actionsWrap = el('div', 'mcp-card-actions');
     srv.reconnect.actions.forEach(act => {
-      // v1.0.95 — Icone Lucide per kind (sostituiscono emoji ↗/🚫 nei label backend)
+      // v1.0.102 — Label backend ora già pulite (no emoji prefix), niente strip.
       const iconByKind = {
         'open-url': 'external-link',
         'open-terminal': 'terminal',
         'clear-cache': 'ban',
       };
-      // Strip leading emoji/symbols from label (backend usa ancora "↗ Riautorizza" etc)
-      const cleanLabel = (act.label || '').replace(/^[^a-zA-ZÀ-ſ]+\s*/, '');
       const btn = btnWithIcon('btn btn-sm ' + (act.kind === 'clear-cache' ? 'btn-ghost' : 'btn-primary'),
-        iconByKind[act.kind] || 'play', cleanLabel);
+        iconByKind[act.kind] || 'play', act.label || '');
       btn.title = act.kind === 'open-url' ? act.url
         : act.kind === 'open-terminal' ? ('Apre nuovo tab terminale e lancia: ' + act.command)
         : 'Cancella entry da mcp-needs-auth-cache.json (non tocca i token reali)';
@@ -5440,7 +5421,7 @@ function renderSettings() {
     const a = await window.claudeAPI.applySnapshot(r.preview);
     importBtn.disabled = false;
     importBtn.textContent = ' Importa';
-    importBtn.prepend(svgIcon('upload'));
+    importBtn.prepend(icon('upload'));
     if (a.success) toast('Snapshot applicato (' + a.log.length + ' azioni)', 'success');
     else {
       const failed = a.log.filter(l => !l.success).length;

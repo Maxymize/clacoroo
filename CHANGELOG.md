@@ -1,5 +1,31 @@
 # Changelog
 
+## v1.0.102 — 2026-05-26 — Simplify code review fixes (high-priority cleanup)
+
+Cleanup post-skill `simplify`: 3 agent paralleli hanno revisionato i commit v1.0.95→v1.0.101 e identificato 1 bug latente + altri cleanup ad alto valore. Fix dei più importanti.
+
+### Bug latente fixato
+
+- [FIX BREAKING] **`btnWithIcon` duplicato/shadowato**: c'erano DUE definizioni della funzione — quella nuova Lucide (v1.0.95, line ~97) e quella vecchia heroicons (v1.0.40, line ~762). La seconda **shadowava** la prima per tutto il codice scritto dopo la riga 762. Le card MCP/Plugin e i bottoni nei modal mostravano icone heroicons invece di Lucide, defeating il refactor v1.0.95
+- [REFACTOR] Eliminato blocco legacy `svgIcon` + `ICONS` (39 righe). Aggiunte le 2 icone mancanti in `LUCIDE_ICONS` (`code`, `upload`). Migrate 6 chiamate `svgIcon('xxx')` → `icon('xxx')` (con rename `folder` → `folder-open`)
+
+### Cleanup batch
+
+- [REFACTOR] **`modifiedFileKey(kind, fullId, name)`** helper: era reinventata in 3+ siti (save handler, isLocallyModified, badge render). Single source of truth
+- [REFACTOR] **`appendModifiedBadge(parent, item, kind, mode)`** helper: blocco identico era inline in `buildSkillAgentCard` E `buildSkillAgentChip` con solo varianti dimensione/styling. Mode `'card'` o `'chip'` distingue
+- [PERF] **Memoize `buildHookList()` su `state._hookListCache`**: era chiamata 2 volte (renderHooks + renderDashboard KPI), ognuna iterava state.plugins × hookEvents × matchers. Ora cache invalidata in `processData()` ad ogni reload. Niente più duplicate compute
+- [PERF] **`setViewMode` guard**: aggiunto `if (state.viewMode[section] === mode) return;` come prima riga per evitare setState + render quando già impostato (era guardato solo lato bottone click)
+- [CLEANUP] Rimosso dead code `kindLabel` (era marcato "unused, placeholder")
+- [REFACTOR backend] **`detectReconnectType` in `src/lib/mcp.js`**: rimossi emoji prefix (`↗`, `🚫`) dai `label` delle actions. Il renderer ora costruisce l'icona Lucide dal `kind` senza dover stripparli con regex `^[^a-zA-Z]+\s*`. Eliminata la regex fragile
+
+### NON applicato (deliberato — false positive o low value)
+
+- ❌ Factory `buildCompactRow(opts)` per 4 sezioni (Marketplace/Plugin/MCP/Hooks): le 4 funzioni hanno strutture davvero diverse (counts/status/transport/matcher/sub variano per sezione), unificarle aumenterebbe le opzioni del factory senza ridurre LOC significativamente
+- ❌ Constants `VIEW`/`KIND`/`RECONNECT`: 30+ siti da migrare, valore basso (stringhe già stabili)
+- ❌ `showMarkdownModal({...opts})`: API change più invasivo, ho lasciato signature posizionale 4-arg
+- ❌ `validIdentifier` shared in `src/lib/validators.js`: 4 siti diversi ma con regex leggermente diversa per use case (mcp name vs plugin id vs markdown name). Mantenuti separati
+- ❌ Cleanup commenti `// v1.0.xx —`: volume alto, valore basso. Git history è la source of truth
+
 ## v1.0.101 — 2026-05-26 — Tooltip esplicativo sui badge event nella sezione Hooks
 
 Ultimo task aperto del Pack K extension. L'utente ha **scartato** gli altri 3 task pianificati (slow-hook indicator, trigger count, overlap warning) per scope opinabile / utilità bassa.

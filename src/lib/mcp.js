@@ -197,8 +197,10 @@ function detectReconnectType(srv) {
       typeLabel: 'OAuth claude.ai',
       description: 'MCP integrato di Claude.ai. La riautorizzazione avviene dal sito web (i token vivono lato server).',
       actions: [
-        { kind: 'open-url', label: '↗ Riautorizza su claude.ai', url: 'https://claude.ai/settings/connectors' },
-        { kind: 'clear-cache', label: '🚫 Rimuovi da cache "Needs auth"' },
+        // v1.0.102 — Label senza emoji prefix: il renderer aggiunge un'icona
+        // Lucide in base al `kind` (external-link / terminal / ban).
+        { kind: 'open-url', label: 'Riautorizza su claude.ai', url: 'https://claude.ai/settings/connectors' },
+        { kind: 'clear-cache', label: 'Rimuovi da cache "Needs auth"' },
       ],
     };
   }
@@ -209,10 +211,8 @@ function detectReconnectType(srv) {
       typeLabel: 'OAuth via /mcp in claude',
       description: 'Server HTTP/SSE gestito dal plugin. Apriamo `claude` e ti portiamo al menu `/mcp` di Claude Code, da dove puoi fare auth/reconnect direttamente.',
       actions: [
-        // v1.0.86 — preDigit invece di solo command: dopo il banner claude, pre-digita
-        // `/mcp` così l'utente vede subito il menu MCP ufficiale di Claude Code.
-        { kind: 'open-terminal', label: '↗ Apri /mcp in claude', command: 'claude', preDigit: '/mcp' },
-        { kind: 'clear-cache', label: '🚫 Rimuovi da cache "Needs auth"' },
+        { kind: 'open-terminal', label: 'Apri /mcp in claude', command: 'claude', preDigit: '/mcp' },
+        { kind: 'clear-cache', label: 'Rimuovi da cache "Needs auth"' },
       ],
     };
   }
@@ -224,8 +224,8 @@ function detectReconnectType(srv) {
     typeLabel: 'Wrapper stdio',
     description: 'Server stdio locale. Se richiede auth, è un wrapper (es. mcp-remote) a fare OAuth — il menu `/mcp` di Claude Code ti fa gestire il reconnect.',
     actions: [
-      { kind: 'open-terminal', label: '↗ Apri /mcp in claude', command: 'claude', preDigit: '/mcp' },
-      { kind: 'clear-cache', label: '🚫 Rimuovi da cache "Needs auth"' },
+      { kind: 'open-terminal', label: 'Apri /mcp in claude', command: 'claude', preDigit: '/mcp' },
+      { kind: 'clear-cache', label: 'Rimuovi da cache "Needs auth"' },
     ],
   };
 }
