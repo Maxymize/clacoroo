@@ -173,13 +173,20 @@ window.LOCALES.it = {
 
   // Empty states
   empty: {
-    noPlugin:     'Nessun plugin installato.',
-    noSkill:      'Nessuna skill disponibile.',
-    noAgent:      'Nessun agent disponibile.',
-    noMcp:        'Nessun MCP server configurato.',
-    noHooks:      'Nessun hook configurato dai plugin installati.',
-    noResults:    'Nessun risultato corrisponde ai filtri.',
-    noActivity:   'Nessuna attività registrata. Le operazioni che farai qui appariranno in questo elenco.',
+    noPlugin:        'Nessun plugin installato.',
+    noPluginResults: 'Nessun plugin corrisponde ai filtri.',
+    noSkill:         'Nessuna skill disponibile.',
+    noAgent:         'Nessun agent disponibile.',
+    noMcp:           'Nessun MCP server configurato.',
+    noMcpResults:    'Nessun server corrisponde ai filtri.',
+    noHooks:         'Nessun hook configurato dai plugin installati.',
+    noHooksInstall:  'Nessun hook trovato. Installa un plugin con `hooks/hooks.json` per popolare questa sezione.',
+    noResults:       'Nessun risultato corrisponde ai filtri.',
+    noResultsShort:  'Nessun risultato',
+    noActivity:      'Nessuna attività registrata. Le operazioni che farai qui appariranno in questo elenco.',
+    noStatsProjects: 'Nessun progetto con attività trovato in ~/.claude/projects/',
+    noTrackedProjects:'Nessun progetto tracciato. Aggiungine uno dal bottone "+" in topbar.',
+    noGenericItems:  'Nessun elemento.',
   },
 
   // Settings (sezione Impostazioni)
@@ -192,9 +199,26 @@ window.LOCALES.it = {
 
   // Toast messages comuni
   toast: {
-    dataReloaded:   'Dati ricaricati',
-    copied:         'Copiato negli appunti',
-    saved:          'Salvato',
-    error:          'Errore',
+    dataReloaded:    'Dati ricaricati',
+    copied:          'Copiato negli appunti',
+    saved:           'Salvato',
+    error:           'Errore',
+    configChanged:   'Configurazione aggiornata — ricarico…',
+    noPublicRelease: 'Nessuna release pubblica disponibile (repo privato o senza release)',
+    upToDate:        'Sei già sulla versione più recente ✓',
+    updateCheckError:'Errore controllo aggiornamenti: {msg}',
+    cannotCopy:      'Impossibile copiare negli appunti',
+    pluginRemoved:   'Plugin rimosso: {id}',
+    pluginUpdated:   'Aggiornato: {id}',
+    pluginDisabled:  'Plugin disabilitato: {id} (−{tok} tok)',
+    projectAdded:    'Progetto aggiunto: {name}',
+    projectRemoved:  'Progetto rimosso',
+    marketplaceAdded:'Marketplace aggiunto',
+    errorPrefix:     'Errore: {msg}',
+    errorOpen:       'Errore apertura: {msg}',
+    errorOpenFinder: 'Errore apertura Finder: {msg}',
+    errorOpenEditor: 'Errore apertura editor: {msg}',
+    errorUpdate:     'Errore aggiornamento: {msg}',
+    copiedShort:     'Copiato: {text}',
   },
 };

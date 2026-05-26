@@ -1,5 +1,40 @@
 # Changelog
 
+## v1.0.114 — 2026-05-26 — Pack N (Phase 3a): empty states + toast principali
+
+Continua Pack N i18n. Migrate i 12 empty state messages e ~15 toast statici/parametrizzati comuni.
+
+### Locales — chiavi nuove
+
+- **`empty.*` (+8)**: noPluginResults, noMcpResults, noHooksInstall, noResultsShort, noStatsProjects, noTrackedProjects, noGenericItems
+- **`toast.*` (+17)**: configChanged, noPublicRelease, upToDate, updateCheckError{msg}, cannotCopy, pluginRemoved{id}, pluginUpdated{id}, pluginDisabled{id,tok}, projectAdded{name}, projectRemoved, marketplaceAdded, errorPrefix{msg}, errorOpen{msg}, errorOpenFinder{msg}, errorOpenEditor{msg}, errorUpdate{msg}, copiedShort{text}
+
+### Migrazione empty states (12)
+
+- [REFACTOR] `Nessuna attività registrata...` → `t('empty.noActivity')`
+- [REFACTOR] `Nessun MCP server configurato.` → `t('empty.noMcp')` (3 occorrenze in Dashboard MCP + sezione MCP principale + grid)
+- [REFACTOR] `Nessun plugin corrisponde ai filtri.` → `t('empty.noPluginResults')`
+- [REFACTOR] `Nessun server corrisponde ai filtri.` → `t('empty.noMcpResults')` (2 occorrenze)
+- [REFACTOR] `Nessun hook trovato. Installa un plugin...` → `t('empty.noHooksInstall')`
+- [REFACTOR] `Nessun progetto con attività trovato...` (Stats) → `t('empty.noStatsProjects')`
+- [REFACTOR] `Nessun progetto tracciato. Aggiungine uno...` (Settings) → `t('empty.noTrackedProjects')`
+- [REFACTOR] `Nessun risultato` (palette) → `t('empty.noResultsShort')`
+- [REFACTOR] `Nessun elemento.` (mcp-empty fallback) → `t('empty.noGenericItems')`
+
+### Migrazione toast comuni (15+)
+
+- [REFACTOR] `'Configurazione aggiornata — ricarico…'` → `t('toast.configChanged')` (il toast spam che si vede ~ogni minuto, ora bilingue mentre aspettiamo il fix del polling)
+- [REFACTOR] Update check: 3 messaggi statici/parametrizzati (noPublicRelease, upToDate, updateCheckError)
+- [REFACTOR] Plugin actions: `Plugin disabilitato: X (−Y tok)` / `Plugin rimosso: X` / `Aggiornato: X` / `Errore aggiornamento: X` con interpolazione
+- [REFACTOR] Errori comuni: `Errore: X` → `t('toast.errorPrefix', {msg: X})` (multiple occorrenze)
+- [REFACTOR] `Errore apertura: X` / `Errore apertura Finder: X` / `Errore apertura VS Code: X` → toast.errorOpen* (3 varianti)
+- [REFACTOR] Progetto tracciato: aggiunto / rimosso
+- [REFACTOR] MCP: marketplace aggiunto, copiato negli appunti, impossibile copiare
+
+### Toast rimasti da migrare (Phase 3b-c)
+
+- ~55 toast con messaggi specifici contestuali (Disabilitato/Abilitato XX / Hook copy / Skill markdown save / Account login / API key activate / Snapshot import-export / etc.) → da batch successive Phase 3b/c
+
 ## v1.0.113 — 2026-05-26 — Pack N (Phase 2 batch 2): badge + status MCP + sort dropdown + view switcher + filter chips
 
 Continua Pack N Phase 2. Migrate i badge scope/health/blocked/modified, gli status MCP (badge + filter chips), il sort dropdown universale, il view switcher e i filter chips MCP.

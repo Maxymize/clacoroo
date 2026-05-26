@@ -510,7 +510,7 @@ async function init() {
       statsCache = null;  // invalida solo per il prossimo accesso, niente reload
       return;
     }
-    toast('Configurazione aggiornata — ricarico…', 'info');
+    toast(t('toast.configChanged'), 'info');
     statsCache = null;
     loadData();
   });
@@ -570,11 +570,11 @@ async function runUpdateCheck(force) {
     refreshFooterStatus(null);
     if (force) {
       if (r.ok === false) {
-        toast('Errore controllo aggiornamenti: ' + r.error, 'error');
+        toast(t('toast.updateCheckError', { msg: r.error }), 'error');
       } else if ((info && info.reason === 'no-release') || (r.reason === 'no-release')) {
-        toast('Nessuna release pubblica disponibile (repo privato o senza release)', 'info');
+        toast(t('toast.noPublicRelease'), 'info');
       } else {
-        toast('Sei già sulla versione più recente ✓', 'success');
+        toast(t('toast.upToDate'), 'success');
       }
     }
     return;
@@ -604,7 +604,7 @@ async function loadData() {
   const result = await window.claudeAPI.getData();
   if (!result.ok) {
     setStatus('error', 'Errore lettura dati');
-    toast('Errore: ' + result.error, 'error');
+    toast(t('toast.errorPrefix', { msg: result.error }), 'error');
     return;
   }
   state.rawData = result.data;
@@ -819,10 +819,10 @@ function render() {
     addProjBtn.addEventListener('click', async () => {
       const r = await window.claudeAPI.addTrackedProject();
       if (r.success) {
-        toast('Progetto aggiunto: ' + r.path.split('/').pop(), 'success');
+        toast(t('toast.projectAdded', { name: r.path.split('/').pop() }), 'success');
         await loadData();
       } else if (r.error !== 'Annullato') {
-        toast('Errore: ' + r.error, 'error');
+        toast(t('toast.errorPrefix', { msg: r.error }), 'error');
       }
     });
     actions.appendChild(addProjBtn);
@@ -1168,7 +1168,7 @@ async function renderActivityList(container, limit, token) {
   const log = await window.claudeAPI.getActivityLog();
   if (token !== dashboardRenderToken) return;  // stale render, container già sostituito
   if (!log.length) {
-    container.appendChild(el('div', 'activity-empty', 'Nessuna attività registrata. Le operazioni che farai qui appariranno in questo elenco.'));
+    container.appendChild(el('div', 'activity-empty', t('empty.noActivity')));
     return;
   }
   log.slice(0, limit).forEach(entry => {
@@ -1405,10 +1405,10 @@ async function confirmAndDisablePlugin(p, recovery) {
   if (response !== 1) return;
   const r = await window.claudeAPI.pluginAction('disable', p.fullId);
   if (r.success) {
-    toast('Plugin disabilitato: ' + p.id + ' (−' + formatTokenSize(recovery) + ' tok)', 'success');
+    toast(t('toast.pluginDisabled', { id: p.id, tok: formatTokenSize(recovery) }), 'success');
     await loadData();
   } else {
-    toast('Errore: ' + (r.error || 'sconosciuto'), 'error');
+    toast(t('toast.errorPrefix', { msg: r.error || t('mcp.status.unknown') }), 'error');
   }
 }
 
@@ -1521,7 +1521,7 @@ function showTokenBudgetModal(plugins) {
 function renderDashboardSection({ container, title, items, buildChip, targetSection, getTimestamp, emptyText, iconName }) {
   container.appendChild(sectionTitle(title, iconName));
   if (!items || !items.length) {
-    container.appendChild(el('div', 'mcp-empty', emptyText || 'Nessun elemento.'));
+    container.appendChild(el('div', 'mcp-empty', emptyText || t('empty.noGenericItems')));
     return;
   }
   const sorted = [...items];
@@ -1548,7 +1548,7 @@ function paintDashboardMcpChips(container, servers) {
   container.textContent = '';
   container.appendChild(sectionTitle(t('section.mcpServerTitle'), 'plug-2'));
   if (!servers || !servers.length) {
-    container.appendChild(el('div', 'mcp-empty', 'Nessun MCP server configurato.'));
+    container.appendChild(el('div', 'mcp-empty', t('empty.noMcp')));
     return;
   }
   // v1.0.105 — Limite 19 + 20° "Vedi tutte" coerente con le altre sezioni dashboard
@@ -1706,7 +1706,7 @@ function renderPlugins() {
   });
 
   if (visible === 0) {
-    const no = el('div', 'no-results', 'Nessun plugin corrisponde ai filtri.');
+    const no = el('div', 'no-results', t('empty.noPluginResults'));
     grid.appendChild(no);
   }
 
@@ -1865,12 +1865,12 @@ function showPluginContentModal(p) {
   const finderBtn = btnWithIcon('btn btn-sm btn-ghost btn-with-icon', 'folder', ' Apri nel Finder');
   finderBtn.addEventListener('click', async () => {
     const r = await window.claudeAPI.openPluginPath(p.fullId);
-    if (!r.success) toast('Errore: ' + r.error, 'error');
+    if (!r.success) toast(t('toast.errorPrefix', { msg: r.error }), 'error');
   });
   const editorBtn = btnWithIcon('btn btn-sm btn-ghost btn-with-icon', 'code', ' Apri in editor');
   editorBtn.addEventListener('click', async () => {
     const r = await window.claudeAPI.openInEditor(p.fullId);
-    if (!r.success) toast('Errore: ' + r.error, 'error');
+    if (!r.success) toast(t('toast.errorPrefix', { msg: r.error }), 'error');
   });
   sourceActions.appendChild(finderBtn);
   sourceActions.appendChild(editorBtn);
@@ -2005,7 +2005,7 @@ function buildPluginCard(p) {
       // nel file manager (Finder/Explorer/Files).
       if (!p.projectPath) return;
       const r = await window.claudeAPI.openDirectory(p.projectPath);
-      if (!r.success) toast('Errore apertura: ' + r.error, 'error');
+      if (!r.success) toast(t('toast.errorOpen', { msg: r.error }), 'error');
     });
     footer.appendChild(openBtn);
     card.appendChild(footer);
@@ -2034,7 +2034,7 @@ function buildPluginCard(p) {
       statsCache = null;  // forza re-fetch contextBreakdown → barra si aggiorna
       await loadData();
     } else {
-      toast('Errore: ' + result.error, 'error');
+      toast(t('toast.errorPrefix', { msg: result.error }), 'error');
       inp.checked = !inp.checked; // revert
       toggleWrap.classList.remove('loading');
       inp.disabled = false;
@@ -2056,7 +2056,7 @@ function buildPluginCard(p) {
   finderBtn.appendChild(icon('folder-open'));
   finderBtn.addEventListener('click', async () => {
     const r = await window.claudeAPI.openPluginPath(p.fullId);
-    if (!r.success) toast('Errore apertura Finder: ' + r.error, 'error');
+    if (!r.success) toast(t('toast.errorOpenFinder', { msg: r.error }), 'error');
   });
 
   const codeBtn = el('button', 'btn btn-sm btn-ghost btn-icon');
@@ -2064,7 +2064,7 @@ function buildPluginCard(p) {
   codeBtn.appendChild(icon('code'));
   codeBtn.addEventListener('click', async () => {
     const r = await window.claudeAPI.openInEditor(p.fullId);
-    if (!r.success) toast('Errore apertura VS Code: ' + r.error, 'error');
+    if (!r.success) toast(t('toast.errorOpenEditor', { msg: r.error }), 'error');
   });
 
   actions.appendChild(detailsBtn);
@@ -2077,9 +2077,9 @@ function buildPluginCard(p) {
     updateBtn.textContent = '…';
     const r = await window.claudeAPI.pluginAction('update', p.fullId);
     if (r.success) {
-      toast('Aggiornato: ' + p.id, 'success');
+      toast(t('toast.pluginUpdated', { id: p.id }), 'success');
       window.claudeAPI.showNotification('Plugin aggiornato', p.id);
-    } else toast('Errore aggiornamento: ' + r.error, 'error');
+    } else toast(t('toast.errorUpdate', { msg: r.error }), 'error');
     updateBtn.disabled = false;
     updateBtn.textContent = 'Aggiorna';
     statsCache = null;
@@ -2098,12 +2098,12 @@ function buildPluginCard(p) {
     uninstBtn.disabled = true;
     const r = await window.claudeAPI.pluginAction('uninstall', p.fullId);
     if (r.success) {
-      toast('Plugin rimosso: ' + p.id, 'success');
+      toast(t('toast.pluginRemoved', { id: p.id }), 'success');
       window.claudeAPI.showNotification('Plugin rimosso', p.id);
       statsCache = null;
       await loadData();
     } else {
-      toast('Errore: ' + r.error, 'error');
+      toast(t('toast.errorPrefix', { msg: r.error }), 'error');
       uninstBtn.disabled = false;
     }
   });
@@ -2210,7 +2210,7 @@ function showAddMarketplaceModal() {
     submitBtn.textContent = 'Aggiungo…';
     const r = await window.claudeAPI.marketplaceAction('add', '', src);
     if (r.success) {
-      toast('Marketplace aggiunto', 'success');
+      toast(t('toast.marketplaceAdded'), 'success');
       close();
       await loadData();
     } else {
@@ -2764,7 +2764,7 @@ function renderMarketplaces() {
       updateMktBtn.disabled = true; updateMktBtn.textContent = '…';
       const r = await window.claudeAPI.marketplaceAction('update', m.id);
       if (r.success) toast('Marketplace aggiornato: ' + m.id, 'success');
-      else toast('Errore: ' + r.error, 'error');
+      else toast(t('toast.errorPrefix', { msg: r.error }), 'error');
       updateMktBtn.disabled = false; updateMktBtn.textContent = '↻ Aggiorna';
     });
 
@@ -2779,7 +2779,7 @@ function renderMarketplaces() {
       if (choice !== 1) return;
       const r = await window.claudeAPI.marketplaceAction('remove', m.id);
       if (r.success) { toast('Marketplace rimosso: ' + m.id, 'success'); await loadData(); }
-      else toast('Errore: ' + r.error, 'error');
+      else toast(t('toast.errorPrefix', { msg: r.error }), 'error');
     });
 
     cardFooter.appendChild(updateMktBtn);
@@ -3156,7 +3156,7 @@ function renderHooks() {
 
   if (!all.length) {
     const empty = el('div', 'empty-state');
-    empty.appendChild(el('p', '', 'Nessun hook trovato. Installa un plugin con `hooks/hooks.json` per popolare questa sezione.'));
+    empty.appendChild(el('p', '', t('empty.noHooksInstall')));
     setContent(empty);
     return;
   }
@@ -4393,7 +4393,7 @@ function renderStatsProjects(container, data) {
   );
 
   if (!filtered.length) {
-    container.appendChild(el('div', 'stats-empty', 'Nessun progetto con attività trovato in ~/.claude/projects/'));
+    container.appendChild(el('div', 'stats-empty', t('empty.noStatsProjects')));
     return;
   }
 
@@ -4525,7 +4525,7 @@ function renderConfigContent(container, data) {
             // revert
             const prevIdx = values.indexOf(previous);
             refresh(prevIdx >= 0 ? prevIdx : 0, previous || values[0]);
-            toast('Errore: ' + r.error, 'error');
+            toast(t('toast.errorPrefix', { msg: r.error }), 'error');
           }
         });
         dotsWrap.appendChild(dotWrap);
@@ -4780,7 +4780,7 @@ async function renderMcp() {
 
   const rawServers = [...(mcpCache.servers || []), ...disabledServers];
   if (!rawServers.length) {
-    grid.appendChild(el('div', 'mcp-empty', 'Nessun MCP server configurato.'));
+    grid.appendChild(el('div', 'mcp-empty', t('empty.noMcp')));
     return;
   }
 
@@ -4797,7 +4797,7 @@ async function renderMcp() {
   });
 
   if (visible === 0) {
-    grid.appendChild(el('div', 'no-results', 'Nessun server corrisponde ai filtri.'));
+    grid.appendChild(el('div', 'no-results', t('empty.noMcpResults')));
   }
   const connectedCount = servers.filter(s => s.status === 'connected').length;
   countSpan.textContent = visible + ' di ' + servers.length + ' server · ' + connectedCount + ' connessi';
@@ -4817,7 +4817,7 @@ function applyMcpFilters(wrap) {
   // remove any existing no-results
   const old = grid.querySelector('.no-results');
   if (old) old.remove();
-  if (visible === 0) grid.appendChild(el('div', 'no-results', 'Nessun server corrisponde ai filtri.'));
+  if (visible === 0) grid.appendChild(el('div', 'no-results', t('empty.noMcpResults')));
   const countSpan = wrap.querySelector('.section-count');
   if (countSpan && mcpCache.servers) {
     const connected = mcpCache.servers.filter(s => s.status === 'connected').length;
@@ -4904,9 +4904,9 @@ function buildMcpCard(srv) {
       try {
         await navigator.clipboard.writeText(srv.connection);
         const short = srv.connection.length > 50 ? srv.connection.slice(0, 47) + '…' : srv.connection;
-        toast('Copiato: ' + short, 'success');
+        toast(t('toast.copiedShort', { text: short }), 'success');
       } catch {
-        toast('Impossibile copiare negli appunti', 'error');
+        toast(t('toast.cannotCopy'), 'error');
       }
     });
     connWrap.appendChild(copyBtn);
@@ -5231,7 +5231,7 @@ async function runMcpReconnectAction(srv, act) {
   }
   if (act.kind === 'clear-cache') {
     const r = await window.claudeAPI.mcpClearAuthCache(srv.id);
-    if (!r.ok) { toast('Errore: ' + r.error, 'error'); return; }
+    if (!r.ok) { toast(t('toast.errorPrefix', { msg: r.error }), 'error'); return; }
     toast(r.removed
       ? 'Entry "' + srv.id + '" rimossa dalla cache. Aggiorna stato live per ricontrollare.'
       : 'Entry non presente in cache (già pulita)', r.removed ? 'success' : 'info');
@@ -5623,7 +5623,7 @@ function makeRemoveBtn(container) {
     } else {
       btn.disabled = false;
       btn.textContent = 'Rimuovi';
-      toast('Errore: ' + (r.error || 'sconosciuto'), 'error');
+      toast(t('toast.errorPrefix', { msg: r.error || t('mcp.status.unknown') }), 'error');
     }
   });
   return btn;
@@ -5884,7 +5884,7 @@ function renderSettings() {
     saveBtn.addEventListener('click', async () => {
       const r = await window.claudeAPI.setClaudeBin(pathInp.value.trim());
       if (r.success) { toast('Percorso aggiornato', 'success'); await loadData(); }
-      else toast('Errore: ' + r.error, 'error');
+      else toast(t('toast.errorPrefix', { msg: r.error }), 'error');
     });
     const inputWrap = el('div');
     inputWrap.style.cssText = 'display:flex;gap:8px;align-items:center;';
@@ -5913,7 +5913,7 @@ function renderSettings() {
     removeBtn.addEventListener('click', async () => {
       const r = await window.claudeAPI.removeTrackedProject(projectPath);
       if (r.success) {
-        toast('Progetto rimosso', 'success');
+        toast(t('toast.projectRemoved'), 'success');
         await loadData();
       }
     });
@@ -5924,7 +5924,7 @@ function renderSettings() {
   if (!state.trackedProjects?.length) {
     const empty = el('div', 'settings-row');
     const emptyL = el('div');
-    emptyL.appendChild(el('div', 'settings-row-desc', 'Nessun progetto tracciato. Aggiungine uno dal bottone "+" in topbar.'));
+    emptyL.appendChild(el('div', 'settings-row-desc', t('empty.noTrackedProjects')));
     empty.appendChild(emptyL);
     gProj.appendChild(empty);
   }
@@ -6381,7 +6381,7 @@ function openCommandPalette() {
       .sort((a, b) => b._score - a._score)
       .slice(0, 30);
     if (!visible.length) {
-      list.appendChild(el('div', 'palette-empty', 'Nessun risultato'));
+      list.appendChild(el('div', 'palette-empty', t('empty.noResultsShort')));
       return;
     }
     visible.forEach((it, i) => {

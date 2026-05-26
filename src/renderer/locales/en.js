@@ -173,13 +173,20 @@ window.LOCALES.en = {
 
   // Empty states
   empty: {
-    noPlugin:     'No plugin installed.',
-    noSkill:      'No skill available.',
-    noAgent:      'No agent available.',
-    noMcp:        'No MCP server configured.',
-    noHooks:      'No hooks configured from installed plugins.',
-    noResults:    'No results match the filters.',
-    noActivity:   'No activity recorded. Operations you perform here will appear in this list.',
+    noPlugin:        'No plugin installed.',
+    noPluginResults: 'No plugin matches the filters.',
+    noSkill:         'No skill available.',
+    noAgent:         'No agent available.',
+    noMcp:           'No MCP server configured.',
+    noMcpResults:    'No server matches the filters.',
+    noHooks:         'No hooks configured from installed plugins.',
+    noHooksInstall:  'No hooks found. Install a plugin with `hooks/hooks.json` to populate this section.',
+    noResults:       'No results match the filters.',
+    noResultsShort:  'No results',
+    noActivity:      'No activity recorded. Operations you perform here will appear in this list.',
+    noStatsProjects: 'No project with activity found in ~/.claude/projects/',
+    noTrackedProjects:'No project tracked. Add one from the "+" button in the topbar.',
+    noGenericItems:  'No items.',
   },
 
   // Settings (sezione Impostazioni)
@@ -192,9 +199,26 @@ window.LOCALES.en = {
 
   // Toast messages comuni
   toast: {
-    dataReloaded:   'Data reloaded',
-    copied:         'Copied to clipboard',
-    saved:          'Saved',
-    error:          'Error',
+    dataReloaded:    'Data reloaded',
+    copied:          'Copied to clipboard',
+    saved:           'Saved',
+    error:           'Error',
+    configChanged:   'Configuration changed — reloading…',
+    noPublicRelease: 'No public release available (private repo or no releases)',
+    upToDate:        'You\'re on the latest version ✓',
+    updateCheckError:'Update check error: {msg}',
+    cannotCopy:      'Cannot copy to clipboard',
+    pluginRemoved:   'Plugin removed: {id}',
+    pluginUpdated:   'Updated: {id}',
+    pluginDisabled:  'Plugin disabled: {id} (−{tok} tok)',
+    projectAdded:    'Project added: {name}',
+    projectRemoved:  'Project removed',
+    marketplaceAdded:'Marketplace added',
+    errorPrefix:     'Error: {msg}',
+    errorOpen:       'Open error: {msg}',
+    errorOpenFinder: 'Finder open error: {msg}',
+    errorOpenEditor: 'Editor open error: {msg}',
+    errorUpdate:     'Update error: {msg}',
+    copiedShort:     'Copied: {text}',
   },
 };
