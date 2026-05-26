@@ -2150,11 +2150,53 @@ function buildHookCard(item) {
 
 function truncate(s, n) { return s && s.length > n ? s.slice(0, n - 1) + '…' : s; }
 
+// v1.0.93 — Polling jobs attivi per detection auto-completamento install di
+// un tool. Una chiave per tool, valore = id setInterval (per poter clearare
+// se l'utente rilancia install su stesso tool).
+const _depInstallPollers = new Map();
+
+// Polla `hooks:check-tool` ogni 5s fino a quando il tool diventa disponibile
+// o passa il timeout (3 min). Quando trovato → invalida cache + ricarica UI
+// + toast success. Non blocca: parte in background dopo che l'utente lancia
+// l'install nel terminale.
+function startDepInstallPoller(tool) {
+  // Pulisci eventuali poller precedenti per lo stesso tool
+  const old = _depInstallPollers.get(tool);
+  if (old) clearInterval(old);
+
+  const startedAt = Date.now();
+  const MAX_DURATION_MS = 3 * 60 * 1000;  // 3 minuti
+  const INTERVAL_MS = 5 * 1000;            // poll ogni 5s
+
+  const id = setInterval(async () => {
+    if (Date.now() - startedAt > MAX_DURATION_MS) {
+      clearInterval(id);
+      _depInstallPollers.delete(tool);
+      toast('Timeout: ' + tool + ' non rilevato dopo 3 minuti. Clicca "↻ Aggiorna" se hai completato l\'install.', 'info');
+      return;
+    }
+    try {
+      const r = await window.claudeAPI.checkHookTool(tool);
+      if (r && r.ok && r.installed) {
+        clearInterval(id);
+        _depInstallPollers.delete(tool);
+        toast('✓ ' + tool + ' installato! Ricarico dati…', 'success');
+        await window.claudeAPI.refreshHookDeps();
+        await loadData();
+      }
+    } catch { /* graceful: prossimo tick riprova */ }
+  }, INTERVAL_MS);
+
+  _depInstallPollers.set(tool, id);
+}
+
 // v1.0.91 — Pack K extension: install di un tool CLI mancante via terminale
 // integrato. Pattern identico al reconnect MCP del Pack G v2 (open-terminal +
 // preDigit). NIENTE Enter automatico: l'utente deve confermare manualmente
 // premendo Invio dentro il terminale. Confirm dialog blocca prima del lancio
 // per evitare esecuzioni accidentali.
+// v1.0.93 — Dopo il lancio parte un polling che rileva auto-completamento
+// dell'install e ricarica i dati senza richiedere click manuale su Aggiorna.
 async function installDepInTerminal(tool, installCommand) {
   // confirm-dialog ritorna direttamente il numero della risposta (0 = Annulla,
   // 1 = Apri terminale). NON un oggetto {response} — bug fixato in v1.0.92.
@@ -2185,6 +2227,11 @@ async function installDepInTerminal(tool, installCommand) {
   setTimeout(() => {
     try { window.claudeAPI.pty.write(tab.ptyId, installCommand); } catch {}
   }, 600);
+  // v1.0.93 — Avvia polling auto: quando il tool appare nel PATH, CLACOROO
+  // ricarica i dati e fa sparire il badge "Manca" senza che l'utente debba
+  // cliccare "↻ Aggiorna". Timeout 3 minuti per evitare polling infinito se
+  // l'utente decide di non eseguire l'install (e basta una Ctrl+C nel pty).
+  startDepInstallPoller(tool);
 }
 
 function showHookDetailsModal(item) {

@@ -1,5 +1,15 @@
 # Changelog
 
+## v1.0.93 — 2026-05-26 — Hook dep install: polling automatico post-install (no click manuale "Aggiorna")
+
+Feedback utente sul flow v1.0.92: dopo aver lanciato `bun install` dal bottone "▶ Installa bun", deve cliccare manualmente "↻ Aggiorna" in topbar per far sparire il badge "Manca: bun". UX zoppa.
+
+- [FEATURE] **`startDepInstallPoller(tool)`** in renderer: dopo che `installDepInTerminal` ha pre-digitato il comando, parte un polling automatico che chiama `hooks:check-tool` ogni 5 secondi per controllare se il tool è apparso nel PATH. Quando installato → invalida cache + ricarica dati + toast `✓ <tool> installato!`. Niente più click manuale
+- [FEATURE] **IPC `hooks:check-tool`** + bridge preload `checkHookTool(tool)`: invalida l'entry del singolo tool dal cache (bypass TTL) e ritorna `{installed, path}`. Lightweight: 1 spawn `which`/`shell -lc` invece dell'intero re-check di tutti i tool
+- [FEATURE] **`invalidateOne(tool)`** in `src/lib/hookDeps.js`: invalida solo l'entry di un singolo tool, lasciando intatti gli altri. Usato dal polling per non bustare l'intero cache ad ogni tick
+- [FEATURE] **Timeout 3 minuti** sul polling: se l'utente decide di non eseguire l'install (Ctrl+C nel pty) il polling smette da solo con toast informativo "Timeout: clicca ↻ Aggiorna se hai completato l'install"
+- [FEATURE] **Anti-doppione**: se l'utente clicca "Installa <tool>" più volte sullo stesso tool, il vecchio poller viene clearato prima di crearne uno nuovo. No accumulo di setInterval
+
 ## v1.0.92 — 2026-05-26 — Fix bottone "Installa": confirm-dialog ritorna numero, non oggetto
 
 Bug introdotto in v1.0.91: click su "Apri terminale" nel confirm dialog non faceva nulla. Root cause: `confirm-dialog` IPC handler ritorna direttamente `r.response` (numero: 0 = Annulla, 1 = Apri terminale), ma il mio codice in `installDepInTerminal` controllava `ok.response !== 1` come se fosse un oggetto wrapper → la condizione era SEMPRE `true` (`undefined !== 1`) e la funzione faceva return immediatamente.

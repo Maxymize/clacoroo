@@ -567,6 +567,17 @@ ipcMain.handle('hooks:refresh-deps', async () => {
   return { ok: true };
 });
 
+// v1.0.93 — Check on-demand di un singolo tool. Usato dal renderer per il
+// polling post-install: dopo che l'utente lancia `bun install`, polla ogni
+// 5s questo IPC fino a quando installed=true, poi ricarica UI automaticamente.
+// invalidateOne forza un fresh check ignorando il TTL del cache.
+ipcMain.handle('hooks:check-tool', async (_e, { tool } = {}) => {
+  if (typeof tool !== 'string' || !tool) return { ok: false, error: 'tool invalido' };
+  HOOK_DEPS.invalidateOne(tool);
+  const result = await HOOK_DEPS.checkAvailabilityOne(tool);
+  return { ok: true, installed: !!result.installed, path: result.path || null };
+});
+
 ipcMain.handle('plugin-action', async (_e, { action, pluginId }) => {
   if (!validPluginId(pluginId)) return { success: false, error: 'ID plugin non valido.' };
   const result = await runClaudeArgs(['plugins', action, pluginId]);

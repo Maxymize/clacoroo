@@ -405,6 +405,12 @@ function clearCache() {
   _availabilityCache.clear();
 }
 
+// v1.0.93 — Invalida solo l'entry di un singolo tool (per il polling post-install:
+// vogliamo ricontrollare se è apparso nel PATH senza bustare l'intero cache).
+function invalidateOne(tool) {
+  _availabilityCache.delete(tool);
+}
+
 /**
  * Helper di alto livello: prende un array di hook event (vedi readHookEvents)
  * e ritorna l'union di tutti i tool dependency detectati. Usato dal main per
@@ -429,6 +435,7 @@ module.exports = {
   checkAvailability,
   checkAvailabilityOne,
   clearCache,
+  invalidateOne,
   collectAllDeps,
   getInstallCommand,
   UBIQUITOUS,
