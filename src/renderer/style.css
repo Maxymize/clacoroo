@@ -1699,6 +1699,84 @@ body {
   font-size: 10px;
   margin-left: 6px;
 }
+
+/* v1.0.109 — Title row con dropdown modello a destra */
+.token-budget-title-row {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px;
+}
+.token-budget-title-row .list-section-title { flex: 1; }
+.token-budget-model-switch {
+  display: inline-flex; align-items: center; gap: 6px;
+  flex-shrink: 0;
+  margin-top: 22px;
+}
+.token-budget-model-label {
+  font-size: 10px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+.token-budget-model-select {
+  background: var(--bg);
+  border: 1px solid var(--border2);
+  color: var(--text);
+  border-radius: 6px;
+  padding: 3px 8px;
+  font-size: 11px;
+  cursor: pointer;
+  font-family: inherit;
+  outline: none;
+}
+.token-budget-model-select:hover { border-color: var(--accent2); }
+
+/* v1.0.109 — Bottone Disabilita inline nelle righe del budget */
+.token-budget-row { grid-template-columns: minmax(140px, 220px) 1fr auto auto auto; }
+.token-budget-list-full .token-budget-row {
+  grid-template-columns: 34px minmax(180px, 260px) 1fr auto auto auto;
+}
+.token-budget-disable-btn {
+  display: inline-flex; align-items: center; gap: 3px;
+  background: rgba(239,68,68,.12);
+  color: #fca5a5;
+  border: 1px solid rgba(239,68,68,.30);
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  white-space: nowrap;
+  transition: background .15s, border-color .15s;
+}
+.token-budget-disable-btn:hover {
+  background: rgba(239,68,68,.22);
+  border-color: rgba(239,68,68,.50);
+  color: #fff;
+}
+.token-budget-disable-btn .inline-icon { width: 11px; height: 11px; margin: 0; vertical-align: 0; }
+
+/* Modal: nuova colonna delta + colonna azioni */
+.token-budget-table-delta {
+  font-family: "SF Mono", "Fira Code", Menlo, monospace;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+.token-budget-table-act { width: 30px; }
+.token-budget-disable-btn-sm {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  padding: 3px 6px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all .15s;
+}
+.token-budget-disable-btn-sm:hover {
+  background: rgba(239,68,68,.18);
+  border-color: rgba(239,68,68,.50);
+  color: #fca5a5;
+}
+.token-budget-disable-btn-sm .inline-icon { width: 12px; height: 12px; margin: 0; vertical-align: 0; }
 .token-budget-row:hover {
   background: var(--surface2);
   border-color: var(--border2);

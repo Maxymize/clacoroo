@@ -302,6 +302,18 @@ CLACOROO è distribuito nella speranza che sia utile, ma SENZA ALCUNA GARANZIA; 
 
 Per usi commerciali che non possono rispettare i termini AGPL, è disponibile una licenza commerciale separata su richiesta: scrivi a `info@maxymizebusiness.com`.
 
+### Compliance della licenza
+
+CLACOROO è attivamente monitorato per il rispetto della licenza. Se vieni a conoscenza di un progetto, prodotto, fork o distribuzione che utilizza codice sorgente CLACOROO (o opere derivate) in violazione dei termini AGPL-3.0-or-later — ad esempio un **SaaS proprietario** che non pubblica il codice modificato, un **fork chiuso** che rimuove il copyright notice, o qualunque **ridistribuzione senza preservare la licenza AGPL** — segnalalo a **`info@maxymizebusiness.com`** indicando:
+
+- Link al prodotto, repository o distribuzione in violazione
+- Descrizione della presunta violazione
+- (Facoltativo) Screenshot, diff o altre evidenze
+
+Ogni segnalazione viene esaminata. I violatori ricevono una prima notifica di cortesia per rientrare nei termini AGPL o per acquisire una **licenza commerciale** separata. Violazioni reiterate o in malafede vengono escalate tramite richieste di rimozione DMCA (GitHub / App Store / Google Play), diffide legali formali e — se necessario — azione civile ai sensi della legge italiana e UE sul diritto d'autore (L. 633/1941 + Convenzione di Berna).
+
+Vogliamo che CLACOROO sia usato e forkato liberamente da chiunque — è il senso dell'open source. Chiediamo solo che tutti rispettino le stesse regole che abbiamo rispettato noi.
+
 ---
 
 ## ☕ Supporta il progetto

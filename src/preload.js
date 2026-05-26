@@ -47,6 +47,7 @@ contextBridge.exposeInMainWorld('claudeAPI', {
   getUsage:             (opts)            => ipcRenderer.invoke('get-usage',              opts || {}),
   getState:           ()                  => ipcRenderer.invoke('get-state'),
   setState:           (patch)             => ipcRenderer.invoke('set-state',          patch),
+  getSystemLocale:    ()                  => ipcRenderer.invoke('get-system-locale'),
   checkUpdates:       (force)             => ipcRenderer.invoke('check-updates',     { force: !!force }),
   getChangelog:       ()                  => ipcRenderer.invoke('get-changelog'),
   exportSnapshot:     ()                  => ipcRenderer.invoke('export-snapshot'),

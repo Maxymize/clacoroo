@@ -302,6 +302,18 @@ CLACOROO is distributed in the hope that it will be useful, but WITHOUT ANY WARR
 
 For commercial use that cannot meet AGPL terms, a separate commercial license is available on request: write to `info@maxymizebusiness.com`.
 
+### License compliance
+
+CLACOROO is actively monitored for license compliance. If you become aware of a project, product, fork or distribution that uses CLACOROO source code (or derivative works) in violation of the AGPL-3.0-or-later terms — for example a **closed-source SaaS** that does not publish modified source, a **proprietary fork** that strips the copyright notice, or any **redistribution without the AGPL license preserved** — please report it to **`info@maxymizebusiness.com`** with:
+
+- Link to the offending product, repository or distribution
+- Description of the suspected violation
+- (Optional) Screenshots, diffs or other evidence
+
+All reports are reviewed. Violators receive a courtesy notice to bring their use into compliance or to acquire a separate **commercial license**. Persistent or bad-faith violations are escalated through DMCA takedowns (GitHub / App Store / Google Play), formal legal notices, and — if necessary — civil litigation under Italian and EU copyright law (D.lgs. 633/1941 + Berne Convention).
+
+We *want* CLACOROO to be widely used and forked freely — that's the point of open source. We just expect everyone to play by the same rules we did.
+
 ---
 
 ## ☕ Support the project

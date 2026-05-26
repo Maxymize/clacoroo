@@ -135,6 +135,96 @@ function sectionTitle(text, iconName) {
   return t;
 }
 
+/* ── i18n (Pack N v1.0.110) ────────────────────────────────────────────── */
+/**
+ * Sistema di traduzione minimale, no dipendenze. Le tabelle vivono in
+ * `src/renderer/locales/<lang>.js` e si attaccano a `window.LOCALES` come
+ * script tag (caricate prima di app.js in index.html). `require()` non è
+ * disponibile nel renderer: `nodeIntegration:false` + `contextIsolation:true`.
+ *
+ * - `LOCALES`: registro lingue supportate (slug → tabella nested)
+ * - `i18nState.lang`: lingua attiva (auto-detect OS al primo avvio, poi
+ *   override manuale persistito in state.json come `state.locale`)
+ * - `t(key, vars?)`: lookup gerarchico (es. 'nav.dashboard'), fallback EN,
+ *   poi alla key stessa se mancante; sostituzione `{name}` da `vars`.
+ */
+const LOCALES = window.LOCALES || {};
+const i18nState = { lang: 'it', detected: '' };
+
+/**
+ * Risolve `obj.a.b.c` da `obj` con key `'a.b.c'`. Ritorna undefined se manca.
+ */
+function _lookupDeep(obj, key) {
+  if (!obj || typeof key !== 'string') return undefined;
+  const parts = key.split('.');
+  let cur = obj;
+  for (const p of parts) {
+    if (cur && typeof cur === 'object' && p in cur) cur = cur[p];
+    else return undefined;
+  }
+  return cur;
+}
+
+/**
+ * t('key.path', { name: 'value' }) — traduce con fallback EN, poi alla key.
+ * Sostituisce `{var}` con `vars.var` (string).
+ */
+function t(key, vars) {
+  let s = _lookupDeep(LOCALES[i18nState.lang], key);
+  if (s === undefined) s = _lookupDeep(LOCALES.en, key);
+  if (typeof s !== 'string') return key;
+  if (vars && typeof vars === 'object') {
+    s = s.replace(/\{(\w+)\}/g, (_, k) => (vars[k] !== undefined ? String(vars[k]) : `{${k}}`));
+  }
+  return s;
+}
+
+/**
+ * Da una locale OS tipo 'it-IT' / 'en-US' / 'fr-FR' ritorna il prefisso
+ * lingua se supportato, altrimenti 'en' (fallback default per anglofoni
+ * e tutte le altre lingue non ancora tradotte).
+ */
+function resolveLocale(raw) {
+  if (typeof raw !== 'string' || !raw) return 'en';
+  const pref = raw.toLowerCase().split(/[-_]/)[0];
+  return LOCALES[pref] ? pref : 'en';
+}
+
+/**
+ * Imposta la lingua attiva (no render qui — chiamante decide).
+ * Espone valori in `i18nState` per debug.
+ */
+function setLocale(lang) {
+  if (LOCALES[lang]) i18nState.lang = lang;
+}
+
+/**
+ * Init lingua: chiamata UNA volta in `init()` prima del primo render.
+ * - Se `state.locale` persistito → usa quello (rispetta scelta utente).
+ * - Altrimenti chiama IPC `get-system-locale` → mappa su 'it'/'en' o EN
+ *   fallback. La selezione auto-detect NON viene persistita: la prossima
+ *   apertura ripeterà l'auto-detect (utile se l'utente cambia lingua OS).
+ *   Si persiste SOLO se l'utente seleziona esplicitamente dal dropdown.
+ */
+async function initLocale() {
+  try {
+    const persisted = await window.claudeAPI.getState();
+    if (persisted && typeof persisted.locale === 'string' && LOCALES[persisted.locale]) {
+      state.locale = persisted.locale;
+      setLocale(persisted.locale);
+      return;
+    }
+    const sysRes = await window.claudeAPI.getSystemLocale();
+    const raw = (sysRes && (sysRes.locale || sysRes.systemLocale)) || '';
+    i18nState.detected = raw;
+    const lang = resolveLocale(raw);
+    setLocale(lang);
+    // state.locale resta '' finché l'utente non sceglie esplicitamente
+  } catch {
+    setLocale('en');
+  }
+}
+
 /* ── STATE ────────────────────────────────────────────────────────────── */
 const state = {
   rawData:   null,
@@ -180,6 +270,13 @@ const state = {
   // Chiave: `kind:fullId:name` (es. "skill:claude-mem@thedotmack:mcp-search").
   // Value: timestamp ISO ultima modifica.
   modifiedFiles: {},
+  // v1.0.109 — Modello selezionato per il token budget visualizzato
+  // ('sonnet' | 'opus'). Default Sonnet 4.6. Persisted in state.json.
+  tokenModel: 'sonnet',
+  // v1.0.110 — Pack N: lingua UI attiva ('it' | 'en'). Vuota al primo avvio
+  // → auto-detect dalla locale OS via IPC `get-system-locale`. Persisted in
+  // state.json. L'utente può overridarla dal dropdown in Impostazioni.
+  locale: '',
 };
 
 const MKT_SORTERS = {
@@ -409,6 +506,13 @@ const $ = id => document.getElementById(id);
 
 /* ── INIT ─────────────────────────────────────────────────────────────── */
 async function init() {
+  // v1.0.110 — Pack N: i18n. Determina lingua UI prima di setupNav() così
+  // i prossimi paint usano già la lingua corretta. Ordine:
+  //   1. state.locale persistito (override esplicito utente) → usa quello
+  //   2. altrimenti chiama IPC get-system-locale → mappa su 'it'/'en'
+  //   3. fallback 'en' (nel caso IPC fallisca o sistema su lingua non supportata)
+  // Nota: tutto l'init è già async; il costo è ~1 IPC chiamata (~ms).
+  await initLocale();
   setupNav();
   attachSupportButtons();
   // v1.0.67 — Carica caps pty PRIMA del primo render, così il bottone
@@ -461,6 +565,10 @@ async function init() {
   // v1.0.100 — restore modifiedFiles tracking (file .md editati localmente)
   if (appState.modifiedFiles && typeof appState.modifiedFiles === 'object') {
     state.modifiedFiles = appState.modifiedFiles;
+  }
+  // v1.0.109 — restore tokenModel preferito
+  if (appState.tokenModel === 'opus' || appState.tokenModel === 'sonnet') {
+    state.tokenModel = appState.tokenModel;
   }
   if (appState.lastSection && appState.lastSection !== 'dashboard') {
     switchToSection(appState.lastSection);
@@ -591,9 +699,11 @@ function processData() {
     const cache  = raw.cacheDetails[fullId] || {};
     const cat    = catalog[fullId] || {};
 
-    const tokenInfo = cat.tokens
-      ? (cat.tokens['claude-sonnet-4-6'] || Object.values(cat.tokens)[0])
-      : null;
+    // v1.0.109 — Salvo tokens per ENTRAMBI i modelli (Opus 4.7 + Sonnet 4.6)
+    // così il renderer può switchare via state.tokenModel senza re-leggere il catalog.
+    const tokensSonnet = cat.tokens ? (cat.tokens['claude-sonnet-4-6'] || null) : null;
+    const tokensOpus   = cat.tokens ? (cat.tokens['claude-opus-4-7']   || null) : null;
+    const tokenInfo = tokensSonnet || tokensOpus || (cat.tokens ? Object.values(cat.tokens)[0] : null);
 
     return {
       fullId,
@@ -615,6 +725,11 @@ function processData() {
       scope:       'global',
       tokensAlways: tokenInfo?.always_on  || 0,
       tokensInvoke: tokenInfo?.on_invoke  || 0,
+      // v1.0.109 — Tokens per modello (Sonnet 4.6 e Opus 4.7) per il comparatore
+      tokensByModel: {
+        sonnet: { always: tokensSonnet?.always_on || 0, invoke: tokensSonnet?.on_invoke || 0 },
+        opus:   { always: tokensOpus?.always_on   || 0, invoke: tokensOpus?.on_invoke   || 0 },
+      },
     };
   });
 
@@ -678,23 +793,39 @@ function setupNav() {
   document.querySelectorAll('.nav-item').forEach(btn => {
     btn.addEventListener('click', () => switchToSection(btn.dataset.section));
   });
+  applyStaticI18n();
+}
+
+/**
+ * v1.0.110 — Pack N: aggiorna tutti i nodi statici con attributo
+ * `data-i18n="key.path"` impostandone il `textContent` via `t()`. Vale per
+ * sidebar nav + qualsiasi label HTML statica che vorremo aggiungere in
+ * futuro (es. status label). I nodi dinamici (renderizzati in JS) usano
+ * `t()` direttamente alla generazione.
+ */
+function applyStaticI18n() {
+  try { document.documentElement.setAttribute('lang', i18nState.lang); } catch {}
+  document.querySelectorAll('[data-i18n]').forEach(node => {
+    const key = node.getAttribute('data-i18n');
+    if (key) node.textContent = t(key);
+  });
 }
 
 /* ── RENDER DISPATCHER ────────────────────────────────────────────────── */
 function render() {
-  const sectionTitles = {
-    dashboard:   'Dashboard',
-    plugins:     'Plugin',
-    marketplaces:'Marketplace',
-    skills:      'Skill',
-    agents:      'Agent',
-    mcp:         'MCP',
-    hooks:       'Hooks',
-    stats:       'Stats',
-    config:      'Claude Config',
-    settings:    'Impostazioni',
+  const sectionTitleKey = {
+    dashboard:   'nav.dashboard',
+    plugins:     'nav.plugin',
+    marketplaces:'nav.marketplace',
+    skills:      'nav.skill',
+    agents:      'nav.agent',
+    mcp:         'nav.mcp',
+    hooks:       'nav.hooks',
+    stats:       'nav.stats',
+    config:      'nav.config',
+    settings:    'nav.settings',
   };
-  $('topbar-title').textContent = sectionTitles[state.section] || '';
+  $('topbar-title').textContent = t(sectionTitleKey[state.section] || '');
 
   // Topbar actions
   const actions = $('topbar-actions');
@@ -704,21 +835,21 @@ function render() {
   // un marketplace da URL/repo. Sostituisce "+ Progetto" quando si è in
   // questa pagina perché Progetto qui non avrebbe senso.
   if (state.section === 'marketplaces') {
-    const addMktBtn = btnWithIcon('btn btn-sm btn-ghost btn-refresh', 'plus', 'Marketplace');
-    addMktBtn.title = 'Aggiungi un marketplace da URL git, repo GitHub o path locale';
+    const addMktBtn = btnWithIcon('btn btn-sm btn-ghost btn-refresh', 'plus', t('topbar.addMarketplace'));
+    addMktBtn.title = t('topbar.addMktTooltip');
     addMktBtn.addEventListener('click', () => showAddMarketplaceModal());
     actions.appendChild(addMktBtn);
   } else if (state.section === 'mcp') {
     // v1.0.94 — Pack G v2: bottone per aggiungere un server da CLACOROO
     // via `claude mcp add` (form modale con transport/url/command/env/headers).
-    const addMcpBtn = btnWithIcon('btn btn-sm btn-ghost btn-refresh', 'plus', 'MCP');
-    addMcpBtn.title = 'Aggiungi un MCP server (HTTP, SSE o stdio) via `claude mcp add`';
+    const addMcpBtn = btnWithIcon('btn btn-sm btn-ghost btn-refresh', 'plus', t('topbar.addMcp'));
+    addMcpBtn.title = t('topbar.addMcpTooltip');
     addMcpBtn.addEventListener('click', () => showAddMcpModal());
     actions.appendChild(addMcpBtn);
   } else {
     // v1.0.11 — Bottone "+" per aggiungere progetto tracciato (locale)
-    const addProjBtn = btnWithIcon('btn btn-sm btn-ghost btn-refresh', 'plus', 'Progetto');
-    addProjBtn.title = 'Aggiungi un progetto da tracciare (per vedere plugin/skill/agent locali)';
+    const addProjBtn = btnWithIcon('btn btn-sm btn-ghost btn-refresh', 'plus', t('topbar.addProject'));
+    addProjBtn.title = t('topbar.addProjectTooltip');
     addProjBtn.addEventListener('click', async () => {
       const r = await window.claudeAPI.addTrackedProject();
       if (r.success) {
@@ -731,8 +862,8 @@ function render() {
     actions.appendChild(addProjBtn);
   }
 
-  const refreshBtn = btnWithIcon('btn btn-sm btn-ghost btn-refresh', 'rotate-cw', 'Aggiorna');
-  refreshBtn.title = 'Ricarica i dati dai file di configurazione di Claude Code + ricontrolla le dipendenze hook';
+  const refreshBtn = btnWithIcon('btn btn-sm btn-ghost btn-refresh', 'rotate-cw', t('topbar.refresh'));
+  refreshBtn.title = t('topbar.refreshTooltip');
   refreshBtn.addEventListener('click', async () => {
     refreshBtn.disabled = true;
     refreshBtn.textContent = '…';
@@ -744,14 +875,14 @@ function render() {
     refreshBtn.disabled = false;
     refreshBtn.textContent = '';
     refreshBtn.appendChild(icon('rotate-cw'));
-    refreshBtn.appendChild(document.createTextNode('Aggiorna'));
-    toast('Dati ricaricati', 'success');
+    refreshBtn.appendChild(document.createTextNode(t('topbar.refresh')));
+    toast(t('toast.dataReloaded'), 'success');
   });
   actions.appendChild(refreshBtn);
 
   // v1.0.67 — Pack B: toggle terminale integrato
   if (termState && termState.caps && termState.caps.available) {
-    const termBtn = btnWithIcon('btn btn-sm btn-ghost btn-refresh', 'terminal', 'Terminale');
+    const termBtn = btnWithIcon('btn btn-sm btn-ghost btn-refresh', 'terminal', t('topbar.terminal'));
     termBtn.title = 'Apri/chiudi il terminale integrato (Cmd+`)';
     termBtn.addEventListener('click', () => termSetOpen(!termState.open));
     actions.appendChild(termBtn);
@@ -1180,28 +1311,64 @@ function formatTokenSize(n) {
 // Top-N bar chart orizzontale per always-on tokens + colonna on-invoke.
 // Mostra solo plugin globali attivi (no locali, no blocked). Sorted desc.
 // Cliccando "Vedi tutti" si apre il modal con tabella completa.
-// v1.0.108 — opts.mode: 'compact' (Dashboard, Top 5, una riga title) o 'full'
-// (Stats Overview, Top 30 + colonne extra). Layout invariato per Dashboard.
+// v1.0.108-109 — opts.mode: 'compact' (Dashboard, Top 5, layout standard) o
+// 'full' (Stats Overview, Top 30 + rank + mkt + % context window).
+// v1.0.109 — model switcher Sonnet/Opus + bottone Disabilita inline.
+//
+// Helper: estrae always/invoke per il modello attualmente selezionato.
+function tokenValuesFor(p, model) {
+  const m = (p.tokensByModel && p.tokensByModel[model]) || null;
+  if (m) return { always: m.always || 0, invoke: m.invoke || 0 };
+  return { always: p.tokensAlways || 0, invoke: p.tokensInvoke || 0 };
+}
+
 function renderTokenBudgetSection(container, plugins, opts = {}) {
   const mode = opts.mode || 'compact';
-  const eligible = (plugins || []).filter(p => p.scope === 'global' && !p.blocked && (p.tokensAlways > 0 || p.tokensInvoke > 0));
+  const model = state.tokenModel || 'sonnet';
+  const modelLabel = model === 'opus' ? 'Opus 4.7' : 'Sonnet 4.6';
+  const eligible = (plugins || []).filter(p => {
+    if (p.scope !== 'global' || p.blocked) return false;
+    const v = tokenValuesFor(p, model);
+    return v.always > 0 || v.invoke > 0;
+  });
   if (!eligible.length) return;
 
-  container.appendChild(sectionTitle('Plugin per peso (context window)', 'gauge'));
+  // Title row con dropdown modello a destra
+  const titleRow = el('div', 'token-budget-title-row');
+  titleRow.appendChild(sectionTitle('Plugin per peso (context window)', 'gauge'));
+  const modelSwitch = el('div', 'token-budget-model-switch');
+  modelSwitch.appendChild(el('span', 'token-budget-model-label', 'Modello:'));
+  const sel = el('select', 'token-budget-model-select');
+  [
+    { v: 'sonnet', l: 'Sonnet 4.6' },
+    { v: 'opus',   l: 'Opus 4.7'   },
+  ].forEach(o => {
+    const opt = document.createElement('option');
+    opt.value = o.v; opt.textContent = o.l;
+    if (o.v === model) opt.selected = true;
+    sel.appendChild(opt);
+  });
+  sel.addEventListener('change', async () => {
+    state.tokenModel = sel.value;
+    try { await window.claudeAPI.setState({ tokenModel: state.tokenModel }); } catch {}
+    render();
+  });
+  modelSwitch.appendChild(sel);
+  titleRow.appendChild(modelSwitch);
+  container.appendChild(titleRow);
 
-  const sorted = [...eligible].sort((a, b) => (b.tokensAlways || 0) - (a.tokensAlways || 0));
+  const sorted = [...eligible].sort((a, b) => tokenValuesFor(b, model).always - tokenValuesFor(a, model).always);
   const TOP_N = mode === 'full' ? 30 : 5;
   const top = sorted.slice(0, TOP_N);
-  const maxAlways = top.reduce((m, p) => Math.max(m, p.tokensAlways || 0), 1);
-  const totalAlways = sorted.reduce((s, p) => s + (p.tokensAlways || 0), 0);
-  const totalInvoke = sorted.reduce((s, p) => s + (p.tokensInvoke || 0), 0);
+  const maxAlways = top.reduce((m, p) => Math.max(m, tokenValuesFor(p, model).always), 1);
+  const totalAlways = sorted.reduce((s, p) => s + tokenValuesFor(p, model).always, 0);
+  const totalInvoke = sorted.reduce((s, p) => s + tokenValuesFor(p, model).invoke, 0);
 
   // Summary line
   const summary = el('div', 'token-budget-summary');
-  summary.appendChild(el('span', 'token-budget-total-label', 'Totale always-on:'));
+  summary.appendChild(el('span', 'token-budget-total-label', modelLabel + ' totale always-on:'));
   summary.appendChild(el('strong', 'token-budget-total-val', formatTokenSize(totalAlways) + ' tok'));
   summary.appendChild(el('span', 'token-budget-sub', '· ' + sorted.length + ' plugin attivi · on-invoke potenziale ' + formatTokenSize(totalInvoke) + ' tok'));
-  // In full mode mostra anche % del context window 200K
   if (mode === 'full') {
     const pctCtx = ((totalAlways / 200000) * 100).toFixed(1);
     summary.appendChild(el('span', 'token-budget-sub', '· ' + pctCtx + '% del context window (200K)'));
@@ -1211,13 +1378,12 @@ function renderTokenBudgetSection(container, plugins, opts = {}) {
   // Bar chart
   const list = el('div', 'token-budget-list' + (mode === 'full' ? ' token-budget-list-full' : ''));
   top.forEach((p, idx) => {
+    const v = tokenValuesFor(p, model);
     const row = el('div', 'token-budget-row');
-    row.title = p.id + ' (' + p.mkt + ')\nalways-on: ' + (p.tokensAlways || 0) + ' tok\non-invoke: ' + (p.tokensInvoke || 0) + ' tok';
-    // Rank (solo full mode)
+    row.title = p.id + ' (' + p.mkt + ')\nalways-on: ' + v.always + ' tok\non-invoke: ' + v.invoke + ' tok';
     if (mode === 'full') {
       row.appendChild(el('span', 'token-budget-rank-inline', '#' + (idx + 1)));
     }
-    // Name
     const nameWrap = el('div', 'token-budget-name');
     const dot = el('span', 'token-budget-dot');
     dot.style.background = mktColor(p.mkt);
@@ -1227,31 +1393,56 @@ function renderTokenBudgetSection(container, plugins, opts = {}) {
       nameWrap.appendChild(el('span', 'token-budget-name-mkt', p.mkt));
     }
     row.appendChild(nameWrap);
-    // Bar always-on
     const barCol = el('div', 'token-budget-bar-col');
     const bar = el('div', 'token-budget-bar');
-    bar.style.width = Math.max(2, Math.round((p.tokensAlways / maxAlways) * 100)) + '%';
+    bar.style.width = Math.max(2, Math.round((v.always / maxAlways) * 100)) + '%';
     bar.style.background = mktColor(p.mkt);
     barCol.appendChild(bar);
     row.appendChild(barCol);
-    // Value always
-    row.appendChild(el('span', 'token-budget-val-always', formatTokenSize(p.tokensAlways) + ' tok'));
-    // Value invoke
+    row.appendChild(el('span', 'token-budget-val-always', formatTokenSize(v.always) + ' tok'));
     const invoke = el('span', 'token-budget-val-invoke');
-    invoke.textContent = '+' + formatTokenSize(p.tokensInvoke || 0) + ' on-invoke';
+    invoke.textContent = '+' + formatTokenSize(v.invoke) + ' on-invoke';
     row.appendChild(invoke);
+    // v1.0.109 — Bottone Disabilita inline (quick context cleanup)
+    const disableBtn = el('button', 'token-budget-disable-btn');
+    disableBtn.appendChild(icon('ban'));
+    disableBtn.appendChild(document.createTextNode('Disabilita −' + formatTokenSize(v.always)));
+    disableBtn.title = 'Disabilita ' + p.id + ' (recupera ' + v.always + ' tok always-on)';
+    disableBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      confirmAndDisablePlugin(p, v.always);
+    });
+    row.appendChild(disableBtn);
     row.addEventListener('click', () => showTokenBudgetModal(sorted));
     list.appendChild(row);
   });
   container.appendChild(list);
 
-  // Footer link: "Vedi tutti (N)" se ci sono più di TOP_N plugin
   if (sorted.length > TOP_N) {
     const seeAll = el('button', 'btn btn-sm btn-ghost token-budget-see-all');
     seeAll.appendChild(icon('external-link'));
     seeAll.appendChild(document.createTextNode('Vedi tutti i ' + sorted.length + ' plugin per peso'));
     seeAll.addEventListener('click', () => showTokenBudgetModal(sorted));
     container.appendChild(seeAll);
+  }
+}
+
+// v1.0.109 — Confirm + disable plugin via IPC pluginAction('disable', id).
+// Quick action dal token budget per recuperare context window al volo.
+async function confirmAndDisablePlugin(p, recovery) {
+  const response = await window.claudeAPI.confirmDialog({
+    title: 'Disabilita plugin',
+    message: 'Disabilitare "' + p.id + '"?',
+    detail: 'Eseguirà `claude plugins disable ' + p.fullId + '` per recuperare ~' + recovery + ' tok always-on dal context window.\n\nIl plugin rimane installato — può essere riabilitato dalla sezione Plugin. Sessioni `claude` già aperte continuano col plugin attivo finché non vengono riavviate.',
+    buttons: ['Annulla', 'Disabilita'],
+  });
+  if (response !== 1) return;
+  const r = await window.claudeAPI.pluginAction('disable', p.fullId);
+  if (r.success) {
+    toast('Plugin disabilitato: ' + p.id + ' (−' + formatTokenSize(recovery) + ' tok)', 'success');
+    await loadData();
+  } else {
+    toast('Errore: ' + (r.error || 'sconosciuto'), 'error');
   }
 }
 
@@ -1270,24 +1461,32 @@ function showTokenBudgetModal(plugins) {
   header.appendChild(closeBtn);
 
   const content = el('div', 'md-content');
+  // v1.0.109 — modello attualmente selezionato + comparison entrambi
+  const model = state.tokenModel || 'sonnet';
+  const modelLabel = model === 'opus' ? 'Opus 4.7' : 'Sonnet 4.6';
   // Intro
   const intro = el('p', 'token-budget-intro');
-  intro.textContent = 'Plugin globali attivi ordinati per peso "always-on" (tokens caricati ad ogni boot di sessione `claude`). Dati estratti dal `plugin-catalog-cache.json` di Claude Code per il modello Sonnet 4.6. La somma always-on è il "costo fisso" del tuo setup; on-invoke è il costo aggiuntivo quando un plugin viene effettivamente invocato.';
+  intro.textContent = 'Plugin globali attivi ordinati per peso "always-on" (tokens caricati ad ogni boot di sessione `claude`). Dati estratti dal `plugin-catalog-cache.json` di Claude Code. Valori attuali per modello ' + modelLabel + '. La colonna "Δ Opus" mostra il delta tra Opus 4.7 e Sonnet 4.6 (Opus pesa tipicamente +30-40%).';
   content.appendChild(intro);
 
-  // Table
+  // Table — v1.0.109 colonna delta Opus aggiunta
   const table = el('table', 'token-budget-table');
   const thead = el('thead');
   const trh = el('tr');
-  ['#', 'Plugin', 'Marketplace', 'Always-on', 'On-invoke', 'Totale'].forEach(h => trh.appendChild(el('th', null, h)));
+  ['#', 'Plugin', 'Marketplace', modelLabel + ' always', 'On-invoke', 'Δ Opus', 'Totale', ''].forEach(h => trh.appendChild(el('th', null, h)));
   thead.appendChild(trh);
   table.appendChild(thead);
   const tbody = el('tbody');
-  const maxAlways = plugins.reduce((m, p) => Math.max(m, p.tokensAlways || 0), 1);
-  plugins.forEach((p, i) => {
+  const sortedPlugins = [...plugins].sort((a, b) => tokenValuesFor(b, model).always - tokenValuesFor(a, model).always);
+  const maxAlways = sortedPlugins.reduce((m, p) => Math.max(m, tokenValuesFor(p, model).always), 1);
+  sortedPlugins.forEach((p, i) => {
+    const v = tokenValuesFor(p, model);
+    const vSonnet = tokenValuesFor(p, 'sonnet');
+    const vOpus   = tokenValuesFor(p, 'opus');
+    const delta = vOpus.always - vSonnet.always;
+    const deltaPct = vSonnet.always > 0 ? Math.round((delta / vSonnet.always) * 100) : 0;
     const tr = el('tr');
     tr.appendChild(el('td', 'token-budget-rank', String(i + 1)));
-    // Name with dot
     const nameTd = el('td', 'token-budget-table-name');
     const dot = el('span', 'token-budget-dot');
     dot.style.background = mktColor(p.mkt);
@@ -1295,29 +1494,45 @@ function showTokenBudgetModal(plugins) {
     nameTd.appendChild(el('span', null, p.id));
     tr.appendChild(nameTd);
     tr.appendChild(el('td', 'token-budget-table-mkt', p.mkt));
-    // Always with mini-bar
     const alwaysTd = el('td', 'token-budget-table-always');
     const mini = el('div', 'token-budget-mini');
     const miniBar = el('div', 'token-budget-mini-bar');
-    miniBar.style.width = Math.max(2, Math.round((p.tokensAlways / maxAlways) * 100)) + '%';
+    miniBar.style.width = Math.max(2, Math.round((v.always / maxAlways) * 100)) + '%';
     miniBar.style.background = mktColor(p.mkt);
     mini.appendChild(miniBar);
     alwaysTd.appendChild(mini);
-    alwaysTd.appendChild(el('span', 'token-budget-val', formatTokenSize(p.tokensAlways) + ' tok'));
+    alwaysTd.appendChild(el('span', 'token-budget-val', formatTokenSize(v.always) + ' tok'));
     tr.appendChild(alwaysTd);
-    tr.appendChild(el('td', 'token-budget-table-invoke', formatTokenSize(p.tokensInvoke || 0) + ' tok'));
-    tr.appendChild(el('td', 'token-budget-table-total', formatTokenSize((p.tokensAlways || 0) + (p.tokensInvoke || 0)) + ' tok'));
+    tr.appendChild(el('td', 'token-budget-table-invoke', formatTokenSize(v.invoke) + ' tok'));
+    // Δ Opus column (sempre relativo a Sonnet, indipendente dal modello attivo)
+    const deltaTd = el('td', 'token-budget-table-delta');
+    if (delta > 0) deltaTd.textContent = '+' + formatTokenSize(delta) + ' (+' + deltaPct + '%)';
+    else if (delta < 0) deltaTd.textContent = formatTokenSize(delta) + ' (' + deltaPct + '%)';
+    else deltaTd.textContent = '—';
+    tr.appendChild(deltaTd);
+    tr.appendChild(el('td', 'token-budget-table-total', formatTokenSize(v.always + v.invoke) + ' tok'));
+    // v1.0.109 — Bottone Disabilita in colonna azioni
+    const actTd = el('td', 'token-budget-table-act');
+    const disBtn = el('button', 'token-budget-disable-btn-sm');
+    disBtn.appendChild(icon('ban'));
+    disBtn.title = 'Disabilita ' + p.id + ' (recupera ' + v.always + ' tok)';
+    disBtn.addEventListener('click', e => { e.stopPropagation(); confirmAndDisablePlugin(p, v.always); });
+    actTd.appendChild(disBtn);
+    tr.appendChild(actTd);
     tbody.appendChild(tr);
   });
   table.appendChild(tbody);
   content.appendChild(table);
 
   // Footer totale
-  const totalAlways = plugins.reduce((s, p) => s + (p.tokensAlways || 0), 0);
-  const totalInvoke = plugins.reduce((s, p) => s + (p.tokensInvoke || 0), 0);
+  const totalAlways = sortedPlugins.reduce((s, p) => s + tokenValuesFor(p, model).always, 0);
+  const totalInvoke = sortedPlugins.reduce((s, p) => s + tokenValuesFor(p, model).invoke, 0);
+  const totalAlwaysSonnet = sortedPlugins.reduce((s, p) => s + tokenValuesFor(p, 'sonnet').always, 0);
+  const totalAlwaysOpus   = sortedPlugins.reduce((s, p) => s + tokenValuesFor(p, 'opus').always, 0);
   const footer = el('div', 'token-budget-modal-footer');
-  footer.textContent = 'Totale: ' + formatTokenSize(totalAlways) + ' tok always-on (peso fisso) + ' +
-    formatTokenSize(totalInvoke) + ' tok on-invoke (cost aggiuntivo per uso) — su ' + plugins.length + ' plugin';
+  footer.textContent = modelLabel + ' totale: ' + formatTokenSize(totalAlways) + ' tok always-on (peso fisso) + ' +
+    formatTokenSize(totalInvoke) + ' tok on-invoke — Sonnet ' + formatTokenSize(totalAlwaysSonnet) +
+    ' vs Opus ' + formatTokenSize(totalAlwaysOpus) + ' (delta ' + formatTokenSize(totalAlwaysOpus - totalAlwaysSonnet) + ' tok)';
   content.appendChild(footer);
 
   function onKey(e) { if (e.key === 'Escape') close(); }
@@ -5636,6 +5851,56 @@ function renderSettings() {
   const apiKeyWrap = el('div', 'apikey-panel-wrap');
   gApiKey.appendChild(apiKeyWrap);
   loadApiKeyPanel(apiKeyWrap);
+
+  // v1.0.110 — Pack N: Lingua interfaccia
+  const gLang = group('Aspetto');
+  const langRow = el('div', 'settings-row');
+  const langLeft = el('div');
+  langLeft.appendChild(el('div', 'settings-row-label', t('settings.language')));
+  langLeft.appendChild(el('div', 'settings-row-desc', t('settings.languageHint')));
+  langRow.appendChild(langLeft);
+  const langRight = el('div');
+  langRight.style.cssText = 'display:flex;gap:8px;align-items:center;';
+  const langSel = el('select', 'config-select');
+  [
+    { v: 'it', l: 'Italiano' },
+    { v: 'en', l: 'English' },
+  ].forEach(o => {
+    const opt = el('option', null, o.l);
+    opt.value = o.v;
+    langSel.appendChild(opt);
+  });
+  langSel.value = i18nState.lang;
+  langSel.addEventListener('change', async () => {
+    const next = langSel.value;
+    if (!LOCALES[next]) return;
+    state.locale = next;
+    setLocale(next);
+    try { document.documentElement.setAttribute('lang', next); } catch {}
+    await window.claudeAPI.setState({ locale: next });
+    toast(t('toast.saved'), 'success');
+    applyStaticI18n();
+    render();
+  });
+  langRight.appendChild(langSel);
+  // Bottone "Usa lingua sistema": reset state.locale → al prossimo avvio
+  // ri-fa auto-detect dell'OS. Visibile solo se locale è stato impostato
+  // esplicitamente (state.locale non vuoto).
+  if (state.locale) {
+    const sysBtn = el('button', 'btn btn-sm btn-ghost', t('settings.useSystemLang'));
+    sysBtn.title = t('settings.useSystemLangTooltip');
+    sysBtn.addEventListener('click', async () => {
+      state.locale = '';
+      await window.claudeAPI.setState({ locale: '' });
+      toast(t('settings.useSystemLang'), 'info');
+      // Non re-render qui: la lingua attiva resta quella corrente fino al
+      // prossimo riavvio dell'app (quando initLocale farà auto-detect).
+      renderSettings();
+    });
+    langRight.appendChild(sysBtn);
+  }
+  langRow.appendChild(langRight);
+  gLang.appendChild(langRow);
 
   const g1 = group('Percorsi');
   row(g1, 'Cartella Claude Code', 'Directory di configurazione globale', d.claudeDir);

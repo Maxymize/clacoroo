@@ -1,5 +1,84 @@
 # Changelog
 
+## v1.0.110 — 2026-05-26 — Pack N (Phase 1): i18n infrastructure + sidebar/topbar/section titles migrati
+
+Prima fase di Pack N — internazionalizzazione `it` + `en` (l'altra metà della Fase 0 prima del lancio pubblico AGPL). Mira a coprire ~500-700 stringhe UI totali in 10-15h di lavoro. Questa v1.0.110 imposta solo l'infrastruttura + le aree statiche; le sezioni dinamiche (modali, toast, badge, dropdown sort, empty states…) seguiranno nelle prossime release di Pack N.
+
+### Infrastruttura i18n
+
+- [FEATURE] **`src/renderer/locales/it.js` + `en.js`**: tabelle nested per categoria (`nav`, `topbar`, `section`, `kpi`, `badge`, `mcp`, `button`, `view`, `sort`, `search`, `empty`, `settings`, `toast`). ~80 stringhe iniziali per lingua. Caricate via `<script>` tag (no `require()`: CSP + `nodeIntegration:false`). Si attaccano a `window.LOCALES`
+- [FEATURE] **Helper `t(key, vars?)`** in `app.js`: lookup gerarchico (es. `t('nav.dashboard')`), fallback automatico EN se mancante in IT, fallback alla key stessa se mancante ovunque, sostituzione `{var}` da `vars` argument
+- [FEATURE] **`resolveLocale(raw)`** mappa locale OS (`it-IT`, `en-US`, `fr-FR`, …) → 'it' o 'en' con fallback 'en' per lingue non supportate
+- [FEATURE] **`applyStaticI18n()`**: itera tutti i nodi con `data-i18n="key"` e ne aggiorna il `textContent` via `t()`. Aggiorna anche `<html lang>` per accessibility/screen reader
+
+### Auto-detect lingua sistema (primo avvio)
+
+- [FEATURE] **IPC `get-system-locale`** in `src/main.js`: chiama `app.getLocale()` (preferito) + `app.getSystemLocale()` (fallback) Electron, ritorna entrambi al renderer
+- [FEATURE] **Bridge `getSystemLocale()`** in `src/preload.js`
+- [FEATURE] **`initLocale()`** chiamata UNA volta in `init()` PRIMA del primo render. Ordine: (1) `state.locale` persistito → usa quello, (2) altrimenti chiama IPC → `resolveLocale()` → 'it'/'en', (3) fallback finale 'en'
+- [FEATURE] **`state.locale`** (`'' | 'it' | 'en'`) persistito in `state.json`. Vuoto = auto-detect ad ogni avvio. Setato esplicitamente solo se l'utente cambia lingua dal dropdown
+
+### Dropdown lingua in Impostazioni
+
+- [FEATURE] **Sezione "Aspetto" → "Lingua"** in `renderSettings()`: dropdown con `Italiano` + `English`, hint che spiega "auto-detected from OS first time". Selezione → `setState({ locale })` + `setLocale()` + `applyStaticI18n()` + `render()` immediato (no riavvio)
+- [FEATURE] **Bottone "Usa lingua sistema"** (visibile solo se `state.locale` esplicitamente settato): reset → `setState({ locale: '' })` → al prossimo riavvio l'app ri-fa auto-detect dall'OS. Tooltip esplicativo
+- [STYLE] Coerente con il pattern esistente del select "Editor predefinito" / "Shell predefinita" già usato in Impostazioni
+
+### Aree migrate a `t()` in questa release
+
+- [REFACTOR] **Sidebar nav** (`src/renderer/index.html`): ogni label nav wrappata in `<span class="nav-label" data-i18n="nav.X">`. Click sui 10 items + cambio lingua aggiorna textContent istantaneamente
+- [REFACTOR] **Topbar title** (`render()`): mappa `state.section` → key `nav.X` → `t()`. Mostra "Dashboard"/"Marketplace"/"Plugin"/"Skill"/… in IT e "Dashboard"/"Marketplaces"/"Plugins"/… in EN
+- [REFACTOR] **Topbar buttons**: "Aggiorna" / "Terminale" / "+ Progetto" / "+ Marketplace" / "+ MCP" + tooltips. Refresh button preserva l'icona Lucide rotate-cw
+
+### Aree NON ancora migrate (Phase 2-4 prossime release)
+
+- Section titles renderizzati in JS (`sectionTitle(text, iconName)`) ancora hardcoded — migrazione massiva nelle prossime release
+- KPI labels Dashboard
+- Badge "globale/locale/disabilitato/modificato/health: errore"
+- Status MCP ("Connected/Needs auth/Warning/…")
+- Dropdown sort + view switcher tooltips
+- Modal titles + form labels (Add Marketplace + Add MCP + confirm dialogs)
+- Toast messages, empty states, attività recenti
+- Settings labels esistenti (Percorsi, Editor esterno, Terminale, Progetti tracciati…)
+
+### Decisioni design
+
+- **Default fallback EN, non IT**: anglofoni = TAM ~25× IT (1.5B vs 60M). Sistema su qualsiasi lingua non-IT → mostra EN, non IT
+- **Auto-detect non persistito**: se l'utente cambia lingua dell'OS, CLACOROO segue al prossimo avvio. Override manuale persistente solo se dropdown usato esplicitamente
+- **Stringa `t()` non re-render automatico**: chiamante decide se serve `render()` dopo cambio lingua (per ora: sì sempre dal dropdown)
+- **No traduzioni in `main.js`/lib backend**: errori e messaggi sistema restano in IT/italiano in v1.0.110; traduzione completa in Phase 3
+
+## v1.0.109 — 2026-05-26 — Pack C: Comparatore Opus/Sonnet + Disabilita inline dal token budget
+
+Due feature Pack C selezionate dall'utente (#3 + #4). Le altre 2 (dependency tree + statistiche storiche) spostate in ROADMAP.md per pianificazione community futura.
+
+### Comparatore Opus 4.7 vs Sonnet 4.6 (#3)
+
+I dati per entrambi i modelli sono **già nel file** `plugin-catalog-cache.json` di Claude Code. Prima caricavamo solo Sonnet 4.6 — ora caricati entrambi e l'utente può switchare.
+
+- [FEATURE] **`tokensByModel`** nuovo campo per ogni plugin in `state.plugins`: `{ sonnet: {always, invoke}, opus: {always, invoke} }`
+- [FEATURE] **`state.tokenModel`** ('sonnet' | 'opus', default 'sonnet') persistito in `state.json`. Restore in `init()` con validation
+- [FEATURE] **Dropdown "Modello: [Sonnet 4.6 ▼ / Opus 4.7 ▼]"** nel section title del token budget (sia Dashboard compact che Stats full). Switch immediato → ricalcolo summary + sort + render
+- [FEATURE] **Modal token budget esteso**: nuova colonna **"Δ Opus"** che mostra la differenza in tok + % di Opus rispetto a Sonnet (tipicamente +30-40%). Footer modal mostra il totale per entrambi i modelli + delta complessivo
+- [FEATURE] **`tokenValuesFor(p, model)`** helper: estrae always/invoke per il modello corrente con fallback graceful
+- [STYLE] `.token-budget-title-row` flex space-between per accomodare title + dropdown allo stesso livello
+
+### Bottone "Disabilita" inline dal token budget (#4)
+
+Quick action di "context cleanup" senza dover navigare alla sezione Plugin.
+
+- [FEATURE] **`.token-budget-disable-btn`** su ogni riga del Top-N (Dashboard + Stats): testo "Disabilita −2.1K" con icona Lucide `ban`. Click → confirm dialog con dettagli (recupero tok + nota sessioni aperte) → `pluginAction('disable', fullId)` → toast + reload data
+- [FEATURE] **`.token-budget-disable-btn-sm`** versione compatta (solo icona) nella colonna azioni del modal full table
+- [FEATURE] **`confirmAndDisablePlugin(p, recovery)`** helper: confirm + IPC + toast feedback con "Disabilitato: X (−Y tok)" che evidenzia il recupero
+- [SAFETY] Confirm dialog OBBLIGATORIO + spiegazione che le sessioni `claude` già aperte continuano col plugin attivo finché non vengono riavviate (coerente con v1.0.106 comportamento OS-level)
+
+### ROADMAP.md creato
+
+- [DOCS] **Nuovo file `ROADMAP.md`**: idee aperte per future iterazioni, organizzate per area (Analytics, UX, Distribuzione, i18n, Multi-account). Task #1 (Dependency tree) e #2 (Statistiche storiche) di Pack C spostati qui dal TASK.md
+- [DOCS] **Brainstorming Free vs Pro** storico: descrive cosa terremmo gratuito (tutto quello che oggi è già implementato) e cosa potrebbe diventare Pro (bulk ops, automation, multi-account, custom themes, AI recommendations). Pricing ipotetico €4-7/mese · €40-60/anno · €99-149 lifetime. Filosofia: free completo e auto-sufficient, Pro = automation + scale + premium polish
+- [DOCS] **Sezione "Suggest a feature"** placeholder per quando il progetto sarà pubblico (template issue GitHub + modulo sito web)
+- [DOCS] **Open questions** documentate: scissione codice AGPL/Pro, payment provider (Stripe/Lemon), license key (offline JWT vs online check)
+
 ## v1.0.108 — 2026-05-26 — Section title con icona Lucide + spacing uniforme + Token budget compatto in Dashboard, completo in Stats
 
 Tre fix Dashboard dal feedback utente:

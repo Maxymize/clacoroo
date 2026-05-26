@@ -1052,6 +1052,17 @@ ipcMain.handle('set-state', async (_e, patch) => {
   return { success: writeState(patch) };
 });
 
+// Pack N v1.0.110 — i18n: espone la locale di sistema (es. 'it-IT', 'en-US') al
+// renderer. Usata solo al primo avvio per auto-detect; le successive selezioni
+// dell'utente sono persistite in state.locale.
+ipcMain.handle('get-system-locale', async () => {
+  try {
+    return { locale: app.getLocale() || '', systemLocale: app.getSystemLocale ? app.getSystemLocale() : '' };
+  } catch {
+    return { locale: '', systemLocale: '' };
+  }
+});
+
 // v1.0.09 — Soft auto-update: cooldown 1h su success, 10min su failure (retry più rapido)
 const UPDATE_COOLDOWN_OK_MS   = 60 * 60 * 1000;
 const UPDATE_COOLDOWN_FAIL_MS = 10 * 60 * 1000;
