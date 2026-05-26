@@ -352,8 +352,8 @@ function appendModifiedBadge(parent, item, kind, mode) {
   const modBadge = el('span', 'browse-card-modified');
   modBadge.appendChild(icon('pencil'));
   modBadge.appendChild(document.createTextNode(t('badge.modified')));
-  if (tsStr) modBadge.title = 'Modificato localmente il ' + tsStr +
-    '\n\nLa modifica verrà sovrascritta al prossimo `claude plugins update ' + item.fullId + '`.';
+  if (tsStr) modBadge.title = t('plugin.modifiedLocal', { when: tsStr })
+    + t('plugin.modifiedNote', { id: item.fullId });
   parent.appendChild(modBadge);
 }
 
@@ -603,7 +603,7 @@ async function loadData() {
   setStatus('loading', 'Caricamento…');
   const result = await window.claudeAPI.getData();
   if (!result.ok) {
-    setStatus('error', 'Errore lettura dati');
+    setStatus('error', t('uiErr.dataLoad'));
     toast(t('toast.errorPrefix', { msg: result.error }), 'error');
     return;
   }
@@ -821,7 +821,7 @@ function render() {
       if (r.success) {
         toast(t('toast.projectAdded', { name: r.path.split('/').pop() }), 'success');
         await loadData();
-      } else if (r.error !== 'Annullato') {
+      } else if (r.error !== t('uiErr.cancelled')) {
         toast(t('toast.errorPrefix', { msg: r.error }), 'error');
       }
     });
@@ -1373,7 +1373,7 @@ function renderTokenBudgetSection(container, plugins, opts = {}) {
     const disableBtn = el('button', 'token-budget-disable-btn');
     disableBtn.appendChild(icon('ban'));
     disableBtn.appendChild(document.createTextNode('Disabilita −' + formatTokenSize(v.always)));
-    disableBtn.title = 'Disabilita ' + p.id + ' (recupera ' + v.always + ' tok always-on)';
+    disableBtn.title = t('plugin.disableTip', { id: p.id, tok: v.always });
     disableBtn.addEventListener('click', e => {
       e.stopPropagation();
       confirmAndDisablePlugin(p, v.always);
@@ -1387,7 +1387,7 @@ function renderTokenBudgetSection(container, plugins, opts = {}) {
   if (sorted.length > TOP_N) {
     const seeAll = el('button', 'btn btn-sm btn-ghost token-budget-see-all');
     seeAll.appendChild(icon('external-link'));
-    seeAll.appendChild(document.createTextNode('Vedi tutti i ' + sorted.length + ' plugin per peso'));
+    seeAll.appendChild(document.createTextNode(t('plugin.seeAllTopN', { n: sorted.length })));
     seeAll.addEventListener('click', () => showTokenBudgetModal(sorted));
     container.appendChild(seeAll);
   }
@@ -1481,7 +1481,7 @@ function showTokenBudgetModal(plugins) {
     const actTd = el('td', 'token-budget-table-act');
     const disBtn = el('button', 'token-budget-disable-btn-sm');
     disBtn.appendChild(icon('ban'));
-    disBtn.title = 'Disabilita ' + p.id + ' (recupera ' + v.always + ' tok)';
+    disBtn.title = t('plugin.disableTipShort', { id: p.id, tok: v.always });
     disBtn.addEventListener('click', e => { e.stopPropagation(); confirmAndDisablePlugin(p, v.always); });
     actTd.appendChild(disBtn);
     tr.appendChild(actTd);
@@ -1535,7 +1535,7 @@ function renderDashboardSection({ container, title, items, buildChip, targetSect
   });
   // 20° chip "Vedi tutte" — sempre presente, colore accent CLACOROO
   const seeAllChip = el('div', 'skill-chip dashboard-see-all clickable');
-  seeAllChip.title = 'Apri la sezione completa ' + title;
+  seeAllChip.title = t('plugin.openFullSection', { title });
   seeAllChip.appendChild(icon('external-link'));
   const lbl = el('span', 'dashboard-see-all-lbl', 'Vedi tutte (' + sorted.length + ')');
   seeAllChip.appendChild(lbl);
@@ -1635,9 +1635,9 @@ function renderPlugins() {
 
   // Status chips
   const chipDefs = [
-    { key: 'all',     label: 'Tutti' },
-    { key: 'active',  label: 'Attivi',      dot: '#10b981' },
-    { key: 'blocked', label: 'Disattivati', dot: '#ef4444' },
+    { key: 'all',     label: t('filter.all') },
+    { key: 'active',  label: t('filter.active'),    dot: '#10b981' },
+    { key: 'blocked', label: t('filter.disabled'),  dot: '#ef4444' },
   ];
   const chips = el('div', 'chips');
   chipDefs.forEach(c => {
@@ -1661,7 +1661,7 @@ function renderPlugins() {
   if (allMkts.length > 1) {
     const mktChips = el('div', 'chips');
     const allChip = el('div', 'chip' + (f.mkt === 'all' ? ' active' : ''));
-    allChip.textContent = 'Tutti i marketplace';
+    allChip.textContent = t('filter.allMarketplaces');
     allChip.addEventListener('click', () => { state.filters.plugins.mkt = 'all'; renderPlugins(); });
     mktChips.appendChild(allChip);
     allMkts.forEach(mkt => {
@@ -1816,10 +1816,10 @@ function showPluginContentModal(p) {
   // v1.0.61 — NON chiudo qui: openMarkdownPreview → showMarkdownModal
   // chiamerà swapModalOverlay() che rimuove questo overlay dopo aver
   // appeso il nuovo. Niente flash.
-  appendModalItemList(content, 'Skills', p.skills, item => {
+  appendModalItemList(content, t('plugin.sectionSkills'), p.skills, item => {
     openMarkdownPreview(p.fullId, 'skill', item.name || item);
   });
-  appendModalItemList(content, 'Agents', p.agents, item => {
+  appendModalItemList(content, t('plugin.sectionAgents'), p.agents, item => {
     openMarkdownPreview(p.fullId, 'agent', item.name || item);
   });
 
@@ -1835,7 +1835,7 @@ function showPluginContentModal(p) {
   }
 
   if (p.hasHooks) {
-    content.appendChild(el('h3', 'plugin-content-section-title', 'Hook'));
+    content.appendChild(el('h3', 'plugin-content-section-title', t('plugin.sectionHook')));
     if (p.hookEvents && p.hookEvents.length) {
       // Lista dettagliata: nome evento + N handler (es. "SessionStart · 2 handler")
       const list = el('div', 'plugin-content-list');
@@ -2014,7 +2014,7 @@ function buildPluginCard(p) {
 
   // Toggle enable/disable
   const toggleWrap = el('label', 'toggle');
-  toggleWrap.title = p.blocked ? 'Attiva plugin' : 'Disattiva plugin';
+  toggleWrap.title = p.blocked ? t('plugin.activate') : t('plugin.deactivate');
   const inp = el('input');
   inp.type = 'checkbox';
   if (!p.blocked) inp.checked = true;
@@ -2028,9 +2028,9 @@ function buildPluginCard(p) {
     const action = p.blocked ? 'enable' : 'disable';
     const result = await window.claudeAPI.pluginAction(action, p.fullId);
     if (result.success) {
-      const verb = action === 'enable' ? 'Attivato' : 'Disattivato';
-      toast((action === 'enable' ? '✓ ' : '✗ ') + verb + ': ' + p.id, action === 'enable' ? 'success' : 'warn');
-      window.claudeAPI.showNotification('Plugin ' + verb.toLowerCase(), p.id);
+      toast(t(action === 'enable' ? 'plugin.toastEnabled' : 'plugin.toastDisabled', { id: p.id }),
+            action === 'enable' ? 'success' : 'warn');
+      window.claudeAPI.showNotification(action === 'enable' ? t('plugin.notifActivated') : t('plugin.notifDeactivated'), p.id);
       statsCache = null;  // forza re-fetch contextBreakdown → barra si aggiorna
       await loadData();
     } else {
@@ -2071,22 +2071,22 @@ function buildPluginCard(p) {
   actions.appendChild(finderBtn);
   actions.appendChild(codeBtn);
 
-  const updateBtn = el('button', 'btn btn-sm btn-ghost', 'Aggiorna');
+  const updateBtn = el('button', 'btn btn-sm btn-ghost', t('button.update'));
   updateBtn.addEventListener('click', async () => {
     updateBtn.disabled = true;
     updateBtn.textContent = '…';
     const r = await window.claudeAPI.pluginAction('update', p.fullId);
     if (r.success) {
       toast(t('toast.pluginUpdated', { id: p.id }), 'success');
-      window.claudeAPI.showNotification('Plugin aggiornato', p.id);
+      window.claudeAPI.showNotification(t('plugin.notifUpdated'), p.id);
     } else toast(t('toast.errorUpdate', { msg: r.error }), 'error');
     updateBtn.disabled = false;
-    updateBtn.textContent = 'Aggiorna';
+    updateBtn.textContent = t('button.update');
     statsCache = null;
     await loadData();
   });
 
-  const uninstBtn = el('button', 'btn btn-sm btn-danger', 'Rimuovi');
+  const uninstBtn = el('button', 'btn btn-sm btn-danger', t('button.remove'));
   uninstBtn.addEventListener('click', async () => {
     const choice = await window.claudeAPI.confirmDialog({
       title:   t('confirm.removePlugin.title'),
@@ -2494,7 +2494,7 @@ async function showMarketplaceContentModal(m) {
 
   // Mostra placeholder mentre carichiamo i metadata
   const listWrap = el('div');
-  content.appendChild(el('h3', 'plugin-content-section-title', 'Plugin nel marketplace'));
+  content.appendChild(el('h3', 'plugin-content-section-title', t('plugin.pluginsInMkt')));
   listWrap.appendChild(el('div', 'plugin-content-note', 'Caricamento lista plugin…'));
   content.appendChild(listWrap);
 
@@ -2539,12 +2539,12 @@ async function showMarketplaceContentModal(m) {
     const right = el('div', 'mkt-modal-plugin-actions');
     if (local) {
       // Già installato: bottone "Dettagli" che apre il modal plugin
-      const detailsBtn = el('button', 'btn btn-sm btn-ghost', 'Dettagli');
+      const detailsBtn = el('button', 'btn btn-sm btn-ghost', t('button.details'));
       // v1.0.61 — Lascio che swapModalOverlay gestisca la rimozione: niente flash
       detailsBtn.addEventListener('click', () => showPluginContentModal(local));
       right.appendChild(detailsBtn);
     } else {
-      const installBtn = el('button', 'btn btn-sm btn-primary', 'Installa');
+      const installBtn = el('button', 'btn btn-sm btn-primary', t('button.install'));
       installBtn.dataset.tt = 'claude plugins install ' + remote.name + '@' + m.id;
       installBtn.addEventListener('click', async () => {
         const ok = await window.claudeAPI.confirmDialog({
@@ -2562,12 +2562,12 @@ async function showMarketplaceContentModal(m) {
         const r = await window.claudeAPI.pluginAction('install', remote.name + '@' + m.id);
         if (r.success) {
           toast('Installato: ' + remote.name, 'success');
-          window.claudeAPI.showNotification('Plugin installato', remote.name + '@' + m.id);
+          window.claudeAPI.showNotification(t('plugin.notifInstalled'), remote.name + '@' + m.id);
           await loadData();
           close();  // chiudo il modal, lista refreshata
         } else {
           installBtn.disabled = false;
-          installBtn.textContent = 'Installa';
+          installBtn.textContent = t('button.install');
           toast('Errore installazione: ' + r.error, 'error');
         }
       });
@@ -2587,7 +2587,7 @@ function renderInstalledOnly(container, m) {
     if (p.description) left.appendChild(el('div', 'plugin-content-item-desc', p.description));
     row.appendChild(left);
     const right = el('div', 'mkt-modal-plugin-actions');
-    const detailsBtn = el('button', 'btn btn-sm btn-ghost', 'Dettagli');
+    const detailsBtn = el('button', 'btn btn-sm btn-ghost', t('button.details'));
     // v1.0.61 — swapModalOverlay gestisce la transizione senza flash
     detailsBtn.addEventListener('click', () => showPluginContentModal(p));
     right.appendChild(detailsBtn);
@@ -2725,8 +2725,8 @@ function renderMarketplaces() {
     countBtn.appendChild(cntL);
     if (totalAvailable > 0) {
       countBtn.dataset.tt = m.installed === totalAvailable
-        ? 'Vedi plugin installati'
-        : 'Vedi e installa plugin';
+        ? t('plugin.seePlugins')
+        : t('plugin.seeAndInstall');
       countBtn.addEventListener('click', () => showMarketplaceContentModal(m));
     } else {
       countBtn.disabled = true;
@@ -2759,7 +2759,7 @@ function renderMarketplaces() {
       updateMktBtn.disabled = false; updateMktBtn.textContent = '↻ Aggiorna';
     });
 
-    const removeMktBtn = el('button', 'btn btn-sm btn-danger', 'Rimuovi');
+    const removeMktBtn = el('button', 'btn btn-sm btn-danger', t('button.remove'));
     removeMktBtn.addEventListener('click', async () => {
       const choice = await window.claudeAPI.confirmDialog({
         title:   t('confirm.removeMarketplace.title'),
@@ -2938,7 +2938,7 @@ function buildSkillAgentCard(item, kind) {
   // Footer: bottone azione (solo per scope global, locali non hanno preview)
   if (item.scope === 'global') {
     const foot = el('div', 'browse-card-foot');
-    const openBtn = btnWithIcon('btn btn-sm btn-ghost', 'eye', 'Apri preview');
+    const openBtn = btnWithIcon('btn btn-sm btn-ghost', 'eye', t('button.openPreview'));
     openBtn.addEventListener('click', e => {
       e.stopPropagation();
       openMarkdownPreview(item.fullId, kind, item.name);
@@ -3047,7 +3047,7 @@ function renderHooks() {
   const events = Array.from(new Set(all.map(h => h.event))).sort();
   const evWrap = el('div', 'hook-filter-group');
   evWrap.appendChild(el('span', 'hook-filter-label', 'Evento:'));
-  const evAll = el('button', 'hook-filter-chip' + (f.event === 'all' ? ' active' : ''), 'Tutti');
+  const evAll = el('button', 'hook-filter-chip' + (f.event === 'all' ? ' active' : ''), t('filter.all'));
   evAll.addEventListener('click', () => { state.filters.hooks.event = 'all'; renderHooks(); });
   evWrap.appendChild(evAll);
   events.forEach(e => {
@@ -3063,7 +3063,7 @@ function renderHooks() {
   const scWrap = el('div', 'hook-filter-group');
   scWrap.appendChild(el('span', 'hook-filter-label', 'Scope:'));
   ['all', 'global', 'local'].forEach(key => {
-    const lbl = key === 'all' ? 'Tutti' : (key === 'global' ? 'Globali' : 'Locali');
+    const lbl = key === 'all' ? t('filter.all') : (key === 'global' ? t('filter.globals') : t('filter.locals'));
     const chip = el('button', 'hook-filter-chip' + (f.scope === key ? ' active' : ''), lbl);
     chip.addEventListener('click', () => { state.filters.hooks.scope = key; renderHooks(); });
     scWrap.appendChild(chip);
@@ -3207,15 +3207,15 @@ function buildHookCard(item) {
       const info = avail[dep];
       if (!info) return;
       if (info.installCommand) {
-        const btn = btnWithIcon('hook-dep-install-btn', 'play', 'Installa ' + dep);
+        const btn = btnWithIcon('hook-dep-install-btn', 'play', t('hookDep.installBtn', { dep }));
         btn.title = 'Apre il terminale integrato + pre-digita:\n' + info.installCommand
           + '\n\nNON premerà Enter automatico — conferma tu premendo Invio se vuoi procedere.';
         btn.addEventListener('click', e => { e.stopPropagation(); installDepInTerminal(dep, info.installCommand); });
         warnRow.appendChild(btn);
       } else if (info.docsUrl) {
         // Tool senza installer one-liner (es. Docker Desktop, gcloud) → solo link docs
-        const link = btnWithIcon('hook-dep-install-btn hook-dep-install-docs', 'external-link', 'Docs ' + dep);
-        link.title = 'Apre la pagina docs di ' + dep + ' nel browser (richiede installer GUI manuale)';
+        const link = btnWithIcon('hook-dep-install-btn hook-dep-install-docs', 'external-link', t('hookDep.docsBtn', { dep }));
+        link.title = t('hookDep.docsTip', { dep });
         link.addEventListener('click', e => { e.stopPropagation(); window.claudeAPI.openExternal(info.docsUrl); });
         warnRow.appendChild(link);
       }
@@ -3265,7 +3265,7 @@ function buildHookCard(item) {
 
   // Footer azioni
   const foot = el('div', 'hook-card-foot');
-  const detailBtn = btnWithIcon('btn btn-sm btn-ghost', 'eye', 'Dettagli');
+  const detailBtn = btnWithIcon('btn btn-sm btn-ghost', 'eye', t('button.details'));
   detailBtn.addEventListener('click', e => { e.stopPropagation(); showHookDetailsModal(item); });
   foot.appendChild(detailBtn);
   if (item.sourcePath) {
@@ -3417,7 +3417,7 @@ function showHookDetailsModal(item) {
   titleWrap.appendChild(el('span', 'hook-modal-plugin', item.pluginId + (item.mkt ? ' · ' + item.mkt : '')));
   header.appendChild(titleWrap);
 
-  const copyBtn = btnWithIcon('md-copy', 'copy', 'Copia');
+  const copyBtn = btnWithIcon('md-copy', 'copy', t('button.copy'));
   copyBtn.title = 'Copia il JSON completo di questa configurazione hook';
   copyBtn.addEventListener('click', () => {
     const json = JSON.stringify({
@@ -3439,12 +3439,12 @@ function showHookDetailsModal(item) {
   const body = el('div', 'md-content hook-modal-body');
   if (item.matcher) {
     const row = el('div', 'hook-detail-row');
-    row.appendChild(el('span', 'hook-detail-label', 'Matcher'));
+    row.appendChild(el('span', 'hook-detail-label', t('plugin.matcher')));
     row.appendChild(el('code', 'hook-detail-value', item.matcher));
     body.appendChild(row);
   }
   const scopeRow = el('div', 'hook-detail-row');
-  scopeRow.appendChild(el('span', 'hook-detail-label', 'Scope'));
+  scopeRow.appendChild(el('span', 'hook-detail-label', t('plugin.scope')));
   scopeRow.appendChild(el('span', '', item.scope === 'local'
     ? t('badge.scopeLocalParen', { name: item.projectName || item.projectPath })
     : t('badge.scopeGlobal')));
@@ -3489,7 +3489,7 @@ function showHookDetailsModal(item) {
 
   if (item.sourcePath) {
     const srcRow = el('div', 'hook-detail-row');
-    srcRow.appendChild(el('span', 'hook-detail-label', 'Sorgente'));
+    srcRow.appendChild(el('span', 'hook-detail-label', t('plugin.source')));
     const link = el('button', 'btn btn-sm btn-ghost', item.sourcePath);
     link.addEventListener('click', () => window.claudeAPI.openDirectory(item.sourcePath));
     srcRow.appendChild(link);

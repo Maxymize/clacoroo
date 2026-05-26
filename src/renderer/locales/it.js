@@ -190,6 +190,51 @@ window.LOCALES.it = {
     fromPlugin:    'Dai plugin',
     builtinClaudeAi:'claude.ai',
     needsAuth:     'Needs Auth',
+    active:        'Attivi',
+    disabled:      'Disattivati',
+    allMarketplaces:'Tutti i marketplace',
+    globals:       'Globali',
+    locals:        'Locali',
+  },
+
+  // Plugin card / modal labels e tooltip
+  plugin: {
+    activate:      'Attiva plugin',
+    deactivate:    'Disattiva plugin',
+    notifActivated:'Plugin attivato',
+    notifDeactivated:'Plugin disattivato',
+    notifInstalled:'Plugin installato',
+    notifUpdated:  'Plugin aggiornato',
+    toastEnabled:  '✓ Attivato: {id}',
+    toastDisabled: '✗ Disattivato: {id}',
+    disableTip:    'Disabilita {id} (recupera {tok} tok always-on)',
+    disableTipShort:'Disabilita {id} (recupera {tok} tok)',
+    seeAllTopN:    'Vedi tutti i {n} plugin per peso',
+    openFullSection:'Apri la sezione completa {title}',
+    modifiedLocal: 'Modificato localmente il {when}',
+    modifiedNote:  '\n\nLa modifica verrà sovrascritta al prossimo `claude plugins update {id}`.',
+    sectionSkills: 'Skills',
+    sectionAgents: 'Agents',
+    sectionHook:   'Hook',
+    pluginsInMkt:  'Plugin nel marketplace',
+    seePlugins:    'Vedi plugin installati',
+    seeAndInstall: 'Vedi e installa plugin',
+    matcher:       'Matcher',
+    scope:         'Scope',
+    source:        'Sorgente',
+  },
+
+  // Hooks deps & status
+  hookDep: {
+    installBtn:    'Installa {dep}',
+    docsBtn:       'Docs {dep}',
+    docsTip:       'Apre la pagina docs di {dep} nel browser (richiede installer GUI manuale)',
+  },
+
+  // Errori UI generici
+  uiErr: {
+    dataLoad:      'Errore lettura dati',
+    cancelled:     'Annullato',
   },
 
   // Search placeholder generico

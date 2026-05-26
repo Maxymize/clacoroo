@@ -1,5 +1,39 @@
 # Changelog
 
+## v1.0.118 — 2026-05-26 — Pack N (Phase 3e): plugin/marketplace/hook buttons + filter chips + notifications + tooltip
+
+Continua Pack N i18n. Migrate ~50 stringhe scattered: filter chips Plugin/Hook, plugin card buttons (Aggiorna/Rimuovi/Dettagli/Installa), system notifications, plugin status tooltips e label hook detail.
+
+### Locales — nuove key
+
+- **`filter.*` (+5)**: active, disabled, allMarketplaces, globals, locals
+- **`plugin.*` (16+2)**: activate, deactivate, notifActivated, notifDeactivated, notifInstalled, notifUpdated, disableTip{id,tok}, disableTipShort{id,tok}, seeAllTopN{n}, openFullSection{title}, modifiedLocal{when}, modifiedNote{id}, sectionSkills/Agents/Hook, pluginsInMkt, seePlugins, seeAndInstall, matcher, scope, source, toastEnabled{id}, toastDisabled{id}
+- **`hookDep.*` (3)**: installBtn{dep}, docsBtn{dep}, docsTip{dep}
+- **`uiErr.*` (2)**: dataLoad, cancelled
+
+### Migrazione
+
+- [REFACTOR] **Plugin filter chips**: status (Tutti/Attivi/Disattivati) + marketplace filter (Tutti i marketplace) via t()
+- [REFACTOR] **Hook filter chips**: scope filter (Tutti/Globali/Locali) + event filter (Tutti)
+- [REFACTOR] **Plugin card buttons**: Aggiorna / Rimuovi / Dettagli / Installa via button.* keys; reused buttons via replace_all
+- [REFACTOR] **Plugin toggle tooltip**: 'Attiva plugin' / 'Disattiva plugin' via t()
+- [REFACTOR] **Plugin notifications**: 'Plugin attivato/disattivato/installato/aggiornato' + toast `✓ Attivato: {id}` / `✗ Disattivato: {id}`
+- [REFACTOR] **Plugin tooltip**: 'Disabilita X (recupera Y tok always-on)' con interpolazione completa
+- [REFACTOR] **Top-N "Vedi tutti i N plugin per peso"** + tooltip "Apri la sezione completa X"
+- [REFACTOR] **Modal section heads**: 'Skills', 'Agents', 'Hook' (modal Plugin content) + 'Plugin nel marketplace'
+- [REFACTOR] **Hook detail labels**: 'Matcher', 'Scope', 'Sorgente'
+- [REFACTOR] **Hook dep buttons**: 'Installa X' + 'Docs X' + tooltip docs
+- [REFACTOR] **Marketplace tooltip**: 'Vedi plugin installati' / 'Vedi e installa plugin'
+- [REFACTOR] **Modified badge** title con interpolazione `{when}` + `{id}`
+- [REFACTOR] **Generic UI errors**: 'Errore lettura dati' + 'Annullato' (status load + cancel check)
+- [REFACTOR] **Copy / Apri preview** + altri button reuse da namespace `button.*`
+
+### Stats
+
+- 382 chiamate `t()` totali in app.js (era 0 pre-Pack N)
+- Coverage stimato: ~85-90% delle stringhe user-visible migrate
+- Residui: loadAccountPanel / loadApiKeyPanel inner texts, onboarding tour, About dialog, restanti toast errori (~10-15 stringhe minori)
+
 ## v1.0.117 — 2026-05-26 — Pack N (Phase 3d): Stats KPI + range filters + tabs + context breakdown
 
 Continua Pack N i18n. Migrate l'intera pagina Stats: tab bar, range filter chips, 10 KPI labels e i 6 context breakdown labels con interpolazione.
