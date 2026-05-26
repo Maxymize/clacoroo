@@ -5237,7 +5237,7 @@ function paintAccountPanel(container, result) {
   container.textContent = '';
   if (!result || !result.ok) {
     const err = el('div', 'account-error',
-      'Impossibile leggere lo stato auth: ' + ((result && result.error) || 'errore sconosciuto'));
+      t('account.readError', { msg: (result && result.error) || t('account.unknownError') }));
     container.appendChild(err);
     return;
   }
@@ -5245,9 +5245,8 @@ function paintAccountPanel(container, result) {
 
   if (!d.loggedIn) {
     const card = el('div', 'account-card account-card-loggedout');
-    card.appendChild(el('div', 'account-status', '⚠ Non autenticato'));
-    card.appendChild(el('div', 'account-note',
-      'Esegui `claude auth login` da terminale (o avvia Claude Code) per accedere.'));
+    card.appendChild(el('div', 'account-status', t('account.notAuthed')));
+    card.appendChild(el('div', 'account-note', t('account.loginInstr')));
     container.appendChild(card);
     return;
   }
@@ -5261,7 +5260,7 @@ function paintAccountPanel(container, result) {
   // v1.0.69 — Status badge dinamico: parte come "Connesso" (verde) e diventa
   // "Disconnesso" (rosso) se la call usage ritorna 401/403 (token scaduto +
   // refresh fallito). In quel caso compare anche un bottone "Login terminale".
-  const status = el('span', 'account-status account-status-ok', '● Connesso');
+  const status = el('span', 'account-status account-status-ok', t('account.connected'));
   head.appendChild(status);
   card.appendChild(head);
 
@@ -5272,18 +5271,18 @@ function paintAccountPanel(container, result) {
     r.appendChild(el('span', 'account-row-val', value || '—'));
     card.appendChild(r);
   }
-  infoRow('Email', d.email);
-  infoRow('Organizzazione', d.orgName);
-  infoRow('ID organizzazione', d.orgId);
-  infoRow('Auth method', d.authMethod === 'claude.ai' ? 'claude.ai (OAuth)' : d.authMethod || '—');
-  infoRow('API provider', d.apiProvider || '—');
+  infoRow(t('account.rowEmail'), d.email);
+  infoRow(t('account.rowOrg'), d.orgName);
+  infoRow(t('account.rowOrgId'), d.orgId);
+  infoRow(t('account.rowAuthMethod'), d.authMethod === 'claude.ai' ? t('account.rowAuthClaudeAi') : d.authMethod || '—');
+  infoRow(t('account.rowApiProvider'), d.apiProvider || '—');
 
   // v1.0.69 — Pre-creo il bottone "Login terminale" (mostrato solo se token scaduto).
   // Il callback di loadAccountUsage lo inserisce/rimuove dalle actions in base
   // allo stato auth reale (401/403 dall'endpoint usage = token irrimediabilmente
   // scaduto, niente più refresh possibile).
-  const loginBtn = el('button', 'btn btn-sm btn-primary', '↗ Login terminale');
-  loginBtn.title = 'Apre il terminale integrato e lancia `claude auth login`';
+  const loginBtn = el('button', 'btn btn-sm btn-primary', t('account.btnLoginTerminal'));
+  loginBtn.title = t('account.btnLoginTerminalTip');
   loginBtn.addEventListener('click', () => openTerminalWithCommand('claude auth login'));
 
   // v1.0.35 — Usage live (Session 5h, Weekly 7d, Weekly Sonnet) via endpoint
@@ -5294,11 +5293,11 @@ function paintAccountPanel(container, result) {
     const authBroken = result && !result.ok && (result.status === 401 || result.status === 403);
     if (authBroken) {
       status.className = 'account-status account-status-error';
-      status.textContent = '● Disconnesso';
+      status.textContent = t('account.disconnected');
       if (loginBtn && !loginBtn.isConnected) actions.insertBefore(loginBtn, refreshBtn);
     } else {
       status.className = 'account-status account-status-ok';
-      status.textContent = '● Connesso';
+      status.textContent = t('account.connected');
       if (loginBtn && loginBtn.isConnected) loginBtn.remove();
     }
     // Allinea anche la pill sidebar (usa lastUsageData appena aggiornato)
@@ -5308,7 +5307,7 @@ function paintAccountPanel(container, result) {
 
   // Actions
   const actions = el('div', 'account-actions');
-  const refreshBtn = el('button', 'btn btn-sm btn-ghost', '↻ Aggiorna');
+  const refreshBtn = el('button', 'btn btn-sm btn-ghost', t('account.btnRefresh'));
   refreshBtn.addEventListener('click', async () => {
     refreshBtn.disabled = true;
     refreshBtn.textContent = '…';
@@ -5319,24 +5318,22 @@ function paintAccountPanel(container, result) {
   });
 
   // Link rapido alla console claude.ai (gestione subscription)
-  const claudeBtn = el('button', 'btn btn-sm btn-ghost', '↗ claude.ai');
-  claudeBtn.title = 'Apri claude.ai (gestione subscription Max/Pro)';
+  const claudeBtn = el('button', 'btn btn-sm btn-ghost', t('account.btnClaudeAi'));
+  claudeBtn.title = t('account.btnClaudeAiTip');
   claudeBtn.addEventListener('click', () => window.claudeAPI.openExternal('https://claude.ai/settings/billing'));
   // Logout con tooltip custom hover (warning esplicito, niente box invadente)
   const logoutWrap = el('div', 'logout-btn-wrap');
-  const logoutBtn = el('button', 'btn btn-sm btn-danger', 'Logout');
+  const logoutBtn = el('button', 'btn btn-sm btn-danger', t('account.btnLogout'));
   const logoutTooltip = el('div', 'logout-tooltip');
-  logoutTooltip.appendChild(el('div', 'logout-tooltip-title', '⚠ Logout di sistema'));
-  logoutTooltip.appendChild(el('div', 'logout-tooltip-body',
-    'Disconnette OVUNQUE — non solo da CLACOROO: il token è nel macOS Keychain condiviso.'));
+  logoutTooltip.appendChild(el('div', 'logout-tooltip-title', t('account.tooltipTitle')));
+  logoutTooltip.appendChild(el('div', 'logout-tooltip-body', t('account.tooltipBody')));
   const list = el('ul', 'logout-tooltip-list');
-  ['CLACOROO', 'Claude Code nel terminale (CLI)', 'Plugin IDE (VS Code, JetBrains, ecc.)'].forEach(item => {
+  [t('account.tooltipItem1'), t('account.tooltipItem2'), t('account.tooltipItem3')].forEach(item => {
     const li = el('li', null, item);
     list.appendChild(li);
   });
   logoutTooltip.appendChild(list);
-  logoutTooltip.appendChild(el('div', 'logout-tooltip-footer',
-    'Per riaccedere: apri terminale ed esegui `claude auth login`.'));
+  logoutTooltip.appendChild(el('div', 'logout-tooltip-footer', t('account.tooltipFooter')));
   logoutWrap.appendChild(logoutBtn);
   logoutWrap.appendChild(logoutTooltip);
 
@@ -5352,15 +5349,15 @@ function paintAccountPanel(container, result) {
     logoutBtn.textContent = '…';
     const r = await window.claudeAPI.accountLogout();
     if (r.ok) {
-      toast('Logout effettuato', 'success');
+      toast(t('account.toastLogout'), 'success');
       accountCache = null;
       const fresh = await window.claudeAPI.getAccount({ force: true });
       accountCache = fresh;
       paintAccountPanel(container, fresh);
     } else {
-      toast('Errore logout: ' + r.error, 'error');
+      toast(t('account.toastLogoutErr', { msg: r.error }), 'error');
       logoutBtn.disabled = false;
-      logoutBtn.textContent = 'Logout';
+      logoutBtn.textContent = t('account.btnLogout');
     }
   });
   actions.appendChild(refreshBtn);
@@ -5374,7 +5371,7 @@ function paintAccountPanel(container, result) {
 async function loadAccountPanel(container) {
   // Render ottimistico con cache se disponibile
   if (accountCache) paintAccountPanel(container, accountCache);
-  else container.appendChild(el('div', 'account-loading', 'Caricamento info account…'));
+  else container.appendChild(el('div', 'account-loading', t('account.loading')));
   const data = await window.claudeAPI.getAccount({});
   accountCache = data;
   paintAccountPanel(container, data);
@@ -5388,13 +5385,13 @@ async function loadAccountPanel(container) {
 
 async function loadApiKeyPanel(container) {
   container.textContent = '';
-  container.appendChild(el('div', 'account-loading', 'Caricamento stato API key…'));
+  container.appendChild(el('div', 'account-loading', t('apikey.loadingStatus')));
   try {
     const status = await window.claudeAPI.apiKey.status();
     paintApiKeyPanel(container, status);
   } catch (e) {
     container.textContent = '';
-    container.appendChild(el('div', 'account-error', 'Errore: ' + e.message));
+    container.appendChild(el('div', 'account-error', t('apikey.error', { msg: e.message })));
   }
 }
 
@@ -5405,29 +5402,25 @@ function paintApiKeyPanel(container, status) {
   // Header con badge stato
   const head = el('div', 'apikey-head');
   const badge = el('span', 'apikey-status-badge ' + (status.present ? 'apikey-status-active' : 'apikey-status-empty'));
-  badge.textContent = status.present ? '● Attiva' : '○ Non configurata';
+  badge.textContent = status.present ? t('apikey.statusActive') : t('apikey.statusEmpty');
   head.appendChild(badge);
   if (!status.secureStorage) {
-    const warn = el('span', 'apikey-storage-warn', '⚠ Storage non cifrato');
-    warn.title = 'Installa `libsecret-tools` per attivare la crittografia';
+    const warn = el('span', 'apikey-storage-warn', t('apikey.storageWarn'));
+    warn.title = t('apikey.storageWarnTip');
     head.appendChild(warn);
   }
   card.appendChild(head);
 
   // Descrizione
-  card.appendChild(el('div', 'apikey-desc',
-    'Configura una chiave API Anthropic come alternativa alla subscription claude.ai. ' +
-    'CLACOROO la salva in modo sicuro nel ' + status.backend +
-    ' e la espone a Claude Code tramite il meccanismo ufficiale `apiKeyHelper`.'));
+  card.appendChild(el('div', 'apikey-desc', t('apikey.description', { backend: status.backend })));
 
   if (status.present) {
     const info = el('div', 'apikey-info');
-    infoLine(info, 'Chiave', status.masked || '—');
-    infoLine(info, 'Storage', status.backend);
-    infoLine(info, 'Helper script', status.helperPath, true);
+    infoLine(info, t('apikey.rowKey'), status.masked || '—');
+    infoLine(info, t('apikey.rowStorage'), status.backend);
+    infoLine(info, t('apikey.rowHelperScript'), status.helperPath, true);
     if (!status.helperConfigured) {
-      info.appendChild(el('div', 'apikey-warn',
-        '⚠ Il campo `apiKeyHelper` in settings.json non corrisponde. Clicca "Riconfigura" per allineare.'));
+      info.appendChild(el('div', 'apikey-warn', t('apikey.helperWarn')));
     }
     card.appendChild(info);
 
@@ -5446,8 +5439,8 @@ function paintApiKeyPanel(container, status) {
 }
 
 function makeConsoleBtn() {
-  const btn = el('button', 'btn btn-sm btn-ghost', '↗ Console Anthropic');
-  btn.title = 'Apri console.anthropic.com/settings/keys per creare/gestire le API keys';
+  const btn = el('button', 'btn btn-sm btn-ghost', t('apikey.btnConsole'));
+  btn.title = t('apikey.btnConsoleTip');
   btn.addEventListener('click', () =>
     window.claudeAPI.openExternal('https://console.anthropic.com/settings/keys'));
   return btn;
@@ -5464,7 +5457,7 @@ function infoLine(parent, label, value, mono) {
 
 function appendApiKeyForm(card, container) {
   const form = el('div', 'apikey-form');
-  form.appendChild(el('div', 'apikey-form-label', 'Incolla la tua chiave Anthropic (inizia con `sk-ant-`):'));
+  form.appendChild(el('div', 'apikey-form-label', t('apikey.formLabel')));
 
   const input = el('input', 'apikey-input');
   input.type = 'password';
@@ -5478,7 +5471,7 @@ function appendApiKeyForm(card, container) {
   showChk.type = 'checkbox';
   showChk.addEventListener('change', () => { input.type = showChk.checked ? 'text' : 'password'; });
   showWrap.appendChild(showChk);
-  showWrap.appendChild(document.createTextNode(' Mostra'));
+  showWrap.appendChild(document.createTextNode(t('apikey.show')));
   form.appendChild(showWrap);
 
   const actions = el('div', 'apikey-actions');

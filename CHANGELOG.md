@@ -1,5 +1,31 @@
 # Changelog
 
+## v1.0.119 — 2026-05-26 — Pack N (Phase 3f): pannelli Account Claude + API key Claude
+
+Continua Pack N i18n. Migrate i 2 pannelli inner di Settings (Account + API key) che erano hardcoded in italiano. Coprono buona parte delle stringhe restanti.
+
+### Locales — 2 namespace nuovi
+
+- **`account.*` (29 chiavi)**: loading, readError{msg}, unknownError, notAuthed, loginInstr, connected, disconnected, 6 row labels (Email/Org/OrgID/AuthMethod/rowAuthClaudeAi/ApiProvider), 6 button labels e tooltip (LoginTerminal/Refresh/ClaudeAi/Logout), 5 tooltip parts (title/body/3 items/footer), 2 toast (logout success + error)
+- **`apikey.*` (15 chiavi)**: loadingStatus, error{msg}, statusActive/Empty, storageWarn + tip, description{backend}, 3 row labels (Key/Storage/HelperScript), helperWarn, btnConsole + tip, formLabel, show
+
+### Migrazione
+
+- [REFACTOR] **`paintAccountPanel`**: tutte le ~25 stringhe migrate inclusi tooltip logout con 3 items lista + footer
+- [REFACTOR] **`loadAccountPanel`**: loading text + error msg
+- [REFACTOR] **`paintApiKeyPanel` + `loadApiKeyPanel`**: badge status (Attiva / Non configurata), storage warn, description con interpolazione `{backend}`, 3 info rows, helper warn, console btn, form label, show toggle
+- [REFACTOR] **`makeConsoleBtn`**: button label + tooltip
+
+### Coverage finale Phase 3
+
+- ✅ Quasi tutti i panel principali migrati (Account + API key inner)
+- ⏳ Onboarding tour (~30 stringhe) → v1.0.120
+- ⏳ About dialog (`setupAboutPanel` in main.js + relative stringhe) → v1.0.120
+- ⏳ Footer update banner (`renderUpdateBanner`) → v1.0.120
+- ⏳ ~15-20 toast/error scattered minori → v1.0.120
+
+Dopo v1.0.120 → Phase 4 closure (audit shape it↔en + smoke test + EN review) → **v1.1.0 bilingue completa**.
+
 ## v1.0.118 — 2026-05-26 — Pack N (Phase 3e): plugin/marketplace/hook buttons + filter chips + notifications + tooltip
 
 Continua Pack N i18n. Migrate ~50 stringhe scattered: filter chips Plugin/Hook, plugin card buttons (Aggiorna/Rimuovi/Dettagli/Installa), system notifications, plugin status tooltips e label hook detail.
