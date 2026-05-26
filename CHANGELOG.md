@@ -1,5 +1,41 @@
 # Changelog
 
+## v1.0.94 — 2026-05-26 — Filtro plugin in Hooks + Pack G v2 azioni mutate: Add/Remove MCP
+
+Due feature parallele dalla stessa scelta utente.
+
+### Filtro plugin nella sezione Hooks (Pack K extension)
+
+- [FEATURE] **Dropdown "Plugin:"** nella riga filtri della sezione Hooks, accanto a "Evento" e "Scope". Lista plugin estratta dinamicamente dagli hook visibili (es. claude-mem · superpowers · watch · ralph-loop · security-guidance) — combinabile in AND con gli altri filtri
+- [FEATURE] **Mostrata solo se >1 plugin**: se l'utente ha hook da un solo plugin, nascondiamo il dropdown (sarebbe inutile). Scelta dropdown invece di chip multipli perché scala meglio (5+ plugin riempirebbero 2 righe)
+- [FEATURE] `state.filters.hooks.plugin = 'all'` nuovo campo nello state, default `'all'`
+- [STYLE] Nuova classe `.hook-filter-select` coerente con `.sort-dropdown` (bg dark + border accent2 on hover)
+
+### Pack G v2 — chiusura azioni mutate: Add/Remove MCP
+
+CLACOROO ora copre il **lifecycle completo MCP** senza dover usare la CLI: aggiungere nuovi server, rimuovere quelli user-added, reconnect (v1.0.85–86), clear cache. Restano fuori solo "View tools" (richiede mini-client JSON-RPC, scope a sé) e "Disable/Enable singolo server senza disabilitare plugin" (CLI Claude Code non lo espone).
+
+**Backend (`src/main.js`)**:
+- [FEATURE] **IPC `mcp:remove`** → `claude mcp remove <name>` con validazione `validMcpName` (regex `^[a-zA-Z0-9][a-zA-Z0-9_.-]*$`). Invalida cache MCP renderer al successo
+- [FEATURE] **IPC `mcp:add`** → `claude mcp add --transport <t> [--scope <s>] [-e KEY=VAL ...] [-H "Header: val" ...] <name> <target> [-- args...]`. Validazione: name regex + transport `http|sse|stdio` + target non vuoto + env regex `KEY=VAL` + header con `:`. Args stdio passati dopo `--`
+- [SECURITY] Tutti i parametri passati come array a `execFile`, niente stringhe interpolate. CLAUDE.md rules rispettate
+
+**Frontend (`src/renderer/app.js`)**:
+- [FEATURE] **Bottone "+ MCP"** nel topbar quando sei in sezione MCP (sostituisce "+ Progetto" come fa "+ Marketplace" in Marketplaces). Apre il form modal Add MCP
+- [FEATURE] **Modal "Aggiungi MCP server"** con form a sezioni:
+  - **Nome** (text input, alfanumerico)
+  - **Transport** (3 radio button card: HTTP / SSE / stdio, con descrizione)
+  - **URL/Comando** (campo dinamico: placeholder cambia in base al transport)
+  - **Argomenti** (textarea, una riga per arg — visibile solo per stdio)
+  - **Env vars** (textarea, formato `KEY=VALUE` una per riga, opzionale)
+  - **Headers HTTP** (textarea, formato `Name: value` una per riga, opzionale)
+  - Validazione client-side prima del submit + error box visibile
+  - Submit chiama `mcpAdd({name, transport, target, args, envs, headers, scope:'user'})` + toast + refresh MCP
+- [FEATURE] **Bottone "🗑 Rimuovi"** sulle card MCP con `scope='user'`: NON appare per builtin claude.ai (Drive/Gmail/Calendar) né per plugin-managed (Cloudflare/Supabase/Neon — sono gestiti dai loro plugin). Dialog di conferma con dettaglio dell'azione (`claude mcp remove <id>`)
+- [FEATURE] **`confirmAndRemoveMcp(srv)`** helper con confirm dialog + chiamata `mcpRemove` + toast feedback + re-render
+- [STYLE] Nuove classi `.add-mcp-form`, `.add-mcp-label/-title/-hint`, `.add-mcp-input`, `.add-mcp-textarea`, `.add-mcp-radios`, `.add-mcp-radio[/.selected]/-label/-desc` (radio button card stile native)
+- [REFACTOR] Helpers `makeFormLabel(title, hint)` + `makeFormInput(id, placeholder)` riusabili per form futuri
+
 ## v1.0.93 — 2026-05-26 — Hook dep install: polling automatico post-install (no click manuale "Aggiorna")
 
 Feedback utente sul flow v1.0.92: dopo aver lanciato `bun install` dal bottone "▶ Installa bun", deve cliccare manualmente "↻ Aggiorna" in topbar per far sparire il badge "Manca: bun". UX zoppa.

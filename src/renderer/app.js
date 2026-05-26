@@ -42,7 +42,7 @@ const state = {
     marketplaces: { search: '' },
     skills:       { search: '' },
     agents:       { search: '' },
-    hooks:        { search: '', event: 'all', scope: 'all' },
+    hooks:        { search: '', event: 'all', scope: 'all', plugin: 'all' },
   },
   // v1.0.55 — ordinamento marketplace. Valori:
   //   'default'        plugin disponibili desc, poi installati desc
@@ -451,6 +451,13 @@ function render() {
     addMktBtn.title = 'Aggiungi un marketplace da URL git, repo GitHub o path locale';
     addMktBtn.addEventListener('click', () => showAddMarketplaceModal());
     actions.appendChild(addMktBtn);
+  } else if (state.section === 'mcp') {
+    // v1.0.94 — Pack G v2: bottone "+ MCP" per aggiungere un server da CLACOROO
+    // via `claude mcp add` (form modale con transport/url/command/env/headers).
+    const addMcpBtn = el('button', 'btn btn-sm btn-ghost btn-refresh', '+ MCP');
+    addMcpBtn.title = 'Aggiungi un MCP server (HTTP, SSE o stdio) via `claude mcp add`';
+    addMcpBtn.addEventListener('click', () => showAddMcpModal());
+    actions.appendChild(addMcpBtn);
   } else {
     // v1.0.11 — Bottone "+" per aggiungere progetto tracciato (locale)
     const addProjBtn = el('button', 'btn btn-sm btn-ghost btn-refresh', '+ Progetto');
@@ -1495,6 +1502,208 @@ function showAddMarketplaceModal() {
   setTimeout(() => input.focus(), 50);
 }
 
+// v1.0.94 — Pack G v2 chiusura: modal "Aggiungi MCP server" che chiama
+// `claude mcp add` con transport (http/sse/stdio) + name + URL/comando +
+// env vars + headers HTTP. Coerente col pattern di showAddMarketplaceModal.
+function showAddMcpModal() {
+  const overlay = el('div', 'md-overlay');
+  const modal = el('div', 'md-modal');
+  modal.setAttribute('role', 'dialog');
+  modal.setAttribute('aria-modal', 'true');
+
+  const header = el('div', 'md-header');
+  const title = el('div', 'md-title');
+  title.appendChild(el('span', 'md-kind-badge md-kind-agent', 'mcp'));
+  title.appendChild(document.createTextNode(' Aggiungi MCP server'));
+  const closeBtn = el('button', 'md-close', '×');
+  closeBtn.setAttribute('aria-label', 'Chiudi');
+  header.appendChild(title); header.appendChild(closeBtn);
+
+  const content = el('div', 'md-content');
+  content.appendChild(el('p', null,
+    'Aggiungi un nuovo MCP server. CLACOROO esegue `claude mcp add` per te. ' +
+    'Per server OAuth (HTTP/SSE con auth) il flow OAuth si triggera alla prima ' +
+    'invocazione di un tool dentro una sessione `claude`.'));
+
+  const form = el('div', 'add-mcp-form');
+
+  // Field: name
+  form.appendChild(makeFormLabel('Nome', 'Identificatore univoco (alfanumerico, _, -, .)'));
+  const nameInp = makeFormInput('add-mcp-name', 'my-server');
+  form.appendChild(nameInp);
+
+  // Field: transport
+  form.appendChild(makeFormLabel('Transport', 'HTTP/SSE per server remoti, stdio per comandi locali'));
+  const transWrap = el('div', 'add-mcp-radios');
+  const transports = [
+    { key: 'http',  label: 'HTTP',  desc: 'Server remoto via REST' },
+    { key: 'sse',   label: 'SSE',   desc: 'Server remoto via Server-Sent Events' },
+    { key: 'stdio', label: 'stdio', desc: 'Comando locale (es. npx ...)' },
+  ];
+  let currentTransport = 'http';
+  transports.forEach(t => {
+    const lbl = el('label', 'add-mcp-radio' + (t.key === currentTransport ? ' selected' : ''));
+    const input = document.createElement('input');
+    input.type = 'radio';
+    input.name = 'mcp-transport';
+    input.value = t.key;
+    if (t.key === currentTransport) input.checked = true;
+    input.addEventListener('change', () => {
+      currentTransport = t.key;
+      transWrap.querySelectorAll('.add-mcp-radio').forEach(r => r.classList.toggle('selected', r.querySelector('input').value === t.key));
+      updateTargetPlaceholder();
+      updateArgsVisibility();
+    });
+    lbl.appendChild(input);
+    lbl.appendChild(el('span', 'add-mcp-radio-label', t.label));
+    lbl.appendChild(el('span', 'add-mcp-radio-desc', t.desc));
+    transWrap.appendChild(lbl);
+  });
+  form.appendChild(transWrap);
+
+  // Field: target (URL o comando)
+  const targetLabel = makeFormLabel('URL', 'Endpoint completo del server (cambia con transport)');
+  form.appendChild(targetLabel);
+  const targetInp = makeFormInput('add-mcp-target', 'https://mcp.example.com/mcp');
+  form.appendChild(targetInp);
+
+  // Field: args (solo se stdio)
+  const argsLabel = makeFormLabel('Argomenti', 'Uno per riga, opzionali (passati al command)');
+  const argsInp = el('textarea', 'add-mcp-input add-mcp-textarea');
+  argsInp.id = 'add-mcp-args';
+  argsInp.placeholder = '-y\n@upstash/context7-mcp';
+  argsInp.rows = 3;
+  argsInp.spellcheck = false;
+  form.appendChild(argsLabel);
+  form.appendChild(argsInp);
+
+  function updateTargetPlaceholder() {
+    if (currentTransport === 'stdio') {
+      targetLabel.querySelector('.add-mcp-label-title').textContent = 'Comando';
+      targetLabel.querySelector('.add-mcp-label-hint').textContent = 'Eseguibile (es. npx, node, sh)';
+      targetInp.placeholder = 'npx';
+    } else {
+      targetLabel.querySelector('.add-mcp-label-title').textContent = 'URL';
+      targetLabel.querySelector('.add-mcp-label-hint').textContent = 'Endpoint completo del server ' + currentTransport.toUpperCase();
+      targetInp.placeholder = currentTransport === 'sse' ? 'https://mcp.example.com/sse' : 'https://mcp.example.com/mcp';
+    }
+  }
+  function updateArgsVisibility() {
+    const showArgs = currentTransport === 'stdio';
+    argsLabel.style.display = showArgs ? '' : 'none';
+    argsInp.style.display   = showArgs ? '' : 'none';
+  }
+  updateArgsVisibility();
+
+  // Field: env vars (opzionale, solo stdio tipicamente)
+  form.appendChild(makeFormLabel('Variabili ambiente', 'Una per riga, formato KEY=VALUE (opzionale)'));
+  const envInp = el('textarea', 'add-mcp-input add-mcp-textarea');
+  envInp.id = 'add-mcp-env';
+  envInp.placeholder = 'API_KEY=sk-xxx\nNODE_ENV=production';
+  envInp.rows = 2;
+  envInp.spellcheck = false;
+  form.appendChild(envInp);
+
+  // Field: headers (opzionale, solo HTTP/SSE)
+  form.appendChild(makeFormLabel('Headers HTTP', 'Una per riga, formato Header-Name: value (opzionale, per HTTP/SSE)'));
+  const hdrInp = el('textarea', 'add-mcp-input add-mcp-textarea');
+  hdrInp.id = 'add-mcp-headers';
+  hdrInp.placeholder = 'Authorization: Bearer xxx\nX-Custom: value';
+  hdrInp.rows = 2;
+  hdrInp.spellcheck = false;
+  form.appendChild(hdrInp);
+
+  // Error box
+  const errBox = el('div', 'add-mkt-error');
+  errBox.style.display = 'none';
+  form.appendChild(errBox);
+
+  content.appendChild(form);
+
+  // Actions
+  const actions = el('div', 'add-mkt-actions');
+  const cancelBtn = el('button', 'btn btn-sm btn-ghost', 'Annulla');
+  cancelBtn.addEventListener('click', () => close());
+  const submitBtn = el('button', 'btn btn-sm btn-primary', 'Aggiungi MCP');
+
+  function showError(msg) { errBox.textContent = '⚠ ' + msg; errBox.style.display = 'block'; }
+  function clearError()   { errBox.style.display = 'none';   errBox.textContent = ''; }
+
+  async function submit() {
+    clearError();
+    const name = nameInp.value.trim();
+    if (!/^[a-zA-Z0-9][a-zA-Z0-9_.-]*$/.test(name)) {
+      showError('Nome non valido (alfanumerico + _ - . consentiti, deve iniziare con lettera o cifra)');
+      return;
+    }
+    const target = targetInp.value.trim();
+    if (!target) { showError('Inserisci URL o comando'); return; }
+    if (currentTransport !== 'stdio' && !/^https?:\/\//i.test(target)) {
+      showError('URL deve iniziare con http:// o https://');
+      return;
+    }
+    const args = currentTransport === 'stdio'
+      ? argsInp.value.split('\n').map(s => s.trim()).filter(Boolean)
+      : [];
+    const envs = envInp.value.split('\n').map(s => s.trim()).filter(Boolean);
+    const headers = hdrInp.value.split('\n').map(s => s.trim()).filter(Boolean);
+
+    submitBtn.disabled = true;
+    cancelBtn.disabled = true;
+    submitBtn.textContent = 'Aggiungo…';
+    const r = await window.claudeAPI.mcpAdd({
+      name, transport: currentTransport, target, args, envs, headers, scope: 'user',
+    });
+    if (r.success) {
+      toast('MCP aggiunto: ' + name, 'success');
+      close();
+      mcpCache = null;
+      if (state.section === 'mcp') renderMcp();
+    } else {
+      showError(r.error || 'Errore sconosciuto');
+      submitBtn.disabled = false;
+      cancelBtn.disabled = false;
+      submitBtn.textContent = 'Aggiungi MCP';
+    }
+  }
+  submitBtn.addEventListener('click', submit);
+  [nameInp, targetInp].forEach(i => i.addEventListener('input', clearError));
+
+  actions.appendChild(cancelBtn);
+  actions.appendChild(submitBtn);
+  content.appendChild(actions);
+
+  function onKey(e) { if (e.key === 'Escape') close(); }
+  function close() { document.removeEventListener('keydown', onKey); overlay.remove(); }
+  closeBtn.addEventListener('click', close);
+  overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+  document.addEventListener('keydown', onKey);
+
+  modal.appendChild(header);
+  modal.appendChild(content);
+  overlay.appendChild(modal);
+  overlay._close = close;
+  swapModalOverlay(overlay);
+  setTimeout(() => nameInp.focus(), 50);
+}
+
+function makeFormLabel(title, hint) {
+  const lbl = el('div', 'add-mcp-label');
+  lbl.appendChild(el('span', 'add-mcp-label-title', title));
+  if (hint) lbl.appendChild(el('span', 'add-mcp-label-hint', hint));
+  return lbl;
+}
+
+function makeFormInput(id, placeholder) {
+  const inp = el('input', 'add-mcp-input');
+  inp.id = id;
+  inp.type = 'text';
+  inp.placeholder = placeholder;
+  inp.spellcheck = false;
+  inp.autocomplete = 'off';
+  return inp;
+}
+
 // Modal "Plugin del marketplace": lista TUTTI i plugin presenti nel
 // marketplace.json (anche non installati), con bottone "Installa" sui
 // non-installati. m.plugins nello state contiene solo gli installati.
@@ -1966,6 +2175,31 @@ function renderHooks() {
     scWrap.appendChild(chip);
   });
   filterRow.appendChild(scWrap);
+
+  // v1.0.94 — Pack K extension: filtro per plugin di provenienza. Dropdown
+  // invece di chip multipli perché con 5+ plugin la lista chip occuperebbe
+  // 2 righe. Lista plugins estratta dinamicamente dagli hook visibili.
+  const plugins = Array.from(new Set(all.map(h => h.pluginId))).sort();
+  if (plugins.length > 1) {
+    const plWrap = el('div', 'hook-filter-group');
+    plWrap.appendChild(el('span', 'hook-filter-label', 'Plugin:'));
+    const sel = el('select', 'hook-filter-select');
+    const optAll = document.createElement('option');
+    optAll.value = 'all';
+    optAll.textContent = 'Tutti (' + plugins.length + ')';
+    if (f.plugin === 'all') optAll.selected = true;
+    sel.appendChild(optAll);
+    plugins.forEach(p => {
+      const opt = document.createElement('option');
+      opt.value = p;
+      opt.textContent = p;
+      if (f.plugin === p) opt.selected = true;
+      sel.appendChild(opt);
+    });
+    sel.addEventListener('change', () => { state.filters.hooks.plugin = sel.value; renderHooks(); });
+    plWrap.appendChild(sel);
+    filterRow.appendChild(plWrap);
+  }
   wrap.appendChild(filterRow);
 
   // Riga 3: header con count + sort dropdown
@@ -1999,9 +2233,10 @@ function renderHooks() {
         || it.matcher.toLowerCase().includes(q)
         || it.pluginId.toLowerCase().includes(q)
         || (it.handlers || []).some(h => (h.command || '').toLowerCase().includes(q));
-      const matchEvent = f.event === 'all' || it.event === f.event;
-      const matchScope = f.scope === 'all' || it.scope === f.scope;
-      const show = matchSearch && matchEvent && matchScope;
+      const matchEvent  = f.event  === 'all' || it.event    === f.event;
+      const matchScope  = f.scope  === 'all' || it.scope    === f.scope;
+      const matchPlugin = f.plugin === 'all' || it.pluginId === f.plugin;
+      const show = matchSearch && matchEvent && matchScope && matchPlugin;
       card.style.display = show ? '' : 'none';
       if (show) visible++;
     });
@@ -3594,13 +3829,25 @@ function buildMcpCard(srv) {
 
   // v1.0.85 — Footer arricchito con azioni reconnect contestuali per status
   // !=connected (Pack G v2). Per connected mostra solo nota di sola-lettura.
+  // v1.0.94 — Pack G v2: bottone "🗑 Rimuovi" SOLO per MCP user-added
+  // (scope='user'). I MCP builtin (claude.ai) e plugin-managed non sono
+  // rimuovibili via `claude mcp remove` perché non li ha aggiunti l'utente.
   const footer = el('div', 'mcp-card-footer');
+  const isUserAdded = srv.scope === 'user';
   if (srv.status === 'connected' || !srv.reconnect) {
     const hint = el('div', 'mcp-card-hint',
       srv.status === 'connected'
         ? 'Connesso · niente azioni necessarie'
         : 'Solo lettura · azioni in arrivo');
     footer.appendChild(hint);
+    if (isUserAdded) {
+      const actionsWrap = el('div', 'mcp-card-actions');
+      const rmBtn = el('button', 'btn btn-sm btn-ghost', '🗑 Rimuovi');
+      rmBtn.title = 'Rimuove questo server con `claude mcp remove ' + srv.id + '`';
+      rmBtn.addEventListener('click', e => { e.stopPropagation(); confirmAndRemoveMcp(srv); });
+      actionsWrap.appendChild(rmBtn);
+      footer.appendChild(actionsWrap);
+    }
   } else {
     const actionsWrap = el('div', 'mcp-card-actions');
     srv.reconnect.actions.forEach(act => {
@@ -3614,6 +3861,13 @@ function buildMcpCard(srv) {
       btn.addEventListener('click', e => { e.stopPropagation(); runMcpReconnectAction(srv, act); });
       actionsWrap.appendChild(btn);
     });
+    // v1.0.94 — bottone Rimuovi anche nel footer "needsAuth" se user-added
+    if (isUserAdded) {
+      const rmBtn = el('button', 'btn btn-sm btn-ghost', '🗑 Rimuovi');
+      rmBtn.title = 'Rimuove questo server con `claude mcp remove ' + srv.id + '`';
+      rmBtn.addEventListener('click', e => { e.stopPropagation(); confirmAndRemoveMcp(srv); });
+      actionsWrap.appendChild(rmBtn);
+    }
     footer.appendChild(actionsWrap);
     const desc = el('div', 'mcp-card-hint', srv.reconnect.description);
     footer.appendChild(desc);
@@ -3621,6 +3875,25 @@ function buildMcpCard(srv) {
   card.appendChild(footer);
 
   return card;
+}
+
+// v1.0.94 — Pack G v2: conferma + rimuove un MCP server user-added
+async function confirmAndRemoveMcp(srv) {
+  const response = await window.claudeAPI.confirmDialog({
+    title: 'Rimuovi MCP server',
+    message: 'Rimuovere "' + srv.id + '"?',
+    detail: 'Eseguirà `claude mcp remove ' + srv.id + '`.\n\nIl server sparirà dalla configurazione di Claude Code. L\'azione è reversibile riaggiungendo il server (i token OAuth potrebbero dover essere riautenticati).',
+    buttons: ['Annulla', 'Rimuovi'],
+  });
+  if (response !== 1) return;
+  const r = await window.claudeAPI.mcpRemove(srv.id);
+  if (r.success) {
+    toast('MCP rimosso: ' + srv.id, 'success');
+    mcpCache = null;
+    if (state.section === 'mcp') renderMcp();
+  } else {
+    toast('Errore rimozione: ' + (r.error || 'sconosciuto'), 'error');
+  }
 }
 
 // v1.0.85 — Pack G v2: dispatcher delle 3 azioni reconnect.

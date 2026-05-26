@@ -578,6 +578,62 @@ ipcMain.handle('hooks:check-tool', async (_e, { tool } = {}) => {
   return { ok: true, installed: !!result.installed, path: result.path || null };
 });
 
+// v1.0.94 — Pack G v2 azioni mutate (chiusura backlog):
+//
+//   mcp:remove   → `claude mcp remove <name>` per rimuovere user-added MCP
+//   mcp:add      → `claude mcp add [opts] <name> <commandOrUrl> [args...]`
+//
+// Validazione nome MCP: identico pattern di validPluginId (alfanumerico +
+// `_`, `-`, `.`). Niente shell injection perché passiamo args come array.
+function validMcpName(s) {
+  return typeof s === 'string' && /^[a-zA-Z0-9][a-zA-Z0-9_.-]*$/.test(s);
+}
+
+ipcMain.handle('mcp:remove', async (_e, { name } = {}) => {
+  if (!validMcpName(name)) return { success: false, error: 'Nome MCP non valido.' };
+  const r = await runClaudeArgs(['mcp', 'remove', name]);
+  if (r.success) { MCP_CACHE = null; MCP_CACHE_AT = 0; }
+  return r;
+});
+
+ipcMain.handle('mcp:add', async (_e, opts = {}) => {
+  const { name, transport, target, args, envs, headers, scope } = opts;
+  if (!validMcpName(name)) {
+    return { success: false, error: 'Nome MCP non valido (alfanumerico + _ - . consentiti).' };
+  }
+  if (!['http', 'sse', 'stdio'].includes(transport)) {
+    return { success: false, error: 'Transport non valido: deve essere http, sse o stdio.' };
+  }
+  if (typeof target !== 'string' || !target.trim()) {
+    return { success: false, error: 'Manca URL o comando del server.' };
+  }
+  const cliArgs = ['mcp', 'add', '--transport', transport];
+  if (scope && ['local', 'user', 'project'].includes(scope)) cliArgs.push('--scope', scope);
+  // env vars: array di stringhe "KEY=VALUE"
+  if (Array.isArray(envs)) {
+    for (const e of envs) {
+      if (typeof e === 'string' && /^[A-Za-z_][A-Za-z0-9_]*=/.test(e)) cliArgs.push('-e', e);
+    }
+  }
+  // headers HTTP: array di stringhe "Header-Name: value"
+  if (Array.isArray(headers)) {
+    for (const h of headers) {
+      if (typeof h === 'string' && h.includes(':')) cliArgs.push('-H', h);
+    }
+  }
+  cliArgs.push(name, target);
+  // extra args (per stdio command). Passati DOPO il target con `--` per separare.
+  if (Array.isArray(args) && args.length) {
+    cliArgs.push('--');
+    for (const a of args) {
+      if (typeof a === 'string' && a) cliArgs.push(a);
+    }
+  }
+  const r = await runClaudeArgs(cliArgs);
+  if (r.success) { MCP_CACHE = null; MCP_CACHE_AT = 0; }
+  return r;
+});
+
 ipcMain.handle('plugin-action', async (_e, { action, pluginId }) => {
   if (!validPluginId(pluginId)) return { success: false, error: 'ID plugin non valido.' };
   const result = await runClaudeArgs(['plugins', action, pluginId]);

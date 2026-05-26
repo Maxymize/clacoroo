@@ -2384,6 +2384,70 @@ body {
   border-top: 1px solid var(--border);
 }
 
+/* v1.0.94 — Pack G v2: form Add MCP server (più campi del Add Marketplace
+   perché serve transport selector + URL/command + env vars + headers). */
+.add-mcp-form { margin: 14px 0; }
+.add-mcp-form > * + * { margin-top: 12px; }
+.add-mcp-label {
+  display: flex; align-items: baseline; gap: 8px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+.add-mcp-label-title { color: var(--text); }
+.add-mcp-label-hint {
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 400;
+  font-size: 10px;
+  color: var(--text-dim);
+}
+.add-mcp-input {
+  width: 100%;
+  padding: 8px 10px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-family: "SF Mono", "Fira Code", Menlo, monospace;
+  font-size: 12px;
+  box-sizing: border-box;
+  transition: border-color .15s, box-shadow .15s;
+}
+.add-mcp-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
+}
+.add-mcp-textarea {
+  resize: vertical;
+  min-height: 50px;
+  line-height: 1.5;
+}
+.add-mcp-radios {
+  display: flex; gap: 8px; flex-wrap: wrap;
+}
+.add-mcp-radio {
+  flex: 1; min-width: 110px;
+  display: flex; flex-direction: column; gap: 2px;
+  padding: 8px 10px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: border-color .15s, background .15s;
+}
+.add-mcp-radio:hover { border-color: var(--border2); }
+.add-mcp-radio.selected {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface2));
+}
+.add-mcp-radio input[type="radio"] { display: none; }
+.add-mcp-radio-label { font-size: 12px; font-weight: 700; color: var(--text); }
+.add-mcp-radio-desc  { font-size: 10px; color: var(--text-muted); }
+
 /* Marketplace sort selector (v1.0.55) */
 .mkt-sort-wrap {
   display: inline-flex;
@@ -3409,6 +3473,21 @@ body {
   color: #fff;
   border-color: transparent;
 }
+
+/* v1.0.94 — Dropdown filtro per plugin di provenienza (più scalabile dei chip
+   quando i plugin con hook sono molti). Stile coerente con .sort-dropdown. */
+.hook-filter-select {
+  background: var(--bg);
+  border: 1px solid var(--border2);
+  color: var(--text);
+  border-radius: 6px;
+  padding: 3px 8px;
+  font-size: 11px;
+  font-family: inherit;
+  cursor: pointer;
+  outline: none;
+}
+.hook-filter-select:hover { border-color: var(--accent2); }
 
 .hook-grid {
   display: grid;
