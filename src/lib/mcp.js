@@ -117,6 +117,7 @@ function readPluginMcpDeclarations() {
               url: def.url || null,
               command: def.command || null,
               args: def.args || null,
+              env: def.env || null,
             });
           }
         } catch { /* skip malformati */ }

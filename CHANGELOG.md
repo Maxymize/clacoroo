@@ -1,5 +1,55 @@
 # Changelog
 
+## v1.0.103 — 2026-05-26 — Pack G v2 — View tools: mini-client MCP JSON-RPC
+
+Penultimo task aperto del Pack G v2: mostrare i tools esposti da un server MCP. CLACOROO ora include un **mini-client JSON-RPC** che fa l'handshake MCP standard (`initialize` + `notifications/initialized` + `tools/list`) per server stdio plugin-managed, e ritorna l'elenco tools con nome, descrizione, parametri.
+
+### Backend
+
+- [FEATURE] **Nuovo modulo `src/lib/mcpClient.js`** con `listToolsStdio(cfg)`:
+  - Spawna processo MCP via `child_process.spawn` (command + args + env merged con `process.env`)
+  - Handshake JSON-RPC newline-delimited (protocolVersion `2025-06-18`)
+  - Sequenza: `initialize` → `notifications/initialized` → `tools/list` → SIGTERM
+  - Timeout 8s su handshake + 5s su `tools/list`. SIGTERM in cleanup, SIGKILL dopo 2s grace
+  - Errori graceful: process exit prematuro, JSON-RPC error, timeout — ognuno ritorna `{ok: false, error: "..."}` con descrizione + STDERR truncato (4KB cap, no leak)
+  - **Sicurezza**: parse line-per-line, skip righe non-JSON (log server vengono ignorati). `pending` map per matching response → request via JSON-RPC id
+- [FEATURE] **IPC `mcp:list-tools`** in `src/main.js`:
+  - Risolve config server da `readPluginMcpDeclarations()` (`.mcp.json` dei plugin)
+  - **Filtro scope**: `claude.ai *` ritorna errore "OAuth required, usa /mcp dentro claude"
+  - **Filtro transport**: solo `stdio`. HTTP/SSE → errore "non supportato in questa versione"
+  - **Server user-added** non ancora supportati (config non in plugin declarations) — ritorna errore con messaggio chiaro
+- [REFACTOR] **`readPluginMcpDeclarations` esteso** in `src/lib/mcp.js`: ora include anche `env` dalla declaration (era ignorato — necessario per server che richiedono env vars come API keys)
+- [BRIDGE] **`mcpListTools(serverId)`** esposto via preload
+
+### Frontend
+
+- [FEATURE] **Bottone "👁 Tools"** sulle card MCP con status `connected`. Sempre visibile per i connessi (backend filtra il supporto):
+  - stdio plugin-managed → fa l'handshake e mostra tools
+  - HTTP/SSE / claude.ai → errore graceful nel modal
+  - user-added → "non ancora supportato" nel modal
+- [FEATURE] **`showMcpToolsModal(srv)`**: modal con:
+  - Header `tools` badge + nome server
+  - Loading state durante l'handshake
+  - Error box arancione con icona warning e spiegazione se fallisce
+  - Lista tools: ogni tool ha `name` (mono accent), `title` (se diverso dal name), `description`, lista compatta dei `inputSchema.properties` con badge param (required = bordo arancione)
+  - Summary "N tool esposti" in alto
+  - Limite display 8 param visibili + "+N" indicatore
+- [STYLE] Nuove classi `.mcp-tools-loading/-empty/-error/-error-text/-summary/-list`, `.mcp-tool-item/-head/-name/-title/-desc/-params/-param/-param-more`
+
+### Test
+
+Provato sull'installazione reale:
+- **`plugin:context7:context7`** (stdio, `npx @upstash/context7-mcp`): handshake OK, ritorna 2 tools (`resolve-library-id`, `get-library-docs`) con parametri visibili
+- **`plugin:claude-mem:mcp-search`** (stdio, sh + node): handshake OK
+- **`plugin:cloudflare:cloudflare-api`** (HTTP): errore graceful "transport http non supportato"
+- **`claude.ai Drive`**: errore graceful "OAuth server-side"
+
+### Non-goals
+
+- ❌ Non supportiamo HTTP/SSE in questa versione (richiedono OAuth tokens che vivono nel keychain di Claude Code, off-limits per CLACOROO)
+- ❌ Non chiamiamo `tools/call` (solo `tools/list`) — esecuzione di tool MCP fuori scope CLACOROO
+- ❌ Non supportiamo user-added server senza config (TODO v1.0.104+ con parsing `claude mcp get <name>` output)
+
 ## v1.0.102 — 2026-05-26 — Simplify code review fixes (high-priority cleanup)
 
 Cleanup post-skill `simplify`: 3 agent paralleli hanno revisionato i commit v1.0.95→v1.0.101 e identificato 1 bug latente + altri cleanup ad alto valore. Fix dei più importanti.

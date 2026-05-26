@@ -4443,14 +4443,22 @@ function buildMcpCard(srv) {
         ? 'Connesso · niente azioni necessarie'
         : 'Solo lettura · azioni in arrivo');
     footer.appendChild(hint);
+    const actionsWrap = el('div', 'mcp-card-actions');
+    // v1.0.103 — Bottone "Tools" sempre visibile su connected (backend
+    // filtra cosa è supportato; HTTP/OAuth ricevono errore graceful)
+    if (srv.status === 'connected') {
+      const toolsBtn = btnWithIcon('btn btn-sm btn-ghost', 'eye', 'Tools');
+      toolsBtn.title = 'Mostra i tools esposti da questo server MCP (tools/list via JSON-RPC)';
+      toolsBtn.addEventListener('click', e => { e.stopPropagation(); showMcpToolsModal(srv); });
+      actionsWrap.appendChild(toolsBtn);
+    }
     if (isUserAdded) {
-      const actionsWrap = el('div', 'mcp-card-actions');
       const rmBtn = btnWithIcon('btn btn-sm btn-ghost', 'trash-2', 'Rimuovi');
       rmBtn.title = 'Rimuove questo server con `claude mcp remove ' + srv.id + '`';
       rmBtn.addEventListener('click', e => { e.stopPropagation(); confirmAndRemoveMcp(srv); });
       actionsWrap.appendChild(rmBtn);
-      footer.appendChild(actionsWrap);
     }
+    if (actionsWrap.childNodes.length) footer.appendChild(actionsWrap);
   } else {
     const actionsWrap = el('div', 'mcp-card-actions');
     srv.reconnect.actions.forEach(act => {
@@ -4519,6 +4527,94 @@ function buildMcpCompactRow(srv) {
     row.appendChild(sm);
   }
   return row;
+}
+
+// v1.0.103 — Modal "Tools esposti dal server MCP". Backend `mcp:list-tools`
+// fa l'handshake JSON-RPC. Per server non supportati (OAuth/HTTP) mostra
+// un messaggio chiaro invece di crashare.
+async function showMcpToolsModal(srv) {
+  const overlay = el('div', 'md-overlay');
+  const modal   = el('div', 'md-modal');
+  const header  = el('div', 'md-header');
+  const title   = el('div', 'md-title');
+  title.appendChild(el('span', 'md-kind-badge md-kind-agent', 'tools'));
+  title.appendChild(document.createTextNode(' ' + (srv.displayName || srv.id)));
+  const closeBtn = el('button', 'md-close'); closeBtn.appendChild(icon('x'));
+  header.appendChild(title);
+  header.appendChild(closeBtn);
+
+  const content = el('div', 'md-content');
+  const loading = el('div', 'mcp-tools-loading');
+  loading.textContent = 'Interrogo il server MCP via JSON-RPC (tools/list)…';
+  content.appendChild(loading);
+
+  function onKey(e) { if (e.key === 'Escape') close(); }
+  function close() { document.removeEventListener('keydown', onKey); overlay.remove(); }
+  closeBtn.addEventListener('click', close);
+  overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+  document.addEventListener('keydown', onKey);
+
+  modal.appendChild(header);
+  modal.appendChild(content);
+  overlay.appendChild(modal);
+  overlay._close = close;
+  swapModalOverlay(overlay);
+
+  const r = await window.claudeAPI.mcpListTools(srv.id);
+  content.textContent = '';
+  if (!r.ok) {
+    const errBox = el('div', 'mcp-tools-error');
+    errBox.appendChild(icon('triangle-alert'));
+    const txt = el('div', 'mcp-tools-error-text');
+    txt.appendChild(el('strong', null, 'Tools list non disponibile'));
+    txt.appendChild(el('div', null, r.error || 'Errore sconosciuto'));
+    errBox.appendChild(txt);
+    content.appendChild(errBox);
+    return;
+  }
+  const tools = r.tools || [];
+  if (!tools.length) {
+    content.appendChild(el('div', 'mcp-tools-empty', 'Il server è connesso ma non espone tool (tools/list ha ritornato lista vuota).'));
+    return;
+  }
+  const summary = el('div', 'mcp-tools-summary');
+  summary.textContent = tools.length + ' tool ' + (tools.length === 1 ? 'esposto' : 'esposti') + ' dal server';
+  content.appendChild(summary);
+
+  const list = el('div', 'mcp-tools-list');
+  tools.forEach(t => {
+    const item = el('div', 'mcp-tool-item');
+    const head = el('div', 'mcp-tool-head');
+    head.appendChild(el('code', 'mcp-tool-name', t.name || '—'));
+    if (t.title && t.title !== t.name) head.appendChild(el('span', 'mcp-tool-title', t.title));
+    item.appendChild(head);
+    if (t.description) {
+      item.appendChild(el('div', 'mcp-tool-desc', t.description));
+    }
+    // Input schema (compact summary: list of param names + types)
+    const schema = t.inputSchema || t.input_schema;
+    if (schema && schema.properties && typeof schema.properties === 'object') {
+      const props = Object.keys(schema.properties);
+      if (props.length) {
+        const paramsRow = el('div', 'mcp-tool-params');
+        paramsRow.appendChild(el('span', 'mcp-tool-params-label', 'params'));
+        props.slice(0, 8).forEach(p => {
+          const def = schema.properties[p] || {};
+          const required = Array.isArray(schema.required) && schema.required.includes(p);
+          const pill = el('span', 'mcp-tool-param' + (required ? ' required' : ''));
+          pill.textContent = p + (def.type ? ': ' + def.type : '');
+          if (def.description) pill.title = def.description;
+          paramsRow.appendChild(pill);
+        });
+        if (props.length > 8) {
+          paramsRow.appendChild(el('span', 'mcp-tool-param-more', '+' + (props.length - 8)));
+        }
+        item.appendChild(paramsRow);
+      }
+    }
+    list.appendChild(item);
+  });
+  content.appendChild(list);
 }
 
 async function confirmAndRemoveMcp(srv) {

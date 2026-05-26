@@ -48,6 +48,7 @@ const { checkLatestRelease } = require('./lib/updater');
 const { readChangelogRaw, parseChangelog } = require('./lib/changelog');
 const STATS   = require('./lib/stats');
 const MCP     = require('./lib/mcp');
+const MCP_CLIENT = require('./lib/mcpClient');
 const HOOK_DEPS = require('./lib/hookDeps');
 const ACCOUNT = require('./lib/account');
 const PRICING = require('./lib/pricing');
@@ -576,6 +577,46 @@ ipcMain.handle('hooks:check-tool', async (_e, { tool } = {}) => {
   HOOK_DEPS.invalidateOne(tool);
   const result = await HOOK_DEPS.checkAvailabilityOne(tool);
   return { ok: true, installed: !!result.installed, path: result.path || null };
+});
+
+// v1.0.103 — Pack G v2 chiusura completa: View tools tramite mini-client
+// JSON-RPC (vedi src/lib/mcpClient.js). Scope: server stdio plugin-managed
+// (declarations da .mcp.json del plugin). HTTP/SSE e claude.ai builtin
+// richiedono OAuth → ritorna errore con messaggio chiaro per il renderer.
+ipcMain.handle('mcp:list-tools', async (_e, { serverId } = {}) => {
+  if (typeof serverId !== 'string' || !serverId) {
+    return { ok: false, error: 'serverId invalido' };
+  }
+  if (serverId.startsWith('claude.ai ')) {
+    return {
+      ok: false,
+      error: 'I server MCP integrati di claude.ai (Drive/Gmail/Calendar) usano OAuth gestito server-side. CLACOROO non può interrogarli direttamente — usa `/mcp` dentro `claude` per vedere i tools esposti.',
+      reason: 'oauth-required',
+    };
+  }
+  // Cerca la declaration corrispondente
+  const decls = MCP.readPluginMcpDeclarations();
+  const cfg = decls.find(d => d.id === serverId);
+  if (!cfg) {
+    return {
+      ok: false,
+      error: 'Server "' + serverId + '" non trovato fra le declarations dei plugin. Per server user-added la feature non è ancora supportata (in arrivo).',
+      reason: 'not-found',
+    };
+  }
+  if (cfg.type !== 'stdio') {
+    return {
+      ok: false,
+      error: 'Server di transport "' + cfg.type + '" non supportato in questa versione (solo stdio). I server HTTP/SSE richiedono OAuth gestito da Claude Code: usa `/mcp` dentro `claude` per vedere i tools.',
+      reason: 'http-not-supported',
+    };
+  }
+  const result = await MCP_CLIENT.listToolsStdio({
+    command: cfg.command,
+    args: cfg.args || [],
+    env: cfg.env || {},
+  });
+  return result;
 });
 
 // v1.0.94 — Pack G v2 azioni mutate (chiusura backlog):

@@ -1537,6 +1537,84 @@ body {
 .md-save-btn { background: rgba(34,197,94,.18); color: #4ade80; border-color: rgba(34,197,94,.36); }
 .md-save-btn:hover { background: rgba(34,197,94,.28); border-color: rgba(34,197,94,.56); }
 
+/* v1.0.103 — Pack G v2 chiusura: modal Tools esposti dal server MCP */
+.mcp-tools-loading {
+  text-align: center;
+  color: var(--text-muted);
+  font-style: italic;
+  padding: 24px 12px;
+}
+.mcp-tools-empty {
+  text-align: center;
+  color: var(--text-muted);
+  padding: 24px 12px;
+  font-size: 13px;
+}
+.mcp-tools-error {
+  display: flex; align-items: flex-start; gap: 10px;
+  background: rgba(245,158,11,.12);
+  border: 1px solid rgba(245,158,11,.36);
+  border-radius: 8px;
+  padding: 14px 16px;
+  color: #fbbf24;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.mcp-tools-error .inline-icon { flex-shrink: 0; width: 18px; height: 18px; margin: 0; vertical-align: 0; margin-top: 1px; }
+.mcp-tools-error-text { flex: 1; }
+.mcp-tools-error-text strong { color: #fcd34d; display: block; margin-bottom: 4px; }
+.mcp-tools-summary {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 12px;
+  font-weight: 700;
+}
+.mcp-tools-list { display: flex; flex-direction: column; gap: 8px; }
+.mcp-tool-item {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  display: flex; flex-direction: column; gap: 6px;
+}
+.mcp-tool-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.mcp-tool-name {
+  font-family: "SF Mono", "Fira Code", Menlo, monospace;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--accent2);
+  background: transparent;
+  padding: 0;
+}
+.mcp-tool-title { font-size: 12px; color: var(--text-muted); }
+.mcp-tool-desc { font-size: 12px; color: var(--text); line-height: 1.5; }
+.mcp-tool-params { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+.mcp-tool-params-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  margin-right: 4px;
+}
+.mcp-tool-param {
+  font-family: "SF Mono", "Fira Code", Menlo, monospace;
+  font-size: 10px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 2px 6px;
+  border-radius: 3px;
+}
+.mcp-tool-param.required { border-color: rgba(217,119,87,.36); color: #f0a280; }
+.mcp-tool-param-more {
+  font-size: 10px;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
 /* v1.0.81 — Bottone copia globale nell'header del modal markdown viewer.
    Posizionato fra title e × con margine per non essere troppo vicino al close. */
 .md-copy {
