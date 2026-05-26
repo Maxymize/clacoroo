@@ -1,5 +1,20 @@
 # Changelog
 
+## v1.0.88 — 2026-05-26 — Hook dep detector fix: whitelist invece di euristica permissiva (no più falsi positivi)
+
+Feedback utente immediato sul rilascio v1.0.87: il detector mostrava badge "Manca: break, do, done, exit, found, hook, not, plugin, scripts, while, observation, claude-code, session-start, …" — assurdo. Il tokenizer permissivo confondeva **shell keywords** (`break`/`do`/`done`/`while`/`not`), **argomenti di comandi** (`claude-code`/`session-start`/`hook`/`scripts`) e nomi a caso con "tool installabili".
+
+- [FIX BREAKING] **Strategia detector cambiata** da "estrai ogni identifier che assomiglia a tool, poi filtra UBIQUITOUS" → "cerca SOLO tool della whitelist `KNOWN_TOOLS` (chiavi di `INSTALL_HINTS`)". Meglio un falso negativo (mancato avviso su tool esotico fuori lista) che 15 falsi positivi (la versione v1.0.87 era inutilizzabile)
+- [FIX] **Regex word-boundary** attorno a ogni tool della whitelist: `(^|[\s;&|\`(<>])tool($|[\s;&|\`)<>])` con escape sicuro dei caratteri speciali. Evita match parziali (`bun` ≠ `bundler`, `python3` ≠ `python3-config`)
+- [FIX] **Test reali confermati**:
+  - `claude-mem` (`node bun-runner.js …`) → trova `bun` via pattern speciale, niente altro
+  - `security-guidance` (`python3 hooks/security-warnings.py`) → trova `python3`
+  - `ralph-loop` (`bash hooks/stop.sh`) → niente (correttamente)
+  - `watch` (`bash hooks/scripts/check-setup.sh`) → niente
+  - `superpowers` (`hooks/run-hook.cmd session-start`) → niente
+- [REFACTOR] Helper `getKnownTools()` + `escapeRegex()` per chiarezza. Pattern speciali `SCRIPT_NAME_TO_TOOL` (bun-runner → bun, deno-runner → deno, python-runner → python3) mantenuti per smascherare dipendenze nascoste in script wrapper
+- [NOTE] Per aggiungere un tool nuovo basta aggiungerlo in `INSTALL_HINTS` con il suo install command: viene automaticamente cercato
+
 ## v1.0.87 — 2026-05-26 — Pack K extension: hook dependency detector (badge ⚠ se tool CLI mancante)
 
 Nuovo detector che analizza i `command` degli hook event di tutti i plugin installati, estrae i tool CLI esterni dichiarati (es. `bun`, `deno`, `python3`, `wrangler`, …) e verifica con `which`/`where` se sono installati nel `PATH`. Sulle card hook compare un badge **"⚠ Manca: bun, deno"** con tooltip che suggerisce come installare gli strumenti mancanti, prima ancora che l'utente apra `claude` e veda errori come "SessionStart:startup hook error · Bun not found".

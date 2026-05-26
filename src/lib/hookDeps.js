@@ -19,18 +19,14 @@ const { execFile } = require('child_process');
 const os = require('os');
 const IS_WIN = process.platform === 'win32';
 
-// Tool che diamo per scontati su sistemi di sviluppo — niente badge per loro
-// (rumoreggerebbero le card). Se davvero non sono installati il hook fallirà
-// con un errore esplicito comunque.
+// Tool che diamo per scontati su sistemi di sviluppo — anche se rilevati
+// nella whitelist, NON generano badge (es. `node` è quasi sempre presente).
+// Solo per documentazione: la nuova strategia v1.0.88 cerca SOLO tool della
+// whitelist KNOWN_TOOLS, quindi questa lista è informativa.
 const UBIQUITOUS = new Set([
   'sh', 'bash', 'zsh', 'fish', 'pwsh', 'cmd', 'powershell',
   'node', 'npm', 'npx', 'yarn',
   'git', 'curl', 'wget',
-  'cat', 'echo', 'printf', 'ls', 'cd', 'cp', 'mv', 'rm', 'mkdir', 'touch',
-  'export', 'source', 'sed', 'awk', 'grep', 'tr', 'head', 'tail', 'sort',
-  'uniq', 'cut', 'tee', 'find', 'xargs', 'which', 'where', 'pwd', 'cygpath',
-  'env', 'true', 'false', 'test', '[', '[[', 'set', 'unset', 'eval', 'exec',
-  'read', 'declare', 'local', 'return', 'shift', 'trap', 'wait',
 ]);
 
 // Mappa tool → suggerimento di installazione. Aggiungi qui i tool noti per
@@ -70,57 +66,50 @@ const SCRIPT_NAME_TO_TOOL = [
   { pattern: /python-runner/i, tool: 'python3' },
 ];
 
+// v1.0.88 — Whitelist tool noti. Solo questi vengono cercati nei command
+// degli hook. Strategia conservativa: meglio un falso negativo (mancato avviso
+// su tool esotico) che 15 falsi positivi (la versione v1.0.87 trattava `break`,
+// `do`, `done`, `claude-code`, `session-start`, ecc. come tool installabili —
+// pessima esperienza utente). Per aggiungere un tool nuovo basta inserirlo
+// in INSTALL_HINTS sotto: viene automaticamente cercato.
+function getKnownTools() {
+  return new Set(Object.keys(INSTALL_HINTS));
+}
+
+// Escape per uso dentro RegExp (gestisce trattini in nomi come `claude-mem`).
+function escapeRegex(s) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 /**
- * Estrae i tool CLI usati in un comando shell. Strategia conservativa:
- * - tokenizza su whitespace + pipe + redirect
- * - per ogni token che assomiglia a un nome di comando (no path, no flag,
- *   no var-expansion), aggiunge alla lista candidati
- * - filtra UBIQUITOUS (per non rumoreggiare le card con bash/node/git)
- * - applica pattern speciali su script Node che internamente chiamano tool
- *   esterni (es. bun-runner → bun)
+ * Cerca i tool CLI esterni richiesti dal command. v1.0.88 usa WHITELIST
+ * esplicita (KNOWN_TOOLS = Object.keys(INSTALL_HINTS)) cercati con regex
+ * word-boundary. Match solo se il tool appare come parola distinta nel
+ * command (es. `python3 script.py` → matcha; `polypython3` → no match).
  *
- * Ritorna un Set di tool name unique.
+ * Più i pattern speciali SCRIPT_NAME_TO_TOOL per smascherare dipendenze
+ * nascoste (es. `node bun-runner.js` rivela un requisito di Bun anche se
+ * nel command non appare la parola `bun` come comando diretto).
  */
 function detectDepsInCommand(cmd) {
   const deps = new Set();
   if (typeof cmd !== 'string' || !cmd) return deps;
 
-  // Tokenizzazione semplice: split su whitespace + alcuni separatori shell.
-  // Non parsiamo realmente la shell (sarebbe overkill), euristica sufficiente
-  // per il 95% dei casi reali nei plugin Claude Code.
-  const tokens = cmd.split(/[\s|;&()`<>]+/).filter(Boolean);
+  const knownTools = getKnownTools();
 
-  for (let i = 0; i < tokens.length; i++) {
-    const raw = tokens[i].replace(/^['"]+|['"]+$/g, ''); // strip quotes
-    if (!raw) continue;
+  // Cerca ogni tool della whitelist come parola intera. I delimitatori
+  // accettati attorno al tool sono inizio/fine stringa o caratteri shell
+  // di separazione (spazio, pipe, semicolon, ampersand, backtick, parentesi,
+  // redirect). Questo evita di confondere `bun` con `bundler` o `python3`
+  // con `python3-config`.
+  for (const tool of knownTools) {
+    const re = new RegExp('(^|[\\s;&|`(<>])' + escapeRegex(tool) + '($|[\\s;&|`)<>])', 'i');
+    if (re.test(cmd)) deps.add(tool);
+  }
 
-    // Skip path assoluti, var expansion, flag, redirect
-    if (raw.startsWith('-') || raw.startsWith('$') || raw.startsWith('{')) continue;
-    if (raw === '||' || raw === '&&' || raw === '>>' || raw === '<<') continue;
-
-    // Per "bash -c '...'" o "sh -lc '...'" il vero comando di interesse è
-    // l'argomento successivo: skip i wrapper.
-    if (UBIQUITOUS.has(raw) && i + 1 < tokens.length) {
-      // ancora analizzeremo l'arg successivo nel loop. solo skip self.
-    }
-
-    // Pattern script (es. bun-runner.js dice "richiede bun")
-    for (const { pattern, tool } of SCRIPT_NAME_TO_TOOL) {
-      if (pattern.test(raw)) deps.add(tool);
-    }
-
-    // Tool name vero e proprio: deve essere [a-z][a-z0-9_-]*, eventualmente
-    // con suffisso ".js"/".sh" rimosso. Skip path-like (`/`).
-    if (/[\/\\]/.test(raw)) continue;
-    const name = raw.replace(/\.(js|sh|py|rb|cjs|mjs)$/, '').toLowerCase();
-    if (!/^[a-z][a-z0-9_-]*$/.test(name)) continue;
-    if (UBIQUITOUS.has(name)) continue;
-
-    // Skip nomi che sono chiaramente fragment di codice (parole con underscore
-    // tipiche da variabili shell, es. _R, _Q, _C)
-    if (/^_/.test(name)) continue;
-
-    deps.add(name);
+  // Pattern speciali: script che internamente richiedono un tool esterno
+  for (const { pattern, tool } of SCRIPT_NAME_TO_TOOL) {
+    if (pattern.test(cmd)) deps.add(tool);
   }
 
   return deps;
