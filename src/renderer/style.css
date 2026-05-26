@@ -3475,6 +3475,40 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
+/* v1.0.91 — Mini-bottone "▶ Installa <tool>" accanto al badge "Manca: X".
+   Stile coerente con il badge ma cliccabile + hover più caldo. */
+.hook-missing-deps-row {
+  flex-wrap: wrap; gap: 6px;
+}
+.hook-dep-install-btn {
+  display: inline-flex; align-items: center;
+  background: rgba(217,119,87,.18);
+  color: #d97757;
+  border: 1px solid rgba(217,119,87,.36);
+  padding: 3px 9px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+  transition: background .15s, border-color .15s;
+}
+.hook-dep-install-btn:hover {
+  background: rgba(217,119,87,.32);
+  border-color: rgba(217,119,87,.56);
+  color: #f0a280;
+}
+.hook-dep-install-docs {
+  background: rgba(106,155,204,.18);
+  color: #9cc1ea;
+  border-color: rgba(106,155,204,.36);
+}
+.hook-dep-install-docs:hover {
+  background: rgba(106,155,204,.32);
+  border-color: rgba(106,155,204,.56);
+  color: #b6d4f0;
+}
+
 .hook-matcher-row {
   display: flex; align-items: center; gap: 8px;
   font-size: 11px;

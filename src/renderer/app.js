@@ -2052,6 +2052,9 @@ function buildHookCard(item) {
   // (vedi src/lib/hookDeps.js). Lista i tool mancanti in ordine, tooltip
   // contiene gli install hint. Spiega all'utente PRIMA che apra il
   // terminale perché un hook potrebbe fallire silenziosamente al boot.
+  // v1.0.91 — Aggiunto bottone "▶ Installa" per tool con installCommand
+  // disponibile per la piattaforma corrente. Click → confirm + open terminal
+  // + pre-digita comando (no Enter automatico, l'utente conferma manualmente).
   const missingDeps = missingDepsForHook(item);
   if (missingDeps.length) {
     const warnRow = el('div', 'hook-missing-deps-row');
@@ -2059,11 +2062,30 @@ function buildHookCard(item) {
     warnBadge.textContent = '⚠ Manca: ' + missingDeps.join(', ');
     const avail = (state.rawData && state.rawData.hookDepsAvailability) || {};
     const hints = missingDeps
-      .map(d => (avail[d] && avail[d].installHint) ? (d + ' → ' + avail[d].installHint) : (d + ': installazione manuale richiesta'))
+      .map(d => (avail[d] && avail[d].installHint) ? (d + '\n' + avail[d].installHint) : (d + ': installazione manuale richiesta'))
       .join('\n\n');
     warnBadge.title = 'Tool richiesti dal command degli handler ma non trovati nel PATH:\n\n' + hints +
       '\n\nInstalla gli strumenti mancanti per evitare errori `hook startup` al boot di `claude`.';
     warnRow.appendChild(warnBadge);
+
+    // Mini-bottone "▶ Installa" per ogni tool mancante con installCommand
+    missingDeps.forEach(dep => {
+      const info = avail[dep];
+      if (!info) return;
+      if (info.installCommand) {
+        const btn = el('button', 'hook-dep-install-btn', '▶ Installa ' + dep);
+        btn.title = 'Apre il terminale integrato + pre-digita:\n' + info.installCommand
+          + '\n\nNON premerà Enter automatico — conferma tu premendo Invio se vuoi procedere.';
+        btn.addEventListener('click', e => { e.stopPropagation(); installDepInTerminal(dep, info.installCommand); });
+        warnRow.appendChild(btn);
+      } else if (info.docsUrl) {
+        // Tool senza installer one-liner (es. Docker Desktop, gcloud) → solo link docs
+        const link = el('button', 'hook-dep-install-btn hook-dep-install-docs', '↗ Docs ' + dep);
+        link.title = 'Apre la pagina docs di ' + dep + ' nel browser (richiede installer GUI manuale)';
+        link.addEventListener('click', e => { e.stopPropagation(); window.claudeAPI.openExternal(info.docsUrl); });
+        warnRow.appendChild(link);
+      }
+    });
     card.appendChild(warnRow);
   }
 
@@ -2127,6 +2149,41 @@ function buildHookCard(item) {
 }
 
 function truncate(s, n) { return s && s.length > n ? s.slice(0, n - 1) + '…' : s; }
+
+// v1.0.91 — Pack K extension: install di un tool CLI mancante via terminale
+// integrato. Pattern identico al reconnect MCP del Pack G v2 (open-terminal +
+// preDigit). NIENTE Enter automatico: l'utente deve confermare manualmente
+// premendo Invio dentro il terminale. Confirm dialog blocca prima del lancio
+// per evitare esecuzioni accidentali.
+async function installDepInTerminal(tool, installCommand) {
+  const ok = await window.claudeAPI.confirmDialog({
+    title: 'Installa ' + tool,
+    message: 'Installare ' + tool + ' nel terminale integrato?',
+    detail: 'Verrà aperto il terminale e pre-digitato:\n\n' + installCommand
+      + '\n\nIl comando NON viene eseguito automaticamente: dovrai confermare premendo Invio nel terminale.',
+    buttons: ['Annulla', 'Apri terminale'],
+  });
+  if (!ok || ok.response !== 1) return;
+
+  // Apre drawer + nuova tab senza eseguire alcun comando (evita prompt vuoto
+  // come accadrebbe con openTerminalWithCommand('') che fa pty.write('\r')).
+  if (!termState.caps || !termState.caps.available) {
+    toast('Terminale integrato non disponibile su questa piattaforma', 'error');
+    return;
+  }
+  if (!termState.open) termSetOpen(true);
+  const tab = await termCreateTab({
+    cwd:   termState.caps.defaultCwd,
+    shell: null,
+  });
+  if (!tab) return;
+  toast('Pre-digitato: ' + tool + ' — premi Invio nel terminale per installare', 'info');
+  // Aspetta che la shell stampi il prompt iniziale, poi pre-digita il comando.
+  // 600ms è prudente per shell lente (zsh con powerlevel10k, ecc.)
+  setTimeout(() => {
+    try { window.claudeAPI.pty.write(tab.ptyId, installCommand); } catch {}
+  }, 600);
+}
 
 function showHookDetailsModal(item) {
   const overlay = el('div', 'md-overlay');

@@ -1,5 +1,39 @@
 # Changelog
 
+## v1.0.91 — 2026-05-26 — Hook dep: bottone "▶ Installa <tool>" cross-platform per dipendenze mancanti
+
+Estensione del detector v1.0.87–90: quando una card hook mostra `⚠ Manca: bun`, ora c'è un bottone **"▶ Installa bun"** accanto al badge che apre il terminale integrato + pre-digita il comando di installazione ufficiale per la piattaforma corrente (macOS/Linux/Windows). Pattern identico al Pack G v2 v1.0.86 reconnect MCP (confirm dialog + pre-typing + nessun Enter automatico — l'utente decide se procedere).
+
+### Backend
+
+- [FEATURE] **`INSTALL_COMMANDS`** nuova mappa `{ tool: { darwin, linux, win32 } }` con comandi UFFICIALI per ogni piattaforma. Ricavati dalle docs ufficiali dei rispettivi tool:
+  - **bun**: `curl -fsSL https://bun.sh/install | bash` (macOS/Linux), `powershell -c "irm bun.sh/install.ps1 | iex"` (Win)
+  - **deno**: `curl -fsSL https://deno.land/install.sh | sh`, `irm https://deno.land/install.ps1 | iex`
+  - **python3** / **gh** / **jq** / **rg** / **fzf** / **aws**: `brew install` (macOS), `sudo apt install -y` (Linux), `winget install` (Win)
+  - **uv**: `curl -LsSf https://astral.sh/uv/install.sh | sh`
+  - **wrangler** / **vercel** / **pnpm**: `npm install -g <tool>`
+  - **cargo** / **rustc**: `curl --proto "=https" --tlsv1.2 -sSf https://sh.rustup.rs | sh`
+  - **gcloud** / **docker**: `null` su tutte le piattaforme — richiedono installer GUI multi-step, mostriamo solo link docs
+- [FEATURE] **`INSTALL_DOCS`** mappa `tool → URL docs ufficiale` (link diretto alla pagina di installazione del tool, da aprire nel browser come fallback per i tool GUI-only)
+- [FEATURE] **`INSTALL_HINTS`** ora generato automaticamente da `INSTALL_COMMANDS + INSTALL_DOCS` per il tooltip (tutte le piattaforme + link docs su righe separate)
+- [FEATURE] **`getInstallCommand(tool, platform)`** helper: ritorna il comando per la piattaforma corrente o `null` se non disponibile
+- [FEATURE] **`checkAvailability` enriched**: ogni tool ora include `installCommand` (per platform corrente) + `docsUrl`
+
+### Frontend
+
+- [FEATURE] **Bottone "▶ Installa &lt;tool&gt;"** accanto al badge `⚠ Manca: X`: cliccando apre confirm dialog ("Installare X nel terminale?") + se OK apre drawer terminale + nuova tab + pre-digita il comando install. **Nessun Enter automatico**: l'utente vede il comando completo nel prompt e preme Invio solo se confermato (pattern Pack B v1.0.77)
+- [FEATURE] **Bottone "↗ Docs &lt;tool&gt;"** per tool senza one-liner (es. Docker Desktop, gcloud): apre la docs page ufficiale nel browser via `shell.openExternal`
+- [FEATURE] **`installDepInTerminal(tool, command)`** helper che orchestra: confirm dialog → check pty capabilities → apre drawer → crea tab pulita (no auto-Enter) → pre-digita comando dopo 600ms
+- [STYLE] Nuove classi `.hook-dep-install-btn` (orange CLACOROO) e `.hook-dep-install-docs` (Anthropic blue) con hover diversi
+
+### Sicurezza & non-goals
+
+- ✅ **Confirm dialog OBBLIGATORIO** prima di qualsiasi pre-typing — niente esecuzione accidentale
+- ✅ **NIENTE Enter automatico** — l'utente vede il comando intero, valuta, e preme Invio solo se vuole
+- ✅ **Comandi presi da fonti ufficiali** dei rispettivi tool (bun.sh, deno.com, rustup.rs, ecc.)
+- ❌ **NIENTE sudo escalation automatica**: i comandi `apt install` su Linux richiederanno la password che l'utente inserirà nel terminale
+- ❌ **NIENTE installer GUI lanciate da CLACOROO**: per Docker/gcloud apriamo solo il browser sulla docs page (l'utente scarica installer)
+
 ## v1.0.90 — 2026-05-26 — Hook dep cache: TTL 60s + refresh esplicito via "↻ Aggiorna"
 
 Feedback utente: ho disinstallato Bun ma le card claude-mem non mostrano "Manca: bun" nemmeno dopo click su "↻ Aggiorna". Root cause: il cache delle availability era in memoria del main process popolato 1 sola volta al boot. Il bottone "↻ Aggiorna" invalidava solo i dati Claude (`get-mcp`, stats), NON il cache `_availabilityCache` di `hookDeps.js` → installazioni/disinstallazioni fatte ad app aperta restavano invisibili fino al restart.

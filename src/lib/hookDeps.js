@@ -58,33 +58,168 @@ const UBIQUITOUS = new Set([
   'git', 'curl', 'wget',
 ]);
 
-// Mappa tool → suggerimento di installazione. Aggiungi qui i tool noti per
-// avere hint utili nella tooltip del badge. Per i tool non in mappa il badge
-// dice solo "Non installato" senza hint specifico.
-const INSTALL_HINTS = {
-  bun:        'curl -fsSL https://bun.sh/install | bash',
-  deno:       'curl -fsSL https://deno.land/install.sh | sh',
-  python3:    'brew install python3   # macOS · apt install python3 · winget install python',
-  python:     'brew install python3   # macOS · apt install python3 · winget install python',
-  uv:         'curl -LsSf https://astral.sh/uv/install.sh | sh',
-  wrangler:   'npm install -g wrangler',
-  supabase:   'brew install supabase/tap/supabase   # macOS · scoop install supabase',
-  vercel:     'npm install -g vercel',
-  gcloud:     'https://cloud.google.com/sdk/docs/install',
-  aws:        'brew install awscli   # macOS · pip install awscli · scoop install aws',
-  gh:         'brew install gh   # macOS · winget install GitHub.cli · apt install gh',
-  rg:         'brew install ripgrep   # macOS · cargo install ripgrep',
-  jq:         'brew install jq   # macOS · apt install jq · scoop install jq',
-  fzf:        'brew install fzf   # macOS · apt install fzf',
-  cargo:      'curl https://sh.rustup.rs -sSf | sh   # installa rustup',
-  rustc:      'curl https://sh.rustup.rs -sSf | sh   # installa rustup',
-  go:         'brew install go   # macOS · winget install GoLang.Go',
-  docker:     'https://docs.docker.com/desktop/',
-  poetry:     'curl -sSL https://install.python-poetry.org | python3 -',
-  pipx:       'brew install pipx   # macOS · python3 -m pip install pipx',
-  pnpm:       'npm install -g pnpm',
-  ruby:       'brew install ruby   # macOS · apt install ruby-full',
+// v1.0.91 — INSTALL_COMMANDS: comandi di installazione UFFICIALI per piattaforma
+// (darwin = macOS, linux, win32 = Windows). Comandi ricavati dalle docs ufficiali
+// dei rispettivi tool. NULL significa "non installabile via one-liner sicuro su
+// quella piattaforma" → solo URL informativa, niente bottone Installa.
+//
+// Sicurezza: prima di eseguire mostriamo sempre confirm dialog all'utente con il
+// comando completo + NON premiamo Enter automatico (l'utente deve confermare
+// manualmente premendo Invio nel terminale). Riusiamo il pattern Pack B v1.0.77
+// pre-typing skill/agent.
+const INSTALL_COMMANDS = {
+  bun: {
+    darwin: 'curl -fsSL https://bun.sh/install | bash',
+    linux:  'curl -fsSL https://bun.sh/install | bash',
+    win32:  'powershell -c "irm bun.sh/install.ps1 | iex"',
+  },
+  deno: {
+    darwin: 'curl -fsSL https://deno.land/install.sh | sh',
+    linux:  'curl -fsSL https://deno.land/install.sh | sh',
+    win32:  'irm https://deno.land/install.ps1 | iex',
+  },
+  python3: {
+    darwin: 'brew install python3',
+    linux:  'sudo apt install -y python3',
+    win32:  'winget install Python.Python.3',
+  },
+  python: {
+    darwin: 'brew install python3',
+    linux:  'sudo apt install -y python3',
+    win32:  'winget install Python.Python.3',
+  },
+  uv: {
+    darwin: 'curl -LsSf https://astral.sh/uv/install.sh | sh',
+    linux:  'curl -LsSf https://astral.sh/uv/install.sh | sh',
+    win32:  'powershell -c "irm https://astral.sh/uv/install.ps1 | iex"',
+  },
+  wrangler: {
+    darwin: 'npm install -g wrangler',
+    linux:  'npm install -g wrangler',
+    win32:  'npm install -g wrangler',
+  },
+  supabase: {
+    darwin: 'brew install supabase/tap/supabase',
+    linux:  null,  // su Linux la install è multi-step (apt repo aggiunto): meglio link
+    win32:  'scoop install supabase',
+  },
+  vercel: {
+    darwin: 'npm install -g vercel',
+    linux:  'npm install -g vercel',
+    win32:  'npm install -g vercel',
+  },
+  gcloud: { darwin: null, linux: null, win32: null },  // installer GUI multi-step
+  aws: {
+    darwin: 'brew install awscli',
+    linux:  'sudo apt install -y awscli',
+    win32:  'winget install Amazon.AWSCLI',
+  },
+  gh: {
+    darwin: 'brew install gh',
+    linux:  'sudo apt install -y gh',
+    win32:  'winget install GitHub.cli',
+  },
+  rg: {
+    darwin: 'brew install ripgrep',
+    linux:  'sudo apt install -y ripgrep',
+    win32:  'winget install BurntSushi.ripgrep.MSVC',
+  },
+  jq: {
+    darwin: 'brew install jq',
+    linux:  'sudo apt install -y jq',
+    win32:  'winget install jqlang.jq',
+  },
+  fzf: {
+    darwin: 'brew install fzf',
+    linux:  'sudo apt install -y fzf',
+    win32:  'winget install junegunn.fzf',
+  },
+  cargo: {
+    darwin: 'curl --proto "=https" --tlsv1.2 -sSf https://sh.rustup.rs | sh',
+    linux:  'curl --proto "=https" --tlsv1.2 -sSf https://sh.rustup.rs | sh',
+    win32:  'winget install Rustlang.Rustup',
+  },
+  rustc: {
+    darwin: 'curl --proto "=https" --tlsv1.2 -sSf https://sh.rustup.rs | sh',
+    linux:  'curl --proto "=https" --tlsv1.2 -sSf https://sh.rustup.rs | sh',
+    win32:  'winget install Rustlang.Rustup',
+  },
+  go: {
+    darwin: 'brew install go',
+    linux:  'sudo apt install -y golang',
+    win32:  'winget install GoLang.Go',
+  },
+  docker: { darwin: null, linux: null, win32: null },  // Docker Desktop installer GUI
+  poetry: {
+    darwin: 'curl -sSL https://install.python-poetry.org | python3 -',
+    linux:  'curl -sSL https://install.python-poetry.org | python3 -',
+    win32:  '(Invoke-WebRequest -Uri https://install.python-poetry.org -UseBasicParsing).Content | python -',
+  },
+  pipx: {
+    darwin: 'brew install pipx',
+    linux:  'python3 -m pip install --user pipx && python3 -m pipx ensurepath',
+    win32:  'python -m pip install --user pipx',
+  },
+  pnpm: {
+    darwin: 'npm install -g pnpm',
+    linux:  'npm install -g pnpm',
+    win32:  'npm install -g pnpm',
+  },
+  ruby: {
+    darwin: 'brew install ruby',
+    linux:  'sudo apt install -y ruby-full',
+    win32:  'winget install RubyInstallerTeam.Ruby.3.3',
+  },
 };
+
+// INSTALL_HINTS testuali per tooltip umano (più informativo del solo comando).
+// Generati automaticamente da INSTALL_COMMANDS + URL ufficiale di reference.
+const INSTALL_DOCS = {
+  bun:      'https://bun.sh',
+  deno:     'https://deno.com/runtime',
+  python3:  'https://www.python.org/downloads/',
+  python:   'https://www.python.org/downloads/',
+  uv:       'https://docs.astral.sh/uv/',
+  wrangler: 'https://developers.cloudflare.com/workers/wrangler/',
+  supabase: 'https://supabase.com/docs/guides/cli',
+  vercel:   'https://vercel.com/docs/cli',
+  gcloud:   'https://cloud.google.com/sdk/docs/install',
+  aws:      'https://aws.amazon.com/cli/',
+  gh:       'https://cli.github.com',
+  rg:       'https://github.com/BurntSushi/ripgrep',
+  jq:       'https://jqlang.github.io/jq/',
+  fzf:      'https://github.com/junegunn/fzf',
+  cargo:    'https://rustup.rs',
+  rustc:    'https://rustup.rs',
+  go:       'https://go.dev/dl/',
+  docker:   'https://docs.docker.com/desktop/',
+  poetry:   'https://python-poetry.org/docs/',
+  pipx:     'https://pipx.pypa.io',
+  pnpm:     'https://pnpm.io/installation',
+  ruby:     'https://www.ruby-lang.org/en/downloads/',
+};
+
+// Helper: ritorna il comando install per la piattaforma corrente, o null se
+// non c'è (tool che richiede installer GUI multi-step).
+function getInstallCommand(tool, platform) {
+  const entry = INSTALL_COMMANDS[tool];
+  if (!entry) return null;
+  return entry[platform] || null;
+}
+
+// Tooltip testuale "human-readable" multi-piattaforma + link docs ufficiali.
+// Sostituisce il vecchio INSTALL_HINTS basato su stringa monolitica.
+const INSTALL_HINTS = Object.fromEntries(
+  Object.keys(INSTALL_COMMANDS).map(tool => {
+    const cmds = INSTALL_COMMANDS[tool];
+    const parts = [];
+    if (cmds.darwin) parts.push('macOS: ' + cmds.darwin);
+    if (cmds.linux)  parts.push('Linux: ' + cmds.linux);
+    if (cmds.win32)  parts.push('Win: '   + cmds.win32);
+    if (INSTALL_DOCS[tool]) parts.push('Docs: ' + INSTALL_DOCS[tool]);
+    return [tool, parts.join('\n')];
+  })
+);
 
 // Pattern speciali: alcuni hook chiamano `node` con uno script che internamente
 // richiede un altro tool (es. `bun-runner.js` cerca bun nel PATH). Senza questa
@@ -256,7 +391,11 @@ async function checkAvailability(tools) {
     out[t] = {
       installed: r.installed,
       path: r.path,
-      installHint: INSTALL_HINTS[t] || '',
+      installHint:    INSTALL_HINTS[t] || '',
+      // v1.0.91 — comando di install per la piattaforma corrente (null se
+      // tool che richiede installer GUI multi-step, es. Docker/gcloud)
+      installCommand: getInstallCommand(t, process.platform),
+      docsUrl:        INSTALL_DOCS[t] || '',
     };
   }));
   return out;
@@ -291,6 +430,9 @@ module.exports = {
   checkAvailabilityOne,
   clearCache,
   collectAllDeps,
+  getInstallCommand,
   UBIQUITOUS,
   INSTALL_HINTS,
+  INSTALL_COMMANDS,
+  INSTALL_DOCS,
 };
