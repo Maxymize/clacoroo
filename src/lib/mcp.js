@@ -206,10 +206,12 @@ function detectReconnectType(srv) {
   if (srv.transport === 'http' || srv.transport === 'sse') {
     return {
       type: 'http-oauth',
-      typeLabel: 'OAuth in sessione claude',
-      description: 'Server HTTP/SSE gestito dal plugin. Il flusso OAuth si triggera automaticamente quando lanci `claude` in modalità interactive — segui il prompt nel terminale.',
+      typeLabel: 'OAuth via /mcp in claude',
+      description: 'Server HTTP/SSE gestito dal plugin. Apriamo `claude` e ti portiamo al menu `/mcp` di Claude Code, da dove puoi fare auth/reconnect direttamente.',
       actions: [
-        { kind: 'open-terminal', label: '↗ Apri claude (OAuth interactive)', command: 'claude' },
+        // v1.0.86 — preDigit invece di solo command: dopo il banner claude, pre-digita
+        // `/mcp` così l'utente vede subito il menu MCP ufficiale di Claude Code.
+        { kind: 'open-terminal', label: '↗ Apri /mcp in claude', command: 'claude', preDigit: '/mcp' },
         { kind: 'clear-cache', label: '🚫 Rimuovi da cache "Needs auth"' },
       ],
     };
@@ -220,9 +222,9 @@ function detectReconnectType(srv) {
   return {
     type: 'stdio-wrapper',
     typeLabel: 'Wrapper stdio',
-    description: 'Server stdio locale. Se richiede auth, è il wrapper (es. mcp-remote) a fare OAuth — completalo lanciando `claude`.',
+    description: 'Server stdio locale. Se richiede auth, è un wrapper (es. mcp-remote) a fare OAuth — il menu `/mcp` di Claude Code ti fa gestire il reconnect.',
     actions: [
-      { kind: 'open-terminal', label: '↗ Apri claude (per OAuth wrapper)', command: 'claude' },
+      { kind: 'open-terminal', label: '↗ Apri /mcp in claude', command: 'claude', preDigit: '/mcp' },
       { kind: 'clear-cache', label: '🚫 Rimuovi da cache "Needs auth"' },
     ],
   };

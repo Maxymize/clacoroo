@@ -3454,8 +3454,17 @@ async function runMcpReconnectAction(srv, act) {
   }
   if (act.kind === 'open-terminal') {
     // Apre il drawer terminale + nuova tab + lancia `claude` interactive.
-    // Pattern identico a quello del pannello Account (`claude auth login`).
-    await openTerminalWithCommand(act.command);
+    // v1.0.86 — se l'action ha `preDigit` (es. `/mcp`), lo invia DOPO ~4s che
+    // claude ha finito di stampare banner + hook + caricato contesto, così
+    // l'utente vede direttamente il menu /mcp di Claude Code. Niente Enter
+    // automatico: la riga resta digitata, l'utente sceglie se inviare.
+    const tab = await openTerminalWithCommand(act.command);
+    if (tab && act.preDigit) {
+      toast('Apro `claude` e ti porto al menu ' + act.preDigit + ' (attendi qualche secondo)', 'info');
+      setTimeout(() => {
+        try { window.claudeAPI.pty.write(tab.ptyId, act.preDigit); } catch {}
+      }, 4000);
+    }
     return;
   }
   if (act.kind === 'clear-cache') {

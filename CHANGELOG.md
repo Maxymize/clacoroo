@@ -1,5 +1,16 @@
 # Changelog
 
+## v1.0.86 — 2026-05-26 — Pack G v2 fix: bottone reconnect HTTP/stdio porta al menu `/mcp` di Claude Code + finding keychain
+
+Risposta al feedback utente sul Pack G v2 v1.0.85: il bottone "Apri claude (OAuth interactive)" lasciava l'utente davanti a una sessione `claude` vuota senza istruzioni — il flow OAuth in Claude Code si triggera SOLO quando un tool MCP viene chiamato, non al boot. Niente OAuth visibile, esperienza inutile.
+
+- [FIX] **Bottone reconnect HTTP-OAuth + stdio-wrapper** ora pre-digita lo slash command `/mcp` 4 secondi dopo il boot di `claude` (tempo che il banner + hook + caricamento contesto finiscano). L'utente vede direttamente il menu MCP ufficiale di Claude Code da dove può fare auth/reconnect sul server specifico. NESSUN Enter automatico: la riga resta digitata, l'utente sceglie se inviare (può anche scrivere altro). Pattern identico al pre-typing delle skill in v1.0.77
+- [FEATURE] Toast informativo "Apro `claude` e ti porto al menu `/mcp`" appare al click, così l'utente sa cosa aspettarsi durante i 4s di caricamento
+- [LABEL] Bottoni rinominati da "↗ Apri claude (OAuth interactive)" a **"↗ Apri /mcp in claude"** + descrizione aggiornata per riflettere il nuovo comportamento
+- [STRUCT] Schema action esteso con campo opzionale `preDigit`: il dispatcher `runMcpReconnectAction` lo invia tramite `pty.write(tab.ptyId, preDigit)` dopo `setTimeout(4000)`. Cross-platform (passa per `node-pty`, già usato in tutto il Pack B)
+
+**Finding keychain (per il TASK Pack G v2.2)**: con autorizzazione esplicita utente, verificato che Claude Code usa **una sola entry keychain** chiamata `"Claude Code-credentials"` (account = username sistema) che contiene tutto il blob di credenziali OAuth (principale + probabilmente token MCP tutti insieme). **Non esistono entries separate per Drive vs Gmail vs Cloudflare** da cancellare chirurgicamente. Modificare il blob significherebbe rischiare di invalidare anche l'OAuth Claude principale → "clear auth vero per singolo MCP" non praticabile via keychain. Strategia confermata: agire solo sul cache locale + delegare reconnect al menu `/mcp` di Claude Code. **Resta giusta la nota originale**: per le API key Anthropic possiamo scrivere nel keychain perché CLACOROO possiede la sua entry dedicata (`clacoroo-api-key`), non modifichiamo entries di altri programmi
+
 ## v1.0.85 — 2026-05-26 — Pack G v2: MCP reconnect from CLACOROO (3 azioni contestuali per tipo MCP)
 
 Risposta alla richiesta utente: "aggiungere task per riconnettere gli MCP da dentro CLACOROO". Discovery completata, implementazione MVP delle 3 azioni contestuali per ogni server in `Needs Auth`. CLACOROO ora distingue 3 pattern MCP e offre l'azione più adatta a ognuno, sempre con un fallback "↗ Apri in terminale" universale. **Niente manipolazione diretta dei token** (rispettato vincolo "CLACOROO non scrive mai nel keychain di Claude Code") — si agisce solo sul cache locale `mcp-needs-auth-cache.json`.
