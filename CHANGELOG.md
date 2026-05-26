@@ -1,5 +1,31 @@
 # Changelog
 
+## v1.0.96 — 2026-05-26 — Pack M MVP: vista cards + compatta switchabile (Skill/Agent)
+
+Primo step di **Pack M** (vista cards + compatta per tutte le sezioni). MVP con infrastruttura + le 2 sezioni più semplici (Skill, Agent — oggi solo compatta). Le altre sezioni (Marketplace/Plugin/MCP/Hooks — oggi solo cards) riceveranno la vista compatta in v1.0.97.
+
+### Infrastruttura view switcher
+
+- [FEATURE] **`state.viewMode = { plugins, marketplaces, skills, agents, mcp, hooks }`** con default `'cards'` per tutte. Persistenza in `state.json` via setState. Restore in `init()` con validazione (solo `'cards'` o `'compact'` accettati)
+- [FEATURE] **`renderViewSwitcher(section, currentMode, onChange)`** helper: 2 bottoni icona toggle (Lucide `layout-grid` per cards + `list` per compatta) con stato attivo evidenziato. Posizionato nel `section-header` accanto al sort dropdown
+- [FEATURE] **`setViewMode(section, mode)`** helper: aggiorna state + persiste + re-render
+- [FEATURE] **`renderListSection` esteso**: accetta `sortConfig.viewSwitcher = {section, mode, onChange}` opzionale. Mostrato a sinistra del sort dropdown
+- [STYLE] Nuove classi `.view-switcher`, `.view-switcher-btn`, `.view-switcher-btn.active`
+
+### Vista cards per Skill/Agent
+
+- [FEATURE] **`buildSkillAgentCard(item, kind)`** nuovo builder: card layout simile a `.hook-card` con header nome + plugin/mkt dot, body con scope badge + health badge + blocked badge se applicable, footer con bottone "Apri preview" (riusa `openMarkdownPreview`). Card cliccabile per intero
+- [FEATURE] **`buildSkillAgentChip(item, kind)`** estratto a parte (era inline in renderSkills/renderAgents). Vista compatta invariata
+- [FEATURE] **`renderSkills` / `renderAgents` refactored**: in base a `state.viewMode.skills/agents` usano il builder card o chip. Grid class diversa: `.browse-card-grid` per cards, `.skill-grid` per compatta
+- [STYLE] Nuove classi `.browse-card-grid`, `.browse-card`, `.browse-card-head/-title-wrap/-title/-plugin-line/-mkt-dot/-plugin/-mkt`, `.browse-card-body/-badges`, `.browse-card-blocked`, `.browse-card-foot/-hint`. Riusabili per le compact view delle altre sezioni in v1.0.97
+
+### NEXT (v1.0.97 — Pack M completamento)
+
+- Compact view per Marketplace (chip con count installati/disponibili)
+- Compact view per Plugin (chip con status)
+- Compact view per MCP (chip con dot status + transport)
+- Compact view per Hooks (chip con event badge piccolo + matcher truncato)
+
 ## v1.0.95 — 2026-05-26 — Card MCP truncate + helper icone Lucide (no emoji) + Pack M registrato
 
 Due fix UX dalla feedback utente sulla sezione MCP.

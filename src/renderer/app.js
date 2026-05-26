@@ -62,6 +62,9 @@ const LUCIDE_ICONS = {
   'plug':        '<path d="M9 2v6"/><path d="M15 2v6"/><path d="M12 17v3"/><path d="M5 8h14"/><path d="M6 11V8h12v3a6 6 0 0 1-12 0Z"/>',
   'chevron-down':'<path d="m6 9 6 6 6-6"/>',
   'chevron-up':  '<path d="m18 15-6-6-6 6"/>',
+  // v1.0.96 — Pack M: view switcher cards/compatta
+  'layout-grid': '<rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/>',
+  'list':        '<line x1="8" x2="21" y1="6" y2="6"/><line x1="8" x2="21" y1="12" y2="12"/><line x1="8" x2="21" y1="18" y2="18"/><line x1="3" x2="3.01" y1="6" y2="6"/><line x1="3" x2="3.01" y1="12" y2="12"/><line x1="3" x2="3.01" y1="18" y2="18"/>',
 };
 
 /**
@@ -133,6 +136,18 @@ const state = {
   mcpSort:    'name-asc',
   // v1.0.83 — Pack K: ordinamento sezione Hooks
   hookSort:   'event-asc',
+  // v1.0.96 — Pack M: vista cards (default) vs compatta (chip) switchabile
+  // per ogni sezione, persistita in state.json. Le sezioni che oggi hanno
+  // solo una delle 2 viste ottengono l'altra (Skill/Agent cards, MCP/Hooks/
+  // Plugin/Marketplace compact). Switch tramite 2 iconcine nel topbar.
+  viewMode: {
+    plugins:      'cards',
+    marketplaces: 'cards',
+    skills:       'cards',
+    agents:       'cards',
+    mcp:          'cards',
+    hooks:        'cards',
+  },
 };
 
 const MKT_SORTERS = {
@@ -179,6 +194,37 @@ const HOOK_SORTERS = {
   'plugin-desc': (a, b) => (b.pluginId || '').localeCompare(a.pluginId || '')
                           || (a.event || '').localeCompare(b.event || ''),
 };
+
+// v1.0.96 — Pack M: due bottoni icona toggle per scegliere vista cards
+// (default) o compatta. Persiste in state.json via setState. Posizionato
+// nel section-header accanto al sort dropdown. Pattern coerente: il
+// bottone attivo ha bordo accent2.
+function renderViewSwitcher(section, currentMode, onChange) {
+  const wrap = el('div', 'view-switcher');
+  const modes = [
+    { key: 'cards',   iconName: 'layout-grid', title: 'Vista a cards' },
+    { key: 'compact', iconName: 'list',        title: 'Vista compatta' },
+  ];
+  modes.forEach(m => {
+    const btn = el('button', 'view-switcher-btn' + (currentMode === m.key ? ' active' : ''));
+    btn.appendChild(icon(m.iconName));
+    btn.title = m.title;
+    btn.setAttribute('aria-label', m.title);
+    btn.addEventListener('click', () => {
+      if (m.key === currentMode) return;
+      onChange(m.key);
+    });
+    wrap.appendChild(btn);
+  });
+  return wrap;
+}
+
+// Helper: switch del view mode di una sezione + persist + re-render
+async function setViewMode(section, mode) {
+  state.viewMode[section] = mode;
+  await window.claudeAPI.setState({ viewMode: state.viewMode });
+  render();
+}
 
 // Renderizza una <select> di ordinamento standardizzata. opts: [{key,label},...]
 function renderSortDropdown(currentKey, opts, onChange) {
@@ -290,6 +336,14 @@ async function init() {
   if (appState.agentSort  && NAME_SORTERS[appState.agentSort])   state.agentSort  = appState.agentSort;
   if (appState.mcpSort    && MCP_SORTERS[appState.mcpSort])      state.mcpSort    = appState.mcpSort;
   if (appState.hookSort   && HOOK_SORTERS[appState.hookSort])    state.hookSort   = appState.hookSort;
+  // v1.0.96 — Pack M: restore viewMode persistito per sezione (default cards)
+  if (appState.viewMode && typeof appState.viewMode === 'object') {
+    for (const sec of Object.keys(state.viewMode)) {
+      if (appState.viewMode[sec] === 'cards' || appState.viewMode[sec] === 'compact') {
+        state.viewMode[sec] = appState.viewMode[sec];
+      }
+    }
+  }
   if (appState.lastSection && appState.lastSection !== 'dashboard') {
     switchToSection(appState.lastSection);
   }
@@ -2087,30 +2141,28 @@ function renderSkills() {
     return { name: s.name, plugin: s.plugin.slice(0, at), mkt: s.plugin.slice(at + 1), blocked: false, fullId: s.plugin, scope: 'local', projectName: s.projectName, projectPath: s.projectPath };
   });
   const all = [...globals, ...locals].sort(NAME_SORTERS[state.skillSort] || NAME_SORTERS['name-asc']);
+  const mode = state.viewMode.skills;
+  const gridCls = mode === 'cards' ? 'browse-card-grid' : 'skill-grid';
+  const builder = mode === 'cards'
+    ? (item) => buildSkillAgentCard(item, 'skill')
+    : (item) => buildSkillAgentChip(item, 'skill');
 
-  renderListSection(all, 'skills', item => {
-    const chip = el('div', 'skill-chip' + (item.scope === 'local' ? ' local-scope' : ' clickable') + (item.blocked ? ' blocked' : ''));
-    chip.style.borderLeftColor = mktColor(item.mkt);
-    const dot = el('span');
-    dot.style.cssText = 'width:6px;height:6px;border-radius:50%;flex-shrink:0;background:' + mktColor(item.mkt);
-    chip.appendChild(dot);
-    chip.appendChild(el('span', 'skill-chip-name', item.name));
-    chip.appendChild(el('span', 'skill-chip-plugin', item.plugin));
-    appendHealthBadge(chip, item.health);
-    appendScopeBadge(chip, item);
-    if (item.scope === 'global') {
-      chip.addEventListener('click', () => openMarkdownPreview(item.fullId, 'skill', item.name));
-    }
-    return chip;
-  }, item => item.name + ' ' + item.plugin + ' ' + item.mkt + (item.projectName || ''), 'skill-grid', {
-    currentKey: state.skillSort,
-    options: SORT_OPTIONS.skill,
-    onChange: async (key) => {
-      state.skillSort = key;
-      await window.claudeAPI.setState({ skillSort: key });
-      renderSkills();
-    },
-  });
+  renderListSection(all, 'skills', builder,
+    item => item.name + ' ' + item.plugin + ' ' + item.mkt + (item.projectName || ''),
+    gridCls,
+    {
+      currentKey: state.skillSort,
+      options: SORT_OPTIONS.skill,
+      onChange: async (key) => {
+        state.skillSort = key;
+        await window.claudeAPI.setState({ skillSort: key });
+        renderSkills();
+      },
+      viewSwitcher: {
+        section: 'skills', mode,
+        onChange: (m) => setViewMode('skills', m),
+      },
+    });
 }
 
 /* ── AGENTS ───────────────────────────────────────────────────────────── */
@@ -2123,30 +2175,111 @@ function renderAgents() {
     return { name: a.name, plugin: a.plugin.slice(0, at), mkt: a.plugin.slice(at + 1), fullId: a.plugin, scope: 'local', projectName: a.projectName, projectPath: a.projectPath };
   });
   const all = [...globals, ...locals].sort(NAME_SORTERS[state.agentSort] || NAME_SORTERS['name-asc']);
+  const mode = state.viewMode.agents;
+  const gridCls = mode === 'cards' ? 'browse-card-grid' : 'skill-grid';
+  const builder = mode === 'cards'
+    ? (item) => buildSkillAgentCard(item, 'agent')
+    : (item) => buildSkillAgentChip(item, 'agent');
 
-  renderListSection(all, 'agents', item => {
-    const chip = el('div', 'skill-chip' + (item.scope === 'local' ? ' local-scope' : ' clickable'));
-    chip.style.borderLeftColor = mktColor(item.mkt);
-    const dot = el('span');
-    dot.style.cssText = 'width:6px;height:6px;border-radius:50%;flex-shrink:0;background:#f97316';
-    chip.appendChild(dot);
-    chip.appendChild(el('span', 'skill-chip-name', item.name));
-    chip.appendChild(el('span', 'skill-chip-plugin', item.plugin));
-    appendHealthBadge(chip, item.health);
-    appendScopeBadge(chip, item);
-    if (item.scope === 'global') {
-      chip.addEventListener('click', () => openMarkdownPreview(item.fullId, 'agent', item.name));
-    }
-    return chip;
-  }, item => item.name + ' ' + item.plugin + ' ' + item.mkt + (item.projectName || ''), 'skill-grid', {
-    currentKey: state.agentSort,
-    options: SORT_OPTIONS.agent,
-    onChange: async (key) => {
-      state.agentSort = key;
-      await window.claudeAPI.setState({ agentSort: key });
-      renderAgents();
-    },
-  });
+  renderListSection(all, 'agents', builder,
+    item => item.name + ' ' + item.plugin + ' ' + item.mkt + (item.projectName || ''),
+    gridCls,
+    {
+      currentKey: state.agentSort,
+      options: SORT_OPTIONS.agent,
+      onChange: async (key) => {
+        state.agentSort = key;
+        await window.claudeAPI.setState({ agentSort: key });
+        renderAgents();
+      },
+      viewSwitcher: {
+        section: 'agents', mode,
+        onChange: (m) => setViewMode('agents', m),
+      },
+    });
+}
+
+// v1.0.96 — Pack M: builder chip "compact view" condiviso fra skill/agent
+// (era inline in renderSkills/renderAgents prima del refactor). `kind` =
+// 'skill' | 'agent' per dot color e icon nel modal preview.
+function buildSkillAgentChip(item, kind) {
+  const chip = el('div', 'skill-chip' + (item.scope === 'local' ? ' local-scope' : ' clickable') + (item.blocked ? ' blocked' : ''));
+  chip.style.borderLeftColor = mktColor(item.mkt);
+  const dot = el('span');
+  const dotColor = kind === 'agent' ? '#f97316' : mktColor(item.mkt);
+  dot.style.cssText = 'width:6px;height:6px;border-radius:50%;flex-shrink:0;background:' + dotColor;
+  chip.appendChild(dot);
+  chip.appendChild(el('span', 'skill-chip-name', item.name));
+  chip.appendChild(el('span', 'skill-chip-plugin', item.plugin));
+  appendHealthBadge(chip, item.health);
+  appendScopeBadge(chip, item);
+  if (item.scope === 'global') {
+    chip.addEventListener('click', () => openMarkdownPreview(item.fullId, kind, item.name));
+  }
+  return chip;
+}
+
+// v1.0.96 — Pack M: builder card "vista ampia" per skill/agent.
+// Layout simile a .hook-card: header con name grande + plugin/mkt dot,
+// body con scope badge + health badge, footer con bottone "Apri preview".
+function buildSkillAgentCard(item, kind) {
+  const card = el('div', 'browse-card' + (item.blocked ? ' blocked' : ''));
+  card.style.borderLeftColor = kind === 'agent' ? '#f97316' : mktColor(item.mkt);
+
+  // Header: nome grande + plugin + dot mkt
+  const head = el('div', 'browse-card-head');
+  const titleWrap = el('div', 'browse-card-title-wrap');
+  titleWrap.appendChild(el('div', 'browse-card-title', item.name));
+  const pluginLine = el('div', 'browse-card-plugin-line');
+  const dot = el('span', 'browse-card-mkt-dot');
+  dot.style.background = mktColor(item.mkt);
+  pluginLine.appendChild(dot);
+  pluginLine.appendChild(el('span', 'browse-card-plugin', item.plugin));
+  if (item.mkt) pluginLine.appendChild(el('span', 'browse-card-mkt', item.mkt));
+  titleWrap.appendChild(pluginLine);
+  head.appendChild(titleWrap);
+  card.appendChild(head);
+
+  // Body: scope + health
+  const body = el('div', 'browse-card-body');
+  const badgeRow = el('div', 'browse-card-badges');
+  const scopeBadge = el('span', 'scope-badge scope-' + item.scope,
+    item.scope === 'local' ? (item.projectName || 'locale') : 'globale');
+  if (item.projectPath) scopeBadge.title = item.projectPath;
+  badgeRow.appendChild(scopeBadge);
+  if (item.health && item.health.status !== 'ok') {
+    const hb = el('span', 'health-badge h-' + item.health.status,
+      item.health.status === 'err' ? 'health: errore' : 'health: warning');
+    hb.title = (item.health.issues || []).join(' · ');
+    badgeRow.appendChild(hb);
+  }
+  if (item.blocked) {
+    badgeRow.appendChild(el('span', 'browse-card-blocked', 'disabilitato'));
+  }
+  body.appendChild(badgeRow);
+  card.appendChild(body);
+
+  // Footer: bottone azione (solo per scope global, locali non hanno preview)
+  if (item.scope === 'global') {
+    const foot = el('div', 'browse-card-foot');
+    const openBtn = btnWithIcon('btn btn-sm btn-ghost', 'eye', 'Apri preview');
+    openBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      openMarkdownPreview(item.fullId, kind, item.name);
+    });
+    foot.appendChild(openBtn);
+    card.appendChild(foot);
+    card.style.cursor = 'pointer';
+    card.addEventListener('click', () => openMarkdownPreview(item.fullId, kind, item.name));
+  } else {
+    // Locali: no preview, mostra path progetto
+    const foot = el('div', 'browse-card-foot');
+    foot.appendChild(el('span', 'browse-card-hint',
+      'Locale al progetto · preview disponibile solo per global'));
+    card.appendChild(foot);
+  }
+
+  return card;
 }
 
 // v1.0.81 — Rimosso `appendRunButton` (era il bottone ⎘ per-riga delle card
@@ -2815,6 +2948,8 @@ function showMarkdownModal(name, kind, content) {
 
 // v1.0.82 — `sortConfig` opzionale: { currentKey, options, onChange } iniettato
 // nell'header per esporre il dropdown sort (usato da renderSkills/renderAgents).
+// v1.0.96 — `sortConfig.viewSwitcher = {section, mode, onChange}` opzionale
+// aggiunge il toggle vista cards/compatta accanto al sort dropdown.
 function renderListSection(items, key, buildChip, searchFn, gridCls, sortConfig) {
   const f = state.filters[key] || { search: '' };
   const wrap = el('div');
@@ -2822,13 +2957,15 @@ function renderListSection(items, key, buildChip, searchFn, gridCls, sortConfig)
   // search
   const bar = el('div', 'filter-bar');
   const sw  = el('div', 'search-wrap');
-  const icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-  icon.setAttribute('viewBox', '0 0 20 20'); icon.setAttribute('fill', 'currentColor');
+  // Icona search SVG inline (legacy: definita prima del refactor Lucide v1.0.95).
+  // Usa variabile `searchIcon` per non shadoware la funzione globale `icon()`.
+  const searchIcon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  searchIcon.setAttribute('viewBox', '0 0 20 20'); searchIcon.setAttribute('fill', 'currentColor');
   const iconPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
   iconPath.setAttribute('fill-rule', 'evenodd');
   iconPath.setAttribute('d', 'M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z');
-  icon.appendChild(iconPath);
-  sw.appendChild(icon);
+  searchIcon.appendChild(iconPath);
+  sw.appendChild(searchIcon);
   const inp = el('input', 'search-input');
   inp.setAttribute('placeholder', 'Cerca…');
   inp.setAttribute('type', 'text');
@@ -2840,6 +2977,10 @@ function renderListSection(items, key, buildChip, searchFn, gridCls, sortConfig)
   const hdr = el('div', 'section-header');
   const countEl = el('span', 'section-count', '');
   hdr.appendChild(countEl);
+  if (sortConfig && sortConfig.viewSwitcher) {
+    const vs = sortConfig.viewSwitcher;
+    hdr.appendChild(renderViewSwitcher(vs.section, vs.mode, vs.onChange));
+  }
   if (sortConfig) {
     hdr.appendChild(renderSortDropdown(sortConfig.currentKey, sortConfig.options, sortConfig.onChange));
   }
