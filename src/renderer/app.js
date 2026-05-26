@@ -305,14 +305,15 @@ const HOOK_SORTERS = {
 function renderViewSwitcher(section, currentMode, onChange) {
   const wrap = el('div', 'view-switcher');
   const modes = [
-    { key: 'cards',   iconName: 'layout-grid', title: 'Vista a cards' },
-    { key: 'compact', iconName: 'list',        title: 'Vista compatta' },
+    { key: 'cards',   iconName: 'layout-grid', titleKey: 'view.cards' },
+    { key: 'compact', iconName: 'list',        titleKey: 'view.compact' },
   ];
   modes.forEach(m => {
     const btn = el('button', 'view-switcher-btn' + (currentMode === m.key ? ' active' : ''));
     btn.appendChild(icon(m.iconName));
-    btn.title = m.title;
-    btn.setAttribute('aria-label', m.title);
+    const title = t(m.titleKey);
+    btn.title = title;
+    btn.setAttribute('aria-label', title);
     btn.addEventListener('click', () => {
       if (m.key === currentMode) return;
       onChange(m.key);
@@ -350,21 +351,21 @@ function appendModifiedBadge(parent, item, kind, mode) {
   }
   const modBadge = el('span', 'browse-card-modified');
   modBadge.appendChild(icon('pencil'));
-  modBadge.appendChild(document.createTextNode('modificato'));
+  modBadge.appendChild(document.createTextNode(t('badge.modified')));
   if (tsStr) modBadge.title = 'Modificato localmente il ' + tsStr +
     '\n\nLa modifica verrà sovrascritta al prossimo `claude plugins update ' + item.fullId + '`.';
   parent.appendChild(modBadge);
 }
 
-// Renderizza una <select> di ordinamento standardizzata. opts: [{key,label},...]
+// Renderizza una <select> di ordinamento standardizzata. opts: [{key,labelKey},...]
 function renderSortDropdown(currentKey, opts, onChange) {
   const wrap = el('div', 'sort-dropdown-wrap');
-  wrap.appendChild(el('span', 'sort-dropdown-label', 'Ordina:'));
+  wrap.appendChild(el('span', 'sort-dropdown-label', t('sort.label')));
   const sel = el('select', 'sort-dropdown');
   opts.forEach(o => {
     const opt = document.createElement('option');
     opt.value = o.key;
-    opt.textContent = o.label;
+    opt.textContent = t(o.labelKey);
     if (o.key === currentKey) opt.selected = true;
     sel.appendChild(opt);
   });
@@ -373,32 +374,33 @@ function renderSortDropdown(currentKey, opts, onChange) {
   return wrap;
 }
 
-// Opzioni standard per sezione (label IT)
+// Opzioni standard per sezione. `labelKey` risolto in renderSortDropdown
+// via t() così le option seguono la lingua corrente (no module-load lock-in).
 const SORT_OPTIONS = {
   plugin: [
-    { key: 'name-asc',       label: 'Nome (A → Z)' },
-    { key: 'name-desc',      label: 'Nome (Z → A)' },
-    { key: 'installed-desc', label: 'Installati di recente' },
-    { key: 'installed-asc',  label: 'Installati meno di recente' },
+    { key: 'name-asc',       labelKey: 'sort.nameAsc' },
+    { key: 'name-desc',      labelKey: 'sort.nameDesc' },
+    { key: 'installed-desc', labelKey: 'sort.installedDesc' },
+    { key: 'installed-asc',  labelKey: 'sort.installedAsc' },
   ],
   skill: [
-    { key: 'name-asc',  label: 'Nome (A → Z)' },
-    { key: 'name-desc', label: 'Nome (Z → A)' },
+    { key: 'name-asc',  labelKey: 'sort.nameAsc' },
+    { key: 'name-desc', labelKey: 'sort.nameDesc' },
   ],
   agent: [
-    { key: 'name-asc',  label: 'Nome (A → Z)' },
-    { key: 'name-desc', label: 'Nome (Z → A)' },
+    { key: 'name-asc',  labelKey: 'sort.nameAsc' },
+    { key: 'name-desc', labelKey: 'sort.nameDesc' },
   ],
   mcp: [
-    { key: 'name-asc',  label: 'Nome (A → Z)' },
-    { key: 'name-desc', label: 'Nome (Z → A)' },
-    { key: 'status',    label: 'Stato (Connected prima)' },
+    { key: 'name-asc',  labelKey: 'sort.nameAsc' },
+    { key: 'name-desc', labelKey: 'sort.nameDesc' },
+    { key: 'status',    labelKey: 'sort.statusFirst' },
   ],
   hook: [
-    { key: 'event-asc',   label: 'Evento (A → Z)' },
-    { key: 'event-desc',  label: 'Evento (Z → A)' },
-    { key: 'plugin-asc',  label: 'Plugin (A → Z)' },
-    { key: 'plugin-desc', label: 'Plugin (Z → A)' },
+    { key: 'event-asc',   labelKey: 'sort.eventAsc' },
+    { key: 'event-desc',  labelKey: 'sort.eventDesc' },
+    { key: 'plugin-asc',  labelKey: 'sort.pluginAsc' },
+    { key: 'plugin-desc', labelKey: 'sort.pluginDesc' },
   ],
 };
 
@@ -1904,9 +1906,14 @@ function buildPluginCompactRow(p) {
   row.appendChild(el('span', 'compact-row-sub', p.mkt));
   // Status badge
   let statusLabel, statusClass;
-  if (p.scope === 'local') { statusLabel = 'locale: ' + (p.projectName || ''); statusClass = 'plugin-status-local'; }
-  else if (p.blocked)       { statusLabel = 'disabilitato'; statusClass = 'plugin-status-blocked'; }
-  else                       { statusLabel = 'attivo'; statusClass = 'plugin-status-active'; }
+  if (p.scope === 'local') {
+    statusLabel = p.projectName
+      ? t('badge.scopeLocalNamed', { name: p.projectName })
+      : t('badge.scopeLocal');
+    statusClass = 'plugin-status-local';
+  }
+  else if (p.blocked) { statusLabel = t('badge.disabled');     statusClass = 'plugin-status-blocked'; }
+  else                { statusLabel = t('badge.pluginActive'); statusClass = 'plugin-status-active'; }
   row.appendChild(el('span', 'compact-row-pstatus ' + statusClass, statusLabel));
   // Count summary
   const counts = [];
@@ -1943,7 +1950,9 @@ function buildPluginCard(p) {
   rightCol.appendChild(pill);
   // Badge scope (v1.0.11)
   const scopeBadge = el('span', 'scope-badge scope-' + p.scope,
-    p.scope === 'local' ? 'locale: ' + (p.projectName || 'progetto') : 'globale');
+    p.scope === 'local'
+      ? t('badge.scopeLocalNamed', { name: p.projectName || t('badge.scopeProgetto') })
+      : t('badge.scopeGlobal'));
   if (p.projectPath) scopeBadge.title = p.projectPath;
   rightCol.appendChild(scopeBadge);
 
@@ -2639,16 +2648,16 @@ function renderMarketplaces() {
 
   // v1.0.55 — Selector di ordinamento
   const sortWrap = el('div', 'mkt-sort-wrap');
-  sortWrap.appendChild(el('span', 'mkt-sort-label', 'Ordina:'));
+  sortWrap.appendChild(el('span', 'mkt-sort-label', t('sort.label')));
   const sortSel = el('select', 'mkt-sort-select');
   [
-    { v: 'default',      l: 'Predefinito (per N plugin)' },
-    { v: 'added-desc',   l: 'Aggiunti di recente' },
-    { v: 'added-asc',    l: 'Aggiunti meno di recente' },
-    { v: 'updated-desc', l: 'Aggiornati di recente' },
-    { v: 'updated-asc',  l: 'Aggiornati meno di recente' },
+    { v: 'default',      k: 'sort.mktDefault' },
+    { v: 'added-desc',   k: 'sort.mktAddedDesc' },
+    { v: 'added-asc',    k: 'sort.mktAddedAsc' },
+    { v: 'updated-desc', k: 'sort.mktUpdatedDesc' },
+    { v: 'updated-asc',  k: 'sort.mktUpdatedAsc' },
   ].forEach(o => {
-    const opt = el('option', null, o.l);
+    const opt = el('option', null, t(o.k));
     opt.value = o.v;
     sortSel.appendChild(opt);
   });
@@ -2905,7 +2914,7 @@ function buildSkillAgentCard(item, kind) {
   const body = el('div', 'browse-card-body');
   const badgeRow = el('div', 'browse-card-badges');
   const scopeBadge = el('span', 'scope-badge scope-' + item.scope,
-    item.scope === 'local' ? (item.projectName || 'locale') : 'globale');
+    item.scope === 'local' ? (item.projectName || t('badge.scopeLocal')) : t('badge.scopeGlobal'));
   if (item.projectPath) scopeBadge.title = item.projectPath;
   badgeRow.appendChild(scopeBadge);
   if (item.health && item.health.status !== 'ok') {
@@ -2917,7 +2926,7 @@ function buildSkillAgentCard(item, kind) {
     // (b) aprire issue sul repo del plugin per fix permanente upstream.
     const hb = el('span', 'browse-card-health h-' + item.health.status);
     hb.appendChild(icon('triangle-alert'));
-    hb.appendChild(document.createTextNode(item.health.status === 'err' ? 'health: errore' : 'health: warning'));
+    hb.appendChild(document.createTextNode(item.health.status === 'err' ? t('badge.healthError') : t('badge.healthWarn')));
     const issues = item.health.issues || [];
     hb.title = 'Problemi rilevati nel frontmatter del file .md (manifest dell\'agent/skill):\n\n'
       + issues.map(i => '  • ' + i).join('\n')
@@ -2929,7 +2938,7 @@ function buildSkillAgentCard(item, kind) {
     badgeRow.appendChild(hb);
   }
   if (item.blocked) {
-    badgeRow.appendChild(el('span', 'browse-card-blocked', 'disabilitato'));
+    badgeRow.appendChild(el('span', 'browse-card-blocked', t('badge.disabled')));
   }
   appendModifiedBadge(badgeRow, item, kind, 'card');
   body.appendChild(badgeRow);
@@ -3176,7 +3185,7 @@ function buildHookCard(item) {
   }
   head.appendChild(pluginLine);
   const scopeBadge = el('span', 'scope-badge scope-' + item.scope,
-    item.scope === 'local' ? (item.projectName || 'locale') : 'globale');
+    item.scope === 'local' ? (item.projectName || t('badge.scopeLocal')) : t('badge.scopeGlobal'));
   if (item.projectPath) scopeBadge.title = item.projectPath;
   head.appendChild(scopeBadge);
   card.appendChild(head);
@@ -3305,7 +3314,7 @@ function buildHookCompactRow(item) {
   }
   // Scope badge
   const scopeBadge = el('span', 'scope-badge scope-' + item.scope,
-    item.scope === 'local' ? (item.projectName || 'locale') : 'globale');
+    item.scope === 'local' ? (item.projectName || t('badge.scopeLocal')) : t('badge.scopeGlobal'));
   if (item.projectPath) scopeBadge.title = item.projectPath;
   row.appendChild(scopeBadge);
   // Warning deps mancanti
@@ -3446,7 +3455,9 @@ function showHookDetailsModal(item) {
   }
   const scopeRow = el('div', 'hook-detail-row');
   scopeRow.appendChild(el('span', 'hook-detail-label', 'Scope'));
-  scopeRow.appendChild(el('span', '', item.scope === 'local' ? ('locale (' + (item.projectName || item.projectPath) + ')') : 'globale'));
+  scopeRow.appendChild(el('span', '', item.scope === 'local'
+    ? t('badge.scopeLocalParen', { name: item.projectName || item.projectPath })
+    : t('badge.scopeGlobal')));
   body.appendChild(scopeRow);
 
   const handlersTitle = el('h3', 'hook-detail-title', 'Handlers (' + (item.handlers || []).length + ')');
@@ -3514,7 +3525,7 @@ function showHookDetailsModal(item) {
 
 function appendScopeBadge(chip, item) {
   const badge = el('span', 'scope-badge scope-' + item.scope,
-    item.scope === 'local' ? (item.projectName || 'locale') : 'globale');
+    item.scope === 'local' ? (item.projectName || t('badge.scopeLocal')) : t('badge.scopeGlobal'));
   if (item.projectPath) badge.title = item.projectPath;
   chip.appendChild(badge);
 }
@@ -4673,10 +4684,10 @@ async function renderMcp() {
 
   // Status chips
   const statusDefs = [
-    { key: 'all',       label: 'Tutti' },
-    { key: 'connected', label: 'Connected', dot: '#22c55e' },
-    { key: 'needsAuth', label: 'Needs Auth', dot: '#f59e0b' },
-    { key: 'error',     label: 'Errore',    dot: '#ef4444' },
+    { key: 'all',       label: t('filter.all') },
+    { key: 'connected', label: t('mcp.status.connected'), dot: '#22c55e' },
+    { key: 'needsAuth', label: t('filter.needsAuth'), dot: '#f59e0b' },
+    { key: 'error',     label: t('mcp.status.error'), dot: '#ef4444' },
   ];
   const sChips = el('div', 'chips');
   statusDefs.forEach(c => {
@@ -4694,9 +4705,9 @@ async function renderMcp() {
 
   // Scope chips (builtin / plugin) — gruppo separato visivamente dai filtri stato
   const scopeDefs = [
-    { key: 'all',     label: 'Tutti i tipi' },
-    { key: 'builtin', label: 'claude.ai' },
-    { key: 'plugin',  label: 'Dai plugin' },
+    { key: 'all',     label: t('filter.allKinds') },
+    { key: 'builtin', label: t('filter.builtinClaudeAi') },
+    { key: 'plugin',  label: t('filter.fromPlugin') },
   ];
   const scChips = el('div', 'chips chips-group-divider');
   scopeDefs.forEach(c => {
@@ -4856,12 +4867,12 @@ function buildMcpCard(srv) {
     disabled:  'ban',
   }[srv.status] || 'circle-help';
   const badgeText = {
-    connected: 'Connected',
-    needsAuth: 'Needs auth',
-    warning:   'Warning',
-    error:     'Errore',
-    unknown:   'Sconosciuto',
-    disabled:  'Disabilitato',
+    connected: t('mcp.status.connected'),
+    needsAuth: t('mcp.status.needsAuth'),
+    warning:   t('mcp.status.warning'),
+    error:     t('mcp.status.error'),
+    unknown:   t('mcp.status.unknown'),
+    disabled:  t('mcp.status.disabled'),
   }[srv.status] || srv.status;
   badge.appendChild(icon(badgeIconName));
   badge.appendChild(document.createTextNode(badgeText));

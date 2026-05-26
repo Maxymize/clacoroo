@@ -74,12 +74,16 @@ window.LOCALES.en = {
 
   // Badge / Status
   badge: {
-    scopeGlobal: 'global',
-    scopeLocal:  'local',
-    healthError: 'health: error',
-    healthWarn:  'health: warning',
-    disabled:    'disabled',
-    modified:    'modified',
+    scopeGlobal:      'global',
+    scopeLocal:       'local',
+    scopeProgetto:    'project',
+    scopeLocalNamed:  'local: {name}',
+    scopeLocalParen:  'local ({name})',
+    pluginActive:     'active',
+    healthError:      'health: error',
+    healthWarn:       'health: warning',
+    disabled:         'disabled',
+    modified:         'modified',
   },
 
   // Status MCP
@@ -135,16 +139,30 @@ window.LOCALES.en = {
 
   // Sort options
   sort: {
-    label:       'Sort:',
-    nameAsc:     'Name (A → Z)',
-    nameDesc:    'Name (Z → A)',
+    label:        'Sort:',
+    nameAsc:      'Name (A → Z)',
+    nameDesc:     'Name (Z → A)',
     installedDesc:'Recently installed',
     installedAsc: 'Installed earliest',
-    statusFirst: 'Status (Connected first)',
-    eventAsc:    'Event (A → Z)',
-    eventDesc:   'Event (Z → A)',
-    pluginAsc:   'Plugin (A → Z)',
-    pluginDesc:  'Plugin (Z → A)',
+    statusFirst:  'Status (Connected first)',
+    eventAsc:     'Event (A → Z)',
+    eventDesc:    'Event (Z → A)',
+    pluginAsc:    'Plugin (A → Z)',
+    pluginDesc:   'Plugin (Z → A)',
+    mktDefault:   'Default (by N plugins)',
+    mktAddedDesc: 'Recently added',
+    mktAddedAsc:  'Added earliest',
+    mktUpdatedDesc:'Recently updated',
+    mktUpdatedAsc:'Updated earliest',
+  },
+
+  // Filter chips
+  filter: {
+    all:           'All',
+    allKinds:      'All types',
+    fromPlugin:    'From plugins',
+    builtinClaudeAi:'claude.ai',
+    needsAuth:     'Needs Auth',
   },
 
   // Search placeholder generico

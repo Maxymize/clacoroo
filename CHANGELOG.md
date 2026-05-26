@@ -1,5 +1,46 @@
 # Changelog
 
+## v1.0.113 — 2026-05-26 — Pack N (Phase 2 batch 2): badge + status MCP + sort dropdown + view switcher + filter chips
+
+Continua Pack N Phase 2. Migrate i badge scope/health/blocked/modified, gli status MCP (badge + filter chips), il sort dropdown universale, il view switcher e i filter chips MCP.
+
+### Locales — chiavi nuove
+
+- **`sort.mkt*` (5)**: opzioni dedicate del dropdown ordinamento Marketplace (default / added-desc / added-asc / updated-desc / updated-asc)
+- **`filter.*` (5)**: chip filtri MCP — `all` / `allKinds` / `fromPlugin` / `builtinClaudeAi` / `needsAuth`
+- **`badge.pluginActive`**: 'attivo' (status compact row plugin)
+- **`badge.scopeProgetto`**: 'progetto' (fallback per scope local senza nome)
+- **`badge.scopeLocalNamed` (interpolato `{name}`)**: 'locale: {name}'
+- **`badge.scopeLocalParen` (interpolato `{name}`)**: 'locale ({name})'
+
+### Migrazione
+
+- [REFACTOR] **`SORT_OPTIONS`** module-level: ogni opzione ora ha `labelKey` invece di `label` hardcoded. Risolto a `t(labelKey)` dentro `renderSortDropdown` → segue automaticamente la lingua attiva (no module-load lock-in)
+- [REFACTOR] **`renderSortDropdown`** label "Ordina:" via `t('sort.label')`
+- [REFACTOR] **`renderViewSwitcher`** tooltip "Vista a cards"/"Vista compatta" via `t('view.cards')` / `t('view.compact')`
+- [REFACTOR] **Marketplace sort dropdown** (5 opzioni): mappate a `sort.mkt*` keys, label e value separati per evitare collisioni con SORT_OPTIONS generico
+- [REFACTOR] **MCP status chips** (4): label da `mcp.status.*` + `filter.*` (es. 'Tutti' / 'Needs Auth' / 'Errore')
+- [REFACTOR] **MCP scope chips** (3): 'Tutti i tipi' / 'claude.ai' / 'Dai plugin' → `filter.*`
+- [REFACTOR] **MCP card badge text** (6 status): `mcp.status.connected/needsAuth/warning/error/unknown/disabled`
+- [REFACTOR] **6 scope badge** scattered nei card buildPluginCard + buildSkillAgentCard + 3 altre card builder → tutti usano `t('badge.scopeGlobal')` / `t('badge.scopeLocal')` / `t('badge.scopeLocalNamed', {name})` / `t('badge.scopeLocalParen', {name})` a seconda del formato
+- [REFACTOR] **Plugin compact status row**: 'locale: ...' / 'disabilitato' / 'attivo' → `t('badge.*')`
+- [REFACTOR] **Health badge text** ('health: errore' / 'health: warning'): `t('badge.healthError')` / `t('badge.healthWarn')`
+- [REFACTOR] **'modificato' badge** in `appendModifiedBadge()`: `t('badge.modified')`
+- [REFACTOR] **'disabilitato' browse-card-blocked**: `t('badge.disabled')`
+
+### Coverage finora
+
+- ✅ Sidebar nav + topbar (v1.0.110)
+- ✅ Dashboard KPI + section titles + summary chips (v1.0.112)
+- ✅ Badge scope/health/blocked/modified su tutti i card builder (Plugin, Skill, Agent compat) (v1.0.113)
+- ✅ MCP status (badge + filter chips + scope chips + sort)
+- ✅ Sort dropdown universale + view switcher (5 sezioni Plugin/Skill/Agent/MCP/Hooks)
+- ⏳ Plugin sez: modali (Add Marketplace, Add MCP, Confirm dialogs), form labels, tooltip card, empty states
+- ⏳ Stats KPI + filtri range + context breakdown labels
+- ⏳ Settings labels (Percorsi/Editor/Terminale/Progetti tracciati/API key)
+- ⏳ Toast messages + activity log + onboarding tour
+- ⏳ Audit shape it↔en + smoke test → v1.1.0 closure
+
 ## v1.0.112 — 2026-05-26 — Pack N (Phase 2 batch 1): section titles JS + KPI Dashboard + summary chips
 
 Continuazione Pack N. Migrate a `t()` tutte le 11 `sectionTitle()` rese dinamicamente in JS + 10 KPI labels Dashboard + tooltip card Hooks + 5 sezioni riassuntive Dashboard (title + emptyText + tooltip chip).
