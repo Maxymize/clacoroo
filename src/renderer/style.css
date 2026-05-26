@@ -3456,6 +3456,25 @@ body {
 }
 .hook-plugin-mkt { color: var(--text-muted); font-size: 11px; }
 
+/* v1.0.87 — Badge "⚠ Manca: X" sulle card hook con dipendenze CLI non installate.
+   Stile arancione warning (--warning palette), hover tooltip con install hint. */
+.hook-missing-deps-row {
+  display: flex; align-items: center;
+  margin-top: -2px;
+}
+.hook-missing-deps-badge {
+  display: inline-block;
+  background: rgba(245,158,11,.18);
+  color: #fbbf24;
+  border: 1px solid rgba(245,158,11,.36);
+  padding: 3px 9px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: help;
+  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
 .hook-matcher-row {
   display: flex; align-items: center; gap: 8px;
   font-size: 11px;
@@ -3577,3 +3596,25 @@ body {
   overflow: auto;
   color: var(--text);
 }
+
+/* v1.0.87 — Dipendenze CLI nel modal dettagli hook: pill verde se tool
+   installato (which trova path), pill arancione warning se mancante. */
+.hook-handler-deps {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
+}
+.hook-handler-deps-label {
+  font-size: 10px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.04em;
+  color: var(--text-muted);
+  margin-right: 4px;
+}
+.hook-dep-pill {
+  font-size: 10px; font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 999px;
+  cursor: help;
+  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+  letter-spacing: 0.02em;
+}
+.hook-dep-pill.dep-ok   { background: rgba(34,197,94,.18);  color: #4ade80; border: 1px solid rgba(34,197,94,.30); }
+.hook-dep-pill.dep-miss { background: rgba(245,158,11,.18); color: #fbbf24; border: 1px solid rgba(245,158,11,.36); }

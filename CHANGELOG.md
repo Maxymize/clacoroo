@@ -1,5 +1,34 @@
 # Changelog
 
+## v1.0.87 — 2026-05-26 — Pack K extension: hook dependency detector (badge ⚠ se tool CLI mancante)
+
+Nuovo detector che analizza i `command` degli hook event di tutti i plugin installati, estrae i tool CLI esterni dichiarati (es. `bun`, `deno`, `python3`, `wrangler`, …) e verifica con `which`/`where` se sono installati nel `PATH`. Sulle card hook compare un badge **"⚠ Manca: bun, deno"** con tooltip che suggerisce come installare gli strumenti mancanti, prima ancora che l'utente apra `claude` e veda errori come "SessionStart:startup hook error · Bun not found".
+
+Caso d'uso originale (sollevato dall'utente): il plugin `claude-mem` richiede [Bun](https://bun.sh) ma se non installato emette errore non-blocking ad ogni boot di `claude`. CLACOROO ora lo segnala in chiaro nella card hook + nel modal dettagli, con il comando esatto di install.
+
+### Backend
+
+- [FEATURE] **`src/lib/hookDeps.js`** nuovo modulo: `detectDepsInCommand(cmd)` tokenizza il command shell (split su whitespace + separatori) ed estrae candidati tool, filtrando UBIQUITOUS set (`sh`, `bash`, `node`, `npm`, `git`, ...). Lista `INSTALL_HINTS` con comando di install ufficiale per 19 tool noti (bun, deno, python3, uv, wrangler, supabase, vercel, gcloud, aws, gh, rg, jq, fzf, cargo, go, docker, poetry, pipx, pnpm, ruby)
+- [FEATURE] **Pattern speciali** `SCRIPT_NAME_TO_TOOL`: alcuni hook chiamano `node bun-runner.js` (script che internamente cerca `bun` nel PATH). Regex dedicate per smascherare la dipendenza nascosta — senza, vedremmo solo `node` (ignorato come UBIQUITOUS) e perderemmo il vero requisito
+- [FEATURE] **`checkAvailability(tools)`** con cache memory: `which <tool>` su Unix, `where <tool>` su Win, via `execFile` (no shell injection — rispetta CLAUDE.md rule). 1 spawn per tool per session
+- [FEATURE] **`collectAllDeps(hookEvents)`**: union di tutte le dep di tutti gli handler di un set di hook event
+- [FEATURE] **`readHookEvents` esteso**: ogni handler ora include `detectedDeps: ['bun', 'deno']`
+- [FEATURE] **`readAllData` async**: al `get-data` fa il batch check di tutti i tool richiesti dai hook installati + ritorna `hookDepsAvailability: { bun: {installed:true, path:'/usr/local/bin/bun', installHint:'...'}, deno: {installed:false, ...} }`
+
+### Frontend
+
+- [FEATURE] **`missingDepsForHook(item)`** helper: cross-check fra `item.handlers[].detectedDeps` e `state.rawData.hookDepsAvailability`. Ritorna array unique di tool mancanti per quella card
+- [FEATURE] **Badge "⚠ Manca: bun"** sulle card hook (`.hook-missing-deps-badge`): colore warning arancione (palette `#fbbf24`), tooltip con install hint multi-linea per ogni tool mancante + nota esplicativa "Installa gli strumenti mancanti per evitare errori `hook startup` al boot di `claude`"
+- [FEATURE] **Modal dettagli hook**: nuova riga "Dipendenze CLI" per ogni handler, con pill verde `✓ tool` per tool installati (path = info nel tooltip) o pill arancione `⚠ tool` per mancanti (tooltip = install command)
+- [FEATURE] **KPI Dashboard "Hook con dep mancanti"** condizionale: appare solo se `> 0` (per non rumoreggiare quando tutto è ok). Cliccabile → naviga a sezione Hooks per drill-down. Colore warning `#f59e0b`
+- [STYLE] Nuove classi `.hook-missing-deps-row`/-badge`, `.hook-handler-deps`/-label`, `.hook-dep-pill.dep-ok`/-miss`
+
+### Non-goals
+
+- ❌ Non installiamo i tool al posto dell'utente (sarebbe troppo invasivo e platform-specific)
+- ❌ Non parsiamo realmente la shell (sarebbe overkill): euristica regex sufficiente per il 95% dei command degli hook reali nei plugin Claude Code
+- ❌ Non logghiamo tool ubiqui (`sh`, `node`, `git`, ...): rumoreggerebbero le card; se davvero non installati il hook fallirà comunque con errore esplicito al boot
+
 ## v1.0.86 — 2026-05-26 — Pack G v2 fix: bottone reconnect HTTP/stdio porta al menu `/mcp` di Claude Code + finding keychain
 
 Risposta al feedback utente sul Pack G v2 v1.0.85: il bottone "Apri claude (OAuth interactive)" lasciava l'utente davanti a una sessione `claude` vuota senza istruzioni — il flow OAuth in Claude Code si triggera SOLO quando un tool MCP viene chiamato, non al boot. Niente OAuth visibile, esperienza inutile.

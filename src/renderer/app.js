@@ -604,6 +604,9 @@ function renderDashboard() {
   // v1.0.83 — Pack K: KPI hook (combo event+matcher) + plugin che li forniscono
   const hookList = buildHookList();
   const hookPluginsCount = new Set(hookList.map(h => h.fullId)).size;
+  // v1.0.87 — count hook con almeno 1 dipendenza CLI mancante. Mostrato come
+  // KPI solo se > 0 per non rumoreggiare la dashboard.
+  const hookMissingDepsCount = hookList.filter(h => missingDepsForHook(h).length > 0).length;
 
   const wrap = el('div');
 
@@ -646,6 +649,12 @@ function renderDashboard() {
     { num: mcpKpiNum,          label: 'MCP connessi',      color: '#22c55e', kind: 'mcp' },
     { num: hookList.length,    label: hookPluginsCount ? ('Hooks · ' + hookPluginsCount + ' plugin') : 'Hooks',
       color: '#a78bfa', kind: 'hooks' },
+    // v1.0.87 — KPI condizionale: mostrato solo se ci sono hook con dep mancanti
+    ...(hookMissingDepsCount > 0 ? [{
+      num: hookMissingDepsCount,
+      label: 'Hook con dep mancanti',
+      color: '#f59e0b', kind: 'hooks-warn',
+    }] : []),
     { num: totalTokens > 0 ? (Math.round(totalTokens / 100) / 10) + 'K' : '—',
       label: 'Token always-on',  color: '#6a9bcc' },                            // Anthropic blue
     { num: healthErr + healthWarn,
@@ -660,9 +669,12 @@ function renderDashboard() {
     const lbl = el('div', 'kpi-label', k.label);
     card.appendChild(num); card.appendChild(lbl);
     // v1.0.83 — KPI Hooks cliccabile → naviga alla sezione dedicata
-    if (k.kind === 'hooks') {
+    // v1.0.87 — anche hooks-warn cliccabile (porta a Hooks per drill-down)
+    if (k.kind === 'hooks' || k.kind === 'hooks-warn') {
       card.style.cursor = 'pointer';
-      card.title = 'Apri la sezione Hooks';
+      card.title = k.kind === 'hooks-warn'
+        ? 'Apri Hooks per vedere quali tool CLI sono mancanti'
+        : 'Apri la sezione Hooks';
       card.addEventListener('click', () => switchToSection('hooks'));
     }
     kpiGrid.appendChild(card);
@@ -1854,6 +1866,23 @@ function renderAgents() {
 // documento (vedi `showMarkdownModal` header).
 
 /* ── HOOKS (v1.0.83 — Pack K) ─────────────────────────────────────────── */
+
+// v1.0.87 — Helper: lista dei tool CLI dichiarati dagli handler di un hook
+// item ma NON installati nel sistema (cross-check con state.rawData.hookDepsAvailability,
+// popolato dal backend tramite `which`/`where`). Vuoto se tutti i tool sono
+// presenti o se l'item non ha detectedDeps.
+function missingDepsForHook(item) {
+  const avail = (state.rawData && state.rawData.hookDepsAvailability) || {};
+  const missing = new Set();
+  for (const h of (item.handlers || [])) {
+    for (const dep of (h.detectedDeps || [])) {
+      const info = avail[dep];
+      if (info && !info.installed) missing.add(dep);
+    }
+  }
+  return Array.from(missing).sort();
+}
+
 // Aggrega tutti gli hook event di tutti i plugin installati in una lista
 // piatta { event, matcher, handlers, pluginId, mkt, fullId, scope, sourcePath }.
 // Ogni combinazione event+matcher di un plugin diventa una card.
@@ -2015,6 +2044,25 @@ function buildHookCard(item) {
   head.appendChild(scopeBadge);
   card.appendChild(head);
 
+  // v1.0.87 — Badge ⚠ se almeno un handler richiede tool CLI non installati
+  // (vedi src/lib/hookDeps.js). Lista i tool mancanti in ordine, tooltip
+  // contiene gli install hint. Spiega all'utente PRIMA che apra il
+  // terminale perché un hook potrebbe fallire silenziosamente al boot.
+  const missingDeps = missingDepsForHook(item);
+  if (missingDeps.length) {
+    const warnRow = el('div', 'hook-missing-deps-row');
+    const warnBadge = el('span', 'hook-missing-deps-badge');
+    warnBadge.textContent = '⚠ Manca: ' + missingDeps.join(', ');
+    const avail = (state.rawData && state.rawData.hookDepsAvailability) || {};
+    const hints = missingDeps
+      .map(d => (avail[d] && avail[d].installHint) ? (d + ' → ' + avail[d].installHint) : (d + ': installazione manuale richiesta'))
+      .join('\n\n');
+    warnBadge.title = 'Tool richiesti dal command degli handler ma non trovati nel PATH:\n\n' + hints +
+      '\n\nInstalla gli strumenti mancanti per evitare errori `hook startup` al boot di `claude`.';
+    warnRow.appendChild(warnBadge);
+    card.appendChild(warnRow);
+  }
+
   // Matcher (opzionale)
   if (item.matcher) {
     const matcherRow = el('div', 'hook-matcher-row');
@@ -2121,6 +2169,7 @@ function showHookDetailsModal(item) {
 
   const handlersTitle = el('h3', 'hook-detail-title', 'Handlers (' + (item.handlers || []).length + ')');
   body.appendChild(handlersTitle);
+  const avail = (state.rawData && state.rawData.hookDepsAvailability) || {};
   (item.handlers || []).forEach((h, i) => {
     const block = el('div', 'hook-handler-block');
     const meta = el('div', 'hook-handler-meta');
@@ -2130,6 +2179,25 @@ function showHookDetailsModal(item) {
     if (h.async) meta.appendChild(el('span', 'hook-handler-async', 'async'));
     if (typeof h.timeout === 'number') meta.appendChild(el('span', 'hook-handler-timeout', 'timeout: ' + h.timeout + 's'));
     block.appendChild(meta);
+
+    // v1.0.87 — Dipendenze rilevate per questo handler: una "pill" per
+    // ogni tool, verde se installato, arancione warning se mancante con
+    // suggerimento di installazione cliccando.
+    if (Array.isArray(h.detectedDeps) && h.detectedDeps.length) {
+      const depsRow = el('div', 'hook-handler-deps');
+      depsRow.appendChild(el('span', 'hook-handler-deps-label', 'Dipendenze CLI'));
+      h.detectedDeps.forEach(tool => {
+        const info = avail[tool] || { installed: false, installHint: '' };
+        const pill = el('span', 'hook-dep-pill' + (info.installed ? ' dep-ok' : ' dep-miss'),
+          (info.installed ? '✓ ' : '⚠ ') + tool);
+        pill.title = info.installed
+          ? (tool + ' trovato: ' + (info.path || 'in PATH'))
+          : (tool + ' NON installato.' + (info.installHint ? '\n\nInstalla con:\n' + info.installHint : ''));
+        depsRow.appendChild(pill);
+      });
+      block.appendChild(depsRow);
+    }
+
     const pre = el('pre', 'hook-handler-pre');
     pre.textContent = h.command || '';
     block.appendChild(pre);

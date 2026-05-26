@@ -48,6 +48,7 @@ const { checkLatestRelease } = require('./lib/updater');
 const { readChangelogRaw, parseChangelog } = require('./lib/changelog');
 const STATS   = require('./lib/stats');
 const MCP     = require('./lib/mcp');
+const HOOK_DEPS = require('./lib/hookDeps');
 const ACCOUNT = require('./lib/account');
 const PRICING = require('./lib/pricing');
 const USAGE   = require('./lib/usage');
@@ -162,13 +163,21 @@ function readHookEvents(hooksDir) {
       const arr = Array.isArray(matchers) ? matchers : [];
       const detailed = arr.map(m => ({
         matcher: typeof m.matcher === 'string' ? m.matcher : '',
-        handlers: Array.isArray(m.hooks) ? m.hooks.map(h => ({
-          type:    h.type    || 'command',
-          command: h.command || '',
-          async:   !!h.async,
-          timeout: typeof h.timeout === 'number' ? h.timeout : null,
-          shell:   h.shell || '',
-        })) : [],
+        handlers: Array.isArray(m.hooks) ? m.hooks.map(h => {
+          // v1.0.87 — detection delle dipendenze CLI esterne richieste
+          // dal comando dell'handler. Lista usata dal renderer per pittare
+          // un badge ⚠ "Richiede X" sulle card hook quando X non è
+          // installato (vedi hookDepsAvailability in readAllData).
+          const detectedDeps = Array.from(HOOK_DEPS.detectDepsInCommand(h.command || ''));
+          return {
+            type:    h.type    || 'command',
+            command: h.command || '',
+            async:   !!h.async,
+            timeout: typeof h.timeout === 'number' ? h.timeout : null,
+            shell:   h.shell || '',
+            detectedDeps,
+          };
+        }) : [],
       }));
       return {
         event: eventName,
@@ -366,7 +375,7 @@ function readMarketplaceAddedAt(marketplaceId) {
   } catch { return null; }
 }
 
-function readAllData() {
+async function readAllData() {
   const installedRaw = safeReadJson(INSTALLED, { version: 2, plugins: {} });
   // plugins can be an array of IDs (old format) or an object {id: [...entries...]} (v2)
   const pluginIds = Array.isArray(installedRaw.plugins)
@@ -405,12 +414,28 @@ function readAllData() {
     };
   }
 
+  // v1.0.87 — Hook deps availability: raccoglie l'union di tutti i tool CLI
+  // richiesti dagli hook di TUTTI i plugin installati + verifica con
+  // `which`/`where` quali sono presenti nel PATH. Risultato cachato in memoria
+  // dentro HOOK_DEPS, quindi 1 spawn per tool per session. Renderer usa questa
+  // mappa per pittare badge ⚠ sulle card hook con dipendenze mancanti.
+  const allDeps = new Set();
+  for (const id of Object.keys(cacheDetails)) {
+    const ev = cacheDetails[id].hookEvents;
+    if (Array.isArray(ev)) {
+      const sub = HOOK_DEPS.collectAllDeps(ev);
+      for (const d of sub) allDeps.add(d);
+    }
+  }
+  const hookDepsAvailability = await HOOK_DEPS.checkAvailability(allDeps);
+
   return {
     installed:    { plugins: pluginIds },
     blocklist:    { plugins: Array.from(blockedSet).map(plugin => ({ plugin })) },
     marketplaces: marketplacesNorm,
     catalog:      catalogRaw.catalog || {},
     cacheDetails,
+    hookDepsAvailability,
     trackedProjects: appState.trackedProjects || [],
     localData,
     claudeDir:    CLAUDE_DIR,
@@ -529,7 +554,7 @@ app.on('before-quit', () => {
 /* ── IPC HANDLERS ──────────────────────────────────────────────────────── */
 
 ipcMain.handle('get-data', async () => {
-  try   { return { ok: true, data: readAllData() }; }
+  try   { return { ok: true, data: await readAllData() }; }
   catch (e) { return { ok: false, error: e.message }; }
 });
 
