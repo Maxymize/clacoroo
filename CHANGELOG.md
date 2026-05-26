@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.0.92 — 2026-05-26 — Fix bottone "Installa": confirm-dialog ritorna numero, non oggetto
+
+Bug introdotto in v1.0.91: click su "Apri terminale" nel confirm dialog non faceva nulla. Root cause: `confirm-dialog` IPC handler ritorna direttamente `r.response` (numero: 0 = Annulla, 1 = Apri terminale), ma il mio codice in `installDepInTerminal` controllava `ok.response !== 1` come se fosse un oggetto wrapper → la condizione era SEMPRE `true` (`undefined !== 1`) e la funzione faceva return immediatamente.
+
+- [FIX] `installDepInTerminal`: rinominata variabile da `ok` a `response`, condizione corretta `if (response !== 1) return;`
+- [NOTE] Stesso pattern in altri confirmDialog dell'app: `r.response` ritornato direttamente come numero. Era solo questo specifico call site a essere sbagliato
+
 ## v1.0.91 — 2026-05-26 — Hook dep: bottone "▶ Installa <tool>" cross-platform per dipendenze mancanti
 
 Estensione del detector v1.0.87–90: quando una card hook mostra `⚠ Manca: bun`, ora c'è un bottone **"▶ Installa bun"** accanto al badge che apre il terminale integrato + pre-digita il comando di installazione ufficiale per la piattaforma corrente (macOS/Linux/Windows). Pattern identico al Pack G v2 v1.0.86 reconnect MCP (confirm dialog + pre-typing + nessun Enter automatico — l'utente decide se procedere).

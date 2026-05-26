@@ -2156,14 +2156,16 @@ function truncate(s, n) { return s && s.length > n ? s.slice(0, n - 1) + '…' :
 // premendo Invio dentro il terminale. Confirm dialog blocca prima del lancio
 // per evitare esecuzioni accidentali.
 async function installDepInTerminal(tool, installCommand) {
-  const ok = await window.claudeAPI.confirmDialog({
+  // confirm-dialog ritorna direttamente il numero della risposta (0 = Annulla,
+  // 1 = Apri terminale). NON un oggetto {response} — bug fixato in v1.0.92.
+  const response = await window.claudeAPI.confirmDialog({
     title: 'Installa ' + tool,
     message: 'Installare ' + tool + ' nel terminale integrato?',
     detail: 'Verrà aperto il terminale e pre-digitato:\n\n' + installCommand
       + '\n\nIl comando NON viene eseguito automaticamente: dovrai confermare premendo Invio nel terminale.',
     buttons: ['Annulla', 'Apri terminale'],
   });
-  if (!ok || ok.response !== 1) return;
+  if (response !== 1) return;
 
   // Apre drawer + nuova tab senza eseguire alcun comando (evita prompt vuoto
   // come accadrebbe con openTerminalWithCommand('') che fa pty.write('\r')).
