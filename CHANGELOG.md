@@ -1,5 +1,66 @@
 # Changelog
 
+## v1.1.0 — 2026-05-26 — 🎉 Bilingual release: Pack N closure (Italian + English completi)
+
+**Milestone bilingue di CLACOROO.** Chiusura formale di Pack N — il primo bump minor (1.0.x → 1.1.0) della serie, riservato al cambiamento semantico più grande dell'app dal lancio: l'intera UI è ora multilingua con auto-detect lingua sistema operativo + override manuale persistito.
+
+### Numeri finali
+
+- **451 chiavi locale per ogni lingua** (`src/renderer/locales/it.js` + `en.js`)
+- **463 chiamate `t()`** in `src/renderer/app.js`
+- **24 namespace tematici** strutturati: nav, topbar, section, kpi, badge, mcp, button, view, sort, search, empty, settings, settingsToast, toast, filter, chip, plugin, hookDep, uiErr, account, apikey, tour, updateBanner, palette, token, status, stats, confirm, modalMkt, modalMcp
+- **Shape perfettamente speculare**: audit IT↔EN passa con 0 chiavi mancanti, 0 mismatch su interpolazione `{var}`
+- **11 commit consecutivi** Pack N (v1.0.110 → v1.0.120) + questo closure
+- ~3500 righe nette aggiunte/modificate fra `app.js`, locales, infrastruttura
+
+### Phase 4 closure tasks
+
+- [VERIFY] **Audit shape**: script `audit-locales.js` flatten + diff key set IT vs EN → ✅ 451 = 451
+- [VERIFY] **Audit interpolazione `{var}`**: per ogni chiave comune, set di `{name}/{id}/{tok}/etc.` deve coincidere IT vs EN → ✅ perfettamente allineato
+- [BUMP] **package.json**: `1.0.120` → `1.1.0` (eccezione esplicita alla regola "solo ultime cifre" CLAUDE.md, milestone release bilingue documentata in memory `versioning-1.1.0-pack-n.md`)
+
+### Coverage finale stimata
+
+- ✅ **~97%** delle stringhe user-visible migrate: tutta la sidebar, topbar, ogni sezione (Dashboard, Plugin, Marketplace, Skill, Agent, MCP, Hooks, Stats, Config, Impostazioni), tutti i modali (Add Marketplace, Add MCP, 10 confirm dialogs, Plugin content, Token budget, Hook detail), tutti i pannelli inner di Settings (Account, API key, Editor, Terminale, Progetti, Plugin Validator, Aggiornamenti), onboarding tour, command palette, update banner, badge/status/filter chips
+- ⏳ **~3%** intenzionalmente non migrato (post-v1.1.0):
+  - `HOOK_EVENT_DOCS` ~30 tooltip developer long-form (raramente visti, tecnici)
+  - About dialog Electron menu (`src/lib/menu.js`)
+  - ~10 toast errori specifici molto contestuali (snapshot import edge cases, MCP auth cache)
+  - Backend activity log labels (`src/lib/state.js`)
+
+### Caratteristiche
+
+- **Auto-detect lingua OS al primo avvio** via Electron `app.getLocale()` IPC. Lingua sistema `it-*` → IT, qualsiasi altra → EN
+- **Override manuale persistente** via dropdown in Impostazioni > Aspetto. Salvato in `state.json` come `state.locale`
+- **Bottone "Usa lingua sistema"** opzionale per reset → al prossimo riavvio ri-fa auto-detect
+- **Switch lingua live** senza riavvio: `applyStaticI18n()` aggiorna nodi `[data-i18n]` + `render()` re-paint sezione corrente
+- **Fallback graceful**: chiave mancante in IT → fallback EN → fallback alla key stessa (mai stringa undefined visibile)
+- **Interpolazione `{var}`** per stringhe parametrizzate (es. `t('toast.pluginDisabled', { id, tok })`)
+
+### Pack N — totale commit history
+
+- `75d705e` v1.0.110 — Infrastruttura i18n (locales + t() helper + IPC + dropdown lingua + sidebar/topbar)
+- `39bbed4` v1.0.111 — Simplify pass post-Phase 1 (review reuse/quality/efficiency)
+- `a4b5448` v1.0.112 — Section titles JS + KPI Dashboard + summary chips
+- `1cdc7c5` v1.0.113 — Badge + MCP status + sort/view switcher + filter chips
+- `0ca4c1e` v1.0.114 — Empty states + toast principali
+- `e25151c` v1.0.115 — Modali Add Marketplace/MCP + 10 confirm dialogs
+- `007fa72` v1.0.116 — Settings labels (6 gruppi core)
+- `32126bd` v1.0.117 — Stats KPI + range + tabs + context breakdown
+- `1608ae7` v1.0.118 — Filter chips + plugin buttons + notifications + tooltip
+- `4c09e96` v1.0.119 — Pannelli Account Claude + API key Claude
+- `afdcedb` v1.0.120 — Onboarding tour + update banner + command palette + token modal
+- `(this)` v1.1.0 — **Closure bilingue**
+
+### Dopo v1.1.0 (Fase 0 completion verso lancio AGPL pubblico)
+
+- v1.1.1+ — CLAUDE.md editor inline (2-3h)
+- v1.1.x — Empty states con mascotte CLACOROO (2h)
+- v1.1.x — Tema light base opzionale (4h)
+- v1.1.x — Notifiche soglia quota (2-3h)
+- v1.1.x — Test Windows VM (1-2h)
+- Then → Apple Developer Program signing → release pubblica AGPL su GitHub
+
 ## v1.0.120 — 2026-05-26 — Pack N (Phase 3g batch finale): onboarding tour + update banner + command palette + token modal + setStatus
 
 Ultimo batch incrementale di Pack N prima della Phase 4 closure. Migrate onboarding tour completo (5 step + buttons), banner update notification, command palette labels, modal token budget headers + intro + disable button, search placeholder Plugin, modal close aria-label e Copy tooltip.
