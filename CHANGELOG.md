@@ -1,5 +1,18 @@
 # Changelog
 
+## v1.0.89 — 2026-05-26 — Hook dep detector fix #2: check robusto a 3 livelli (PATH + login shell + fs.existsSync)
+
+Feedback utente: ho installato Bun ma CLACOROO mostra ancora "Manca: bun" sulle card claude-mem. Root cause: Bun installato in `~/.bun/bin/bun` ma `~/.bun/bin` non è nel PATH del processo Electron (eredita PATH minimal di launchd quando lanciato dal Finder, e anche `npm start` non triggera ricarica `.zshrc`). `which bun` chiamato da CLACOROO falliva, anche se nella shell utente `which bun` funziona perfettamente.
+
+- [FIX] **Check availability a 3 livelli** (`checkAvailabilityOne` in `src/lib/hookDeps.js`):
+  1. **`which`/`where`** sul PATH del processo Electron — veloce, copre installazioni Homebrew/system
+  2. **`$SHELL -lc 'command -v <tool>'`** — login shell con `-l` legge `.zshrc`/`.bashrc` dell'utente e prende il PATH "vero" (include `~/.bun/bin`, `~/.deno/bin`, ecc. aggiunti dagli installer)
+  3. **`fs.existsSync`** su `STANDARD_BIN_DIRS` — fallback finale su lista di directory note: `~/.bun/bin`, `~/.deno/bin`, `~/.cargo/bin`, `~/.local/bin`, `~/.volta/bin`, `~/.pyenv/shims`, `~/.rbenv/shims`, `~/.poetry/bin`, `/opt/homebrew/bin`, `/usr/local/bin`
+- [FIX] **`looksLikePath(s)` validation**: alcuni hook startup (es. claude-mem SessionStart che cerca Bun) emettono output spurio tipo "bun not found" su stdout della login shell, che senza validazione veniva preso come "path trovato". Ora accetto solo output che comincia con `/` (Unix) o `C:\` (Windows)
+- [FIX] **`command -v` invece di `which`** dentro la login shell: builtin POSIX più affidabile, ritorna SOLO l'absolute path su stdout, niente noise. `2>/dev/null` per silenziare STDERR di eventuali hook precedenti, `|| echo ""` per forzare exit code 0
+- [TEST] Verifica empirica su 7 tool: `bun` ora trovato in `~/.bun/bin/bun`, `deno`/`python3`/`gh`/`jq` trovati nei rispettivi path, `wrangler`/`nonexistent` correttamente `✗`. Niente più falsi positivi né falsi negativi
+- [SECURITY] Sempre `execFile` con args array (nessuna shell interpolation). Il tool name viene passato come `$1` alla shell login, riferito poi via `"$1"` quoted — nessun injection possibile
+
 ## v1.0.88 — 2026-05-26 — Hook dep detector fix: whitelist invece di euristica permissiva (no più falsi positivi)
 
 Feedback utente immediato sul rilascio v1.0.87: il detector mostrava badge "Manca: break, do, done, exit, found, hook, not, plugin, scripts, while, observation, claude-code, session-start, …" — assurdo. Il tokenizer permissivo confondeva **shell keywords** (`break`/`do`/`done`/`while`/`not`), **argomenti di comandi** (`claude-code`/`session-start`/`hook`/`scripts`) e nomi a caso con "tool installabili".

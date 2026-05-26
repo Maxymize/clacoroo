@@ -16,8 +16,37 @@
  */
 
 const { execFile } = require('child_process');
+const fs = require('fs');
+const path = require('path');
 const os = require('os');
 const IS_WIN = process.platform === 'win32';
+
+// v1.0.89 — Directory standard dove i tool manager installano i loro binari
+// MA che spesso non sono nel PATH di un processo Electron lanciato dal Finder
+// (eredita il PATH minimal di launchd) o subito dopo install (shell deve essere
+// riavviata). Fallback fs.existsSync per ognuna se `which`/`where` falliscono.
+const HOMEDIR = os.homedir();
+const STANDARD_BIN_DIRS = IS_WIN
+  ? [
+      // Windows: pochi standard non-PATH. Aggiungi qui se serve.
+      path.join(HOMEDIR, '.bun', 'bin'),
+      path.join(HOMEDIR, '.deno', 'bin'),
+      path.join(HOMEDIR, '.cargo', 'bin'),
+    ]
+  : [
+      path.join(HOMEDIR, '.bun', 'bin'),
+      path.join(HOMEDIR, '.deno', 'bin'),
+      path.join(HOMEDIR, '.cargo', 'bin'),
+      path.join(HOMEDIR, '.local', 'bin'),
+      path.join(HOMEDIR, '.volta', 'bin'),
+      path.join(HOMEDIR, '.pyenv', 'shims'),
+      path.join(HOMEDIR, '.rbenv', 'shims'),
+      path.join(HOMEDIR, '.poetry', 'bin'),
+      '/opt/homebrew/bin',         // macOS Apple Silicon
+      '/opt/homebrew/sbin',
+      '/usr/local/bin',            // macOS Intel + Linux
+      '/usr/local/sbin',
+    ];
 
 // Tool che diamo per scontati su sistemi di sviluppo — anche se rilevati
 // nella whitelist, NON generano badge (es. `node` è quasi sempre presente).
@@ -116,26 +145,94 @@ function detectDepsInCommand(cmd) {
 }
 
 /**
- * Verifica se un tool è installato cercandolo nel PATH.
- * Usa `which` su Unix, `where` su Win. Cross-platform, niente shell injection
- * (execFile con args array, mai stringa interpolata — vedi CLAUDE.md rules).
+ * Verifica se un tool è installato. Strategia a 3 livelli (cross-platform):
+ *
+ *   1. **`which`/`where`** sul PATH del processo Electron (veloce, 95% dei casi).
+ *   2. **`$SHELL -lc 'which <tool>'`** (Unix) per leggere il PATH della shell
+ *      login dell'utente, dove sono stati eseguiti gli `export PATH=...` del
+ *      `.zshrc`/`.bashrc`. Necessario perché Electron lanciato dal Finder NON
+ *      eredita il PATH della shell interattiva (eredita quello di launchd,
+ *      molto minimal) → tool installati post-install (es. Bun appena aggiunto)
+ *      restano "invisibili" senza questa fallback.
+ *   3. **`fs.existsSync`** su STANDARD_BIN_DIRS (`~/.bun/bin/bun`, `~/.deno/bin/deno`,
+ *      `/opt/homebrew/bin/<tool>`, …). Garantisce detection anche se il tool
+ *      è installato in path standard ma fuori PATH del processo.
+ *
+ * Sicurezza: execFile con args array, mai stringa interpolata (CLAUDE.md rules).
  */
 const _availabilityCache = new Map(); // tool → { installed, checkedAt, path }
 
-function checkAvailabilityOne(tool) {
-  return new Promise((resolve) => {
-    const cached = _availabilityCache.get(tool);
-    if (cached) return resolve(cached);
+// v1.0.89 — Valida che `s` assomigli a un absolute path eseguibile. Necessario
+// perché alcuni hook di login shell (es. claude-mem SessionStart che cerca Bun)
+// stampano output spurio tipo "bun not found" su stdout intercettato da `which`.
+// Senza questa validazione lo prenderemmo come "path trovato" → falso positivo.
+function looksLikePath(s) {
+  if (!s) return false;
+  if (IS_WIN) return /^[A-Za-z]:[/\\]/.test(s) || s.startsWith('\\\\');
+  return s.startsWith('/');
+}
 
+function whichSimple(tool) {
+  return new Promise((resolve) => {
     const cmd = IS_WIN ? 'where' : 'which';
     execFile(cmd, [tool], { timeout: 3000 }, (err, stdout) => {
-      const result = err
-        ? { installed: false, path: null, checkedAt: Date.now() }
-        : { installed: true, path: (stdout || '').split('\n')[0].trim(), checkedAt: Date.now() };
-      _availabilityCache.set(tool, result);
-      resolve(result);
+      if (err) return resolve(null);
+      const p = (stdout || '').split('\n')[0].trim();
+      resolve(looksLikePath(p) ? p : null);
     });
   });
+}
+
+function whichViaLoginShell(tool) {
+  if (IS_WIN) return Promise.resolve(null);  // Su Windows i `.profile` di shell login non esistono nel senso Unix
+  return new Promise((resolve) => {
+    const shell = process.env.SHELL || '/bin/zsh';
+    // -l = login shell (legge .zprofile/.bash_profile/.zshrc dell'utente).
+    // command -v è builtin POSIX più affidabile di `which`: ritorna SOLO l'absolute
+    // path su stdout, niente altro. `2>/dev/null` silenzia STDERR di eventuali
+    // hook startup. `|| echo ""` forza exit code 0 per non far errare execFile.
+    // `> /dev/null 2>&1` su `:` per drenare stdin/stderr noise da hook precedenti.
+    execFile(shell, ['-lc', ': 2>/dev/null; command -v "$1" 2>/dev/null || echo ""', '--', tool], { timeout: 5000 }, (err, stdout) => {
+      if (err) return resolve(null);
+      // L'output può contenere righe spurie da hook di shell startup. Cerchiamo
+      // la PRIMA riga che assomiglia a un absolute path (filtra "bun not found", ecc.)
+      const lines = (stdout || '').split('\n').map(l => l.trim()).filter(Boolean);
+      const found = lines.find(looksLikePath);
+      resolve(found || null);
+    });
+  });
+}
+
+function fsFallback(tool) {
+  for (const dir of STANDARD_BIN_DIRS) {
+    const full = path.join(dir, IS_WIN ? tool + '.exe' : tool);
+    try {
+      if (fs.existsSync(full) && fs.statSync(full).isFile()) return full;
+    } catch { /* skip */ }
+  }
+  return null;
+}
+
+async function checkAvailabilityOne(tool) {
+  const cached = _availabilityCache.get(tool);
+  if (cached) return cached;
+
+  // Tentativo 1: which/where standard
+  let foundPath = await whichSimple(tool);
+
+  // Tentativo 2: which via login shell (legge .zshrc/.bashrc utente)
+  if (!foundPath) foundPath = await whichViaLoginShell(tool);
+
+  // Tentativo 3: fs.existsSync su path standard noti
+  if (!foundPath) foundPath = fsFallback(tool);
+
+  const result = {
+    installed: !!foundPath,
+    path: foundPath,
+    checkedAt: Date.now(),
+  };
+  _availabilityCache.set(tool, result);
+  return result;
 }
 
 /**
