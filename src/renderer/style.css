@@ -3888,6 +3888,7 @@ body {
   padding: 3px 8px;
   border-radius: 4px;
   color: #fff;
+  cursor: help; /* v1.0.101 — hover mostra tooltip esplicativo dell'event */
 }
 .hook-plugin-line {
   display: inline-flex; align-items: center; gap: 6px;

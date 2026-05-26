@@ -298,6 +298,61 @@ function hookEventColor(name) {
   return HOOK_EVENT_COLORS[name] || '#71717a';
 }
 
+// v1.0.101 — Tooltip esplicativo per ogni event type Claude Code: passando
+// il mouse sopra il badge sulla card hook, l'utente legge cosa fa l'event,
+// quando viene triggerato, e cosa tipicamente fanno gli hook che vi si
+// agganciano. Sostituisce il vecchio title=event name che era ridondante.
+const HOOK_EVENT_DOCS = {
+  SessionStart:
+    'Triggera all\'avvio di una sessione `claude` (startup, --continue, --resume, /clear).\n\n' +
+    'Tipicamente usato per: inizializzare contesto, iniettare istruzioni, ' +
+    'caricare memoria persistente (es. claude-mem), eseguire setup checks.',
+  SessionEnd:
+    'Triggera alla fine della sessione `claude` (uscita normale o forzata).\n\n' +
+    'Tipicamente usato per: cleanup, persistenza stato, log finale di sessione.',
+  Stop:
+    'Triggera quando Claude finisce di rispondere a un prompt utente.\n\n' +
+    'Tipicamente usato per: riassumere/registrare la risposta, salvare ' +
+    'observations (es. claude-mem), trigger di azioni post-completion.',
+  SubagentStop:
+    'Come `Stop`, ma per i subagent (Task tool con agent specifico).\n\n' +
+    'Tipicamente usato per: log dedicato dei subagent, analisi separata ' +
+    'rispetto alla main conversation.',
+  UserPromptSubmit:
+    'Triggera quando l\'utente invia un messaggio, PRIMA che Claude lo processi.\n\n' +
+    'Tipicamente usato per: iniettare contesto, applicare guardrail, ' +
+    'preparare la memoria della sessione (es. claude-mem session-init).',
+  PreToolUse:
+    'Triggera PRIMA che Claude usi un tool. Il `matcher` filtra quali tool ' +
+    'attivano il hook (regex, es. `Edit|Write|MultiEdit`, oppure `*` per tutti).\n\n' +
+    'Tipicamente usato per: pre-validation (es. security-guidance prima di edit), ' +
+    'pre-fetch context, log del tool che sta per essere invocato.',
+  PostToolUse:
+    'Triggera DOPO che Claude ha usato un tool. Il `matcher` filtra quali tool.\n\n' +
+    'Tipicamente usato per: registrare observations su cosa Claude ha fatto ' +
+    '(es. claude-mem PostToolUse `*` traccia ogni azione), post-validation.',
+  PreCompact:
+    'Triggera prima che Claude compatti il contesto (quando si avvicina al limite ' +
+    'di token).\n\n' +
+    'Tipicamente usato per: salvare un riassunto della sessione prima della ' +
+    'compattazione, persistere informazioni che andrebbero perse.',
+  Notification:
+    'Triggera quando Claude vuole notificare qualcosa all\'utente (es. completamento, ' +
+    'permessi richiesti).\n\n' +
+    'Tipicamente usato per: integrazione con sistemi di notifica esterni (toast, ' +
+    'macOS notifications, Slack).',
+  Setup:
+    'Triggera al primo setup del plugin (one-time configuration).\n\n' +
+    'Tipicamente usato per: verifiche di prerequisiti (es. claude-mem version-check), ' +
+    'creazione di directory di storage, init di config files.',
+};
+
+function hookEventDoc(name) {
+  const desc = HOOK_EVENT_DOCS[name];
+  if (desc) return name + '\n\n' + desc;
+  return name + '\n\nEvent custom (non documentato nel core di Claude Code).';
+}
+
 /* ── DOM REFS ─────────────────────────────────────────────────────────── */
 const $ = id => document.getElementById(id);
 
@@ -2514,6 +2569,7 @@ function renderHooks() {
     const chip = el('button', 'hook-filter-chip' + (f.event === e ? ' active' : ''), e);
     chip.style.borderColor = hookEventColor(e);
     if (f.event === e) chip.style.background = hookEventColor(e);
+    chip.title = hookEventDoc(e);  // v1.0.101 — tooltip esplicativo anche sui chip filter
     chip.addEventListener('click', () => { state.filters.hooks.event = e; renderHooks(); });
     evWrap.appendChild(chip);
   });
@@ -2623,6 +2679,7 @@ function buildHookCard(item) {
   const head = el('div', 'hook-card-head');
   const evBadge = el('span', 'hook-event-badge', item.event);
   evBadge.style.background = hookEventColor(item.event);
+  evBadge.title = hookEventDoc(item.event);  // v1.0.101 — tooltip esplicativo event
   head.appendChild(evBadge);
   const pluginLine = el('span', 'hook-plugin-line');
   pluginLine.appendChild(el('span', 'hook-plugin-name', item.pluginId));
@@ -2751,6 +2808,7 @@ function buildHookCompactRow(item) {
   // Badge event
   const evBadge = el('span', 'hook-event-badge hook-event-badge-sm', item.event);
   evBadge.style.background = hookEventColor(item.event);
+  evBadge.title = hookEventDoc(item.event);  // v1.0.101 — tooltip esplicativo event
   row.appendChild(evBadge);
   // Plugin
   row.appendChild(el('span', 'compact-row-plugin', item.pluginId));
@@ -2870,6 +2928,7 @@ function showHookDetailsModal(item) {
   const titleWrap = el('div', 'md-title');
   const evBadge = el('span', 'hook-event-badge', item.event);
   evBadge.style.background = hookEventColor(item.event);
+  evBadge.title = hookEventDoc(item.event);  // v1.0.101 — tooltip esplicativo event
   titleWrap.appendChild(evBadge);
   titleWrap.appendChild(el('span', 'hook-modal-plugin', item.pluginId + (item.mkt ? ' · ' + item.mkt : '')));
   header.appendChild(titleWrap);

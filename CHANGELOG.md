@@ -1,5 +1,26 @@
 # Changelog
 
+## v1.0.101 — 2026-05-26 — Tooltip esplicativo sui badge event nella sezione Hooks
+
+Ultimo task aperto del Pack K extension. L'utente ha **scartato** gli altri 3 task pianificati (slow-hook indicator, trigger count, overlap warning) per scope opinabile / utilità bassa.
+
+- [FEATURE] **`HOOK_EVENT_DOCS`** dictionary nel renderer con descrizione lunga di ognuno dei 10 event Claude Code: SessionStart, SessionEnd, Stop, SubagentStop, UserPromptSubmit, PreToolUse, PostToolUse, PreCompact, Notification, Setup. Ogni voce ha 2 paragrafi: (1) **quando triggera** (cosa lo causa), (2) **come viene usato tipicamente** dai plugin
+- [FEATURE] **`hookEventDoc(name)`** helper genera la stringa tooltip formattata. Per event custom non documentati ritorna nome + nota "Event custom (non documentato nel core di Claude Code)"
+- [FEATURE] **Tooltip applicato in 4 punti**:
+  - Badge event sulle card hook (vista cards)
+  - Badge event mini sulle compact row
+  - Badge event nell'header del modal dettagli hook
+  - Chip filter event nel header della sezione Hooks (utile per imparare cosa filtri prima di cliccare)
+- [STYLE] **`.hook-event-badge cursor: help`**: il cursore indica all'utente che hovering produce info
+
+### Scartati (decisione utente)
+
+- ~~Indicatore "hook potenzialmente lento" (`async: false` + script long-running)~~ — scope troppo opinabile, falsi positivi alti
+- ~~Conteggio "trigger stimati" basato su pattern matcher~~ — informazione poco azionabile
+- ~~Warning matcher sovrapposti su stesso event~~ — caso d'uso raro
+
+Pack K extension considerato **chiuso** con v1.0.87+v1.0.94+v1.0.101 (hook deps, plugin filter, event tooltip).
+
 ## v1.0.100 — 2026-05-26 — Tre fix UX: toast z-index, badge "modificato" sulle card, activity log esteso
 
 Centesima release! 🎉 Tre fix legati al feedback utente su v1.0.99 (editor inline).
