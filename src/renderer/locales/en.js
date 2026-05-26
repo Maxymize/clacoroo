@@ -52,6 +52,33 @@ window.LOCALES.en = {
     configClaudeCode:   'Claude Code configuration',
   },
 
+  // Stats section (KPI + tabs + heatmap + context breakdown)
+  stats: {
+    tabOverview:  'Overview',
+    tabModels:    'Models',
+    tabProjects:  'Per-project',
+    rangeAll:     'All',
+    range30:      '30d',
+    range7:       '7d',
+    kpiSessions:  'Sessions',
+    kpiMessages:  'Messages',
+    kpiTokens:    'Total tokens',
+    kpiApiValue:  'Est. API\nvalue',
+    kpiActiveDays:'Active days',
+    kpiMostActive:'Most active day',
+    kpiStreak:    'Current streak',
+    kpiLongestStreak:'Longest streak',
+    kpiPeakHour:  'Peak hour',
+    kpiFavModel:  'Favorite\nModel',
+    contextSkills:    'Skills (index) · {count}',
+    contextSystemPrompt:'System prompt',
+    contextAgents:    'Agents (index) · {count}',
+    contextMemoryFiles:'Memory files · {count}',
+    contextMcpServers:'MCP servers',
+    contextMcpServersConn:'MCP servers · {count} connected',
+    contextFreeSpace: 'Free space',
+  },
+
   // KPI labels Dashboard
   kpi: {
     pluginActive:    'Active plugins',

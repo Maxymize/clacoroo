@@ -52,6 +52,33 @@ window.LOCALES.it = {
     configClaudeCode:   'Configurazione Claude Code',
   },
 
+  // Stats section (KPI + tabs + heatmap + context breakdown)
+  stats: {
+    tabOverview:  'Overview',
+    tabModels:    'Modelli',
+    tabProjects:  'Per-progetto',
+    rangeAll:     'Tutto',
+    range30:      '30g',
+    range7:       '7g',
+    kpiSessions:  'Sessioni',
+    kpiMessages:  'Messaggi',
+    kpiTokens:    'Token totali',
+    kpiApiValue:  'Valore\nAPI stimato',
+    kpiActiveDays:'Giorni attivi',
+    kpiMostActive:'Giorno più attivo',
+    kpiStreak:    'Serie attuale',
+    kpiLongestStreak:'Serie più lunga',
+    kpiPeakHour:  'Ora di punta',
+    kpiFavModel:  'Modello\nPreferito',
+    contextSkills:    'Skills (index) · {count}',
+    contextSystemPrompt:'System prompt',
+    contextAgents:    'Agents (index) · {count}',
+    contextMemoryFiles:'Memory files · {count}',
+    contextMcpServers:'MCP servers',
+    contextMcpServersConn:'MCP servers · {count} connessi',
+    contextFreeSpace: 'Free space',
+  },
+
   // KPI labels Dashboard
   kpi: {
     pluginActive:    'Plugin attivi',

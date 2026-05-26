@@ -1,5 +1,31 @@
 # Changelog
 
+## v1.0.117 — 2026-05-26 — Pack N (Phase 3d): Stats KPI + range filters + tabs + context breakdown
+
+Continua Pack N i18n. Migrate l'intera pagina Stats: tab bar, range filter chips, 10 KPI labels e i 6 context breakdown labels con interpolazione.
+
+### Locales — namespace nuovo `stats.*` (23 chiavi)
+
+- **Tabs (3)**: tabOverview / tabModels / tabProjects
+- **Range filters (3)**: rangeAll / range30 / range7
+- **KPI labels (10)**: kpiSessions / kpiMessages / kpiTokens / kpiApiValue / kpiActiveDays / kpiMostActive / kpiStreak / kpiLongestStreak / kpiPeakHour / kpiFavModel
+- **Context breakdown (7)**: contextSkills{count} / contextSystemPrompt / contextAgents{count} / contextMemoryFiles{count} / contextMcpServers / contextMcpServersConn{count} / contextFreeSpace
+
+### Migrazione
+
+- [REFACTOR] **Stats tab bar** (3 tab): `tabLabels` mappa hardcoded → `tabLabelKeys` con `t()` lookup al render. Variable shadow fix (`tabs.forEach(t => ...)` → `forEach(tab => ...)`)
+- [REFACTOR] **`buildStatsKpiGrid`**: tutte le 10 KPI label via `t('stats.kpi*')`
+- [REFACTOR] **Range filter chips** `[['all', 'Tutto'], ['30', '30g'], ['7', '7g']]` → letti via `t()` al render time
+- [REFACTOR] **`contextCats()`** breakdown labels: 6 categorie via `t()` con interpolazione `{count}` per skills/agents/memoryFiles/mcpServersConn
+
+### Coverage
+
+- ✅ Tutta la pagina Stats (KPI + tabs + filtri + heatmap titles + context breakdown)
+- ✅ Stat dashboard summary chip Dashboard (già migrate in batch 1)
+- ⏳ Stats per-model + per-project tabs (renderStatsModels + renderStatsProjects) — ancora da migrare in batch successiva
+- ⏳ Account panel + API key panel inner texts → Phase 3e
+- ⏳ Onboarding tour → Phase 3e
+
 ## v1.0.116 — 2026-05-26 — Pack N (Phase 3c): Settings labels esistenti (gruppi Percorsi/Editor/Terminale/Progetti/Aggiornamenti/Sviluppo plugin)
 
 Continua Pack N i18n. Migrate i 6 gruppi Impostazioni "core" che erano ancora hardcoded in italiano.

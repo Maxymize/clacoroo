@@ -3878,11 +3878,11 @@ async function renderStats() {
   // Tab strip
   // v1.0.38 — 'config' è ora una sezione sidebar autonoma, rimosso da qui
   const tabs = ['overview', 'modelli', 'progetti'];
-  const tabLabels = { overview: 'Overview', modelli: 'Modelli', progetti: 'Per-progetto' };
+  const tabLabelKeys = { overview: 'stats.tabOverview', modelli: 'stats.tabModels', progetti: 'stats.tabProjects' };
   const tabBar = el('div', 'stats-tabs');
-  tabs.forEach(t => {
-    const btn = el('button', 'stats-tab' + (t === statsActiveTab ? ' active' : ''), tabLabels[t]);
-    btn.addEventListener('click', () => { statsActiveTab = t; renderStats(); });
+  tabs.forEach(tab => {
+    const btn = el('button', 'stats-tab' + (tab === statsActiveTab ? ' active' : ''), t(tabLabelKeys[tab]));
+    btn.addEventListener('click', () => { statsActiveTab = tab; renderStats(); });
     tabBar.appendChild(btn);
   });
   wrap.appendChild(tabBar);
@@ -4041,16 +4041,16 @@ function buildStatsKpiGrid(data, range) {
 
   const grid = el('div', 'kpi-grid stats-kpi-grid');
   [
-    { num: fmtNum(kpi.sessions),  label: 'Sessioni',        color: '#d97757' },
-    { num: fmtNum(kpi.messages),  label: 'Messaggi',        color: '#e89478' },
-    { num: fmtNum(kpi.tokens),    label: 'Token totali',    color: '#6a9bcc' },
-    { num: costLabel,             label: 'Valore\nAPI stimato', color: '#22c55e' },
-    { num: activeLabel,           label: 'Giorni attivi',   color: '#788c5d' },
-    { num: madLabel,              label: 'Giorno più attivo', color: '#b8c79a' },
-    { num: (data.streak || 0) + 'g',     label: 'Serie attuale',   color: '#b8c79a' },
-    { num: (data.longestStreak || 0) + 'g', label: 'Serie più lunga', color: '#9cc1ea' },
-    { num: peakH != null ? peakH + ':00' : '—', label: 'Ora di punta', color: '#f97316' },
-    { num: favShort,              label: 'Modello\nPreferito', color: '#d97757' },
+    { num: fmtNum(kpi.sessions),  label: t('stats.kpiSessions'),     color: '#d97757' },
+    { num: fmtNum(kpi.messages),  label: t('stats.kpiMessages'),     color: '#e89478' },
+    { num: fmtNum(kpi.tokens),    label: t('stats.kpiTokens'),       color: '#6a9bcc' },
+    { num: costLabel,             label: t('stats.kpiApiValue'),     color: '#22c55e' },
+    { num: activeLabel,           label: t('stats.kpiActiveDays'),   color: '#788c5d' },
+    { num: madLabel,              label: t('stats.kpiMostActive'),   color: '#b8c79a' },
+    { num: (data.streak || 0) + 'g',     label: t('stats.kpiStreak'),         color: '#b8c79a' },
+    { num: (data.longestStreak || 0) + 'g', label: t('stats.kpiLongestStreak'), color: '#9cc1ea' },
+    { num: peakH != null ? peakH + ':00' : '—', label: t('stats.kpiPeakHour'),  color: '#f97316' },
+    { num: favShort,              label: t('stats.kpiFavModel'),     color: '#d97757' },
   ].forEach(k => {
     const card = el('div', 'kpi-card');
     card.style.setProperty('--kpi-color', k.color);
@@ -4066,7 +4066,7 @@ function renderStatsOverview(container, data) {
 
   // Filtri range
   const rangeBar = el('div', 'stats-range');
-  [['all', 'Tutto'], ['30', '30g'], ['7', '7g']].forEach(([k, l]) => {
+  [['all', t('stats.rangeAll')], ['30', t('stats.range30')], ['7', t('stats.range7')]].forEach(([k, l]) => {
     const btn = el('button', 'stats-range-btn' + (statsRange === k ? ' active' : ''), l);
     btn.addEventListener('click', () => { statsRange = k; renderStats(); });
     rangeBar.appendChild(btn);
@@ -4094,18 +4094,16 @@ function renderStatsOverview(container, data) {
 
 function contextCats(cb) {
   const mcp = cb.mcpServers || { tokens: 0, count: 0, total: 0 };
-  // Label MCP: "MCP servers · X connessi / Y totali" se ci sono server,
-  // altrimenti "MCP servers" semplice (caso pre-1.0.23 o nessun server)
   const mcpLabel = mcp.total
-    ? 'MCP servers · ' + mcp.count + ' connessi'
-    : 'MCP servers';
+    ? t('stats.contextMcpServersConn', { count: mcp.count })
+    : t('stats.contextMcpServers');
   return [
-    { kind: 'skills',       tokens: cb.skills.tokens,       label: 'Skills (index) · ' + cb.skills.count,    color: '#d97757' },
-    { kind: 'systemPrompt', tokens: cb.systemPrompt.tokens, label: 'System prompt',                            color: '#6a9bcc' },
-    { kind: 'agents',       tokens: cb.agents.tokens,       label: 'Agents (index) · ' + cb.agents.count,    color: '#f97316' },
-    { kind: 'memoryFiles',  tokens: cb.memoryFiles.tokens,  label: 'Memory files · ' + cb.memoryFiles.count, color: '#788c5d' },
-    { kind: 'mcpServers',   tokens: mcp.tokens,             label: mcpLabel,                                    color: '#14b8a6' },
-    { kind: 'freeSpace',    tokens: cb.freeSpace.tokens,    label: 'Free space',                               color: '#3a3530' },
+    { kind: 'skills',       tokens: cb.skills.tokens,       label: t('stats.contextSkills', { count: cb.skills.count }),     color: '#d97757' },
+    { kind: 'systemPrompt', tokens: cb.systemPrompt.tokens, label: t('stats.contextSystemPrompt'),                            color: '#6a9bcc' },
+    { kind: 'agents',       tokens: cb.agents.tokens,       label: t('stats.contextAgents', { count: cb.agents.count }),     color: '#f97316' },
+    { kind: 'memoryFiles',  tokens: cb.memoryFiles.tokens,  label: t('stats.contextMemoryFiles', { count: cb.memoryFiles.count }), color: '#788c5d' },
+    { kind: 'mcpServers',   tokens: mcp.tokens,             label: mcpLabel,                                                  color: '#14b8a6' },
+    { kind: 'freeSpace',    tokens: cb.freeSpace.tokens,    label: t('stats.contextFreeSpace'),                               color: '#3a3530' },
   ];
 }
 
