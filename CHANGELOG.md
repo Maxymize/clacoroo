@@ -1,5 +1,40 @@
 # Changelog
 
+## v1.0.97 — 2026-05-26 — Pack M chiusura: vista compatta per Marketplace / Plugin / MCP / Hooks
+
+Completata l'altra metà del **Pack M** dopo v1.0.96 (che ha portato cards a Skill/Agent). Ora **tutte le 6 sezioni** hanno entrambe le viste con switch live nel topbar.
+
+### Compact view per le 4 sezioni che oggi avevano solo cards
+
+- [FEATURE] **`buildMarketplaceCompactRow(m)`**: dot colore mkt + nome + count `X / Y plugin` (installati/disponibili) + repo + badge `auto-update`. Click apre `showMarketplaceContentModal`
+- [FEATURE] **`buildPluginCompactRow(p)`**: dot colore mkt + name + mkt + status badge (`attivo`/`disabilitato`/`locale: nome-progetto`) + count summary (`N skill · M agent · mcp · hooks`). Click apre `showPluginContentModal`
+- [FEATURE] **`buildMcpCompactRow(srv)`**: dot status colorato (verde/arancione/rosso) + name + badge transport (HTTP/SSE/STDIO) + sub (claude.ai/plugin/user-added) + statusText se non connected
+- [FEATURE] **`buildHookCompactRow(item)`**: badge event piccolo colorato + plugin + matcher truncato (30 char con tooltip full) + scope badge + warn deps mancanti se applicable. Click apre `showHookDetailsModal`
+
+### Refactor render functions
+
+- [FEATURE] **`renderMarketplaces` / `renderPlugins` / `renderMcp` / `renderHooks`**: ognuno ora include `renderViewSwitcher` nell'header e seleziona il builder corretto (card o compact row) in base a `state.viewMode[section]`. Grid class diversa: `.cards-grid|.mkt-cards-grid|.mcp-grid|.hook-grid` per cards, `.compact-list` per compatta
+
+### CSS condiviso
+
+- [STYLE] **`.compact-list`** flex column con gap minimo (4px) per liste dense
+- [STYLE] **`.compact-row`** base con border-left colorato (status/mkt), padding minimo, hover sottile
+- [STYLE] **`.compact-row-*`** classi atomiche riusabili: `-dot`, `-name` (mono bold), `-sub` (muted), `-plugin`, `-matcher` (code accent2), `-transport`, `-counts` (margin-left auto), `-pstatus` (badge), `-status-msg`, `-warn` (badge arancione con icon Lucide), `-tag`
+- [STYLE] **`.plugin-status-active/-blocked/-local`** varianti colorate per status badge
+- [STYLE] **`.hook-event-badge-sm`** versione mini del badge event Hook (9px) per le compact row
+
+### Comportamento
+
+- ✅ Switch immediato (no reload), persistito in `state.json`
+- ✅ Default `cards` per tutte le sezioni
+- ✅ Search + filtri + sort funzionano identici in entrambe le viste
+- ✅ In compact: niente bottoni inline (Installa/Rimuovi/Dettagli) — click sull'intera riga apre il modal dettagli completo
+
+### Fix accavallamento health badge nelle card Skill/Agent
+
+- [FIX] Card Skill/Agent: il health badge "health: warning"/"health: errore" si accavallava al `scope-badge GLOBALE` perché usava la classe `.health-badge` (cerchietto 16x16 pensato per le chip compatte, con un singolo carattere `⚠`/`!`). Il testo fuorisciva dal cerchio sovrapponendosi all'elemento accanto
+- [FIX] Sostituito con nuova classe `.browse-card-health` (badge rettangolare proper, allineato in flex con gli altri badge, gap 6px). Include icona Lucide `triangle-alert` + testo. Varianti `.h-err` (rosso) e `.h-warn` (arancione)
+
 ## v1.0.96 — 2026-05-26 — Pack M MVP: vista cards + compatta switchabile (Skill/Agent)
 
 Primo step di **Pack M** (vista cards + compatta per tutte le sezioni). MVP con infrastruttura + le 2 sezioni più semplici (Skill, Agent — oggi solo compatta). Le altre sezioni (Marketplace/Plugin/MCP/Hooks — oggi solo cards) riceveranno la vista compatta in v1.0.97.

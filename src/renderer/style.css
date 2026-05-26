@@ -349,6 +349,23 @@ body {
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
+/* v1.0.98 — Badge health rettangolare per le card Skill/Agent (sostituisce
+   il cerchietto .health-badge 16x16 usato nelle compact chip, che con
+   il testo "health: warning" fuoriusciva accavallandosi al scope-badge). */
+.browse-card-health {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: help;
+  flex-shrink: 0;
+}
+.browse-card-health .inline-icon { width: 11px; height: 11px; margin: 0; vertical-align: 0; }
+.browse-card-health.h-err  { background: rgba(239,68,68,.18);  color: #fca5a5; border: 1px solid rgba(239,68,68,.36); }
+.browse-card-health.h-warn { background: rgba(245,158,11,.18); color: #fbbf24; border: 1px solid rgba(245,158,11,.36); }
 .browse-card-foot {
   display: flex; justify-content: flex-end;
   margin-top: 2px;
@@ -357,6 +374,137 @@ body {
   font-size: 10px;
   color: var(--text-dim);
   font-style: italic;
+}
+
+/* v1.0.97 — Pack M: compact-list per le sezioni che oggi hanno solo cards.
+   Riga singola con dot status/colore + name + sub-info + badge, click apre
+   modal dettagli. Riusato da Marketplace/Plugin/MCP/Hooks. */
+.compact-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 12px;
+}
+.compact-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--text-muted);
+  border-radius: 6px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background .15s, border-color .15s;
+}
+.compact-row:hover {
+  background: var(--surface2);
+  border-color: var(--border2);
+}
+.compact-row.blocked { opacity: 0.55; }
+.compact-row-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.compact-row-name {
+  font-family: "SF Mono", "Fira Code", Menlo, monospace;
+  font-weight: 700;
+  color: var(--text);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  flex-shrink: 0;
+  max-width: 240px;
+}
+.compact-row-sub {
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+.compact-row-plugin {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+}
+.compact-row-matcher {
+  font-family: "SF Mono", "Fira Code", Menlo, monospace;
+  font-size: 10px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--accent2);
+  padding: 1px 6px;
+  border-radius: 3px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.compact-row-transport {
+  font-family: "SF Mono", "Fira Code", Menlo, monospace;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  background: var(--surface2);
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+.compact-row-counts {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+.compact-row-pstatus {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  flex-shrink: 0;
+}
+.plugin-status-active   { background: rgba(34,197,94,.18);  color: #4ade80; }
+.plugin-status-blocked  { background: rgba(239,68,68,.18);  color: #fca5a5; }
+.plugin-status-local    { background: rgba(106,155,204,.18); color: #9cc1ea; }
+.compact-row-status-msg {
+  font-size: 10px;
+  color: #fbbf24;
+  font-style: italic;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+.compact-row-warn {
+  display: inline-flex; align-items: center;
+  margin-left: auto;
+  font-size: 10px;
+  color: #fbbf24;
+  background: rgba(245,158,11,.14);
+  border: 1px solid rgba(245,158,11,.30);
+  padding: 1px 6px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+.compact-row-tag {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: rgba(106,155,204,.18);
+  color: #9cc1ea;
+  flex-shrink: 0;
+}
+
+/* Badge event Hook variante "small" per la compact view */
+.hook-event-badge-sm {
+  font-size: 9px !important;
+  padding: 2px 6px !important;
+  flex-shrink: 0;
 }
 
 .nav-badge {

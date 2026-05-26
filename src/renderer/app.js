@@ -1105,10 +1105,12 @@ function renderPlugins() {
 
   wrap.appendChild(bar);
 
-  // COUNT + SORT (v1.0.82)
+  // COUNT + VIEW SWITCHER + SORT (v1.0.82, v1.0.97)
   const countRow = el('div', 'section-header');
   const countSpan = el('span', 'section-count', '');
   countRow.appendChild(countSpan);
+  const pMode = state.viewMode.plugins;
+  countRow.appendChild(renderViewSwitcher('plugins', pMode, (m) => setViewMode('plugins', m)));
   countRow.appendChild(renderSortDropdown(state.pluginSort, SORT_OPTIONS.plugin, async (key) => {
     state.pluginSort = key;
     await window.claudeAPI.setState({ pluginSort: key });
@@ -1116,14 +1118,14 @@ function renderPlugins() {
   }));
   wrap.appendChild(countRow);
 
-  // GRID
-  const grid = el('div', 'cards-grid');
+  // GRID: cards (default) o compact list
+  const grid = el('div', pMode === 'cards' ? 'cards-grid' : 'compact-list');
   let visible = 0;
 
   const sortedPlugins = [...state.plugins].sort(PLUGIN_SORTERS[state.pluginSort] || PLUGIN_SORTERS['name-asc']);
   state._renderedPlugins = sortedPlugins;  // usato da applyPluginFilters per indicizzazione corretta
   sortedPlugins.forEach(p => {
-    const card = buildPluginCard(p);
+    const card = pMode === 'cards' ? buildPluginCard(p) : buildPluginCompactRow(p);
     const show = pluginMatchesFilter(p, f);
     card.style.display = show ? '' : 'none';
     if (show) visible++;
@@ -1312,6 +1314,40 @@ function showPluginContentModal(p) {
   overlay.appendChild(modal);
   overlay._close = close;
   swapModalOverlay(overlay);
+}
+
+// v1.0.97 — Pack M: compact view row per la sezione Plugin. Riga singola
+// con dot mkt + name + status badge (attivo/disattivato/locale) + count
+// skill/agent/mcp/hooks. Click apre il modal "Contenuto plugin".
+function buildPluginCompactRow(p) {
+  const row = el('div', 'compact-row plugin-compact-row');
+  row.style.borderLeftColor = mktColor(p.mkt);
+  if (p.blocked) row.classList.add('blocked');
+  // Dot mkt
+  const dot = el('span', 'compact-row-dot');
+  dot.style.background = mktColor(p.mkt);
+  row.appendChild(dot);
+  // Nome plugin
+  row.appendChild(el('span', 'compact-row-name', p.id));
+  // Mkt
+  row.appendChild(el('span', 'compact-row-sub', p.mkt));
+  // Status badge
+  let statusLabel, statusClass;
+  if (p.scope === 'local') { statusLabel = 'locale: ' + (p.projectName || ''); statusClass = 'plugin-status-local'; }
+  else if (p.blocked)       { statusLabel = 'disabilitato'; statusClass = 'plugin-status-blocked'; }
+  else                       { statusLabel = 'attivo'; statusClass = 'plugin-status-active'; }
+  row.appendChild(el('span', 'compact-row-pstatus ' + statusClass, statusLabel));
+  // Count summary
+  const counts = [];
+  if (p.skills.length) counts.push(p.skills.length + ' skill');
+  if (p.agents.length) counts.push(p.agents.length + ' agent');
+  if (p.hasMcp)        counts.push('mcp');
+  if (p.hasHooks)      counts.push('hooks');
+  if (counts.length) {
+    row.appendChild(el('span', 'compact-row-counts', counts.join(' · ')));
+  }
+  row.addEventListener('click', () => showPluginContentModal(p));
+  return row;
 }
 
 function buildPluginCard(p) {
@@ -1989,11 +2025,46 @@ function renderInstalledOnly(container, m) {
   });
 }
 
+// v1.0.97 — Pack M: compact view row per Marketplace. Riga singola con
+// dot colore + nome marketplace + count X/Y installati/disponibili + repo.
+// Click apre il modal "Plugin del marketplace" (showMarketplaceContentModal).
+function buildMarketplaceCompactRow(m) {
+  const row = el('div', 'compact-row mkt-compact-row');
+  row.style.borderLeftColor = mktColor(m.id);
+  // Dot
+  const dot = el('span', 'compact-row-dot');
+  dot.style.background = mktColor(m.id);
+  row.appendChild(dot);
+  // Nome marketplace
+  row.appendChild(el('span', 'compact-row-name', m.id));
+  // Count X/Y
+  const count = el('span', 'compact-row-counts');
+  count.textContent = (m.installed || 0) + ' / ' + (m.available || 0) + ' plugin';
+  count.title = 'Installati / Disponibili nel marketplace';
+  row.appendChild(count);
+  // Repo
+  if (m.repo) {
+    const r = el('span', 'compact-row-sub', 'github.com/' + m.repo);
+    row.appendChild(r);
+  }
+  // Auto-update badge
+  if (m.autoUpdate) {
+    const au = el('span', 'compact-row-tag', 'auto-update');
+    row.appendChild(au);
+  }
+  row.addEventListener('click', () => showMarketplaceContentModal(m));
+  return row;
+}
+
 function renderMarketplaces() {
   const wrap = el('div');
 
   const hdr = el('div', 'section-header');
   hdr.appendChild(el('span', 'section-count', state.mktList.length + ' marketplace configurati'));
+
+  // v1.0.97 — Pack M: view switcher cards/compatta per Marketplace
+  const mMode = state.viewMode.marketplaces;
+  hdr.appendChild(renderViewSwitcher('marketplaces', mMode, (m) => setViewMode('marketplaces', m)));
 
   // v1.0.55 — Selector di ordinamento
   const sortWrap = el('div', 'mkt-sort-wrap');
@@ -2021,6 +2092,17 @@ function renderMarketplaces() {
   hdr.appendChild(sortWrap);
 
   wrap.appendChild(hdr);
+
+  // Grid: cards (default) o compact list
+  if (mMode === 'compact') {
+    const list = el('div', 'compact-list');
+    state.mktList.forEach(m => {
+      list.appendChild(buildMarketplaceCompactRow(m));
+    });
+    wrap.appendChild(list);
+    setContent(wrap);
+    return;
+  }
 
   const grid = el('div', 'mkt-cards-grid');
 
@@ -2248,8 +2330,12 @@ function buildSkillAgentCard(item, kind) {
   if (item.projectPath) scopeBadge.title = item.projectPath;
   badgeRow.appendChild(scopeBadge);
   if (item.health && item.health.status !== 'ok') {
-    const hb = el('span', 'health-badge h-' + item.health.status,
-      item.health.status === 'err' ? 'health: errore' : 'health: warning');
+    // v1.0.98 — Badge rettangolare proper (era .health-badge cerchio 16x16
+    // pensato per le compact chip; il testo "health: warning" fuorisceva
+    // accavallandosi al scope-badge nelle card).
+    const hb = el('span', 'browse-card-health h-' + item.health.status);
+    hb.appendChild(icon('triangle-alert'));
+    hb.appendChild(document.createTextNode(item.health.status === 'err' ? 'health: errore' : 'health: warning'));
     hb.title = (item.health.issues || []).join(' · ');
     badgeRow.appendChild(hb);
   }
@@ -2412,10 +2498,13 @@ function renderHooks() {
   }
   wrap.appendChild(filterRow);
 
-  // Riga 3: header con count + sort dropdown
+  // Riga 3: header con count + view switcher + sort dropdown
   const hdr = el('div', 'section-header');
   const countEl = el('span', 'section-count', '');
   hdr.appendChild(countEl);
+  // v1.0.97 — Pack M: view switcher cards/compatta per Hooks
+  const hMode = state.viewMode.hooks;
+  hdr.appendChild(renderViewSwitcher('hooks', hMode, (m) => setViewMode('hooks', m)));
   hdr.appendChild(renderSortDropdown(state.hookSort, SORT_OPTIONS.hook, async (key) => {
     state.hookSort = key;
     await window.claudeAPI.setState({ hookSort: key });
@@ -2423,11 +2512,11 @@ function renderHooks() {
   }));
   wrap.appendChild(hdr);
 
-  // Grid
-  const grid = el('div', 'hook-grid');
+  // Grid: cards (default) o compact list
+  const grid = el('div', hMode === 'cards' ? 'hook-grid' : 'compact-list');
   const cards = [];
   all.forEach(item => {
-    const card = buildHookCard(item);
+    const card = hMode === 'cards' ? buildHookCard(item) : buildHookCompactRow(item);
     grid.appendChild(card);
     cards.push(card);
   });
@@ -2595,6 +2684,42 @@ function buildHookCard(item) {
 }
 
 function truncate(s, n) { return s && s.length > n ? s.slice(0, n - 1) + '…' : s; }
+
+// v1.0.97 — Pack M: compact view row per la sezione Hooks. Riga singola
+// con badge event mini + plugin + matcher truncato + indicatore deps mancanti.
+// Click sulla riga apre il modal dettagli completo (come la card).
+function buildHookCompactRow(item) {
+  const row = el('div', 'compact-row hook-compact-row');
+  row.style.borderLeftColor = hookEventColor(item.event);
+  // Badge event
+  const evBadge = el('span', 'hook-event-badge hook-event-badge-sm', item.event);
+  evBadge.style.background = hookEventColor(item.event);
+  row.appendChild(evBadge);
+  // Plugin
+  row.appendChild(el('span', 'compact-row-plugin', item.pluginId));
+  // Matcher (mono truncato)
+  if (item.matcher) {
+    const m = el('code', 'compact-row-matcher', truncate(item.matcher, 30));
+    m.title = item.matcher;
+    row.appendChild(m);
+  }
+  // Scope badge
+  const scopeBadge = el('span', 'scope-badge scope-' + item.scope,
+    item.scope === 'local' ? (item.projectName || 'locale') : 'globale');
+  if (item.projectPath) scopeBadge.title = item.projectPath;
+  row.appendChild(scopeBadge);
+  // Warning deps mancanti
+  const missingDeps = missingDepsForHook(item);
+  if (missingDeps.length) {
+    const w = el('span', 'compact-row-warn');
+    w.appendChild(icon('triangle-alert'));
+    w.appendChild(document.createTextNode('manca ' + missingDeps.join(', ')));
+    w.title = 'Tool richiesti dagli handler ma non installati: ' + missingDeps.join(', ');
+    row.appendChild(w);
+  }
+  row.addEventListener('click', () => showHookDetailsModal(item));
+  return row;
+}
 
 // v1.0.93 — Polling jobs attivi per detection auto-completamento install di
 // un tool. Una chiave per tool, valore = id setInterval (per poter clearare
@@ -3856,16 +3981,18 @@ async function renderMcp() {
 
   wrap.appendChild(bar);
 
-  // Count + sort + refresh button (v1.0.82 — sort)
+  // Count + view switcher + sort + refresh button (v1.0.82 — sort, v1.0.97 — view switcher)
   const headerRow = el('div', 'section-header');
   const countSpan = el('span', 'section-count', '');
   headerRow.appendChild(countSpan);
+  const mcpMode = state.viewMode.mcp;
+  headerRow.appendChild(renderViewSwitcher('mcp', mcpMode, (m) => setViewMode('mcp', m)));
   headerRow.appendChild(renderSortDropdown(state.mcpSort, SORT_OPTIONS.mcp, async (key) => {
     state.mcpSort = key;
     await window.claudeAPI.setState({ mcpSort: key });
     renderMcp();
   }));
-  const refreshBtn = el('button', 'btn btn-sm btn-ghost', '↻ Aggiorna stato live');
+  const refreshBtn = btnWithIcon('btn btn-sm btn-ghost', 'rotate-cw', 'Aggiorna stato live');
   refreshBtn.title = 'Esegue `claude mcp list` con health-check (può richiedere qualche secondo)';
   refreshBtn.addEventListener('click', async () => {
     refreshBtn.disabled = true;
@@ -3875,14 +4002,16 @@ async function renderMcp() {
     if (myToken !== mcpRenderToken) return;
     mcpCache = data;
     refreshBtn.disabled = false;
-    refreshBtn.textContent = '↻ Aggiorna stato live';
+    refreshBtn.textContent = '';
+    refreshBtn.appendChild(icon('rotate-cw'));
+    refreshBtn.appendChild(document.createTextNode('Aggiorna stato live'));
     renderMcp();
   });
   headerRow.appendChild(refreshBtn);
   wrap.appendChild(headerRow);
 
-  // Grid
-  const grid = el('div', 'mcp-grid');
+  // Grid: cards (default) o compact list
+  const grid = el('div', mcpMode === 'cards' ? 'mcp-grid' : 'compact-list');
   wrap.appendChild(grid);
 
   // Caricamento iniziale o usa cache
@@ -3913,7 +4042,7 @@ async function renderMcp() {
 
   let visible = 0;
   servers.forEach(srv => {
-    const card = buildMcpCard(srv);
+    const card = mcpMode === 'cards' ? buildMcpCard(srv) : buildMcpCompactRow(srv);
     const show = mcpMatches(srv, mcpFilter);
     card.style.display = show ? '' : 'none';
     if (show) visible++;
@@ -4133,6 +4262,42 @@ function buildMcpCard(srv) {
 }
 
 // v1.0.94 — Pack G v2: conferma + rimuove un MCP server user-added
+// v1.0.97 — Pack M: compact view row per la sezione MCP. Riga singola
+// con dot status colorato + name + transport + sub (claude.ai/plugin/user).
+// Click sulla riga: per ora apre il modal niente (placeholder) — futuro
+// integrazione con un detail modal MCP.
+function buildMcpCompactRow(srv) {
+  const row = el('div', 'compact-row mcp-compact-row');
+  row.dataset.mcpId = srv.id;
+  // Dot status colorato
+  const statusColor = {
+    connected: '#22c55e',
+    needsAuth: '#f59e0b',
+    warning:   '#f59e0b',
+    error:     '#ef4444',
+    unknown:   '#71717a',
+  }[srv.status] || '#71717a';
+  const dot = el('span', 'compact-row-dot');
+  dot.style.background = statusColor;
+  row.appendChild(dot);
+  // Nome
+  row.appendChild(el('span', 'compact-row-name', srv.displayName || srv.id));
+  // Transport badge (HTTP/SSE/STDIO)
+  const tr = el('span', 'compact-row-transport mcp-card-transport-' + srv.transport, srv.transport.toUpperCase());
+  row.appendChild(tr);
+  // Sub: tipo (claude.ai/plugin/user-added)
+  const subText = srv.scope === 'builtin' ? 'claude.ai · globale'
+    : srv.scope === 'plugin' ? ('plugin: ' + (srv.plugin || '—'))
+    : 'user-added';
+  row.appendChild(el('span', 'compact-row-sub', subText));
+  // Status text se non connected
+  if (srv.status !== 'connected' && srv.statusText) {
+    const sm = el('span', 'compact-row-status-msg', srv.statusText);
+    row.appendChild(sm);
+  }
+  return row;
+}
+
 async function confirmAndRemoveMcp(srv) {
   const response = await window.claudeAPI.confirmDialog({
     title: 'Rimuovi MCP server',
