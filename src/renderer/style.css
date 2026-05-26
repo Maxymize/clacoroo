@@ -1642,6 +1642,171 @@ body {
   letter-spacing: 0.02em;
 }
 
+/* v1.0.107 — Pack C analytics: sezione Dashboard "Plugin per peso" */
+.token-budget-summary {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+  margin: 6px 0 10px;
+  font-size: 12px;
+}
+.token-budget-total-label { color: var(--text-muted); }
+.token-budget-total-val { color: var(--accent); font-size: 14px; }
+.token-budget-sub { color: var(--text-dim); font-size: 11px; }
+
+.token-budget-list {
+  display: flex; flex-direction: column;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+.token-budget-row {
+  display: grid;
+  grid-template-columns: minmax(140px, 220px) 1fr auto auto;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: background .15s, border-color .15s;
+}
+.token-budget-row:hover {
+  background: var(--surface2);
+  border-color: var(--border2);
+}
+.token-budget-name {
+  display: flex; align-items: center; gap: 6px;
+  min-width: 0;
+}
+.token-budget-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.token-budget-name-text {
+  font-family: "SF Mono", "Fira Code", Menlo, monospace;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.token-budget-bar-col {
+  height: 8px;
+  background: var(--bg);
+  border-radius: 4px;
+  overflow: hidden;
+  min-width: 60px;
+}
+.token-budget-bar {
+  height: 100%;
+  border-radius: 4px;
+  transition: width .3s ease;
+}
+.token-budget-val-always {
+  font-family: "SF Mono", "Fira Code", Menlo, monospace;
+  font-weight: 700;
+  color: var(--text);
+  min-width: 60px;
+  text-align: right;
+  font-size: 11px;
+}
+.token-budget-val-invoke {
+  font-size: 10px;
+  color: var(--text-muted);
+  font-family: "SF Mono", "Fira Code", Menlo, monospace;
+  min-width: 110px;
+  text-align: right;
+}
+.token-budget-see-all {
+  margin-top: 4px;
+}
+
+/* Modal */
+.token-budget-modal { max-width: 900px; }
+.token-budget-intro {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-muted);
+  margin-bottom: 14px;
+  padding: 10px 12px;
+  background: var(--bg);
+  border-radius: 6px;
+  border-left: 3px solid var(--accent);
+}
+.token-budget-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.token-budget-table th {
+  text-align: left;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border2);
+  color: var(--text-muted);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 700;
+  background: var(--surface);
+  position: sticky; top: 0;
+}
+.token-budget-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+.token-budget-table tr:hover td { background: var(--surface); }
+.token-budget-rank {
+  color: var(--text-dim);
+  font-family: "SF Mono", "Fira Code", Menlo, monospace;
+  width: 30px;
+}
+.token-budget-table-name {
+  font-family: "SF Mono", "Fira Code", Menlo, monospace;
+  font-weight: 600;
+  color: var(--text);
+}
+.token-budget-table-name .token-budget-dot { margin-right: 6px; display: inline-block; vertical-align: -1px; }
+.token-budget-table-mkt {
+  color: var(--text-muted);
+  font-size: 11px;
+}
+.token-budget-table-always {
+  font-family: "SF Mono", "Fira Code", Menlo, monospace;
+  min-width: 180px;
+}
+.token-budget-mini {
+  display: inline-block;
+  width: 80px; height: 6px;
+  background: var(--bg);
+  border-radius: 3px;
+  overflow: hidden;
+  vertical-align: middle;
+  margin-right: 8px;
+}
+.token-budget-mini-bar { height: 100%; border-radius: 3px; }
+.token-budget-val { font-weight: 700; font-size: 11px; }
+.token-budget-table-invoke {
+  font-family: "SF Mono", "Fira Code", Menlo, monospace;
+  color: var(--text-muted);
+  font-size: 11px;
+}
+.token-budget-table-total {
+  font-family: "SF Mono", "Fira Code", Menlo, monospace;
+  font-weight: 700;
+  color: var(--accent);
+  font-size: 11px;
+}
+.token-budget-modal-footer {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
 /* v1.0.81 — Bottone copia globale nell'header del modal markdown viewer.
    Posizionato fra title e × con margine per non essere troppo vicino al close. */
 .md-copy {

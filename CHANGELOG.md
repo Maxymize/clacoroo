@@ -1,5 +1,45 @@
 # Changelog
 
+## v1.0.107 — 2026-05-26 — Pack C: Token cost breakdown per plugin (Top-N + modal full table)
+
+Prima feature del **Pack C — Insight + analytics**. Nuova sezione "Plugin per peso" in Dashboard che mostra Top-10 plugin globali attivi ordinati per token always-on (peso fisso nel context window). Click sulla riga o sul bottone "Vedi tutti" apre un modal con tabella completa di tutti i plugin attivi.
+
+### Backend (dati già disponibili)
+
+I dati sono **già caricati** in `state.plugins` da v1.0.11 — letti da `~/.claude/plugins/plugin-catalog-cache.json` di Claude Code per il modello `claude-sonnet-4-6`:
+- `p.tokensAlways` (sempre caricati al boot di `claude`)
+- `p.tokensInvoke` (cost aggiuntivo quando il plugin viene invocato)
+
+Nessuna modifica backend richiesta — analytics puro renderer.
+
+### Frontend
+
+- [FEATURE] **`formatTokenSize(n)`** helper: formatta `12500 → "12.5K"`, `1500000 → "1.5M"`, `<1000 → numero`
+- [FEATURE] **`renderTokenBudgetSection(container, plugins)`** in Dashboard:
+  - Filtra plugin globali attivi con tokens > 0 (no locali, no blocked)
+  - Summary line: "Totale always-on: X.XK tok · N plugin attivi · on-invoke potenziale Y.YK"
+  - Bar chart orizzontale dei **Top 10**: nome con dot mkt color + bar proporzionale + valore tok + on-invoke estimate
+  - Click su qualsiasi riga → apre modal completa
+  - Footer "↗ Vedi tutti i N plugin per peso" se ci sono > 10 plugin attivi
+- [FEATURE] **`showTokenBudgetModal(plugins)`**: modal large (max-w 900) con:
+  - Intro esplicativa (always-on vs on-invoke + fonte plugin-catalog-cache.json)
+  - Tabella completa: rank · nome · marketplace · always (con mini bar) · on-invoke · totale
+  - Footer con totali aggregati (always + on-invoke + N plugin)
+  - Tutti i valori formatati con `formatTokenSize`
+  - Tabella ordinata desc per `tokensAlways`
+- [STYLE] Nuove classi: `.token-budget-summary/-total-label/-total-val/-sub`, `.token-budget-list/-row/-name/-name-text/-dot/-bar-col/-bar/-val-always/-val-invoke/-see-all`, `.token-budget-modal/-intro/-table/-rank/-table-name/-mkt/-always/-mini/-mini-bar/-val/-invoke/-total/-modal-footer`. Coerente con design system CLACOROO
+
+### Posizionamento
+
+La sezione "Plugin per peso" appare in Dashboard **subito dopo le KPI Utilizzo Claude Code** e **prima delle sezioni riassuntive Marketplace/Plugin/Skill/...** (vedi v1.0.105). Visibilità alta per la decisione "quali plugin disabilitare per recuperare context".
+
+### Non-goals (rimangono nel backlog Pack C)
+
+- ❌ Dependency tree skill → plugin → marketplace (visualizzazione gerarchica)
+- ❌ Statistiche storiche (abilitazioni/disabilitazioni nel tempo)
+- ❌ Comparatore Opus 4.7 vs Sonnet 4.6 (i dati sono entrambi nel catalog cache, ma usiamo solo Sonnet ora)
+- ❌ Bottone "Disabilita" direttamente dalla riga budget (l'utente può andare in sezione Plugin per fare l'azione)
+
 ## v1.0.106 — 2026-05-26 — Rinominata sidebar "Config" → "Claude Config" per chiarezza
 
 Piccolo fix UX: la voce sidebar "Config" era ambigua rispetto a "Impostazioni" (settings dell'app CLACOROO). "Claude Config" chiarisce che la sezione contiene le impostazioni di Claude Code (`~/.claude/settings.json` — model, theme, language, Always Thinking, Voice, Effort), distinte dalle impostazioni dell'app stessa.

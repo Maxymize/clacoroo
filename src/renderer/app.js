@@ -912,6 +912,9 @@ function renderDashboard() {
   wrap.appendChild(statsSection);
   loadDashboardStats(statsSection, renderToken);
 
+  // v1.0.107 — Pack C: Top-N plugin per peso (token cost breakdown)
+  renderTokenBudgetSection(wrap, state.plugins);
+
   // v1.0.105 — Sezioni riassuntive dashboard nello stesso ordine della sidebar
   // (Marketplace → Plugin → Skill → Agent → MCP → Hooks). Tutte usano lo
   // stesso helper renderDashboardSection con max 19 + 20° "Vedi tutte".
@@ -1143,6 +1146,156 @@ async function loadPluginsContextBar(container, token) {
   if (token !== pluginsRenderToken || !data || !data.contextBreakdown) return;
   if (data !== prevData) paintCtxBar(container, data.contextBreakdown);
   lastStatsData = data;
+}
+
+// v1.0.107 — Pack C analytics: formatter token "12.5K" / "1.2M" / "950"
+function formatTokenSize(n) {
+  if (!n || n < 1000) return String(n || 0);
+  if (n < 1000000) return (n / 1000).toFixed(n < 10000 ? 1 : 0) + 'K';
+  return (n / 1000000).toFixed(1) + 'M';
+}
+
+// v1.0.107 — Pack C analytics: sezione Dashboard "Plugin per peso" con
+// Top-N bar chart orizzontale per always-on tokens + colonna on-invoke.
+// Mostra solo plugin globali attivi (no locali, no blocked). Sorted desc.
+// Cliccando "Vedi tutti" si apre il modal con tabella completa.
+function renderTokenBudgetSection(container, plugins) {
+  const eligible = (plugins || []).filter(p => p.scope === 'global' && !p.blocked && (p.tokensAlways > 0 || p.tokensInvoke > 0));
+  if (!eligible.length) return;  // niente da mostrare, skip
+
+  container.appendChild(el('div', 'list-section-title', 'Plugin per peso (context window)'));
+
+  // Sort desc per tokensAlways (più impattante: pesa sempre)
+  const sorted = [...eligible].sort((a, b) => (b.tokensAlways || 0) - (a.tokensAlways || 0));
+  const TOP_N = 10;
+  const top = sorted.slice(0, TOP_N);
+  const maxAlways = top.reduce((m, p) => Math.max(m, p.tokensAlways || 0), 1);
+  const totalAlways = sorted.reduce((s, p) => s + (p.tokensAlways || 0), 0);
+  const totalInvoke = sorted.reduce((s, p) => s + (p.tokensInvoke || 0), 0);
+
+  // Summary line in alto
+  const summary = el('div', 'token-budget-summary');
+  summary.appendChild(el('span', 'token-budget-total-label', 'Totale always-on:'));
+  summary.appendChild(el('strong', 'token-budget-total-val', formatTokenSize(totalAlways) + ' tok'));
+  summary.appendChild(el('span', 'token-budget-sub', '· ' + sorted.length + ' plugin attivi · on-invoke potenziale ' + formatTokenSize(totalInvoke) + ' tok'));
+  container.appendChild(summary);
+
+  // Bar chart: una riga per plugin, larghezza barra proporzionale a tokensAlways/maxAlways
+  const list = el('div', 'token-budget-list');
+  top.forEach(p => {
+    const row = el('div', 'token-budget-row');
+    row.title = p.id + ' (' + p.mkt + ')\nalways-on: ' + (p.tokensAlways || 0) + ' tok\non-invoke: ' + (p.tokensInvoke || 0) + ' tok';
+    // Name
+    const nameWrap = el('div', 'token-budget-name');
+    const dot = el('span', 'token-budget-dot');
+    dot.style.background = mktColor(p.mkt);
+    nameWrap.appendChild(dot);
+    nameWrap.appendChild(el('span', 'token-budget-name-text', p.id));
+    row.appendChild(nameWrap);
+    // Bar always-on
+    const barCol = el('div', 'token-budget-bar-col');
+    const bar = el('div', 'token-budget-bar');
+    bar.style.width = Math.max(2, Math.round((p.tokensAlways / maxAlways) * 100)) + '%';
+    bar.style.background = mktColor(p.mkt);
+    barCol.appendChild(bar);
+    row.appendChild(barCol);
+    // Value always
+    row.appendChild(el('span', 'token-budget-val-always', formatTokenSize(p.tokensAlways) + ' tok'));
+    // Value invoke (smaller, muted)
+    const invoke = el('span', 'token-budget-val-invoke');
+    invoke.textContent = '+' + formatTokenSize(p.tokensInvoke || 0) + ' on-invoke';
+    row.appendChild(invoke);
+    row.addEventListener('click', () => showTokenBudgetModal(sorted));
+    list.appendChild(row);
+  });
+  container.appendChild(list);
+
+  // Footer link: "Vedi tutti (N)" se ci sono più di TOP_N plugin
+  if (sorted.length > TOP_N) {
+    const seeAll = el('button', 'btn btn-sm btn-ghost token-budget-see-all');
+    seeAll.appendChild(icon('external-link'));
+    seeAll.appendChild(document.createTextNode('Vedi tutti i ' + sorted.length + ' plugin per peso'));
+    seeAll.addEventListener('click', () => showTokenBudgetModal(sorted));
+    container.appendChild(seeAll);
+  }
+}
+
+// v1.0.107 — Modal "Plugin per peso": tabella completa con tutti i plugin
+// ordinati desc per tokensAlways. Colonne: rank · nome · marketplace · always · on-invoke · total
+function showTokenBudgetModal(plugins) {
+  const overlay = el('div', 'md-overlay');
+  const modal   = el('div', 'md-modal token-budget-modal');
+
+  const header = el('div', 'md-header');
+  const title  = el('div', 'md-title');
+  title.appendChild(el('span', 'md-kind-badge md-kind-agent', 'analytics'));
+  title.appendChild(document.createTextNode(' Plugin per peso nel context window'));
+  const closeBtn = el('button', 'md-close'); closeBtn.appendChild(icon('x'));
+  header.appendChild(title);
+  header.appendChild(closeBtn);
+
+  const content = el('div', 'md-content');
+  // Intro
+  const intro = el('p', 'token-budget-intro');
+  intro.textContent = 'Plugin globali attivi ordinati per peso "always-on" (tokens caricati ad ogni boot di sessione `claude`). Dati estratti dal `plugin-catalog-cache.json` di Claude Code per il modello Sonnet 4.6. La somma always-on è il "costo fisso" del tuo setup; on-invoke è il costo aggiuntivo quando un plugin viene effettivamente invocato.';
+  content.appendChild(intro);
+
+  // Table
+  const table = el('table', 'token-budget-table');
+  const thead = el('thead');
+  const trh = el('tr');
+  ['#', 'Plugin', 'Marketplace', 'Always-on', 'On-invoke', 'Totale'].forEach(h => trh.appendChild(el('th', null, h)));
+  thead.appendChild(trh);
+  table.appendChild(thead);
+  const tbody = el('tbody');
+  const maxAlways = plugins.reduce((m, p) => Math.max(m, p.tokensAlways || 0), 1);
+  plugins.forEach((p, i) => {
+    const tr = el('tr');
+    tr.appendChild(el('td', 'token-budget-rank', String(i + 1)));
+    // Name with dot
+    const nameTd = el('td', 'token-budget-table-name');
+    const dot = el('span', 'token-budget-dot');
+    dot.style.background = mktColor(p.mkt);
+    nameTd.appendChild(dot);
+    nameTd.appendChild(el('span', null, p.id));
+    tr.appendChild(nameTd);
+    tr.appendChild(el('td', 'token-budget-table-mkt', p.mkt));
+    // Always with mini-bar
+    const alwaysTd = el('td', 'token-budget-table-always');
+    const mini = el('div', 'token-budget-mini');
+    const miniBar = el('div', 'token-budget-mini-bar');
+    miniBar.style.width = Math.max(2, Math.round((p.tokensAlways / maxAlways) * 100)) + '%';
+    miniBar.style.background = mktColor(p.mkt);
+    mini.appendChild(miniBar);
+    alwaysTd.appendChild(mini);
+    alwaysTd.appendChild(el('span', 'token-budget-val', formatTokenSize(p.tokensAlways) + ' tok'));
+    tr.appendChild(alwaysTd);
+    tr.appendChild(el('td', 'token-budget-table-invoke', formatTokenSize(p.tokensInvoke || 0) + ' tok'));
+    tr.appendChild(el('td', 'token-budget-table-total', formatTokenSize((p.tokensAlways || 0) + (p.tokensInvoke || 0)) + ' tok'));
+    tbody.appendChild(tr);
+  });
+  table.appendChild(tbody);
+  content.appendChild(table);
+
+  // Footer totale
+  const totalAlways = plugins.reduce((s, p) => s + (p.tokensAlways || 0), 0);
+  const totalInvoke = plugins.reduce((s, p) => s + (p.tokensInvoke || 0), 0);
+  const footer = el('div', 'token-budget-modal-footer');
+  footer.textContent = 'Totale: ' + formatTokenSize(totalAlways) + ' tok always-on (peso fisso) + ' +
+    formatTokenSize(totalInvoke) + ' tok on-invoke (cost aggiuntivo per uso) — su ' + plugins.length + ' plugin';
+  content.appendChild(footer);
+
+  function onKey(e) { if (e.key === 'Escape') close(); }
+  function close() { document.removeEventListener('keydown', onKey); overlay.remove(); }
+  closeBtn.addEventListener('click', close);
+  overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+  document.addEventListener('keydown', onKey);
+
+  modal.appendChild(header);
+  modal.appendChild(content);
+  overlay.appendChild(modal);
+  overlay._close = close;
+  swapModalOverlay(overlay);
 }
 
 // v1.0.105 — Helper riassuntivo Dashboard: titolo + griglia di max 19 chip
