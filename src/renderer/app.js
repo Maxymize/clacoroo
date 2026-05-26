@@ -5798,17 +5798,17 @@ function renderSettings() {
   }
 
   // v1.0.27 — Pack A: pannello Account (sopra a tutto)
-  const gAccount = group('Account Claude');
+  const gAccount = group(t('settings.accountClaude'));
   const accountWrap = el('div', 'settings-account-wrap');
   gAccount.appendChild(accountWrap);
   loadAccountPanel(accountWrap);
 
-  const gApiKey = group('API key Claude');
+  const gApiKey = group(t('settings.apiKeyClaude'));
   const apiKeyWrap = el('div', 'apikey-panel-wrap');
   gApiKey.appendChild(apiKeyWrap);
   loadApiKeyPanel(apiKeyWrap);
 
-  const gLang = group('Aspetto');
+  const gLang = group(t('settings.appearance'));
   const langRow = el('div', 'settings-row');
   const langLeft = el('div');
   langLeft.appendChild(el('div', 'settings-row-label', t('settings.language')));
@@ -5849,23 +5849,23 @@ function renderSettings() {
   langRow.appendChild(langRight);
   gLang.appendChild(langRow);
 
-  const g1 = group('Percorsi');
-  row(g1, 'Cartella Claude Code', 'Directory di configurazione globale', d.claudeDir);
-  row(g1, 'Binario claude', d.claudeBin ? 'Trovato automaticamente' : '⚠ Non trovato — configura manualmente', d.claudeBin || '—');
+  const g1 = group(t('settings.paths'));
+  row(g1, t('settings.claudeFolder'), t('settings.claudeFolderDesc'), d.claudeDir);
+  row(g1, t('settings.claudeBin'), d.claudeBin ? t('settings.claudeBinFound') : t('settings.claudeBinNotFound'), d.claudeBin || '—');
 
   if (!d.claudeBin) {
     const r2 = el('div', 'settings-row');
     const left = el('div');
-    left.appendChild(el('div', 'settings-row-label', 'Configura percorso claude'));
-    left.appendChild(el('div', 'settings-row-desc', 'Inserisci il percorso completo al binario claude'));
+    left.appendChild(el('div', 'settings-row-label', t('settings.configBinLabel')));
+    left.appendChild(el('div', 'settings-row-desc', t('settings.configBinDesc')));
     r2.appendChild(left);
     const pathInp = el('input', 'search-input');
     pathInp.style.cssText = 'width:300px;';
     pathInp.setAttribute('placeholder', '/usr/local/bin/claude');
-    const saveBtn = el('button', 'btn btn-primary btn-sm', 'Salva');
+    const saveBtn = el('button', 'btn btn-primary btn-sm', t('button.save'));
     saveBtn.addEventListener('click', async () => {
       const r = await window.claudeAPI.setClaudeBin(pathInp.value.trim());
-      if (r.success) { toast('Percorso aggiornato', 'success'); await loadData(); }
+      if (r.success) { toast(t('settingsToast.pathUpdated'), 'success'); await loadData(); }
       else toast(t('toast.errorPrefix', { msg: r.error }), 'error');
     });
     const inputWrap = el('div');
@@ -5877,11 +5877,11 @@ function renderSettings() {
 
   // v1.0.40 — Rimossa sezione Statistiche: già presente in Dashboard e Stats
   // v1.0.11 — Progetti tracciati (scope locale)
-  const gProj = group('Progetti tracciati');
+  const gProj = group(t('settings.trackedProjects'));
   const projDesc = el('div', 'settings-row');
   const projDescL = el('div');
-  projDescL.appendChild(el('div', 'settings-row-label', 'Progetti con scope locale'));
-  projDescL.appendChild(el('div', 'settings-row-desc', 'CLACOROO mostrerà anche plugin/skill/agent installati in .claude/ di questi progetti. Click su "+ Progetto" nella topbar per aggiungerli.'));
+  projDescL.appendChild(el('div', 'settings-row-label', t('settings.trackedProjectsLabel')));
+  projDescL.appendChild(el('div', 'settings-row-desc', t('settings.trackedProjectsDesc')));
   projDesc.appendChild(projDescL);
   gProj.appendChild(projDesc);
 
@@ -5891,7 +5891,7 @@ function renderSettings() {
     left.appendChild(el('div', 'settings-row-label', projectPath.split('/').pop() || projectPath));
     left.appendChild(el('div', 'settings-row-desc', projectPath));
     projRow.appendChild(left);
-    const removeBtn = el('button', 'btn btn-sm btn-danger', 'Rimuovi');
+    const removeBtn = el('button', 'btn btn-sm btn-danger', t('button.remove'));
     removeBtn.addEventListener('click', async () => {
       const r = await window.claudeAPI.removeTrackedProject(projectPath);
       if (r.success) {
@@ -5916,22 +5916,21 @@ function renderSettings() {
   // plugin card e del modal Contenuto plugin. Schema URL: vscode://file/...,
   // cursor://file/... (Cursor è fork di VS Code, stesso protocollo).
   // 'system' = apri con app predefinita del sistema (shell.openPath).
-  const gEditor = group('Editor esterno');
+  const gEditor = group(t('settings.externalEditor'));
   const edRow = el('div', 'settings-row');
   const edLeft = el('div');
-  edLeft.appendChild(el('div', 'settings-row-label', 'Editor predefinito'));
-  edLeft.appendChild(el('div', 'settings-row-desc',
-    'Usato dal bottone "Apri in editor" sulle plugin card e nel modal Contenuto plugin. Apre la cartella del plugin dalla cache locale.'));
+  edLeft.appendChild(el('div', 'settings-row-label', t('settings.editorDefault')));
+  edLeft.appendChild(el('div', 'settings-row-desc', t('settings.editorDefaultDesc')));
   edRow.appendChild(edLeft);
 
   const edSel = el('select', 'config-select');
   [
-    { v: 'vscode',      l: 'Visual Studio Code (vscode://)' },
-    { v: 'cursor',      l: 'Cursor (cursor://)' },
-    { v: 'antigravity', l: 'Antigravity (antigravity://)' },
-    { v: 'system',      l: 'Sistema (default OS)' },
+    { v: 'vscode',      k: 'settings.editorVscode' },
+    { v: 'cursor',      k: 'settings.editorCursor' },
+    { v: 'antigravity', k: 'settings.editorAntigravity' },
+    { v: 'system',      k: 'settings.editorSystem' },
   ].forEach(o => {
-    const opt = el('option', null, o.l);
+    const opt = el('option', null, t(o.k));
     opt.value = o.v;
     edSel.appendChild(opt);
   });
@@ -5942,24 +5941,23 @@ function renderSettings() {
   })();
   edSel.addEventListener('change', async () => {
     await window.claudeAPI.setState({ preferredEditor: edSel.value });
-    toast('Editor predefinito: ' + edSel.options[edSel.selectedIndex].textContent, 'success');
+    toast(t('settingsToast.editorSet', { name: edSel.options[edSel.selectedIndex].textContent }), 'success');
   });
   edRow.appendChild(edSel);
   gEditor.appendChild(edRow);
 
   // v1.0.75 — Terminale: shell predefinita per le nuove tab del drawer
   if (termState.caps && termState.caps.available) {
-    const gTerm = group('Terminale');
+    const gTerm = group(t('settings.terminal'));
     const shellRow = el('div', 'settings-row');
     const shellLeft = el('div');
-    shellLeft.appendChild(el('div', 'settings-row-label', 'Shell predefinita'));
-    shellLeft.appendChild(el('div', 'settings-row-desc',
-      'Usata quando apri una nuova tab del terminale o lanci una skill/agent con ▶. Le tab già aperte continuano a usare la shell con cui sono nate.'));
+    shellLeft.appendChild(el('div', 'settings-row-label', t('settings.shellDefault')));
+    shellLeft.appendChild(el('div', 'settings-row-desc', t('settings.shellDefaultDesc')));
     shellRow.appendChild(shellLeft);
 
     const shellSel = el('select', 'config-select');
     // Opzione "default" = lascia che pty.js decida ($SHELL / pwsh / cmd…)
-    const defOpt = el('option', null, 'Default di sistema (' + (termState.caps.defaultShell || '?') + ')');
+    const defOpt = el('option', null, t('settings.shellSystemDefault', { shell: termState.caps.defaultShell || '?' }));
     defOpt.value = '';
     shellSel.appendChild(defOpt);
     (termState.caps.availableShells || []).forEach(sh => {
@@ -5972,18 +5970,18 @@ function renderSettings() {
       const v = shellSel.value || null;
       termState.preferredShell = v;
       await window.claudeAPI.setState({ preferredShell: v });
-      const lbl = v ? (shellSel.options[shellSel.selectedIndex].textContent) : 'default';
-      toast('Shell predefinita: ' + lbl + ' — vale per le nuove tab', 'success');
+      const lbl = v ? (shellSel.options[shellSel.selectedIndex].textContent) : t('settingsToast.shellDefaultName');
+      toast(t('settingsToast.shellSet', { name: lbl }), 'success');
     });
     shellRow.appendChild(shellSel);
     gTerm.appendChild(shellRow);
   }
 
-  const g4 = group('Sviluppo plugin');
+  const g4 = group(t('settings.pluginDev'));
   const devRow = el('div', 'settings-row');
   const devLeft = el('div');
-  devLeft.appendChild(el('div', 'settings-row-label', 'Plugin Validator'));
-  devLeft.appendChild(el('div', 'settings-row-desc', 'Valida plugin.json e marketplace.json di un plugin locale prima di pubblicarlo'));
+  devLeft.appendChild(el('div', 'settings-row-label', t('settings.pluginValidator')));
+  devLeft.appendChild(el('div', 'settings-row-desc', t('settings.pluginValidatorDesc')));
   devRow.appendChild(devLeft);
 
   const devWrap = el('div');
@@ -5994,8 +5992,8 @@ function renderSettings() {
   pathInp.style.cssText = 'width:240px;font-family:"SF Mono",monospace;';
   pathInp.setAttribute('placeholder', '/path/to/local/plugin');
   pathInp.setAttribute('type', 'text');
-  const browseBtn = btnWithIcon('btn btn-sm btn-ghost btn-with-icon', 'folder', ' Sfoglia');
-  const validateBtn = el('button', 'btn btn-sm btn-primary', 'Valida');
+  const browseBtn = btnWithIcon('btn btn-sm btn-ghost btn-with-icon', 'folder', t('settings.pluginBrowse'));
+  const validateBtn = el('button', 'btn btn-sm btn-primary', t('settings.pluginValidate'));
   const outputEl = el('pre', 'dev-validate-output');
   outputEl.style.display = 'none';
 
@@ -6005,13 +6003,13 @@ function renderSettings() {
   });
   validateBtn.addEventListener('click', async () => {
     const p = pathInp.value.trim();
-    if (!p) { toast('Specifica un path', 'warn'); return; }
+    if (!p) { toast(t('settings.pluginPathRequired'), 'warn'); return; }
     validateBtn.disabled = true;
     validateBtn.textContent = '…';
     const r = await window.claudeAPI.validatePlugin(p);
     validateBtn.disabled = false;
-    validateBtn.textContent = 'Valida';
-    outputEl.textContent = r.success ? (r.output || '✓ Manifest valido') : ('✗ ' + r.error);
+    validateBtn.textContent = t('settings.pluginValidate');
+    outputEl.textContent = r.success ? (r.output || t('settings.pluginValid')) : ('✗ ' + r.error);
     outputEl.className = 'dev-validate-output ' + (r.success ? 'ok' : 'err');
     outputEl.style.display = 'block';
   });
@@ -6025,29 +6023,29 @@ function renderSettings() {
   g4.appendChild(devRow);
 
   // Aggiornamenti (v1.0.09 — soft auto-update)
-  const gUpd = group('Aggiornamenti');
+  const gUpd = group(t('settings.updates'));
   (async () => {
     const st = await window.claudeAPI.getState();
     const last = st.lastUpdateCheck
-      ? new Date(st.lastUpdateCheck).toLocaleString('it-IT')
-      : 'mai';
+      ? new Date(st.lastUpdateCheck).toLocaleString(activeLang === 'it' ? 'it-IT' : 'en-US')
+      : t('settings.lastCheckNever');
     const cachedInfo = st.lastUpdateResult;
 
     const rowCheck = el('div', 'settings-row');
     const ckLeft = el('div');
-    ckLeft.appendChild(el('div', 'settings-row-label', 'Controlla aggiornamenti'));
+    ckLeft.appendChild(el('div', 'settings-row-label', t('settings.checkUpdates')));
     const desc = cachedInfo?.available && cachedInfo.latest
-      ? 'Nuova versione disponibile: v' + cachedInfo.latest + ' · Ultimo controllo: ' + last
-      : 'Ultimo controllo: ' + last;
+      ? t('settings.newVersionInfo', { ver: cachedInfo.latest, when: last })
+      : t('settings.lastCheck', { when: last });
     ckLeft.appendChild(el('div', 'settings-row-desc', desc));
     rowCheck.appendChild(ckLeft);
-    const ckBtn = el('button', 'btn btn-sm btn-primary', 'Controlla adesso');
+    const ckBtn = el('button', 'btn btn-sm btn-primary', t('settings.checkNow'));
     ckBtn.addEventListener('click', async () => {
       ckBtn.disabled = true;
       ckBtn.textContent = '…';
       await runUpdateCheck(true);
       ckBtn.disabled = false;
-      ckBtn.textContent = 'Controlla adesso';
+      ckBtn.textContent = t('settings.checkNow');
       renderSettings();  // refresh timestamp
     });
     rowCheck.appendChild(ckBtn);
@@ -6055,8 +6053,8 @@ function renderSettings() {
 
     const rowAuto = el('div', 'settings-row');
     const auLeft = el('div');
-    auLeft.appendChild(el('div', 'settings-row-label', 'Controllo automatico'));
-    auLeft.appendChild(el('div', 'settings-row-desc', "All'avvio dell'app + ogni 24 ore (con cooldown 1h)"));
+    auLeft.appendChild(el('div', 'settings-row-label', t('settings.autoCheck')));
+    auLeft.appendChild(el('div', 'settings-row-desc', t('settings.autoCheckDesc')));
     rowAuto.appendChild(auLeft);
     const togWrap = el('label', 'toggle');
     const togInp = el('input');

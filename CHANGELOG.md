@@ -1,5 +1,30 @@
 # Changelog
 
+## v1.0.116 — 2026-05-26 — Pack N (Phase 3c): Settings labels esistenti (gruppi Percorsi/Editor/Terminale/Progetti/Aggiornamenti/Sviluppo plugin)
+
+Continua Pack N i18n. Migrate i 6 gruppi Impostazioni "core" che erano ancora hardcoded in italiano.
+
+### Locales — chiavi nuove
+
+- **`settings.*` (+30 chiavi)**: appearance, accountClaude, apiKeyClaude, paths, claudeFolder/Bin/BinFound/BinNotFound, configBinLabel/Desc, trackedProjects/Label/Desc, externalEditor, editorDefault/Desc + 4 editor options (vscode/cursor/antigravity/system), terminal, shellDefault/Desc, shellSystemDefault{shell}, pluginDev/Validator/ValidatorDesc/Validate/Browse/Valid/PathRequired, updates, checkUpdates, checkNow, autoCheck/Desc, lastCheck{when}, lastCheckNever, newVersionInfo{ver,when}
+- **`settingsToast.*` (4)**: pathUpdated, editorSet{name}, shellSet{name}, shellDefaultName
+
+### Migrazione
+
+- [REFACTOR] **Gruppo "Account Claude"** + **"API key Claude"** + **"Aspetto"**: titoli via `t()`
+- [REFACTOR] **Gruppo "Percorsi"**: title + 2 row labels (Cartella Claude Code, Binario claude) + 2 row desc + 2 status (Trovato/Non trovato) + bottone Salva + toast "Percorso aggiornato"
+- [REFACTOR] **Gruppo "Progetti tracciati"**: title + label + desc + bottone "Rimuovi"
+- [REFACTOR] **Gruppo "Editor esterno"**: title + label + desc + 4 option labels (Visual Studio Code / Cursor / Antigravity / Sistema) + toast change
+- [REFACTOR] **Gruppo "Terminale"**: title + label + desc + "Default di sistema (X)" con interpolazione + toast change "Shell predefinita: X — vale per le nuove tab"
+- [REFACTOR] **Gruppo "Sviluppo plugin"**: title + Plugin Validator label + desc + Sfoglia/Valida buttons + "Specifica un path" + "✓ Manifest valido"
+- [REFACTOR] **Gruppo "Aggiornamenti"**: title + 2 row labels + 2 desc (con interpolazione `{when}` / `{ver}`) + "Controlla adesso" button + "ultimo controllo: mai/timestamp" con locale-aware date formatting (it-IT vs en-US)
+
+### Coverage Settings
+
+- ✅ Tutti i 6 gruppi core (Account/API key/Aspetto/Percorsi/Progetti/Editor/Terminale/Sviluppo/Aggiornamenti)
+- ⏳ Inner panels: `loadAccountPanel()` + `loadApiKeyPanel()` (panel renderer separati con 20+ stringhe ciascuno) → Phase 3c batch successiva
+- ⏳ Onboarding tour, About dialog content, Footer aggiornamenti banner
+
 ## v1.0.115 — 2026-05-26 — Pack N (Phase 3b): modali Add Marketplace + Add MCP + 10 confirm dialogs
 
 Continua Pack N i18n. Migrate i 2 modali principali (Add Marketplace + Add MCP) con tutte le label/placeholder/hint/error + tutti i 10 confirm dialog Electron native (title + message + detail + buttons).
