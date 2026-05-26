@@ -1397,10 +1397,10 @@ function renderTokenBudgetSection(container, plugins, opts = {}) {
 // Quick action dal token budget per recuperare context window al volo.
 async function confirmAndDisablePlugin(p, recovery) {
   const response = await window.claudeAPI.confirmDialog({
-    title: 'Disabilita plugin',
-    message: 'Disabilitare "' + p.id + '"?',
-    detail: 'Eseguirà `claude plugins disable ' + p.fullId + '` per recuperare ~' + recovery + ' tok always-on dal context window.\n\nIl plugin rimane installato — può essere riabilitato dalla sezione Plugin. Sessioni `claude` già aperte continuano col plugin attivo finché non vengono riavviate.',
-    buttons: ['Annulla', 'Disabilita'],
+    title:   t('confirm.disablePlugin.title'),
+    message: t('confirm.disablePlugin.message', { id: p.id }),
+    detail:  t('confirm.disablePlugin.detail', { fullId: p.fullId, recovery }),
+    buttons: [t('button.cancel'), t('confirm.disablePlugin.yes')],
   });
   if (response !== 1) return;
   const r = await window.claudeAPI.pluginAction('disable', p.fullId);
@@ -2089,17 +2089,17 @@ function buildPluginCard(p) {
   const uninstBtn = el('button', 'btn btn-sm btn-danger', 'Rimuovi');
   uninstBtn.addEventListener('click', async () => {
     const choice = await window.claudeAPI.confirmDialog({
-      title:   'Rimuovi plugin',
-      message: 'Rimuovere ' + p.id + '?',
-      detail:  'Il plugin verrà disinstallato da Claude Code.',
-      buttons: ['Annulla', 'Rimuovi'],
+      title:   t('confirm.removePlugin.title'),
+      message: t('confirm.removePlugin.message', { id: p.id }),
+      detail:  t('confirm.removePlugin.detail'),
+      buttons: [t('button.cancel'), t('confirm.removePlugin.yes')],
     });
     if (choice !== 1) return;
     uninstBtn.disabled = true;
     const r = await window.claudeAPI.pluginAction('uninstall', p.fullId);
     if (r.success) {
       toast(t('toast.pluginRemoved', { id: p.id }), 'success');
-      window.claudeAPI.showNotification('Plugin rimosso', p.id);
+      window.claudeAPI.showNotification(t('toast.pluginRemovedNotif'), p.id);
       statsCache = null;
       await loadData();
     } else {
@@ -2131,41 +2131,35 @@ function showAddMarketplaceModal() {
 
   const header = el('div', 'md-header');
   const title = el('div', 'md-title');
-  title.appendChild(el('span', 'md-kind-badge md-kind-agent', 'marketplace'));
-  title.appendChild(document.createTextNode(' Aggiungi marketplace'));
+  title.appendChild(el('span', 'md-kind-badge md-kind-agent', t('modalMkt.badge')));
+  title.appendChild(document.createTextNode(' ' + t('modalMkt.title')));
   const closeBtn = el('button', 'md-close'); closeBtn.appendChild(icon('x'));
-  closeBtn.setAttribute('aria-label', 'Chiudi');
+  closeBtn.setAttribute('aria-label', t('button.close'));
   header.appendChild(title); header.appendChild(closeBtn);
 
   const content = el('div', 'md-content');
 
-  content.appendChild(el('p', null,
-    'Aggiungi un nuovo marketplace per scoprire e installare plugin Claude Code. ' +
-    'CLACOROO esegue `claude plugins marketplace add <source>` per te.'));
+  content.appendChild(el('p', null, t('modalMkt.intro')));
 
   // Input source
   const formWrap = el('div', 'add-mkt-form');
-  const lbl = el('label', 'add-mkt-label', 'Source');
+  const lbl = el('label', 'add-mkt-label', t('modalMkt.sourceLabel'));
   lbl.setAttribute('for', 'add-mkt-input');
   formWrap.appendChild(lbl);
 
   const input = el('input', 'add-mkt-input');
   input.id = 'add-mkt-input';
   input.type = 'text';
-  input.placeholder = 'es. thedotmack/claude-mem';
+  input.placeholder = t('modalMkt.placeholder');
   input.setAttribute('spellcheck', 'false');
   input.setAttribute('autocomplete', 'off');
   formWrap.appendChild(input);
 
   const helper = el('div', 'add-mkt-helper');
-  helper.appendChild(el('div', null, 'Formati accettati:'));
+  helper.appendChild(el('div', null, t('modalMkt.formatsTitle')));
   const ul = el('ul');
-  [
-    'Shorthand GitHub: user/repo (es. thedotmack/claude-mem)',
-    'URL git: https://github.com/user/repo o https://github.com/user/repo.git',
-    'Path locale: /path/assoluto/al/marketplace',
-  ].forEach(t => {
-    const li = el('li', null, t);
+  ['modalMkt.formatShort', 'modalMkt.formatUrl', 'modalMkt.formatPath'].forEach(k => {
+    const li = el('li', null, t(k));
     ul.appendChild(li);
   });
   helper.appendChild(ul);
@@ -2179,9 +2173,9 @@ function showAddMarketplaceModal() {
 
   // Actions
   const actions = el('div', 'add-mkt-actions');
-  const cancelBtn = el('button', 'btn btn-sm btn-ghost', 'Annulla');
+  const cancelBtn = el('button', 'btn btn-sm btn-ghost', t('button.cancel'));
   cancelBtn.addEventListener('click', () => close());
-  const submitBtn = el('button', 'btn btn-sm btn-primary', 'Aggiungi marketplace');
+  const submitBtn = el('button', 'btn btn-sm btn-primary', t('modalMkt.submit'));
 
   function showError(msg) {
     errBox.textContent = '⚠ ' + msg;
@@ -2193,10 +2187,10 @@ function showAddMarketplaceModal() {
   // più strict prima di runClaudeArgs (validMarketplaceName). Qui filtriamo
   // solo input vuoti o palesemente malformati per evitare round-trip inutili.
   function validateSource(s) {
-    if (!s) return 'Inserisci un source';
-    if (s.length > 500) return 'Source troppo lungo (max 500 caratteri)';
+    if (!s) return t('modalMkt.errEmpty');
+    if (s.length > 500) return t('modalMkt.errTooLong');
     // Caratteri shell pericolosi vietati anche se il main usa execFile
-    if (/[;|&`$<>(){}[\]"'\\]/.test(s)) return 'Caratteri non ammessi nel source';
+    if (/[;|&`$<>(){}[\]"'\\]/.test(s)) return t('modalMkt.errBadChars');
     return null;
   }
 
@@ -2207,17 +2201,17 @@ function showAddMarketplaceModal() {
     if (validationErr) { showError(validationErr); return; }
     submitBtn.disabled = true;
     cancelBtn.disabled = true;
-    submitBtn.textContent = 'Aggiungo…';
+    submitBtn.textContent = t('modalMkt.submitting');
     const r = await window.claudeAPI.marketplaceAction('add', '', src);
     if (r.success) {
       toast(t('toast.marketplaceAdded'), 'success');
       close();
       await loadData();
     } else {
-      showError(r.error || 'Errore sconosciuto');
+      showError(r.error || t('modalMkt.errUnknown'));
       submitBtn.disabled = false;
       cancelBtn.disabled = false;
-      submitBtn.textContent = 'Aggiungi marketplace';
+      submitBtn.textContent = t('modalMkt.submit');
     }
   }
   submitBtn.addEventListener('click', submit);
@@ -2260,65 +2254,62 @@ function showAddMcpModal() {
 
   const header = el('div', 'md-header');
   const title = el('div', 'md-title');
-  title.appendChild(el('span', 'md-kind-badge md-kind-agent', 'mcp'));
-  title.appendChild(document.createTextNode(' Aggiungi MCP server'));
+  title.appendChild(el('span', 'md-kind-badge md-kind-agent', t('modalMcp.badge')));
+  title.appendChild(document.createTextNode(' ' + t('modalMcp.title')));
   const closeBtn = el('button', 'md-close'); closeBtn.appendChild(icon('x'));
-  closeBtn.setAttribute('aria-label', 'Chiudi');
+  closeBtn.setAttribute('aria-label', t('button.close'));
   header.appendChild(title); header.appendChild(closeBtn);
 
   const content = el('div', 'md-content');
-  content.appendChild(el('p', null,
-    'Aggiungi un nuovo MCP server. CLACOROO esegue `claude mcp add` per te. ' +
-    'Per server OAuth (HTTP/SSE con auth) il flow OAuth si triggera alla prima ' +
-    'invocazione di un tool dentro una sessione `claude`.'));
+  content.appendChild(el('p', null, t('modalMcp.intro')));
 
   const form = el('div', 'add-mcp-form');
 
   // Field: name
-  form.appendChild(makeFormLabel('Nome', 'Identificatore univoco (alfanumerico, _, -, .)'));
-  const nameInp = makeFormInput('add-mcp-name', 'my-server');
+  form.appendChild(makeFormLabel(t('modalMcp.nameLabel'), t('modalMcp.nameHint')));
+  const nameInp = makeFormInput('add-mcp-name', t('modalMcp.namePlaceholder'));
   form.appendChild(nameInp);
 
   // Field: transport
-  form.appendChild(makeFormLabel('Transport', 'HTTP/SSE per server remoti, stdio per comandi locali'));
+  form.appendChild(makeFormLabel(t('modalMcp.transportLabel'), t('modalMcp.transportHint')));
   const transWrap = el('div', 'add-mcp-radios');
   const transports = [
-    { key: 'http',  label: 'HTTP',  desc: 'Server remoto via REST' },
-    { key: 'sse',   label: 'SSE',   desc: 'Server remoto via Server-Sent Events' },
-    { key: 'stdio', label: 'stdio', desc: 'Comando locale (es. npx ...)' },
+    { key: 'http',  label: t('modalMcp.transportHttp'),  desc: t('modalMcp.transportHttpDesc') },
+    { key: 'sse',   label: t('modalMcp.transportSse'),   desc: t('modalMcp.transportSseDesc') },
+    { key: 'stdio', label: t('modalMcp.transportStdio'), desc: t('modalMcp.transportStdioDesc') },
   ];
   let currentTransport = 'http';
-  transports.forEach(t => {
-    const lbl = el('label', 'add-mcp-radio' + (t.key === currentTransport ? ' selected' : ''));
+  transports.forEach(tr => {
+    const lbl = el('label', 'add-mcp-radio' + (tr.key === currentTransport ? ' selected' : ''));
     const input = document.createElement('input');
     input.type = 'radio';
     input.name = 'mcp-transport';
-    input.value = t.key;
-    if (t.key === currentTransport) input.checked = true;
+    input.value = tr.key;
+    if (tr.key === currentTransport) input.checked = true;
     input.addEventListener('change', () => {
-      currentTransport = t.key;
-      transWrap.querySelectorAll('.add-mcp-radio').forEach(r => r.classList.toggle('selected', r.querySelector('input').value === t.key));
+      currentTransport = tr.key;
+      transWrap.querySelectorAll('.add-mcp-radio').forEach(r => r.classList.toggle('selected', r.querySelector('input').value === tr.key));
       updateTargetPlaceholder();
       updateArgsVisibility();
     });
     lbl.appendChild(input);
-    lbl.appendChild(el('span', 'add-mcp-radio-label', t.label));
-    lbl.appendChild(el('span', 'add-mcp-radio-desc', t.desc));
+    lbl.appendChild(el('span', 'add-mcp-radio-label', tr.label));
+    lbl.appendChild(el('span', 'add-mcp-radio-desc', tr.desc));
     transWrap.appendChild(lbl);
   });
   form.appendChild(transWrap);
 
   // Field: target (URL o comando)
-  const targetLabel = makeFormLabel('URL', 'Endpoint completo del server (cambia con transport)');
+  const targetLabel = makeFormLabel(t('modalMcp.urlLabel'), t('modalMcp.urlHint'));
   form.appendChild(targetLabel);
-  const targetInp = makeFormInput('add-mcp-target', 'https://mcp.example.com/mcp');
+  const targetInp = makeFormInput('add-mcp-target', t('modalMcp.urlPlaceholder'));
   form.appendChild(targetInp);
 
   // Field: args (solo se stdio)
-  const argsLabel = makeFormLabel('Argomenti', 'Uno per riga, opzionali (passati al command)');
+  const argsLabel = makeFormLabel(t('modalMcp.argsLabel'), t('modalMcp.argsHint'));
   const argsInp = el('textarea', 'add-mcp-input add-mcp-textarea');
   argsInp.id = 'add-mcp-args';
-  argsInp.placeholder = '-y\n@upstash/context7-mcp';
+  argsInp.placeholder = t('modalMcp.argsPlaceholder');
   argsInp.rows = 3;
   argsInp.spellcheck = false;
   form.appendChild(argsLabel);
@@ -2326,13 +2317,13 @@ function showAddMcpModal() {
 
   function updateTargetPlaceholder() {
     if (currentTransport === 'stdio') {
-      targetLabel.querySelector('.add-mcp-label-title').textContent = 'Comando';
-      targetLabel.querySelector('.add-mcp-label-hint').textContent = 'Eseguibile (es. npx, node, sh)';
-      targetInp.placeholder = 'npx';
+      targetLabel.querySelector('.add-mcp-label-title').textContent = t('modalMcp.commandLabel');
+      targetLabel.querySelector('.add-mcp-label-hint').textContent = t('modalMcp.commandHint');
+      targetInp.placeholder = t('modalMcp.commandPlaceholder');
     } else {
-      targetLabel.querySelector('.add-mcp-label-title').textContent = 'URL';
-      targetLabel.querySelector('.add-mcp-label-hint').textContent = 'Endpoint completo del server ' + currentTransport.toUpperCase();
-      targetInp.placeholder = currentTransport === 'sse' ? 'https://mcp.example.com/sse' : 'https://mcp.example.com/mcp';
+      targetLabel.querySelector('.add-mcp-label-title').textContent = t('modalMcp.urlLabel');
+      targetLabel.querySelector('.add-mcp-label-hint').textContent = t('modalMcp.urlHintRemote', { transport: currentTransport.toUpperCase() });
+      targetInp.placeholder = currentTransport === 'sse' ? t('modalMcp.urlPlaceholderSse') : t('modalMcp.urlPlaceholder');
     }
   }
   function updateArgsVisibility() {
@@ -2343,19 +2334,19 @@ function showAddMcpModal() {
   updateArgsVisibility();
 
   // Field: env vars (opzionale, solo stdio tipicamente)
-  form.appendChild(makeFormLabel('Variabili ambiente', 'Una per riga, formato KEY=VALUE (opzionale)'));
+  form.appendChild(makeFormLabel(t('modalMcp.envLabel'), t('modalMcp.envHint')));
   const envInp = el('textarea', 'add-mcp-input add-mcp-textarea');
   envInp.id = 'add-mcp-env';
-  envInp.placeholder = 'API_KEY=sk-xxx\nNODE_ENV=production';
+  envInp.placeholder = t('modalMcp.envPlaceholder');
   envInp.rows = 2;
   envInp.spellcheck = false;
   form.appendChild(envInp);
 
   // Field: headers (opzionale, solo HTTP/SSE)
-  form.appendChild(makeFormLabel('Headers HTTP', 'Una per riga, formato Header-Name: value (opzionale, per HTTP/SSE)'));
+  form.appendChild(makeFormLabel(t('modalMcp.headersLabel'), t('modalMcp.headersHint')));
   const hdrInp = el('textarea', 'add-mcp-input add-mcp-textarea');
   hdrInp.id = 'add-mcp-headers';
-  hdrInp.placeholder = 'Authorization: Bearer xxx\nX-Custom: value';
+  hdrInp.placeholder = t('modalMcp.headersPlaceholder');
   hdrInp.rows = 2;
   hdrInp.spellcheck = false;
   form.appendChild(hdrInp);
@@ -2369,9 +2360,9 @@ function showAddMcpModal() {
 
   // Actions
   const actions = el('div', 'add-mkt-actions');
-  const cancelBtn = el('button', 'btn btn-sm btn-ghost', 'Annulla');
+  const cancelBtn = el('button', 'btn btn-sm btn-ghost', t('button.cancel'));
   cancelBtn.addEventListener('click', () => close());
-  const submitBtn = el('button', 'btn btn-sm btn-primary', 'Aggiungi MCP');
+  const submitBtn = el('button', 'btn btn-sm btn-primary', t('modalMcp.submit'));
 
   function showError(msg) { errBox.textContent = '⚠ ' + msg; errBox.style.display = 'block'; }
   function clearError()   { errBox.style.display = 'none';   errBox.textContent = ''; }
@@ -2380,13 +2371,13 @@ function showAddMcpModal() {
     clearError();
     const name = nameInp.value.trim();
     if (!/^[a-zA-Z0-9][a-zA-Z0-9_.-]*$/.test(name)) {
-      showError('Nome non valido (alfanumerico + _ - . consentiti, deve iniziare con lettera o cifra)');
+      showError(t('modalMcp.errName'));
       return;
     }
     const target = targetInp.value.trim();
-    if (!target) { showError('Inserisci URL o comando'); return; }
+    if (!target) { showError(t('modalMcp.errTarget')); return; }
     if (currentTransport !== 'stdio' && !/^https?:\/\//i.test(target)) {
-      showError('URL deve iniziare con http:// o https://');
+      showError(t('modalMcp.errUrlScheme'));
       return;
     }
     const args = currentTransport === 'stdio'
@@ -2397,20 +2388,20 @@ function showAddMcpModal() {
 
     submitBtn.disabled = true;
     cancelBtn.disabled = true;
-    submitBtn.textContent = 'Aggiungo…';
+    submitBtn.textContent = t('modalMcp.submitting');
     const r = await window.claudeAPI.mcpAdd({
       name, transport: currentTransport, target, args, envs, headers, scope: 'user',
     });
     if (r.success) {
-      toast('MCP aggiunto: ' + name, 'success');
+      toast(t('modalMcp.toastAdded', { name }), 'success');
       close();
       mcpCache = null;
       if (state.section === 'mcp') renderMcp();
     } else {
-      showError(r.error || 'Errore sconosciuto');
+      showError(r.error || t('modalMcp.errUnknown'));
       submitBtn.disabled = false;
       cancelBtn.disabled = false;
-      submitBtn.textContent = 'Aggiungi MCP';
+      submitBtn.textContent = t('modalMcp.submit');
     }
   }
   submitBtn.addEventListener('click', submit);
@@ -2557,17 +2548,17 @@ async function showMarketplaceContentModal(m) {
       installBtn.dataset.tt = 'claude plugins install ' + remote.name + '@' + m.id;
       installBtn.addEventListener('click', async () => {
         const ok = await window.claudeAPI.confirmDialog({
-          title:   'Installa plugin',
-          message: 'Installare ' + remote.name + '?',
-          detail:  'Da: ' + m.id + '\n\n' +
-                   'CLACOROO eseguirà:\n' +
-                   '  claude plugins install ' + remote.name + '@' + m.id + '\n\n' +
-                   (remote.description ? 'Descrizione: ' + remote.description : ''),
-          buttons: ['Annulla', 'Installa'],
+          title:   t('confirm.installPlugin.title'),
+          message: t('confirm.installPlugin.message', { name: remote.name }),
+          detail:  t('confirm.installPlugin.detailL1', { mkt: m.id }) + '\n\n' +
+                   t('confirm.installPlugin.detailL2') + '\n' +
+                   t('confirm.installPlugin.detailL3', { name: remote.name, mkt: m.id }) + '\n\n' +
+                   (remote.description ? t('confirm.installPlugin.detailDesc', { desc: remote.description }) : ''),
+          buttons: [t('button.cancel'), t('confirm.installPlugin.yes')],
         });
         if (ok !== 1) return;
         installBtn.disabled = true;
-        installBtn.textContent = '…installazione…';
+        installBtn.textContent = t('confirm.installPlugin.progress');
         const r = await window.claudeAPI.pluginAction('install', remote.name + '@' + m.id);
         if (r.success) {
           toast('Installato: ' + remote.name, 'success');
@@ -2771,14 +2762,14 @@ function renderMarketplaces() {
     const removeMktBtn = el('button', 'btn btn-sm btn-danger', 'Rimuovi');
     removeMktBtn.addEventListener('click', async () => {
       const choice = await window.claudeAPI.confirmDialog({
-        title:   'Rimuovi marketplace',
-        message: 'Rimuovere ' + m.id + '?',
-        detail:  'Tutti i plugin installati da questo marketplace rimarranno installati.',
-        buttons: ['Annulla', 'Rimuovi'],
+        title:   t('confirm.removeMarketplace.title'),
+        message: t('confirm.removeMarketplace.message', { id: m.id }),
+        detail:  t('confirm.removeMarketplace.detail'),
+        buttons: [t('button.cancel'), t('confirm.removeMarketplace.yes')],
       });
       if (choice !== 1) return;
       const r = await window.claudeAPI.marketplaceAction('remove', m.id);
-      if (r.success) { toast('Marketplace rimosso: ' + m.id, 'success'); await loadData(); }
+      if (r.success) { toast(t('toast.mktRemoved', { id: m.id }), 'success'); await loadData(); }
       else toast(t('toast.errorPrefix', { msg: r.error }), 'error');
     });
 
@@ -3381,11 +3372,10 @@ async function installDepInTerminal(tool, installCommand) {
   // confirm-dialog ritorna direttamente il numero della risposta (0 = Annulla,
   // 1 = Apri terminale). NON un oggetto {response} — bug fixato in v1.0.92.
   const response = await window.claudeAPI.confirmDialog({
-    title: 'Installa ' + tool,
-    message: 'Installare ' + tool + ' nel terminale integrato?',
-    detail: 'Verrà aperto il terminale e pre-digitato:\n\n' + installCommand
-      + '\n\nIl comando NON viene eseguito automaticamente: dovrai confermare premendo Invio nel terminale.',
-    buttons: ['Annulla', 'Apri terminale'],
+    title:   t('confirm.installTool.title', { tool }),
+    message: t('confirm.installTool.message', { tool }),
+    detail:  t('confirm.installTool.detail', { cmd: installCommand }),
+    buttons: [t('button.cancel'), t('confirm.installTool.yes')],
   });
   if (response !== 1) return;
 
@@ -5160,15 +5150,15 @@ async function showMcpToolsModal(srv) {
 // Confirm dialog → IPC mcp:disable (salva config in state.json + claude mcp remove).
 async function confirmAndDisableMcp(srv) {
   const response = await window.claudeAPI.confirmDialog({
-    title: 'Disabilita MCP server',
-    message: 'Disabilitare "' + srv.id + '"?',
-    detail: 'Eseguirà `claude mcp remove ' + srv.id + '` ma CLACOROO salverà la config (URL/comando/env/headers) per ri-attivarlo dopo con un click "Abilita".\n\nIl server sparirà da Claude Code finché non lo riabiliti. Per server OAuth potresti dover riautenticare al re-enable.',
-    buttons: ['Annulla', 'Disabilita'],
+    title:   t('confirm.disableMcp.title'),
+    message: t('confirm.disableMcp.message', { id: srv.id }),
+    detail:  t('confirm.disableMcp.detail', { id: srv.id }),
+    buttons: [t('button.cancel'), t('confirm.disableMcp.yes')],
   });
   if (response !== 1) return;
   const r = await window.claudeAPI.mcpDisable(srv.id);
   if (r.success) {
-    toast('MCP disabilitato: ' + srv.id, 'success');
+    toast(t('toast.mcpDisabled', { id: srv.id }), 'success');
     mcpCache = null;
     if (state.section === 'mcp') renderMcp();
   } else {
@@ -5181,7 +5171,7 @@ async function confirmAndDisableMcp(srv) {
 async function enableMcp(srv) {
   const r = await window.claudeAPI.mcpEnable(srv.id);
   if (r.success) {
-    toast('MCP riabilitato: ' + srv.id, 'success');
+    toast(t('toast.mcpEnabled', { id: srv.id }), 'success');
     mcpCache = null;
     if (state.section === 'mcp') renderMcp();
   } else {
@@ -5191,15 +5181,15 @@ async function enableMcp(srv) {
 
 async function confirmAndRemoveMcp(srv) {
   const response = await window.claudeAPI.confirmDialog({
-    title: 'Rimuovi MCP server',
-    message: 'Rimuovere "' + srv.id + '"?',
-    detail: 'Eseguirà `claude mcp remove ' + srv.id + '`.\n\nIl server sparirà dalla configurazione di Claude Code. L\'azione è reversibile riaggiungendo il server (i token OAuth potrebbero dover essere riautenticati).',
-    buttons: ['Annulla', 'Rimuovi'],
+    title:   t('confirm.removeMcp.title'),
+    message: t('confirm.removeMcp.message', { id: srv.id }),
+    detail:  t('confirm.removeMcp.detail', { id: srv.id }),
+    buttons: [t('button.cancel'), t('confirm.removeMcp.yes')],
   });
   if (response !== 1) return;
   const r = await window.claudeAPI.mcpRemove(srv.id);
   if (r.success) {
-    toast('MCP rimosso: ' + srv.id, 'success');
+    toast(t('toast.mcpRemoved', { id: srv.id }), 'success');
     mcpCache = null;
     if (state.section === 'mcp') renderMcp();
   } else {
@@ -5354,18 +5344,10 @@ function paintAccountPanel(container, result) {
 
   logoutBtn.addEventListener('click', async () => {
     const ok = await window.claudeAPI.confirmDialog({
-      title:   '⚠ Logout di sistema da Claude',
-      message: 'Il logout disconnette OVUNQUE — non solo da CLACOROO',
-      detail:
-        'Questa azione rimuove le credenziali OAuth dal Keychain macOS, che è lo storage condiviso da tutte le istanze del binario `claude`.\n\n' +
-        'Disconnetterai contemporaneamente:\n' +
-        '  • CLACOROO\n' +
-        '  • Claude Code nel terminale (CLI)\n' +
-        '  • Eventuali plugin IDE (VS Code, JetBrains, ecc.)\n\n' +
-        'Per ri-autenticarti dovrai aprire un terminale ed eseguire:\n' +
-        '    claude auth login\n\n' +
-        'Procedere?',
-      buttons: ['Annulla', 'Sì, logout globale'],
+      title:   t('confirm.logoutAccount.title'),
+      message: t('confirm.logoutAccount.message'),
+      detail:  t('confirm.logoutAccount.detail'),
+      buttons: [t('button.cancel'), t('confirm.logoutAccount.yes')],
     });
     if (ok !== 1) return;
     logoutBtn.disabled = true;
@@ -5531,7 +5513,7 @@ function appendApiKeyForm(card, container) {
     const r = await window.claudeAPI.apiKey.activate(k);
     if (r.ok) {
       input.value = '';
-      toast('API key attivata' + (r.warning ? ` (${r.warning})` : ''), 'success');
+      toast(t('toast.apiKeyActivated', { warning: r.warning ? ' (' + r.warning + ')' : '' }), 'success');
       await loadApiKeyPanel(container);
     } else {
       testBtn.disabled = saveBtn.disabled = false;
@@ -5608,17 +5590,17 @@ function makeRemoveBtn(container) {
   btn.title = 'Rimuove la chiave dal Keychain e il campo apiKeyHelper da settings.json';
   btn.addEventListener('click', async () => {
     const ok = await window.claudeAPI.confirmDialog({
-      title:   'Rimuovere la API key Claude?',
-      message: 'La chiave verrà eliminata dallo storage sicuro e il campo `apiKeyHelper` rimosso da settings.json.',
-      detail:  'Claude Code tornerà a usare l\'OAuth subscription (se configurata). Per re-attivare la chiave dovrai reinserirla qui.',
-      buttons: ['Annulla', 'Sì, rimuovi'],
+      title:   t('confirm.removeApiKey.title'),
+      message: t('confirm.removeApiKey.message'),
+      detail:  t('confirm.removeApiKey.detail'),
+      buttons: [t('button.cancel'), t('confirm.removeApiKey.yes')],
     });
     if (ok !== 1) return;
     btn.disabled = true;
     btn.textContent = '…';
     const r = await window.claudeAPI.apiKey.deactivate();
     if (r.ok) {
-      toast('API key rimossa', 'success');
+      toast(t('toast.apiKeyRemoved'), 'success');
       await loadApiKeyPanel(container);
     } else {
       btn.disabled = false;
@@ -6119,14 +6101,14 @@ function renderSettings() {
       return;
     }
     const choice = await window.claudeAPI.confirmDialog({
-      title:   'Applica snapshot',
-      message: 'Applicare le seguenti azioni?',
-      detail:  '+ ' + mktToAdd.length + ' marketplace\n+ ' + pluginsToInstall.length + ' plugin\n\nL\'operazione può richiedere alcuni minuti.',
-      buttons: ['Annulla', 'Applica'],
+      title:   t('confirm.applySnapshot.title'),
+      message: t('confirm.applySnapshot.message'),
+      detail:  t('confirm.applySnapshot.detail', { mktCount: mktToAdd.length, plgCount: pluginsToInstall.length }),
+      buttons: [t('button.cancel'), t('confirm.applySnapshot.yes')],
     });
     if (choice !== 1) return;
     importBtn.disabled = true;
-    importBtn.textContent = 'Applicazione…';
+    importBtn.textContent = t('confirm.applySnapshot.progress');
     const a = await window.claudeAPI.applySnapshot(r.preview);
     importBtn.disabled = false;
     importBtn.textContent = ' Importa';

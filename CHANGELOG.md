@@ -1,5 +1,34 @@
 # Changelog
 
+## v1.0.115 — 2026-05-26 — Pack N (Phase 3b): modali Add Marketplace + Add MCP + 10 confirm dialogs
+
+Continua Pack N i18n. Migrate i 2 modali principali (Add Marketplace + Add MCP) con tutte le label/placeholder/hint/error + tutti i 10 confirm dialog Electron native (title + message + detail + buttons).
+
+### Locales — nuovi namespace
+
+- **`modalMkt.*` (15 chiavi)**: Add Marketplace modal — title, badge, intro, sourceLabel, placeholder, formatsTitle, 3 formats accepted, submit, submitting, 3 validation errors, errUnknown
+- **`modalMcp.*` (30+ chiavi)**: Add MCP modal — title, badge, intro, name/transport/url/command/args/env/headers (label + hint + placeholder), 3 transport options (label + desc), 2 url placeholder variants (http vs sse), 4 validation errors, toastAdded{name}
+- **`confirm.*` (10 dialog × ~4 fields)**: disablePlugin / removePlugin / installPlugin / removeMarketplace / installTool / disableMcp / removeMcp / logoutAccount / removeApiKey / applySnapshot. Tutti con interpolazione `{id}`, `{name}`, `{fullId}`, `{recovery}`, `{tool}`, `{cmd}`, `{mktCount}`, `{plgCount}`, `{desc}`, `{transport}` etc.
+- **`toast.*` (+7)**: mktRemoved{id}, mcpDisabled{id}, mcpEnabled{id}, mcpRemoved{id}, apiKeyActivated{warning}, apiKeyRemoved, pluginRemovedNotif (per system notification)
+
+### Migrazione
+
+- [REFACTOR] **`showAddMarketplaceModal()`**: title/badge/close-aria/intro/source-label/placeholder/helper-list/buttons/validation-errors tutto via `t()`
+- [REFACTOR] **`showAddMcpModal()`**: ~25 stringhe migrate (form labels + hints + placeholders + 3 transport radio + dynamic URL/Comando swap via `updateTargetPlaceholder()` + 4 validation errors + submit/cancel)
+- [REFACTOR] **10 `confirmDialog()` calls** migrate con interpolazione completa. Tutti i dialog preservano comportamento ma testi seguono lingua attiva
+- [REFACTOR] **6 toast specifici** (mktRemoved, mcpDisabled/enabled/removed, apiKeyActivated/removed) + system notification "Plugin rimosso"
+- [QUALITY] Variable shadow fix: `transports.forEach(t => ...)` rinominato a `tr` per non shadoware il helper `t()` globale (2 altri shadow lasciati perché non chiamano t() dentro)
+
+### Coverage
+
+- ✅ Modali principali Plugin (Add Marketplace + Add MCP)
+- ✅ Tutti i 10 confirm dialog native Electron
+- ✅ Toast contestuali aggiuntivi (6+1)
+- ⏳ Settings labels esistenti (Percorsi/Editor/Terminale/Progetti tracciati/Account/API key panel) → v1.0.116
+- ⏳ Stats KPI + range filters + context breakdown labels → v1.0.117
+- ⏳ Onboarding tour + activity log entries → v1.0.116
+- ⏳ Audit shape it↔en + review EN + smoke test → v1.1.0 closure
+
 ## v1.0.114 — 2026-05-26 — Pack N (Phase 3a): empty states + toast principali
 
 Continua Pack N i18n. Migrate i 12 empty state messages e ~15 toast statici/parametrizzati comuni.
