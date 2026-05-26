@@ -1,5 +1,44 @@
 # Changelog
 
+## v1.0.100 — 2026-05-26 — Tre fix UX: toast z-index, badge "modificato" sulle card, activity log esteso
+
+Centesima release! 🎉 Tre fix legati al feedback utente su v1.0.99 (editor inline).
+
+### Fix #1 — Activity log esteso
+
+Le nuove action aggiunte dopo la prima implementazione dell'activity log (v1.0.05) non venivano registrate. Le card "Recenti" in sidebar e la sezione "Attività recenti" della Dashboard mostravano solo plugin/marketplace, mancavano tutte le novità da v1.0.85+.
+
+- [FEATURE] **`write-markdown-file` IPC** ora chiama `appendActivity({kind: 'skill'|'agent', action: 'edit', target: name + ' (' + fullId + ')'})` su successo e failure
+- [FEATURE] **`mcp:add` IPC** logga `kind: 'mcp', action: 'add', target: name + ' (' + transport + ')'`
+- [FEATURE] **`mcp:remove` IPC** logga `kind: 'mcp', action: 'remove', target: name`
+- [FEATURE] **`mcp:clear-auth-cache` IPC** logga `kind: 'mcp', action: 'clear-auth-cache', target: serverId`
+- [FIX] **`refreshSidebarRecent` routing esteso**: oltre a `marketplace` e `plugin`, il click sulla riga ora indirizza alle sezioni `skills`/`agents`/`mcp`/`hooks` in base al `kind` dell'entry
+- [NOTE] **NON loggate** `hooks:check-tool` (polling automatico, rumore) e `hooks:refresh-deps` (richiamato da topbar Aggiorna, già visibile)
+
+### Fix #2 — Toast sotto modal overlay
+
+I toast generati da azioni dentro un modal (es. Salva file .md, Copia testo, Aggiunta MCP) comparivano **sotto** il backdrop sfocato del modal: l'utente vedeva solo una macchia colorata illeggibile in basso a destra.
+
+- [FIX] **`.toast-container z-index`** alzato da `9999` a `99999` (sopra `.md-overlay` che è `99998`). I toast ora compaiono sopra il modal con leggibilità piena
+
+### Fix #3 — Badge "modificato" sulle card skill/agent
+
+Dopo aver salvato una modifica al file `.md` di una skill/agent (v1.0.99), non c'era modo di vedere a colpo d'occhio quali skill/agent sono state editate localmente. Now:
+
+- [FEATURE] **`state.modifiedFiles`** nuovo campo state, persisted in `state.json`. Chiave: `kind:fullId:name`, valore: timestamp ISO ultima modifica
+- [FEATURE] **Save flow esteso**: dopo `writeMarkdownFile` con successo, aggiunge entry a `state.modifiedFiles` + persiste via setState
+- [FEATURE] **`isLocallyModified(item, kind)`** helper di cross-check sullo state
+- [FEATURE] **Badge "✎ MODIFICATO"** sulle card skill/agent (`.browse-card-modified`): arancione warm CLACOROO (`#f0a280` su `rgba(217,119,87,.18)`), accanto a scope/health/blocked. Icona Lucide `pencil`. Tooltip: timestamp di modifica + reminder che verrà sovrascritto al prossimo `claude plugins update`
+- [FEATURE] **Mini-icona pencil** sui chip compatti (vista compatta) per stesso scopo, dimensione 11×11, colore giallo warning
+- [STYLE] `.browse-card-modified` + override `.chip-modified-icon` per la vista compact
+
+### Note sulla persistenza
+
+Il tracking `modifiedFiles` rimane finché non viene esplicitamente pulito. Idealmente dovremmo invalidarlo quando l'utente fa `claude plugins update <plugin>` (che riporta il file all'upstream), ma:
+- Non possiamo intercettare quando l'utente lo fa da terminale esterno
+- Possiamo intercettare quando lo fa da CLACOROO (bottone "Update" nella card plugin) — potenziale extension futura
+- Per ora il tooltip ricorda all'utente: "verrà sovrascritto al prossimo `claude plugins update`". L'utente può sapere quando il badge non è più accurato
+
 ## v1.0.99 — 2026-05-26 — Editor inline file .md skill/agent nel modal preview
 
 Estensione naturale di v1.0.98 (tooltip esplicativo): il modal markdown preview di skill/agent ora ha un bottone **"Modifica"** che switcha la preview in editor textarea, permettendo all'utente di fixare il frontmatter o il body del file `.md` direttamente da CLACOROO senza aprire un editor esterno. Warning chiaro sopra l'editor: le modifiche sono **temporanee** (sovrascritte al prossimo `claude plugins update <plugin>`).

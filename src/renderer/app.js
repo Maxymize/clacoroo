@@ -150,6 +150,12 @@ const state = {
     mcp:          'cards',
     hooks:        'cards',
   },
+  // v1.0.100 — Tracking file .md modificati localmente dall'utente via editor
+  // inline (showMarkdownModal Modifica/Salva). Persisted in state.json.
+  // Permette di mostrare un badge "modificato" sulle card skill/agent.
+  // Chiave: `kind:fullId:name` (es. "skill:claude-mem@thedotmack:mcp-search").
+  // Value: timestamp ISO ultima modifica.
+  modifiedFiles: {},
 };
 
 const MKT_SORTERS = {
@@ -346,6 +352,10 @@ async function init() {
       }
     }
   }
+  // v1.0.100 — restore modifiedFiles tracking (file .md editati localmente)
+  if (appState.modifiedFiles && typeof appState.modifiedFiles === 'object') {
+    state.modifiedFiles = appState.modifiedFiles;
+  }
   if (appState.lastSection && appState.lastSection !== 'dashboard') {
     switchToSection(appState.lastSection);
   }
@@ -440,8 +450,15 @@ async function refreshSidebarRecent() {
     const txt = el('span', 'sidebar-recent-txt', entry.target.split('@')[0]);
     row.appendChild(icon); row.appendChild(txt);
     row.addEventListener('click', () => {
-      const target = entry.kind === 'marketplace' ? 'marketplaces' : 'plugins';
-      switchToSection(target);
+      // v1.0.100 — routing esteso per i nuovi kind (skill/agent/mcp/hooks)
+      const map = {
+        marketplace: 'marketplaces',
+        skill:       'skills',
+        agent:       'agents',
+        mcp:         'mcp',
+        hook:        'hooks',
+      };
+      switchToSection(map[entry.kind] || 'plugins');
     });
     container.appendChild(row);
   });
@@ -2297,10 +2314,27 @@ function buildSkillAgentChip(item, kind) {
   chip.appendChild(el('span', 'skill-chip-plugin', item.plugin));
   appendHealthBadge(chip, item.health);
   appendScopeBadge(chip, item);
+  // v1.0.100 — Icona pencil mini se file editato localmente
+  if (isLocallyModified(item, kind)) {
+    const modIcon = icon('pencil');
+    modIcon.classList.add('chip-modified-icon');
+    modIcon.style.cssText = 'width:11px;height:11px;color:#fbbf24;margin-left:4px;';
+    const ts = state.modifiedFiles[kind + ':' + item.fullId + ':' + item.name];
+    if (ts) modIcon.setAttribute('aria-label', 'Modificato localmente ' + new Date(ts).toLocaleString('it-IT'));
+    chip.appendChild(modIcon);
+  }
   if (item.scope === 'global') {
     chip.addEventListener('click', () => openMarkdownPreview(item.fullId, kind, item.name));
   }
   return chip;
+}
+
+// v1.0.100 — Helper: l'item è stato editato localmente dall'utente?
+// Cross-check con state.modifiedFiles (popolato dal save dell'editor inline).
+function isLocallyModified(item, kind) {
+  if (!item.fullId) return false;
+  const key = kind + ':' + item.fullId + ':' + item.name;
+  return !!(state.modifiedFiles && state.modifiedFiles[key]);
 }
 
 // v1.0.96 — Pack M: builder card "vista ampia" per skill/agent.
@@ -2354,6 +2388,16 @@ function buildSkillAgentCard(item, kind) {
   }
   if (item.blocked) {
     badgeRow.appendChild(el('span', 'browse-card-blocked', 'disabilitato'));
+  }
+  // v1.0.100 — Badge "modificato" se l'utente ha editato localmente il file .md
+  if (isLocallyModified(item, kind)) {
+    const modBadge = el('span', 'browse-card-modified');
+    modBadge.appendChild(icon('pencil'));
+    modBadge.appendChild(document.createTextNode('modificato'));
+    const ts = state.modifiedFiles[kind + ':' + item.fullId + ':' + item.name];
+    if (ts) modBadge.title = 'Modificato localmente il ' + new Date(ts).toLocaleString('it-IT') +
+      '\n\nLa modifica verrà sovrascritta al prossimo `claude plugins update ' + item.fullId + '`.';
+    badgeRow.appendChild(modBadge);
   }
   body.appendChild(badgeRow);
   card.appendChild(body);
@@ -3154,8 +3198,13 @@ function showMarkdownModal(name, kind, content, fullId) {
     if (r.success) {
       currentContent = newContent;
       toast('File salvato — ricordati che verrà sovrascritto al prossimo `claude plugins update`', 'success');
+      // v1.0.100 — Marca il file come modificato localmente per mostrare badge
+      // sulla card skill/agent. Persisted in state.json.
+      const key = kind + ':' + fullId + ':' + name;
+      state.modifiedFiles[key] = new Date().toISOString();
+      try { await window.claudeAPI.setState({ modifiedFiles: state.modifiedFiles }); } catch {}
       switchToPreview();
-      // Trigger reload dati per re-check health
+      // Trigger reload dati per re-check health + re-render card con badge
       try { await loadData(); } catch { /* graceful */ }
     } else {
       toast('Errore salvataggio: ' + (r.error || 'sconosciuto'), 'error');

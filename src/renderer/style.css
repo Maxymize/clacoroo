@@ -366,6 +366,27 @@ body {
 .browse-card-health .inline-icon { width: 11px; height: 11px; margin: 0; vertical-align: 0; }
 .browse-card-health.h-err  { background: rgba(239,68,68,.18);  color: #fca5a5; border: 1px solid rgba(239,68,68,.36); }
 .browse-card-health.h-warn { background: rgba(245,158,11,.18); color: #fbbf24; border: 1px solid rgba(245,158,11,.36); }
+
+/* v1.0.100 — Badge "modificato" sulle card skill/agent quando l'utente ha
+   editato localmente il file .md tramite editor inline (showMarkdownModal).
+   Stile arancione warm (come accent CLACOROO) per distinguerlo da health
+   warning arancione yellow. Tooltip mostra il timestamp + reminder che
+   verrà sovrascritto al prossimo `claude plugins update`. */
+.browse-card-modified {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: rgba(217,119,87,.18);
+  color: #f0a280;
+  border: 1px solid rgba(217,119,87,.36);
+  cursor: help;
+  flex-shrink: 0;
+}
+.browse-card-modified .inline-icon { width: 11px; height: 11px; margin: 0; vertical-align: 0; }
 .browse-card-foot {
   display: flex; justify-content: flex-end;
   margin-top: 2px;
@@ -3508,9 +3529,13 @@ body {
 @keyframes spin { to { transform: rotate(360deg); } }
 
 /* ── TOAST ────────────────────────────────────────────────────────────── */
+/* v1.0.100 — z-index 99999 (era 9999): deve stare SOPRA il .md-overlay
+   (z-index 99998) altrimenti i toast generati da azioni dentro un modal
+   (es. Salva file .md, Copia testo) compaiono sotto il backdrop sfocato
+   e l'utente vede solo una macchia colorata illeggibile. */
 .toast-container {
   position: fixed; bottom: 20px; right: 20px;
-  z-index: 9999;
+  z-index: 99999;
   display: flex; flex-direction: column; gap: 8px;
   pointer-events: none;
 }

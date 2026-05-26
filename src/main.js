@@ -593,6 +593,8 @@ ipcMain.handle('mcp:remove', async (_e, { name } = {}) => {
   if (!validMcpName(name)) return { success: false, error: 'Nome MCP non valido.' };
   const r = await runClaudeArgs(['mcp', 'remove', name]);
   if (r.success) { MCP_CACHE = null; MCP_CACHE_AT = 0; }
+  // v1.0.100 — log azione
+  appendActivity({ kind: 'mcp', action: 'remove', target: name, success: !!r.success, error: r.error || undefined });
   return r;
 });
 
@@ -631,6 +633,8 @@ ipcMain.handle('mcp:add', async (_e, opts = {}) => {
   }
   const r = await runClaudeArgs(cliArgs);
   if (r.success) { MCP_CACHE = null; MCP_CACHE_AT = 0; }
+  // v1.0.100 — log azione (include transport per chiarezza)
+  appendActivity({ kind: 'mcp', action: 'add', target: name + ' (' + transport + ')', success: !!r.success, error: r.error || undefined });
   return r;
 });
 
@@ -834,6 +838,8 @@ ipcMain.handle('mcp:clear-auth-cache', async (_e, { serverId } = {}) => {
   const result = MCP.clearAuthCacheEntry(serverId);
   if (result.ok) {
     MCP_CACHE = null; MCP_CACHE_AT = 0;  // invalida cache renderer
+    // v1.0.100 — log azione per Recenti
+    appendActivity({ kind: 'mcp', action: 'clear-auth-cache', target: serverId, success: true });
   }
   return result;
 });
@@ -1276,6 +1282,11 @@ ipcMain.handle('write-markdown-file', async (_e, { fullId, kind, name, content }
   if (!fs.existsSync(resolved)) return { success: false, error: 'File non trovato.' };
   try {
     fs.writeFileSync(resolved, content, 'utf8');
+    // v1.0.100 — log nell'activity log per visibilità in sidebar Recenti
+    appendActivity({ kind: kind, action: 'edit', target: name + ' (' + fullId + ')', success: true });
     return { success: true };
-  } catch (e) { return { success: false, error: e.message }; }
+  } catch (e) {
+    appendActivity({ kind: kind, action: 'edit', target: name + ' (' + fullId + ')', success: false, error: e.message });
+    return { success: false, error: e.message };
+  }
 });
