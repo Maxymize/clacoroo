@@ -251,6 +251,33 @@ function clearAuthCacheEntry(serverId) {
   }
 }
 
+// v1.0.104 — Lettura config user/local di un singolo MCP server da ~/.claude.json.
+// Usato per Disable/Enable: prima di rimuovere un server user-added, salviamo
+// la sua config in state.json di CLACOROO così possiamo re-add con i giusti
+// parametri quando l'utente clicca "Abilita".
+//
+// Ritorna { scope: 'user'|'local', config: {type, url|command, args, env, headers}, project? }
+// o null se il server non è user-added.
+const CLAUDE_USER_CONFIG = path.join(os.homedir(), '.claude.json');
+
+function readUserMcpConfig(name) {
+  if (!fs.existsSync(CLAUDE_USER_CONFIG)) return null;
+  try {
+    const data = JSON.parse(fs.readFileSync(CLAUDE_USER_CONFIG, 'utf8'));
+    // User scope (globale)
+    if (data.mcpServers && Object.prototype.hasOwnProperty.call(data.mcpServers, name)) {
+      return { scope: 'user', config: data.mcpServers[name] };
+    }
+    // Local/project scope: in projects[<cwd>].mcpServers
+    for (const [proj, projData] of Object.entries(data.projects || {})) {
+      if (projData && projData.mcpServers && Object.prototype.hasOwnProperty.call(projData.mcpServers, name)) {
+        return { scope: 'local', project: proj, config: projData.mcpServers[name] };
+      }
+    }
+  } catch { /* invalid JSON, skip */ }
+  return null;
+}
+
 module.exports = {
   parseListLine,
   runMcpList,
@@ -259,4 +286,5 @@ module.exports = {
   fastEstimate,
   detectReconnectType,
   clearAuthCacheEntry,
+  readUserMcpConfig,
 };

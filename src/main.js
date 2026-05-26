@@ -639,6 +639,106 @@ ipcMain.handle('mcp:remove', async (_e, { name } = {}) => {
   return r;
 });
 
+// v1.0.104 — Disable/Enable singolo MCP user-added.
+// Pattern: salva config in state.json prima del remove (so possiamo re-add
+// quando user clicca "Abilita"). Funziona SOLO per server user-added
+// (presenti in ~/.claude.json). NON funziona per plugin-managed (vengono
+// dal .mcp.json del plugin, fuori dal nostro controllo) né per claude.ai
+// builtin (gestiti dal cloud).
+ipcMain.handle('mcp:disable', async (_e, { name } = {}) => {
+  if (!validMcpName(name)) return { success: false, error: 'Nome MCP non valido.' };
+  // Cerca la config user/local del server
+  const found = MCP.readUserMcpConfig(name);
+  if (!found) {
+    return {
+      success: false,
+      error: 'Server "' + name + '" non è user-added (non trovato in ~/.claude.json). Disable funziona solo su server aggiunti via `claude mcp add` o dal pulsante "+ MCP" di CLACOROO.',
+    };
+  }
+  // Salva backup config in state.json
+  const state = readState();
+  const disabled = state.disabledMcpServers || {};
+  disabled[name] = { ...found, disabledAt: new Date().toISOString() };
+  writeState({ ...state, disabledMcpServers: disabled });
+  // Esegui remove
+  const removeArgs = ['mcp', 'remove', name];
+  if (found.scope === 'user') removeArgs.push('-s', 'user');
+  const r = await runClaudeArgs(removeArgs);
+  if (r.success) { MCP_CACHE = null; MCP_CACHE_AT = 0; }
+  else {
+    // Rollback: rimuovi il backup se la rimozione fallisce
+    const s2 = readState();
+    const d2 = s2.disabledMcpServers || {};
+    delete d2[name];
+    writeState({ ...s2, disabledMcpServers: d2 });
+  }
+  appendActivity({ kind: 'mcp', action: 'disable', target: name, success: !!r.success, error: r.error || undefined });
+  return r;
+});
+
+ipcMain.handle('mcp:enable', async (_e, { name } = {}) => {
+  if (!validMcpName(name)) return { success: false, error: 'Nome MCP non valido.' };
+  const state = readState();
+  const disabled = state.disabledMcpServers || {};
+  const entry = disabled[name];
+  if (!entry) {
+    return { success: false, error: 'Server "' + name + '" non è nella lista dei disabilitati.' };
+  }
+  // Ricostruisci gli argomenti `claude mcp add` dalla config salvata
+  const cfg = entry.config || {};
+  const transport = cfg.type || (cfg.command ? 'stdio' : 'http');
+  const target = cfg.url || cfg.command;
+  if (!target) {
+    return { success: false, error: 'Config backup malformata (manca url/command).' };
+  }
+  const cliArgs = ['mcp', 'add', '--transport', transport, '-s', entry.scope || 'user'];
+  if (cfg.env && typeof cfg.env === 'object') {
+    for (const [k, v] of Object.entries(cfg.env)) {
+      if (/^[A-Za-z_][A-Za-z0-9_]*$/.test(k)) cliArgs.push('-e', k + '=' + v);
+    }
+  }
+  if (cfg.headers && typeof cfg.headers === 'object') {
+    for (const [k, v] of Object.entries(cfg.headers)) {
+      if (k && v) cliArgs.push('-H', k + ': ' + v);
+    }
+  }
+  cliArgs.push(name, target);
+  if (Array.isArray(cfg.args) && cfg.args.length) {
+    cliArgs.push('--');
+    for (const a of cfg.args) if (typeof a === 'string' && a) cliArgs.push(a);
+  }
+  const r = await runClaudeArgs(cliArgs);
+  if (r.success) {
+    // Rimuovi entry da disabledMcpServers
+    const s2 = readState();
+    const d2 = s2.disabledMcpServers || {};
+    delete d2[name];
+    writeState({ ...s2, disabledMcpServers: d2 });
+    MCP_CACHE = null; MCP_CACHE_AT = 0;
+  }
+  appendActivity({ kind: 'mcp', action: 'enable', target: name, success: !!r.success, error: r.error || undefined });
+  return r;
+});
+
+// v1.0.104 — Get list dei server disabled (per il merge in renderer)
+ipcMain.handle('mcp:list-disabled', async () => {
+  const state = readState();
+  const disabled = state.disabledMcpServers || {};
+  return {
+    ok: true,
+    servers: Object.entries(disabled).map(([name, entry]) => ({
+      id:          name,
+      displayName: name,
+      scope:       'user',
+      transport:   entry.config?.type || (entry.config?.command ? 'stdio' : 'http'),
+      connection:  entry.config?.url || entry.config?.command || '',
+      status:      'disabled',
+      statusText:  'Disabilitato da CLACOROO',
+      disabledAt:  entry.disabledAt || null,
+    })),
+  };
+});
+
 ipcMain.handle('mcp:add', async (_e, opts = {}) => {
   const { name, transport, target, args, envs, headers, scope } = opts;
   if (!validMcpName(name)) {

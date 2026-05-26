@@ -1,5 +1,58 @@
 # Changelog
 
+## v1.0.104 — 2026-05-26 — Pack G v2 chiusura COMPLETA: Disable/Enable singolo MCP user-added
+
+Ultimo task del Pack G v2 implementato. Scelta utente: **solo user-added** (remove+add con backup config in state.json). Per plugin-managed e claude.ai builtin l'azione non è offerta perché non praticabile in modo pulito (vedi TASK.md nota tecnica).
+
+### Backend
+
+- [FEATURE] **`readUserMcpConfig(name)`** in `src/lib/mcp.js`: legge `~/.claude.json` e ritorna `{scope: 'user'|'local', config}` del server se presente (controllando sia top-level `mcpServers` per scope user, sia `projects[<cwd>].mcpServers` per scope local). Ritorna `null` se il server non è user-added
+- [FEATURE] **IPC `mcp:disable`**:
+  - Cerca config via `readUserMcpConfig` → errore se non user-added
+  - Salva config in `state.disabledMcpServers[name] = {scope, config, disabledAt: ISO}`
+  - Esegue `claude mcp remove <name> [-s <scope>]`
+  - **Rollback automatico** se remove fallisce: rimuove l'entry da `disabledMcpServers`
+- [FEATURE] **IPC `mcp:enable`**:
+  - Legge entry da `state.disabledMcpServers[name]`
+  - Ricostruisce args per `claude mcp add --transport <t> [-s <scope>] [-e KEY=VAL] [-H "Header: val"] <name> <target> [-- args]`
+  - Validazione env keys (regex `^[A-Za-z_][A-Za-z0-9_]*$`) e headers
+  - Su successo: rimuove l'entry da `disabledMcpServers` + invalida MCP_CACHE
+- [FEATURE] **IPC `mcp:list-disabled`**: ritorna i server disabled come pseudo-server con `status: 'disabled'`, `statusText: 'Disabilitato da CLACOROO'`, transport + connection estratti dalla config salvata. Usato dal renderer per merge nel grid
+- [FEATURE] **Activity log esteso**: `mcp disable` + `mcp enable` registrati
+
+### Frontend
+
+- [FEATURE] **Bottone "Disabilita"** sulle card MCP user-added (sia connected che needsAuth, NO sui disabled): confirm dialog → `mcpDisable` → toast + re-render. Icona Lucide `ban`
+- [FEATURE] **Bottone "Abilita"** sulle card disabled (primary style accent): `mcpEnable` diretto (no confirm — l'enable è azione "additive" non distruttiva) → toast verde + re-render. Icona Lucide `check`
+- [FEATURE] **Merge dei disabled nel grid MCP**: `renderMcp` ora fa una chiamata aggiuntiva a `mcpListDisabled` e merge i server disabled con i server attivi. Sort identico, appaiono come card "ghost" con border tratteggiato
+- [FEATURE] **Badge status "Disabilitato"**: nuovo entry nel dictionary di status badge (icona `ban`, label "Disabilitato"). Card con `data-disabled="true"` ha opacity 0.7 per indicare lo stato
+
+### Comportamento
+
+- ✅ Solo user-added: backend ritorna errore chiaro se l'utente prova su plugin-managed/builtin
+- ✅ Lifecycle reversibile: disable → enable con config preservata (URL/comando/env/headers tutto salvato)
+- ✅ Per server OAuth: il re-enable potrebbe richiedere riautenticazione (toast informativo nel confirm)
+- ✅ Activity log mostra anche disable/enable per audit
+
+### Non-goals confirmati
+
+- ❌ Plugin-managed disable: rimosso dal scope per evitare il problema "claude plugins update ripristina il file"
+- ❌ claude.ai builtin disable: gestiti server-side, fuori dal controllo locale
+
+### Pack G v2 status finale
+
+| Task | Stato | Versione |
+|---|---|---|
+| Sezione MCP base | ✅ | v1.0.21–24 |
+| Reconnect MCP | ✅ | v1.0.85 |
+| Bottone `/mcp` in claude | ✅ | v1.0.86 |
+| Add MCP | ✅ | v1.0.94 |
+| Remove user-added | ✅ | v1.0.94 |
+| View tools (JSON-RPC) | ✅ | v1.0.103 |
+| Disable/Enable singolo | ✅ | v1.0.104 |
+
+**Pack G v2 chiuso.** 🎉
+
 ## v1.0.103 — 2026-05-26 — Pack G v2 — View tools: mini-client MCP JSON-RPC
 
 Penultimo task aperto del Pack G v2: mostrare i tools esposti da un server MCP. CLACOROO ora include un **mini-client JSON-RPC** che fa l'handshake MCP standard (`initialize` + `notifications/initialized` + `tools/list`) per server stdio plugin-managed, e ritorna l'elenco tools con nome, descrizione, parametri.

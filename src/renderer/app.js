@@ -4256,7 +4256,15 @@ async function renderMcp() {
     return;
   }
 
-  const rawServers = mcpCache.servers || [];
+  // v1.0.104 — Merge dei server disabled dal state.json. Vengono mostrati
+  // come card "ghost" con status='disabled' + bottone Abilita per re-add.
+  let disabledServers = [];
+  try {
+    const dr = await window.claudeAPI.mcpListDisabled();
+    if (dr && dr.ok) disabledServers = dr.servers || [];
+  } catch { /* graceful */ }
+
+  const rawServers = [...(mcpCache.servers || []), ...disabledServers];
   if (!rawServers.length) {
     grid.appendChild(el('div', 'mcp-empty', 'Nessun MCP server configurato.'));
     return;
@@ -4342,6 +4350,7 @@ function buildMcpCard(srv) {
     warning:   'circle-alert',
     error:     'circle-x',
     unknown:   'circle-help',
+    disabled:  'ban',
   }[srv.status] || 'circle-help';
   const badgeText = {
     connected: 'Connected',
@@ -4349,6 +4358,7 @@ function buildMcpCard(srv) {
     warning:   'Warning',
     error:     'Errore',
     unknown:   'Sconosciuto',
+    disabled:  'Disabilitato',
   }[srv.status] || srv.status;
   badge.appendChild(icon(badgeIconName));
   badge.appendChild(document.createTextNode(badgeText));
@@ -4451,6 +4461,21 @@ function buildMcpCard(srv) {
       toolsBtn.title = 'Mostra i tools esposti da questo server MCP (tools/list via JSON-RPC)';
       toolsBtn.addEventListener('click', e => { e.stopPropagation(); showMcpToolsModal(srv); });
       actionsWrap.appendChild(toolsBtn);
+    }
+    // v1.0.104 — Disabilita (solo user-added attivi): salva config in state
+    // + remove via CLI. Re-abilitabile dopo via il bottone "Abilita".
+    if (isUserAdded && srv.status !== 'disabled') {
+      const disableBtn = btnWithIcon('btn btn-sm btn-ghost', 'ban', 'Disabilita');
+      disableBtn.title = 'Disabilita questo server: lo rimuove da Claude Code ma salva la config in CLACOROO per ri-attivarlo dopo';
+      disableBtn.addEventListener('click', e => { e.stopPropagation(); confirmAndDisableMcp(srv); });
+      actionsWrap.appendChild(disableBtn);
+    }
+    // v1.0.104 — Abilita: server attualmente disabilitato → re-add con config salvata
+    if (srv.status === 'disabled') {
+      const enableBtn = btnWithIcon('btn btn-sm btn-primary', 'check', 'Abilita');
+      enableBtn.title = 'Re-aggiunge questo server a Claude Code usando la config salvata in CLACOROO';
+      enableBtn.addEventListener('click', e => { e.stopPropagation(); enableMcp(srv); });
+      actionsWrap.appendChild(enableBtn);
     }
     if (isUserAdded) {
       const rmBtn = btnWithIcon('btn btn-sm btn-ghost', 'trash-2', 'Rimuovi');
@@ -4615,6 +4640,39 @@ async function showMcpToolsModal(srv) {
     list.appendChild(item);
   });
   content.appendChild(list);
+}
+
+// v1.0.104 — Pack G v2 chiusura: disabilita un server MCP user-added.
+// Confirm dialog → IPC mcp:disable (salva config in state.json + claude mcp remove).
+async function confirmAndDisableMcp(srv) {
+  const response = await window.claudeAPI.confirmDialog({
+    title: 'Disabilita MCP server',
+    message: 'Disabilitare "' + srv.id + '"?',
+    detail: 'Eseguirà `claude mcp remove ' + srv.id + '` ma CLACOROO salverà la config (URL/comando/env/headers) per ri-attivarlo dopo con un click "Abilita".\n\nIl server sparirà da Claude Code finché non lo riabiliti. Per server OAuth potresti dover riautenticare al re-enable.',
+    buttons: ['Annulla', 'Disabilita'],
+  });
+  if (response !== 1) return;
+  const r = await window.claudeAPI.mcpDisable(srv.id);
+  if (r.success) {
+    toast('MCP disabilitato: ' + srv.id, 'success');
+    mcpCache = null;
+    if (state.section === 'mcp') renderMcp();
+  } else {
+    toast('Errore disable: ' + (r.error || 'sconosciuto'), 'error');
+  }
+}
+
+// v1.0.104 — Ri-abilita un server MCP precedentemente disabilitato.
+// Usa la config salvata in state.disabledMcpServers per fare `claude mcp add`.
+async function enableMcp(srv) {
+  const r = await window.claudeAPI.mcpEnable(srv.id);
+  if (r.success) {
+    toast('MCP riabilitato: ' + srv.id, 'success');
+    mcpCache = null;
+    if (state.section === 'mcp') renderMcp();
+  } else {
+    toast('Errore enable: ' + (r.error || 'sconosciuto'), 'error');
+  }
 }
 
 async function confirmAndRemoveMcp(srv) {

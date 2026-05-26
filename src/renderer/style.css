@@ -3051,6 +3051,9 @@ body {
 .mcp-badge-warning   { background: rgba(245, 158, 11, .15); color: #f59e0b; }
 .mcp-badge-error     { background: rgba(239, 68, 68, .15);  color: #ef4444; }
 .mcp-badge-unknown   { background: rgba(176, 174, 165, .15); color: var(--text-muted); }
+/* v1.0.104 — Server disabled (CLACOROO-managed local state) */
+.mcp-badge-disabled  { background: rgba(176, 174, 165, .18); color: var(--text-muted); border: 1px dashed var(--border2); }
+.mcp-card[data-disabled="true"] { opacity: 0.7; }
 
 .mcp-card-body { padding: 0 14px 12px 18px; }
 .mcp-card-row {
