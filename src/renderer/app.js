@@ -670,7 +670,7 @@ function render() {
     mcp:         'MCP',
     hooks:       'Hooks',
     stats:       'Stats',
-    config:      'Config',
+    config:      'Claude Config',
     settings:    'Impostazioni',
   };
   $('topbar-title').textContent = sectionTitles[state.section] || '';

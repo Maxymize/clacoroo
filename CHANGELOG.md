@@ -1,5 +1,13 @@
 # Changelog
 
+## v1.0.106 — 2026-05-26 — Rinominata sidebar "Config" → "Claude Config" per chiarezza
+
+Piccolo fix UX: la voce sidebar "Config" era ambigua rispetto a "Impostazioni" (settings dell'app CLACOROO). "Claude Config" chiarisce che la sezione contiene le impostazioni di Claude Code (`~/.claude/settings.json` — model, theme, language, Always Thinking, Voice, Effort), distinte dalle impostazioni dell'app stessa.
+
+- [REFACTOR] `src/renderer/index.html` line 77: "Config" → "Claude Config" nella voce sidebar nav
+- [REFACTOR] `src/renderer/app.js`: `sectionTitles.config: 'Config'` → `'Claude Config'` (titolo topbar quando attiva la sezione)
+- [NOTE] La pagina interna mostra già `Configurazione Claude Code` come list-section-title (invariata)
+
 ## v1.0.105 — 2026-05-26 — Dashboard: sezioni riassuntive Plugin / Skill / Agent / Hooks + "Vedi tutte"
 
 Estensione Dashboard (richiesta utente 2026-05-26): aggiunte 4 nuove sezioni riassuntive (Plugin, Skill, Agent, Hooks) con stesso stile di quelle Marketplace e MCP Server già presenti. Tutte le 6 sezioni ora hanno limite **19 chip + 20° "Vedi tutte (N)"** che porta alla sezione completa.
