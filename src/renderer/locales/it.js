@@ -1,16 +1,5 @@
-/*
- * CLACOROO v1.0.110+ — Pack N: i18n
- * Locale: Italiano (lingua originale del progetto)
- *
- * Caricato come <script> nel renderer (no require: contextIsolation:true,
- * nodeIntegration:false). Si attacca a `window.LOCALES.it`. La struttura è
- * nested per categoria UI; il helper `t('section.plugins.title')` fa lookup
- * gerarchico in app.js con fallback EN.
- *
- * Per aggiungere una nuova stringa: aggiungila qui + nel locale `en.js`
- * con stessa shape. Per aggiungere una lingua: nuovo file `<lang>.js` con
- * struttura identica + voce nel registro in app.js.
- */
+// Locale: it. Caricato come <script> tag (no require: contextIsolation+
+// nodeIntegration:false). Shape deve restare identica fra tutti i locales/*.
 'use strict';
 
 window.LOCALES = window.LOCALES || {};

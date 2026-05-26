@@ -1,10 +1,5 @@
-/*
- * CLACOROO v1.0.110+ — Pack N: i18n
- * Locale: English (default fallback for non-Italian systems)
- *
- * Caricato come <script> nel renderer (no require). Si attacca a
- * `window.LOCALES.en`. Mirror di `it.js` (stessa shape, EN strings).
- */
+// Locale: en. Default fallback per sistemi non-it. Shape deve restare
+// identica a it.js (controllata da `t()` con fallback).
 'use strict';
 
 window.LOCALES = window.LOCALES || {};

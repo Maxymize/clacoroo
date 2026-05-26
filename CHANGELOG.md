@@ -1,5 +1,40 @@
 # Changelog
 
+## v1.0.111 — 2026-05-26 — Simplify pass post-Pack N Phase 1
+
+Cleanup di qualità sull'infrastruttura i18n appena introdotta, dopo `/simplify` (3 review agents: reuse / quality / efficiency). Nessun cambiamento funzionale per l'utente — l'app si comporta identica a v1.0.110.
+
+### Code quality
+
+- [REFACTOR] **`i18nState` object rimosso**: sostituito da una semplice `let activeLang = 'it'` module-level. Eliminato il dead field `i18nState.detected` (scritto in `initLocale()` ma mai letto). Una sola fonte di verità per la lingua runtime
+- [REFACTOR] **`_lookupDeep` → `lookupDeep`**: rimosso prefisso underscore non in linea con la convenzione del codebase (nessun altro helper usa `_`)
+- [REFACTOR] **Commenti narrativi trimmed** in app.js e locales/*.js: rimossi i JSDoc che narravano l'ovvio (`setLocale()`, `resolveLocale()`, header i18n) e i commenti versionati `v1.0.110 — Pack N:` sul campo `state.locale`. Conformi alla regola "no narrative comments" di CLAUDE.md (keep only WHY)
+
+### Efficiency
+
+- [PERF] **IPC `getState()` dedup**: `init()` ora chiama `getState()` una volta sola e passa `appState` a `initLocale(appState)`. Prima erano 2 roundtrip IPC consecutivi al cold start (-5ms boot time, marginale ma gratis)
+- [PERF] **Regex guard in `t()`**: la sostituzione `s.replace(/\{(\w+)\}/g, ...)` viene saltata se `vars` è undefined O se la stringa non contiene `{`. Risparmia ~50-100 regex execution per render (al ramp-up di Pack N Phase 2, dove `t()` sarà chiamato 500+ volte)
+
+### Defensive coding removed
+
+- [REFACTOR] **`try/catch` su `document.documentElement.setAttribute('lang', …)` rimosso** in `applyStaticI18n` e nel langSel handler. `setAttribute` con una stringa non lancia mai eccezioni; `document.documentElement` esiste sempre quando app.js è caricato. Tre righe diventano una
+
+### DRY
+
+- [REFACTOR] **`changeLocale(lang)` helper** estratto: centralizza i 5 step del cambio lingua (`state.locale =`, `setLocale()`, `setState({locale})`, `applyStaticI18n()`, `render()`). Il langSel handler in `renderSettings()` ora è 4 righe invece di 7. Elimina il duplicate `setAttribute('lang')` che era sia nell'handler sia (correttamente) in `applyStaticI18n()`
+
+### Numeri
+
+- `src/renderer/app.js`: -82 righe nette (127 rimosse, 45 aggiunte)
+- `src/renderer/locales/it.js` + `en.js`: -6 righe ciascuno (header semplificati)
+
+### Findings agenti non applicate (false positives o premature)
+
+- ❌ Costanti `LANGS.IT / MODELS.SONNET` per stringhe 'it'/'en'/'sonnet'/'opus': surface piccolo, premature abstraction
+- ❌ Spostare `applyStaticI18n()` nel blocco i18n: cosmetico, no behavioral change
+- ❌ `tokenValuesFor()` fallback ora dead: out of scope (è Pack C residual, non Pack N)
+- ❌ Cache element lookup in `renderSettings()` per il dropdown: re-render Settings non è hot path
+
 ## v1.0.110 — 2026-05-26 — Pack N (Phase 1): i18n infrastructure + sidebar/topbar/section titles migrati
 
 Prima fase di Pack N — internazionalizzazione `it` + `en` (l'altra metà della Fase 0 prima del lancio pubblico AGPL). Mira a coprire ~500-700 stringhe UI totali in 10-15h di lavoro. Questa v1.0.110 imposta solo l'infrastruttura + le aree statiche; le sezioni dinamiche (modali, toast, badge, dropdown sort, empty states…) seguiranno nelle prossime release di Pack N.

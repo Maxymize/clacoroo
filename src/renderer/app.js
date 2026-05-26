@@ -135,26 +135,15 @@ function sectionTitle(text, iconName) {
   return t;
 }
 
-/* ── i18n (Pack N v1.0.110) ────────────────────────────────────────────── */
-/**
- * Sistema di traduzione minimale, no dipendenze. Le tabelle vivono in
- * `src/renderer/locales/<lang>.js` e si attaccano a `window.LOCALES` come
- * script tag (caricate prima di app.js in index.html). `require()` non è
- * disponibile nel renderer: `nodeIntegration:false` + `contextIsolation:true`.
- *
- * - `LOCALES`: registro lingue supportate (slug → tabella nested)
- * - `i18nState.lang`: lingua attiva (auto-detect OS al primo avvio, poi
- *   override manuale persistito in state.json come `state.locale`)
- * - `t(key, vars?)`: lookup gerarchico (es. 'nav.dashboard'), fallback EN,
- *   poi alla key stessa se mancante; sostituzione `{name}` da `vars`.
- */
+/* ── i18n ──────────────────────────────────────────────────────────────── */
+// `window.LOCALES` popolato dai <script> locales/<lang>.js prima di app.js.
+// `activeLang` = runtime; `state.locale` = scelta utente persistita (vuota
+// finché l'utente non seleziona dal dropdown, così l'auto-detect OS può
+// seguire i cambi di lingua di sistema fra un avvio e l'altro).
 const LOCALES = window.LOCALES || {};
-const i18nState = { lang: 'it', detected: '' };
+let activeLang = 'it';
 
-/**
- * Risolve `obj.a.b.c` da `obj` con key `'a.b.c'`. Ritorna undefined se manca.
- */
-function _lookupDeep(obj, key) {
+function lookupDeep(obj, key) {
   if (!obj || typeof key !== 'string') return undefined;
   const parts = key.split('.');
   let cur = obj;
@@ -165,64 +154,51 @@ function _lookupDeep(obj, key) {
   return cur;
 }
 
-/**
- * t('key.path', { name: 'value' }) — traduce con fallback EN, poi alla key.
- * Sostituisce `{var}` con `vars.var` (string).
- */
 function t(key, vars) {
-  let s = _lookupDeep(LOCALES[i18nState.lang], key);
-  if (s === undefined) s = _lookupDeep(LOCALES.en, key);
+  let s = lookupDeep(LOCALES[activeLang], key);
+  if (s === undefined) s = lookupDeep(LOCALES.en, key);
   if (typeof s !== 'string') return key;
-  if (vars && typeof vars === 'object') {
+  if (vars && s.indexOf('{') !== -1) {
     s = s.replace(/\{(\w+)\}/g, (_, k) => (vars[k] !== undefined ? String(vars[k]) : `{${k}}`));
   }
   return s;
 }
 
-/**
- * Da una locale OS tipo 'it-IT' / 'en-US' / 'fr-FR' ritorna il prefisso
- * lingua se supportato, altrimenti 'en' (fallback default per anglofoni
- * e tutte le altre lingue non ancora tradotte).
- */
 function resolveLocale(raw) {
   if (typeof raw !== 'string' || !raw) return 'en';
   const pref = raw.toLowerCase().split(/[-_]/)[0];
   return LOCALES[pref] ? pref : 'en';
 }
 
-/**
- * Imposta la lingua attiva (no render qui — chiamante decide).
- * Espone valori in `i18nState` per debug.
- */
 function setLocale(lang) {
-  if (LOCALES[lang]) i18nState.lang = lang;
+  if (LOCALES[lang]) activeLang = lang;
 }
 
-/**
- * Init lingua: chiamata UNA volta in `init()` prima del primo render.
- * - Se `state.locale` persistito → usa quello (rispetta scelta utente).
- * - Altrimenti chiama IPC `get-system-locale` → mappa su 'it'/'en' o EN
- *   fallback. La selezione auto-detect NON viene persistita: la prossima
- *   apertura ripeterà l'auto-detect (utile se l'utente cambia lingua OS).
- *   Si persiste SOLO se l'utente seleziona esplicitamente dal dropdown.
- */
-async function initLocale() {
+// Risolve la lingua da usare al boot: scelta utente persistita prevale
+// sull'auto-detect OS; se mancano entrambi, fallback 'en'. `appState` è
+// passato per evitare un secondo getState() IPC roundtrip.
+async function initLocale(appState) {
+  if (appState && typeof appState.locale === 'string' && LOCALES[appState.locale]) {
+    state.locale = appState.locale;
+    setLocale(appState.locale);
+    return;
+  }
   try {
-    const persisted = await window.claudeAPI.getState();
-    if (persisted && typeof persisted.locale === 'string' && LOCALES[persisted.locale]) {
-      state.locale = persisted.locale;
-      setLocale(persisted.locale);
-      return;
-    }
     const sysRes = await window.claudeAPI.getSystemLocale();
     const raw = (sysRes && (sysRes.locale || sysRes.systemLocale)) || '';
-    i18nState.detected = raw;
-    const lang = resolveLocale(raw);
-    setLocale(lang);
-    // state.locale resta '' finché l'utente non sceglie esplicitamente
+    setLocale(resolveLocale(raw));
   } catch {
     setLocale('en');
   }
+}
+
+async function changeLocale(lang) {
+  if (!LOCALES[lang]) return;
+  state.locale = lang;
+  setLocale(lang);
+  await window.claudeAPI.setState({ locale: lang });
+  applyStaticI18n();
+  render();
 }
 
 /* ── STATE ────────────────────────────────────────────────────────────── */
@@ -273,9 +249,7 @@ const state = {
   // v1.0.109 — Modello selezionato per il token budget visualizzato
   // ('sonnet' | 'opus'). Default Sonnet 4.6. Persisted in state.json.
   tokenModel: 'sonnet',
-  // v1.0.110 — Pack N: lingua UI attiva ('it' | 'en'). Vuota al primo avvio
-  // → auto-detect dalla locale OS via IPC `get-system-locale`. Persisted in
-  // state.json. L'utente può overridarla dal dropdown in Impostazioni.
+  // Scelta utente esplicita. Vuota = auto-detect OS ad ogni avvio.
   locale: '',
 };
 
@@ -506,13 +480,11 @@ const $ = id => document.getElementById(id);
 
 /* ── INIT ─────────────────────────────────────────────────────────────── */
 async function init() {
-  // v1.0.110 — Pack N: i18n. Determina lingua UI prima di setupNav() così
-  // i prossimi paint usano già la lingua corretta. Ordine:
-  //   1. state.locale persistito (override esplicito utente) → usa quello
-  //   2. altrimenti chiama IPC get-system-locale → mappa su 'it'/'en'
-  //   3. fallback 'en' (nel caso IPC fallisca o sistema su lingua non supportata)
-  // Nota: tutto l'init è già async; il costo è ~1 IPC chiamata (~ms).
-  await initLocale();
+  // Leggi appState UNA volta e condividi fra initLocale + restore sort/view/ecc.
+  // Lingua va inizializzata prima di setupNav() così il primo paint usa la
+  // locale corretta.
+  const appState = await window.claudeAPI.getState();
+  await initLocale(appState);
   setupNav();
   attachSupportButtons();
   // v1.0.67 — Carica caps pty PRIMA del primo render, così il bottone
@@ -542,7 +514,6 @@ async function init() {
   });
   window.claudeAPI.onSwitchSection(name => switchToSection(name));
   window.claudeAPI.onForceRefresh(() => loadData());
-  const appState = await window.claudeAPI.getState();
   if (appState.mktSort && MKT_SORTERS[appState.mktSort]) {
     state.mktSort = appState.mktSort;
     applyMktSort();
@@ -796,15 +767,8 @@ function setupNav() {
   applyStaticI18n();
 }
 
-/**
- * v1.0.110 — Pack N: aggiorna tutti i nodi statici con attributo
- * `data-i18n="key.path"` impostandone il `textContent` via `t()`. Vale per
- * sidebar nav + qualsiasi label HTML statica che vorremo aggiungere in
- * futuro (es. status label). I nodi dinamici (renderizzati in JS) usano
- * `t()` direttamente alla generazione.
- */
 function applyStaticI18n() {
-  try { document.documentElement.setAttribute('lang', i18nState.lang); } catch {}
+  document.documentElement.setAttribute('lang', activeLang);
   document.querySelectorAll('[data-i18n]').forEach(node => {
     const key = node.getAttribute('data-i18n');
     if (key) node.textContent = t(key);
@@ -5852,7 +5816,6 @@ function renderSettings() {
   gApiKey.appendChild(apiKeyWrap);
   loadApiKeyPanel(apiKeyWrap);
 
-  // v1.0.110 — Pack N: Lingua interfaccia
   const gLang = group('Aspetto');
   const langRow = el('div', 'settings-row');
   const langLeft = el('div');
@@ -5870,22 +5833,16 @@ function renderSettings() {
     opt.value = o.v;
     langSel.appendChild(opt);
   });
-  langSel.value = i18nState.lang;
+  langSel.value = activeLang;
   langSel.addEventListener('change', async () => {
     const next = langSel.value;
     if (!LOCALES[next]) return;
-    state.locale = next;
-    setLocale(next);
-    try { document.documentElement.setAttribute('lang', next); } catch {}
-    await window.claudeAPI.setState({ locale: next });
+    await changeLocale(next);
     toast(t('toast.saved'), 'success');
-    applyStaticI18n();
-    render();
   });
   langRight.appendChild(langSel);
-  // Bottone "Usa lingua sistema": reset state.locale → al prossimo avvio
-  // ri-fa auto-detect dell'OS. Visibile solo se locale è stato impostato
-  // esplicitamente (state.locale non vuoto).
+  // Reset locale persistita: al prossimo avvio l'app ri-fa auto-detect OS.
+  // La lingua attiva NON cambia subito (l'utente la riavrà al riavvio).
   if (state.locale) {
     const sysBtn = el('button', 'btn btn-sm btn-ghost', t('settings.useSystemLang'));
     sysBtn.title = t('settings.useSystemLangTooltip');
@@ -5893,8 +5850,6 @@ function renderSettings() {
       state.locale = '';
       await window.claudeAPI.setState({ locale: '' });
       toast(t('settings.useSystemLang'), 'info');
-      // Non re-render qui: la lingua attiva resta quella corrente fino al
-      // prossimo riavvio dell'app (quando initLocale farà auto-detect).
       renderSettings();
     });
     langRight.appendChild(sysBtn);
