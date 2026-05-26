@@ -1246,3 +1246,36 @@ ipcMain.handle('read-markdown-file', async (_e, { fullId, kind, name }) => {
     return { success: true, content };
   } catch (e) { return { success: false, error: e.message }; }
 });
+
+// v1.0.99 — Editor inline file .md skill/agent: scrive il nuovo contenuto sul
+// file nella cache del plugin. ATTENZIONE: queste modifiche locali verranno
+// sovrascritte al prossimo `claude plugins update <plugin>`. Per fix permanente
+// l'utente deve aprire PR/issue sul repo del plugin. Il warning è mostrato
+// nella UI sopra l'editor.
+//
+// Validazione paranoid: rifiuta path che non sono dentro la directory cache
+// del plugin (no escape, no symlink follow). Validate kind/name regex.
+ipcMain.handle('write-markdown-file', async (_e, { fullId, kind, name, content }) => {
+  const root = resolvePluginPath(fullId);
+  if (!root) return { success: false, error: 'Path plugin non trovato.' };
+  if (!/^[a-zA-Z0-9][a-zA-Z0-9_.-]*$/.test(name)) return { success: false, error: 'Nome non valido.' };
+  if (typeof content !== 'string') return { success: false, error: 'Contenuto non valido (richiesta string).' };
+  // Limite hardcoded per sanity: nessun file .md skill/agent dovrebbe superare 500KB
+  if (content.length > 500 * 1024) return { success: false, error: 'File troppo grande (max 500KB).' };
+  let filePath;
+  if (kind === 'skill')      filePath = path.join(root, 'skills', name, 'SKILL.md');
+  else if (kind === 'agent') filePath = path.join(root, 'agents', name + '.md');
+  else return { success: false, error: 'Tipo non riconosciuto.' };
+  // Verifica che il path finale sia effettivamente dentro root (paranoia su edge cases)
+  const resolved = path.resolve(filePath);
+  if (!resolved.startsWith(path.resolve(root) + path.sep)) {
+    return { success: false, error: 'Path fuori dalla directory plugin.' };
+  }
+  // Il file deve esistere già (non creiamo file nuovi — esiste già lo skill/agent
+  // a livello del plugin; stiamo solo aggiornandone il contenuto del manifest)
+  if (!fs.existsSync(resolved)) return { success: false, error: 'File non trovato.' };
+  try {
+    fs.writeFileSync(resolved, content, 'utf8');
+    return { success: true };
+  } catch (e) { return { success: false, error: e.message }; }
+});

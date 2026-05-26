@@ -1,5 +1,42 @@
 # Changelog
 
+## v1.0.99 — 2026-05-26 — Editor inline file .md skill/agent nel modal preview
+
+Estensione naturale di v1.0.98 (tooltip esplicativo): il modal markdown preview di skill/agent ora ha un bottone **"Modifica"** che switcha la preview in editor textarea, permettendo all'utente di fixare il frontmatter o il body del file `.md` direttamente da CLACOROO senza aprire un editor esterno. Warning chiaro sopra l'editor: le modifiche sono **temporanee** (sovrascritte al prossimo `claude plugins update <plugin>`).
+
+### Backend (`src/main.js` + preload)
+
+- [FEATURE] **IPC `write-markdown-file(fullId, kind, name, content)`** + bridge preload `writeMarkdownFile`. Stesso pattern di validazione di `read-markdown-file`:
+  - `fullId` risolto via `resolvePluginPath` (no path escape)
+  - `name` deve matchare regex `^[a-zA-Z0-9][a-zA-Z0-9_.-]*$`
+  - `kind` deve essere `skill` o `agent`
+  - `content` deve essere string ≤ 500KB (sanity limit)
+  - **Verifica paranoid path traversal**: il path finale deve essere dentro la directory cache del plugin (`path.resolve(...).startsWith(root + sep)`)
+  - **File deve esistere già**: non creiamo file nuovi, solo update di skill/agent già dichiarate dal plugin (no creazione di ghost agent)
+
+### Frontend (`src/renderer/app.js`)
+
+- [FEATURE] **`showMarkdownModal(name, kind, content, fullId)`** esteso: nuovo argomento `fullId` opzionale. Se passato, abilita il bottone "Modifica" nell'header del modal
+- [FEATURE] **3 nuovi bottoni header**: "Modifica" (icona Lucide `pencil`), "Salva" (icona `check`, verde), "Annulla" (icona `x`). Mostrati condizionalmente in base al `mode` (`preview` vs `edit`)
+- [FEATURE] **`switchToEdit()` / `switchToPreview()`** orchestrano lo swap del contenuto modal: in preview rendering markdown via `renderMarkdownToContainer`; in edit mostrano warning box + textarea editabile
+- [FEATURE] **Warning box `.md-editor-warn`** sopra la textarea: icona triangle-alert + testo che spiega che le modifiche locali verranno sovrascritte al prossimo `claude plugins update <plugin>`, e suggerisce di aprire PR/issue per fix permanente
+- [FEATURE] **Confirm dialog su exit con modifiche pendenti**: se l'utente preme Esc / Annulla / chiude / click outside con `textarea.value !== currentContent`, viene chiesto conferma via `window.confirm`
+- [FEATURE] **Save flow**: click "Salva" → `writeMarkdownFile` IPC → toast success → ricarica `loadData()` per re-trigger health check (se il fix risolve il warning, il badge sparisce subito dalla card)
+- [FEATURE] **Cancel flow**: click "Annulla" → con confirm se modifiche pendenti → torna a preview con currentContent originale
+- [REFACTOR] **`openMarkdownPreview` propaga `fullId`** a `showMarkdownModal` (era già disponibile nel chiamante)
+- [STYLE] Nuove classi `.md-editor-warn` (badge arancione), `.md-editor-warn-text strong` (header bold giallo), `.md-editor-textarea` (mono 12px, min-height 400px, resize vertical, focus border accent), `.md-save-btn` (override colore verde success)
+- [ICON] Nuova icona Lucide `pencil` per il bottone Modifica
+
+### Use case
+
+Esempio: l'agent `audit-budget` di `maxym-ai-ads` ha health-warn perché manca `description` nel frontmatter. Click sulla card → preview → "Modifica" → aggiungi `description: ...` al frontmatter YAML → "Salva" → toast verde + il badge sparisce dalla card. Fix locale immediato finché non aggiorni il plugin.
+
+### Non-goals
+
+- ❌ Non scriviamo file nuovi (`existsSync` check obbligatorio)
+- ❌ Non modifichiamo path fuori dalla cache del plugin (paranoid check)
+- ❌ Non c'è confirm prima del salvataggio (è dell'utente la responsabilità); il warning permanente sull'editor è sufficiente
+
 ## v1.0.98 — 2026-05-26 — Tooltip esplicativo arricchito sui badge health di Skill/Agent
 
 Feedback utente sui warning/errori visibili nelle card Agent: cosa sono e si possono risolvere? Indagine:

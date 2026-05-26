@@ -1472,6 +1472,50 @@ body {
 /* v1.0.95 — Icona Lucide x dentro md-close (sostituisce carattere unicode ×). */
 .md-close .inline-icon { width: 18px; height: 18px; margin: 0; vertical-align: 0; }
 
+/* v1.0.99 — Editor inline markdown skill/agent: textarea che sostituisce
+   la preview rendered quando l'utente clicca "Modifica". Warning box
+   chiaro sopra spiega la temporaneità delle modifiche (sovrascritte al
+   prossimo `claude plugins update`). */
+.md-editor-warn {
+  display: flex; align-items: flex-start; gap: 10px;
+  background: rgba(245,158,11,.12);
+  border: 1px solid rgba(245,158,11,.36);
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin-bottom: 12px;
+  color: #fbbf24;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.md-editor-warn .inline-icon {
+  flex-shrink: 0;
+  margin: 0;
+  width: 18px; height: 18px;
+  vertical-align: 0;
+  margin-top: 1px;
+}
+.md-editor-warn-text { flex: 1; }
+.md-editor-warn-text strong { color: #fcd34d; display: block; margin-bottom: 2px; }
+.md-editor-textarea {
+  width: 100%;
+  min-height: 400px;
+  box-sizing: border-box;
+  background: var(--bg);
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  padding: 12px 14px;
+  color: var(--text);
+  font-family: "SF Mono", "Fira Code", Menlo, monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  resize: vertical;
+  outline: none;
+  transition: border-color .15s;
+}
+.md-editor-textarea:focus { border-color: var(--accent); }
+.md-save-btn { background: rgba(34,197,94,.18); color: #4ade80; border-color: rgba(34,197,94,.36); }
+.md-save-btn:hover { background: rgba(34,197,94,.28); border-color: rgba(34,197,94,.56); }
+
 /* v1.0.81 — Bottone copia globale nell'header del modal markdown viewer.
    Posizionato fra title e × con margine per non essere troppo vicino al close. */
 .md-copy {

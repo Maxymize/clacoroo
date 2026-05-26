@@ -65,6 +65,8 @@ const LUCIDE_ICONS = {
   // v1.0.96 — Pack M: view switcher cards/compatta
   'layout-grid': '<rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/>',
   'list':        '<line x1="8" x2="21" y1="6" y2="6"/><line x1="8" x2="21" y1="12" y2="12"/><line x1="8" x2="21" y1="18" y2="18"/><line x1="3" x2="3.01" y1="6" y2="6"/><line x1="3" x2="3.01" y1="12" y2="12"/><line x1="3" x2="3.01" y1="18" y2="18"/>',
+  // v1.0.99 — Editor markdown inline (skill/agent)
+  'pencil':      '<path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/>',
 };
 
 /**
@@ -2938,10 +2940,11 @@ function appendHealthBadge(chip, health) {
 }
 
 /* ── MARKDOWN PREVIEW (idea #1) ───────────────────────────────────────── */
+// v1.0.99 — Passa anche fullId a showMarkdownModal per abilitare l'editor inline
 async function openMarkdownPreview(fullId, kind, name) {
   const r = await window.claudeAPI.readMarkdownFile(fullId, kind, name);
   if (!r.success) { toast('Errore lettura ' + kind + ': ' + r.error, 'error'); return; }
-  showMarkdownModal(name, kind, r.content);
+  showMarkdownModal(name, kind, r.content, fullId);
 }
 
 function inlineNodes(text) {
@@ -3028,12 +3031,21 @@ function renderMarkdownToContainer(container, content) {
   if (inCode) { const pre = el('pre'); pre.appendChild(el('code', null, codeBuf.join('\n'))); container.appendChild(pre); }
 }
 
-function showMarkdownModal(name, kind, content) {
-  // v1.0.60 — Il guard del double-open è gestito da swapModalOverlay() a fine funzione
+// v1.0.99 — Modal markdown viewer con switch preview ⟷ editor inline.
+// Per skill/agent l'utente può cliccare "Modifica" per editare il contenuto
+// del file .md (frontmatter + body) e salvarlo. Warning chiaro: le modifiche
+// locali verranno sovrascritte al prossimo `claude plugins update <plugin>`.
+// `fullId` è opzionale: se passato, abilita l'editor. Senza fullId resta
+// solo preview (es. quando il modal viene aperto da un context dove non
+// abbiamo l'id del plugin).
+function showMarkdownModal(name, kind, content, fullId) {
   const overlay = el('div', 'md-overlay');
   const modal   = el('div', 'md-modal');
   modal.setAttribute('role', 'dialog');
   modal.setAttribute('aria-modal', 'true');
+
+  let currentContent = content;        // contenuto live (per copy / save)
+  let mode = 'preview';                 // 'preview' | 'edit'
 
   const header = el('div', 'md-header');
   const title  = el('div', 'md-title');
@@ -3041,38 +3053,149 @@ function showMarkdownModal(name, kind, content) {
   title.appendChild(kindBadge);
   title.appendChild(document.createTextNode(' ' + name));
 
-  // v1.0.81 — Bottone copia globale: copia l'intero contenuto markdown raw
-  // negli appunti. Utile per condividere skill/agent intere o usarle come
-  // base per istruzioni custom. Posizionato accanto al × con margine.
+  // Bottone copia (sempre disponibile, copia currentContent attuale)
   const copyAllBtn = btnWithIcon('md-copy', 'copy', 'Copia');
   copyAllBtn.setAttribute('aria-label', 'Copia testo completo negli appunti');
   copyAllBtn.title = 'Copia il contenuto completo del documento';
   copyAllBtn.addEventListener('click', async () => {
     try {
-      await navigator.clipboard.writeText(content);
+      await navigator.clipboard.writeText(currentContent);
       toast('Testo copiato negli appunti', 'success');
     } catch (e) {
       toast('Impossibile copiare: ' + e.message, 'error');
     }
   });
 
+  // v1.0.99 — Bottone Modifica/Salva/Annulla (solo se fullId presente)
+  const editBtn = btnWithIcon('md-copy', 'pencil', 'Modifica');
+  editBtn.title = 'Modifica il file .md (modifiche locali, sovrascritte al prossimo `claude plugins update`)';
+
+  const saveBtn   = btnWithIcon('md-copy md-save-btn', 'check', 'Salva');
+  saveBtn.title   = 'Salva le modifiche sul file .md locale';
+  saveBtn.style.display = 'none';
+
+  const cancelBtn = btnWithIcon('md-copy', 'x', 'Annulla');
+  cancelBtn.title = 'Annulla le modifiche e torna alla preview';
+  cancelBtn.style.display = 'none';
+
   const closeBtn = el('button', 'md-close'); closeBtn.appendChild(icon('x'));
   closeBtn.setAttribute('aria-label', 'Chiudi');
+
   header.appendChild(title);
   header.appendChild(copyAllBtn);
+  if (fullId) {
+    header.appendChild(editBtn);
+    header.appendChild(saveBtn);
+    header.appendChild(cancelBtn);
+  }
   header.appendChild(closeBtn);
 
+  // Container che alterna preview rendered ⟷ textarea editor
   const contentEl = el('div', 'md-content');
-  renderMarkdownToContainer(contentEl, content);
 
-  function onKey(e) { if (e.key === 'Escape') close(); }
+  function renderPreview() {
+    contentEl.textContent = '';
+    renderMarkdownToContainer(contentEl, currentContent);
+  }
+
+  let editorTextarea = null;
+  function renderEditor() {
+    contentEl.textContent = '';
+    // Warning box visibile sopra l'editor
+    const warn = el('div', 'md-editor-warn');
+    warn.appendChild(icon('triangle-alert'));
+    const wText = el('div', 'md-editor-warn-text');
+    wText.appendChild(el('strong', null, 'Attenzione — modifica locale temporanea'));
+    wText.appendChild(el('div', null,
+      'Stai modificando il file .md nella cache del plugin. Le tue modifiche verranno sovrascritte al prossimo `claude plugins update ' + (fullId || '<plugin>') + '`. Per fix permanente apri PR/issue sul repo del plugin.'));
+    warn.appendChild(wText);
+    contentEl.appendChild(warn);
+
+    // Textarea editor
+    editorTextarea = el('textarea', 'md-editor-textarea');
+    editorTextarea.spellcheck = false;
+    editorTextarea.value = currentContent;
+    contentEl.appendChild(editorTextarea);
+    editorTextarea.focus();
+  }
+
+  function switchToEdit() {
+    mode = 'edit';
+    editBtn.style.display   = 'none';
+    saveBtn.style.display   = '';
+    cancelBtn.style.display = '';
+    renderEditor();
+  }
+
+  function switchToPreview() {
+    mode = 'preview';
+    editBtn.style.display   = '';
+    saveBtn.style.display   = 'none';
+    cancelBtn.style.display = 'none';
+    editorTextarea = null;
+    renderPreview();
+  }
+
+  editBtn.addEventListener('click', switchToEdit);
+  cancelBtn.addEventListener('click', () => {
+    // Confirm solo se l'utente ha modificato il contenuto
+    if (editorTextarea && editorTextarea.value !== currentContent) {
+      if (!window.confirm('Hai modifiche non salvate. Vuoi davvero annullare?')) return;
+    }
+    switchToPreview();
+  });
+  saveBtn.addEventListener('click', async () => {
+    if (!editorTextarea) return;
+    const newContent = editorTextarea.value;
+    if (newContent === currentContent) { switchToPreview(); return; }
+    saveBtn.disabled = true; cancelBtn.disabled = true;
+    const r = await window.claudeAPI.writeMarkdownFile(fullId, kind, name, newContent);
+    saveBtn.disabled = false; cancelBtn.disabled = false;
+    if (r.success) {
+      currentContent = newContent;
+      toast('File salvato — ricordati che verrà sovrascritto al prossimo `claude plugins update`', 'success');
+      switchToPreview();
+      // Trigger reload dati per re-check health
+      try { await loadData(); } catch { /* graceful */ }
+    } else {
+      toast('Errore salvataggio: ' + (r.error || 'sconosciuto'), 'error');
+    }
+  });
+
+  function onKey(e) {
+    if (e.key === 'Escape') {
+      if (mode === 'edit') {
+        // In edit mode Esc fa Annulla con confirm se modificato
+        if (editorTextarea && editorTextarea.value !== currentContent) {
+          if (!window.confirm('Hai modifiche non salvate. Vuoi davvero annullare?')) return;
+        }
+        switchToPreview();
+      } else {
+        close();
+      }
+    }
+  }
   function close() {
     document.removeEventListener('keydown', onKey);
     overlay.remove();
   }
-  closeBtn.addEventListener('click', close);
-  overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+  closeBtn.addEventListener('click', () => {
+    if (mode === 'edit' && editorTextarea && editorTextarea.value !== currentContent) {
+      if (!window.confirm('Hai modifiche non salvate. Vuoi davvero chiudere?')) return;
+    }
+    close();
+  });
+  overlay.addEventListener('click', e => {
+    if (e.target !== overlay) return;
+    if (mode === 'edit' && editorTextarea && editorTextarea.value !== currentContent) {
+      if (!window.confirm('Hai modifiche non salvate. Vuoi davvero chiudere?')) return;
+    }
+    close();
+  });
   document.addEventListener('keydown', onKey);
+
+  // Render iniziale preview
+  renderPreview();
 
   modal.appendChild(header);
   modal.appendChild(contentEl);
