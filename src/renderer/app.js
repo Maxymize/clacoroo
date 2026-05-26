@@ -31,6 +31,81 @@ const MKT_COLORS = {
 
 function mktColor(mkt) { return MKT_COLORS[mkt] || '#d97757'; }
 
+/* ── ICONE LUCIDE (v1.0.95 — no emoji as icons) ────────────────────────
+ * Set di icone Lucide (lucide.dev, MIT) usate inline al posto di emoji
+ * (🗑/▶/↗/⎘/⚠/etc). Coerenza visuale con la sidebar (anche lei Lucide
+ * dalla v1.0.84). viewBox 24×24, stile stroke, ereditano currentColor.
+ *
+ * Per aggiungere un'icona: copia il path SVG da lucide.dev e mettilo nel
+ * dictionary qui sotto. Renderer la usa via `icon('nome')` che ritorna
+ * un nodo <svg> inline (cssClass `inline-icon`).
+ */
+const LUCIDE_ICONS = {
+  'plus':        '<line x1="12" x2="12" y1="5" y2="19"/><line x1="5" x2="19" y1="12" y2="12"/>',
+  'x':           '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
+  'check':       '<path d="M20 6 9 17l-5-5"/>',
+  'trash-2':     '<path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/>',
+  'play':        '<polygon points="6 3 20 12 6 21 6 3"/>',
+  'copy':        '<rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>',
+  'external-link':'<path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>',
+  'search':      '<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
+  'folder-open': '<path d="m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2"/>',
+  'triangle-alert':'<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/>',
+  'rotate-cw':   '<path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/>',
+  'circle-check':'<circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>',
+  'circle-x':    '<circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/>',
+  'circle-alert':'<circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/>',
+  'circle-help': '<circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" x2="12.01" y1="17" y2="17"/>',
+  'ban':         '<circle cx="12" cy="12" r="10"/><path d="m4.9 4.9 14.2 14.2"/>',
+  'eye':         '<path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/>',
+  'terminal':    '<polyline points="4 17 10 11 4 5"/><line x1="12" x2="20" y1="19" y2="19"/>',
+  'plug':        '<path d="M9 2v6"/><path d="M15 2v6"/><path d="M12 17v3"/><path d="M5 8h14"/><path d="M6 11V8h12v3a6 6 0 0 1-12 0Z"/>',
+  'chevron-down':'<path d="m6 9 6 6 6-6"/>',
+  'chevron-up':  '<path d="m18 15-6-6-6 6"/>',
+};
+
+/**
+ * Ritorna un nodo <svg> Lucide inline. Argomento `name` = chiave di
+ * LUCIDE_ICONS. Classe CSS `.inline-icon` per dimensione/colore standard.
+ * Per usarla in un bottone: `btn.appendChild(icon('trash-2'))` + testo.
+ */
+function icon(name) {
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('viewBox', '0 0 24 24');
+  svg.setAttribute('fill', 'none');
+  svg.setAttribute('stroke', 'currentColor');
+  svg.setAttribute('stroke-width', '2');
+  svg.setAttribute('stroke-linecap', 'round');
+  svg.setAttribute('stroke-linejoin', 'round');
+  svg.classList.add('inline-icon');
+  // I path Lucide sono semplici: parse via innerHTML SAFE (markup statico
+  // controllato da noi, niente input utente, vedi LUCIDE_ICONS sopra).
+  svg.innerHTML = LUCIDE_ICONS[name] || '';
+  return svg;
+}
+
+/**
+ * Helper per creare un button con icona Lucide + testo. Sostituisce il
+ * pattern `el('button', cls, '🗑 Rimuovi')` con `btnWithIcon(cls, 'trash-2', 'Rimuovi')`
+ * — coerente con il design system v1.0.95 (no emoji).
+ */
+function btnWithIcon(cls, iconName, label) {
+  const btn = el('button', cls);
+  btn.appendChild(icon(iconName));
+  btn.appendChild(document.createTextNode(label));
+  return btn;
+}
+
+/**
+ * Helper per "span con icona + testo" (badge, status, ecc.).
+ */
+function spanWithIcon(cls, iconName, label) {
+  const span = el('span', cls);
+  span.appendChild(icon(iconName));
+  span.appendChild(document.createTextNode(label));
+  return span;
+}
+
 /* ── STATE ────────────────────────────────────────────────────────────── */
 const state = {
   rawData:   null,
@@ -447,20 +522,20 @@ function render() {
   // un marketplace da URL/repo. Sostituisce "+ Progetto" quando si è in
   // questa pagina perché Progetto qui non avrebbe senso.
   if (state.section === 'marketplaces') {
-    const addMktBtn = el('button', 'btn btn-sm btn-ghost btn-refresh', '+ Marketplace');
+    const addMktBtn = btnWithIcon('btn btn-sm btn-ghost btn-refresh', 'plus', 'Marketplace');
     addMktBtn.title = 'Aggiungi un marketplace da URL git, repo GitHub o path locale';
     addMktBtn.addEventListener('click', () => showAddMarketplaceModal());
     actions.appendChild(addMktBtn);
   } else if (state.section === 'mcp') {
-    // v1.0.94 — Pack G v2: bottone "+ MCP" per aggiungere un server da CLACOROO
+    // v1.0.94 — Pack G v2: bottone per aggiungere un server da CLACOROO
     // via `claude mcp add` (form modale con transport/url/command/env/headers).
-    const addMcpBtn = el('button', 'btn btn-sm btn-ghost btn-refresh', '+ MCP');
+    const addMcpBtn = btnWithIcon('btn btn-sm btn-ghost btn-refresh', 'plus', 'MCP');
     addMcpBtn.title = 'Aggiungi un MCP server (HTTP, SSE o stdio) via `claude mcp add`';
     addMcpBtn.addEventListener('click', () => showAddMcpModal());
     actions.appendChild(addMcpBtn);
   } else {
     // v1.0.11 — Bottone "+" per aggiungere progetto tracciato (locale)
-    const addProjBtn = el('button', 'btn btn-sm btn-ghost btn-refresh', '+ Progetto');
+    const addProjBtn = btnWithIcon('btn btn-sm btn-ghost btn-refresh', 'plus', 'Progetto');
     addProjBtn.title = 'Aggiungi un progetto da tracciare (per vedere plugin/skill/agent locali)';
     addProjBtn.addEventListener('click', async () => {
       const r = await window.claudeAPI.addTrackedProject();
@@ -474,7 +549,7 @@ function render() {
     actions.appendChild(addProjBtn);
   }
 
-  const refreshBtn = el('button', 'btn btn-sm btn-ghost btn-refresh', '↻ Aggiorna');
+  const refreshBtn = btnWithIcon('btn btn-sm btn-ghost btn-refresh', 'rotate-cw', 'Aggiorna');
   refreshBtn.title = 'Ricarica i dati dai file di configurazione di Claude Code + ricontrolla le dipendenze hook';
   refreshBtn.addEventListener('click', async () => {
     refreshBtn.disabled = true;
@@ -485,14 +560,16 @@ function render() {
     try { await window.claudeAPI.refreshHookDeps(); } catch { /* graceful */ }
     await loadData();
     refreshBtn.disabled = false;
-    refreshBtn.textContent = '↻ Aggiorna';
+    refreshBtn.textContent = '';
+    refreshBtn.appendChild(icon('rotate-cw'));
+    refreshBtn.appendChild(document.createTextNode('Aggiorna'));
     toast('Dati ricaricati', 'success');
   });
   actions.appendChild(refreshBtn);
 
   // v1.0.67 — Pack B: toggle terminale integrato
   if (termState && termState.caps && termState.caps.available) {
-    const termBtn = el('button', 'btn btn-sm btn-ghost btn-refresh', '▣ Terminale');
+    const termBtn = btnWithIcon('btn btn-sm btn-ghost btn-refresh', 'terminal', 'Terminale');
     termBtn.title = 'Apri/chiudi il terminale integrato (Cmd+`)';
     termBtn.addEventListener('click', () => termSetOpen(!termState.open));
     actions.appendChild(termBtn);
@@ -1076,7 +1153,7 @@ function showPluginContentModal(p) {
   const title = el('div', 'md-title');
   title.appendChild(el('span', 'md-kind-badge md-kind-skill', 'plugin'));
   title.appendChild(document.createTextNode(' ' + p.id));
-  const closeBtn = el('button', 'md-close', '×');
+  const closeBtn = el('button', 'md-close'); closeBtn.appendChild(icon('x'));
   closeBtn.setAttribute('aria-label', 'Chiudi');
   header.appendChild(title);
   header.appendChild(closeBtn);
@@ -1386,7 +1463,7 @@ function showAddMarketplaceModal() {
   const title = el('div', 'md-title');
   title.appendChild(el('span', 'md-kind-badge md-kind-agent', 'marketplace'));
   title.appendChild(document.createTextNode(' Aggiungi marketplace'));
-  const closeBtn = el('button', 'md-close', '×');
+  const closeBtn = el('button', 'md-close'); closeBtn.appendChild(icon('x'));
   closeBtn.setAttribute('aria-label', 'Chiudi');
   header.appendChild(title); header.appendChild(closeBtn);
 
@@ -1515,7 +1592,7 @@ function showAddMcpModal() {
   const title = el('div', 'md-title');
   title.appendChild(el('span', 'md-kind-badge md-kind-agent', 'mcp'));
   title.appendChild(document.createTextNode(' Aggiungi MCP server'));
-  const closeBtn = el('button', 'md-close', '×');
+  const closeBtn = el('button', 'md-close'); closeBtn.appendChild(icon('x'));
   closeBtn.setAttribute('aria-label', 'Chiudi');
   header.appendChild(title); header.appendChild(closeBtn);
 
@@ -1718,7 +1795,7 @@ async function showMarketplaceContentModal(m) {
   const title = el('div', 'md-title');
   title.appendChild(el('span', 'md-kind-badge md-kind-agent', 'marketplace'));
   title.appendChild(document.createTextNode(' ' + m.id));
-  const closeBtn = el('button', 'md-close', '×');
+  const closeBtn = el('button', 'md-close'); closeBtn.appendChild(icon('x'));
   closeBtn.setAttribute('aria-label', 'Chiudi');
   header.appendChild(title);
   header.appendChild(closeBtn);
@@ -2294,7 +2371,8 @@ function buildHookCard(item) {
   if (missingDeps.length) {
     const warnRow = el('div', 'hook-missing-deps-row');
     const warnBadge = el('span', 'hook-missing-deps-badge');
-    warnBadge.textContent = '⚠ Manca: ' + missingDeps.join(', ');
+    warnBadge.appendChild(icon('triangle-alert'));
+    warnBadge.appendChild(document.createTextNode('Manca: ' + missingDeps.join(', ')));
     const avail = (state.rawData && state.rawData.hookDepsAvailability) || {};
     const hints = missingDeps
       .map(d => (avail[d] && avail[d].installHint) ? (d + '\n' + avail[d].installHint) : (d + ': installazione manuale richiesta'))
@@ -2303,19 +2381,19 @@ function buildHookCard(item) {
       '\n\nInstalla gli strumenti mancanti per evitare errori `hook startup` al boot di `claude`.';
     warnRow.appendChild(warnBadge);
 
-    // Mini-bottone "▶ Installa" per ogni tool mancante con installCommand
+    // Mini-bottone "Installa" per ogni tool mancante con installCommand
     missingDeps.forEach(dep => {
       const info = avail[dep];
       if (!info) return;
       if (info.installCommand) {
-        const btn = el('button', 'hook-dep-install-btn', '▶ Installa ' + dep);
+        const btn = btnWithIcon('hook-dep-install-btn', 'play', 'Installa ' + dep);
         btn.title = 'Apre il terminale integrato + pre-digita:\n' + info.installCommand
           + '\n\nNON premerà Enter automatico — conferma tu premendo Invio se vuoi procedere.';
         btn.addEventListener('click', e => { e.stopPropagation(); installDepInTerminal(dep, info.installCommand); });
         warnRow.appendChild(btn);
       } else if (info.docsUrl) {
         // Tool senza installer one-liner (es. Docker Desktop, gcloud) → solo link docs
-        const link = el('button', 'hook-dep-install-btn hook-dep-install-docs', '↗ Docs ' + dep);
+        const link = btnWithIcon('hook-dep-install-btn hook-dep-install-docs', 'external-link', 'Docs ' + dep);
         link.title = 'Apre la pagina docs di ' + dep + ' nel browser (richiede installer GUI manuale)';
         link.addEventListener('click', e => { e.stopPropagation(); window.claudeAPI.openExternal(info.docsUrl); });
         warnRow.appendChild(link);
@@ -2366,11 +2444,11 @@ function buildHookCard(item) {
 
   // Footer azioni
   const foot = el('div', 'hook-card-foot');
-  const detailBtn = el('button', 'btn btn-sm btn-ghost', '⌕ Dettagli');
+  const detailBtn = btnWithIcon('btn btn-sm btn-ghost', 'eye', 'Dettagli');
   detailBtn.addEventListener('click', e => { e.stopPropagation(); showHookDetailsModal(item); });
   foot.appendChild(detailBtn);
   if (item.sourcePath) {
-    const openBtn = el('button', 'btn btn-sm btn-ghost', '📁 Apri hooks.json');
+    const openBtn = btnWithIcon('btn btn-sm btn-ghost', 'folder-open', 'Apri hooks.json');
     openBtn.addEventListener('click', e => {
       e.stopPropagation();
       window.claudeAPI.openDirectory(item.sourcePath);
@@ -2481,7 +2559,7 @@ function showHookDetailsModal(item) {
   titleWrap.appendChild(el('span', 'hook-modal-plugin', item.pluginId + (item.mkt ? ' · ' + item.mkt : '')));
   header.appendChild(titleWrap);
 
-  const copyBtn = el('button', 'md-copy', '⎘ Copia');
+  const copyBtn = btnWithIcon('md-copy', 'copy', 'Copia');
   copyBtn.title = 'Copia il JSON completo di questa configurazione hook';
   copyBtn.addEventListener('click', () => {
     const json = JSON.stringify({
@@ -2494,7 +2572,7 @@ function showHookDetailsModal(item) {
   });
   header.appendChild(copyBtn);
 
-  const closeBtn = el('button', 'md-close', '×');
+  const closeBtn = el('button', 'md-close'); closeBtn.appendChild(icon('x'));
   closeBtn.title = 'Chiudi (Esc)';
   header.appendChild(closeBtn);
 
@@ -2697,7 +2775,7 @@ function showMarkdownModal(name, kind, content) {
   // v1.0.81 — Bottone copia globale: copia l'intero contenuto markdown raw
   // negli appunti. Utile per condividere skill/agent intere o usarle come
   // base per istruzioni custom. Posizionato accanto al × con margine.
-  const copyAllBtn = el('button', 'md-copy', '⎘ Copia');
+  const copyAllBtn = btnWithIcon('md-copy', 'copy', 'Copia');
   copyAllBtn.setAttribute('aria-label', 'Copia testo completo negli appunti');
   copyAllBtn.title = 'Copia il contenuto completo del documento';
   copyAllBtn.addEventListener('click', async () => {
@@ -2709,7 +2787,7 @@ function showMarkdownModal(name, kind, content) {
     }
   });
 
-  const closeBtn = el('button', 'md-close', '×');
+  const closeBtn = el('button', 'md-close'); closeBtn.appendChild(icon('x'));
   closeBtn.setAttribute('aria-label', 'Chiudi');
   header.appendChild(title);
   header.appendChild(copyAllBtn);
@@ -3761,15 +3839,24 @@ function buildMcpCard(srv) {
   nameWrap.appendChild(sub);
   header.appendChild(nameWrap);
 
+  // v1.0.95 — Badge status con icona Lucide invece di carattere unicode
   const badge = el('div', 'mcp-badge mcp-badge-' + srv.status);
+  const badgeIconName = {
+    connected: 'circle-check',
+    needsAuth: 'circle-alert',
+    warning:   'circle-alert',
+    error:     'circle-x',
+    unknown:   'circle-help',
+  }[srv.status] || 'circle-help';
   const badgeText = {
-    connected: '✓ Connected',
-    needsAuth: '! Needs auth',
-    warning:   '! Warning',
-    error:     '✗ Errore',
-    unknown:   '? Sconosciuto',
+    connected: 'Connected',
+    needsAuth: 'Needs auth',
+    warning:   'Warning',
+    error:     'Errore',
+    unknown:   'Sconosciuto',
   }[srv.status] || srv.status;
-  badge.textContent = badgeText;
+  badge.appendChild(icon(badgeIconName));
+  badge.appendChild(document.createTextNode(badgeText));
   header.appendChild(badge);
   card.appendChild(header);
 
@@ -3792,7 +3879,7 @@ function buildMcpCard(srv) {
     const copyBtn = el('button', 'mcp-card-icon-btn');
     copyBtn.title = 'Copia negli appunti';
     copyBtn.setAttribute('aria-label', 'Copia');
-    copyBtn.textContent = '⧉';
+    copyBtn.appendChild(icon('copy'));
     copyBtn.addEventListener('click', async (e) => {
       e.stopPropagation();
       try {
@@ -3805,6 +3892,27 @@ function buildMcpCard(srv) {
     });
     connWrap.appendChild(copyBtn);
   }
+
+  // v1.0.95 — Toggle "Mostra tutto" se il comando supera l'altezza max.
+  // Verifica DOPO il render (next tick) leggendo scrollHeight vs clientHeight.
+  if (srv.connection && srv.connection.length > 80) {
+    const toggle = el('button', 'mcp-card-conn-toggle');
+    toggle.textContent = 'Mostra tutto';
+    toggle.style.display = 'none';  // mostrato solo se serve
+    toggle.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const expanded = conn.classList.toggle('expanded');
+      toggle.textContent = expanded ? 'Mostra meno' : 'Mostra tutto';
+    });
+    connWrap.appendChild(toggle);
+    // Check truncation dopo il primo paint
+    requestAnimationFrame(() => {
+      if (conn.scrollHeight > conn.clientHeight + 2) {
+        toggle.style.display = '';
+      }
+    });
+  }
+
   connRow.appendChild(connWrap);
   body.appendChild(connRow);
 
@@ -3842,7 +3950,7 @@ function buildMcpCard(srv) {
     footer.appendChild(hint);
     if (isUserAdded) {
       const actionsWrap = el('div', 'mcp-card-actions');
-      const rmBtn = el('button', 'btn btn-sm btn-ghost', '🗑 Rimuovi');
+      const rmBtn = btnWithIcon('btn btn-sm btn-ghost', 'trash-2', 'Rimuovi');
       rmBtn.title = 'Rimuove questo server con `claude mcp remove ' + srv.id + '`';
       rmBtn.addEventListener('click', e => { e.stopPropagation(); confirmAndRemoveMcp(srv); });
       actionsWrap.appendChild(rmBtn);
@@ -3851,10 +3959,16 @@ function buildMcpCard(srv) {
   } else {
     const actionsWrap = el('div', 'mcp-card-actions');
     srv.reconnect.actions.forEach(act => {
-      const btn = el('button', 'btn btn-sm');
-      btn.textContent = act.label;
-      // Stile: open-url e open-terminal sono "primari" (accent), clear-cache è "ghost"
-      btn.classList.add(act.kind === 'clear-cache' ? 'btn-ghost' : 'btn-primary');
+      // v1.0.95 — Icone Lucide per kind (sostituiscono emoji ↗/🚫 nei label backend)
+      const iconByKind = {
+        'open-url': 'external-link',
+        'open-terminal': 'terminal',
+        'clear-cache': 'ban',
+      };
+      // Strip leading emoji/symbols from label (backend usa ancora "↗ Riautorizza" etc)
+      const cleanLabel = (act.label || '').replace(/^[^a-zA-ZÀ-ſ]+\s*/, '');
+      const btn = btnWithIcon('btn btn-sm ' + (act.kind === 'clear-cache' ? 'btn-ghost' : 'btn-primary'),
+        iconByKind[act.kind] || 'play', cleanLabel);
       btn.title = act.kind === 'open-url' ? act.url
         : act.kind === 'open-terminal' ? ('Apre nuovo tab terminale e lancia: ' + act.command)
         : 'Cancella entry da mcp-needs-auth-cache.json (non tocca i token reali)';
@@ -3863,7 +3977,7 @@ function buildMcpCard(srv) {
     });
     // v1.0.94 — bottone Rimuovi anche nel footer "needsAuth" se user-added
     if (isUserAdded) {
-      const rmBtn = el('button', 'btn btn-sm btn-ghost', '🗑 Rimuovi');
+      const rmBtn = btnWithIcon('btn btn-sm btn-ghost', 'trash-2', 'Rimuovi');
       rmBtn.title = 'Rimuove questo server con `claude mcp remove ' + srv.id + '`';
       rmBtn.addEventListener('click', e => { e.stopPropagation(); confirmAndRemoveMcp(srv); });
       actionsWrap.appendChild(rmBtn);
@@ -5116,7 +5230,7 @@ async function openChangelogModal() {
 
   const header = el('div', 'changelog-header');
   const title = el('div', 'changelog-title', 'Changelog');
-  const closeBtn = el('button', 'md-close', '×');
+  const closeBtn = el('button', 'md-close'); closeBtn.appendChild(icon('x'));
   closeBtn.setAttribute('aria-label', 'Chiudi');
   header.appendChild(title); header.appendChild(closeBtn);
 

@@ -240,6 +240,20 @@ body {
 }
 .nav-item.active .nav-icon { opacity: 1; }
 
+/* v1.0.95 — Icone Lucide inline usate nei bottoni / badge dell'app
+   (sostituiscono le emoji 🗑/▶/⎘/⚠/etc per coerenza visiva). Dimensione
+   default 14px, allineata al baseline del testo via vertical-align. */
+.inline-icon {
+  width: 14px; height: 14px;
+  flex-shrink: 0;
+  display: inline-block;
+  vertical-align: -2px;
+  margin-right: 4px;
+}
+.inline-icon:last-child { margin-right: 0; }
+.inline-icon.icon-only { margin-right: 0; }
+.inline-icon.icon-lg   { width: 16px; height: 16px; vertical-align: -3px; }
+
 .nav-badge {
   margin-left: auto;
   background: var(--red);
@@ -1202,6 +1216,8 @@ body {
   font-family: inherit;
 }
 .md-close:hover { background: var(--surface2); color: var(--text); }
+/* v1.0.95 — Icona Lucide x dentro md-close (sostituisce carattere unicode ×). */
+.md-close .inline-icon { width: 18px; height: 18px; margin: 0; vertical-align: 0; }
 
 /* v1.0.81 — Bottone copia globale nell'header del modal markdown viewer.
    Posizionato fra title e × con margine per non essere troppo vicino al close. */
@@ -2662,21 +2678,50 @@ body {
 .mcp-card-conn-wrap {
   flex: 1;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 4px;
   min-width: 0;
+  flex-wrap: wrap;
 }
+/* v1.0.95 — Limita altezza a ~2 righe per default. Comandi shell molto lunghi
+   (es. claude-mem mcp-search con ~600 char) generavano card altissime che
+   sfalsavano l'altezza dell'intera riga grid. Bottone "Mostra tutto" sotto
+   espande/collassa. La classe .expanded toglie il vincolo. */
 .mcp-card-conn {
   font-family: "SF Mono", "Fira Code", Menlo, monospace;
   font-size: 11px;
   color: var(--text);
   background: var(--surface2);
-  padding: 2px 6px;
+  padding: 4px 6px;
   border-radius: 4px;
   word-break: break-all;
   flex: 1;
   min-width: 0;
+  max-height: 36px;        /* ~2 righe a font-size 11px line-height 1.4 */
+  overflow: hidden;
+  position: relative;
+  line-height: 1.4;
+  transition: max-height .2s ease;
 }
+.mcp-card-conn.expanded {
+  max-height: 500px;       /* abbastanza per il command più lungo che abbiamo */
+}
+.mcp-card-conn-toggle {
+  flex-basis: 100%;
+  margin-top: 4px;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 10px;
+  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+  cursor: pointer;
+  padding: 2px 4px;
+  text-align: left;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  transition: color .15s;
+}
+.mcp-card-conn-toggle:hover { color: var(--accent2); }
 .mcp-card-conn-link {
   cursor: pointer;
   color: var(--accent2, #6a9bcc);

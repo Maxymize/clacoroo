@@ -1,5 +1,28 @@
 # Changelog
 
+## v1.0.95 — 2026-05-26 — Card MCP truncate + helper icone Lucide (no emoji) + Pack M registrato
+
+Due fix UX dalla feedback utente sulla sezione MCP.
+
+### Truncate comando MCP a 2 righe
+
+- [FIX] **Card MCP `mcp-search` (claude-mem) altissima**: il comando shell molto lungo (~600 char) faceva crescere la card a tutta colonna sfalsando l'altezza della riga grid e creando spazi vuoti enormi nelle altre card. Ora `.mcp-card-conn` ha `max-height: 36px` (~2 righe) + bottone "Mostra tutto" / "Mostra meno" sotto, visibile solo se il contenuto è davvero troncato (`scrollHeight > clientHeight + 2`)
+- [STYLE] `.mcp-card-conn.expanded` toglie il vincolo `max-height` per espandere
+- [STYLE] `.mcp-card-conn-toggle` mini-bottone uppercase neutro che attiva l'espansione
+
+### Helper icone Lucide (sostituisce emoji)
+
+- [REFACTOR] **`LUCIDE_ICONS`** dictionary nel renderer con ~20 path SVG Lucide (plus, x, check, trash-2, play, copy, external-link, search, folder-open, triangle-alert, rotate-cw, circle-check, circle-x, circle-alert, circle-help, ban, eye, terminal, plug, chevron-down/up)
+- [REFACTOR] **`icon(name)`** helper genera nodo `<svg>` Lucide inline con classe `.inline-icon` (14px default, ereditano currentColor, stroke style coerente con sidebar)
+- [REFACTOR] **`btnWithIcon(cls, iconName, label)`** + **`spanWithIcon`** helper per ridurre boilerplate
+- [STYLE] `.inline-icon` CSS centralizzato + variant `.icon-lg` (16px) e `.icon-only` (no margin-right)
+- [FIX] **Sostituite emoji sui bottoni più visibili**: topbar (`+ Marketplace/MCP/Progetto`, `↻ Aggiorna`, `▣ Terminale`), card MCP (badge status, `⧉ Copy`, `🗑 Rimuovi`), card Hook (`⌕ Dettagli`, `📁 Apri hooks.json`), badge "Manca", bottoni "▶ Installa <tool>" + "↗ Docs <tool>", modal close (`×` → icona Lucide `x`), modal copy (`⎘ Copia` → icona `copy`), bottoni reconnect MCP (icon per kind)
+- [NOTE] **Refactor parziale**: ho coperto i bottoni e badge più visibili. Restano alcune emoji ancora in posti minori (toast `✓/✗`, indicatori inline `⚠ Storage`, etc) — saranno sostituiti incrementalmente nelle prossime versioni quando si lavora su quelle aree
+
+### Pack M registrato (NEXT)
+
+- [DOCS] **Pack M — Vista cards + compatta switchabile per tutte le sezioni**: registrato in TASK.md. Skill/Agent oggi hanno solo compatta a chip; Marketplace/Plugin/MCP/Hooks hanno solo cards. Pack M aggiunge entrambe le viste per tutte con switch in topbar accanto al sort dropdown. Default vista cards. Implementazione in v1.0.96+ (MVP infra+Skill/Agent), v1.0.97+ (compact per le altre)
+
 ## v1.0.94 — 2026-05-26 — Filtro plugin in Hooks + Pack G v2 azioni mutate: Add/Remove MCP
 
 Due feature parallele dalla stessa scelta utente.
