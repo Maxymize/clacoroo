@@ -151,6 +151,9 @@ window.LOCALES.en = {
     seeAll:        'See all',
     details:       'Details',
     tools:         'Tools',
+    copyHookJson:  'Copy the full JSON of this hook config',
+    copyDocument:  'Copy the full document content',
+    copyToClipboard:'Copy to clipboard',
   },
 
   // Chip nelle sezioni riassuntive (Dashboard)
@@ -268,6 +271,51 @@ window.LOCALES.en = {
     toastLogoutErr: 'Logout error: {msg}',
   },
 
+  // Onboarding tour
+  tour: {
+    skip:           'Skip',
+    back:           'Back',
+    next:           'Next',
+    start:          'Start',
+    step1Title:     'Welcome to CLACOROO',
+    step1Body:      'The visual panel to manage plugins, marketplaces, skills and agents of your Claude Code. No more CLI commands to remember. Quick 5-step tour.',
+    step2Title:     'Sidebar',
+    step2Body:      'On the left, 6 sections: Dashboard (overview), Plugins (enable/disable), Marketplaces (plugin sources), Skills and Agents (catalogs), Settings. Click to navigate.',
+    step3Title:     'Plugins',
+    step3Body:      'Each plugin has a card with enable/disable toggle, Update button, Remove, and the new 📁 (open in Finder) and 📝 (open in VS Code) buttons. Filters and search at the top.',
+    step4Title:     'Auto-refresh',
+    step4Body:      'The UI auto-refreshes when Claude Code config files change. Operations performed here go into "Recent activity" in the Dashboard.',
+    step5Title:     'Ready!',
+    step5Body:      'Feel free to explore. You can replay this tour from Settings → Onboarding → Restart tour. Have fun!',
+  },
+
+  // Update banner (below topbar)
+  updateBanner: {
+    msgPre:         'New version ',
+    msgTail:        ' available',
+    openDownload:   'Open download page',
+    later:          'Remind me later',
+    skipVersion:    'Skip this version',
+  },
+
+  // Command palette (Cmd+K) — common labels
+  palette: {
+    placeholder:    'Search plugin, skill, agent, marketplace or action…',
+    ariaLabel:      'Command palette',
+    sectionAction:  'action',
+    sectionKindSection:'section',
+    actionGoTo:     'Go to {name}',
+    actionReload:   'Reload data',
+    actionExport:   'Export snapshot',
+    actionImport:   'Import snapshot',
+    actionChangelog:'Open changelog',
+    actionRestartTour:'Restart onboarding tour',
+    actionCheckUpdates:'Check for updates',
+    pluginDisabledSuffix:' · disabled',
+    pluginsCount:   '{n} plugins',
+    toastSnapshot:  'Snapshot exported',
+  },
+
   // API key panel (Settings > Claude API key)
   apikey: {
     loadingStatus:  'Loading API key status…',
@@ -290,7 +338,29 @@ window.LOCALES.en = {
   // Search placeholder generico
   search: {
     generic:       'Search…',
+    plugins:       'Search plugin…',
     hooks:         'Search matcher, command, plugin…',
+    skills:        'Search skill…',
+    agents:        'Search agent…',
+  },
+
+  // Token budget modal
+  token: {
+    modelLabel:    'Model:',
+    disableBtn:    'Disable −{tok}',
+    introTopN:     'Active global plugins sorted by "always-on" weight (tokens loaded on every `claude` session boot). Data extracted from Claude Code\'s `plugin-catalog-cache.json`. Current values for model {model}. The "Δ Opus" column shows the delta between Opus 4.7 and Sonnet 4.6 (Opus typically weighs +30-40%).',
+    colNumber:     '#',
+    colPlugin:     'Plugin',
+    colMarketplace:'Marketplace',
+    colAlwaysOn:   '{model} always',
+    colOnInvoke:   'On-invoke',
+    colDeltaOpus:  'Δ Opus',
+    colTotal:      'Total',
+  },
+
+  // UI common status
+  status: {
+    loading:       'Loading…',
   },
 
   // Empty states

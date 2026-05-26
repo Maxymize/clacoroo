@@ -1,5 +1,45 @@
 # Changelog
 
+## v1.0.120 — 2026-05-26 — Pack N (Phase 3g batch finale): onboarding tour + update banner + command palette + token modal + setStatus
+
+Ultimo batch incrementale di Pack N prima della Phase 4 closure. Migrate onboarding tour completo (5 step + buttons), banner update notification, command palette labels, modal token budget headers + intro + disable button, search placeholder Plugin, modal close aria-label e Copy tooltip.
+
+### Locales — 5 namespace nuovi
+
+- **`tour.*` (12)**: skip/back/next/start buttons + 5 step (title + body)
+- **`updateBanner.*` (5)**: msgPre, msgTail, openDownload, later, skipVersion
+- **`palette.*` (14)**: placeholder, ariaLabel, sectionAction/Section, 7 action labels (goTo/reload/export/import/changelog/restartTour/checkUpdates), pluginDisabledSuffix, pluginsCount{n}, toastSnapshot
+- **`token.*` (10)**: modelLabel, disableBtn{tok}, introTopN{model}, 6 table column headers
+- **`status.*` (1)**: loading
+- **Esteso `search.*`**: + plugins / skills / agents placeholders
+- **Esteso `button.*`**: + copyHookJson / copyDocument / copyToClipboard
+
+### Migrazione
+
+- [REFACTOR] **Onboarding tour**: `TOUR_STEPS` array module-level rimosso. Sostituito da `getTourStep(idx)` runtime helper che fa lookup `t('tour.stepNTitle')` + `t('tour.stepNBody')` — segue lingua attiva
+- [REFACTOR] **Tour buttons** (Salta/Indietro/Avanti/Inizia): tutti via `t('tour.*')`. Counter "N / 5" formato dinamico
+- [REFACTOR] **Update banner**: msg parts (pre/tail) + 3 action buttons (openDownload / later / skipVersion)
+- [REFACTOR] **Command palette**: placeholder + aria-label + 7 action labels + 2 sub labels (azione/sezione) con interpolazione `{name}` per goTo
+- [REFACTOR] **Token budget modal**: model dropdown label "Modello:", disable button "Disabilita −X" con interpolazione `{tok}`, intro text completo con `{model}`, 6 column headers
+- [REFACTOR] **`setStatus('loading', …)`**: stringa "Caricamento…" via `t('status.loading')`
+- [REFACTOR] **Plugin search placeholder**: 'Cerca plugin…' via t()
+- [REFACTOR] **4 modal close aria-label** ("Chiudi"): replace_all su `t('button.close')`
+- [REFACTOR] **3 Copy tooltip varianti**: copyHookJson, copyDocument, copyToClipboard
+
+### Stats
+
+- 463 chiamate `t()` totali in app.js
+- Coverage finale stimato: ~97% delle stringhe user-visible migrate
+
+### Residui (intenzionalmente non migrati)
+
+- **HOOK_EVENT_DOCS** (~30 long-form descriptions tecniche per developer): mantenute in IT, tooltip raramente visti. Migrazione opzionale post-v1.1.0
+- **About dialog** (setupAboutPanel in src/lib/menu.js + main process): testi statici Electron menu. Migrazione opzionale post-v1.1.0
+- **~10 toast errori specifici** (es. MCP auth cache cleared, snapshot import errors): casi raramente attivati, restano in IT
+- **Activity log entries** (kind/action labels stringhe lib/state.js): backend strings, migrazione opzionale
+
+Prossimo step: **v1.1.0 closure** — audit shape it↔en + smoke test + bump esplicito a milestone bilingue.
+
 ## v1.0.119 — 2026-05-26 — Pack N (Phase 3f): pannelli Account Claude + API key Claude
 
 Continua Pack N i18n. Migrate i 2 pannelli inner di Settings (Account + API key) che erano hardcoded in italiano. Coprono buona parte delle stringhe restanti.

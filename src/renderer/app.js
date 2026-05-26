@@ -345,7 +345,7 @@ function appendModifiedBadge(parent, item, kind, mode) {
     const modIcon = icon('pencil');
     modIcon.classList.add('chip-modified-icon');
     modIcon.style.cssText = 'width:11px;height:11px;color:#fbbf24;margin-left:4px;';
-    if (tsStr) modIcon.setAttribute('aria-label', 'Modificato localmente ' + tsStr);
+    if (tsStr) modIcon.setAttribute('aria-label', t('plugin.modifiedLocal', { when: tsStr }));
     parent.appendChild(modIcon);
     return;
   }
@@ -600,7 +600,7 @@ function switchToSection(name) {
 
 /* ── DATA ─────────────────────────────────────────────────────────────── */
 async function loadData() {
-  setStatus('loading', 'Caricamento…');
+  setStatus('loading', t('status.loading'));
   const result = await window.claudeAPI.getData();
   if (!result.ok) {
     setStatus('error', t('uiErr.dataLoad'));
@@ -1303,7 +1303,7 @@ function renderTokenBudgetSection(container, plugins, opts = {}) {
   const titleRow = el('div', 'token-budget-title-row');
   titleRow.appendChild(sectionTitle(t('section.pluginPerPeso'), 'gauge'));
   const modelSwitch = el('div', 'token-budget-model-switch');
-  modelSwitch.appendChild(el('span', 'token-budget-model-label', 'Modello:'));
+  modelSwitch.appendChild(el('span', 'token-budget-model-label', t('token.modelLabel')));
   const sel = el('select', 'token-budget-model-select');
   [
     { v: 'sonnet', l: 'Sonnet 4.6' },
@@ -1372,7 +1372,7 @@ function renderTokenBudgetSection(container, plugins, opts = {}) {
     // v1.0.109 — Bottone Disabilita inline (quick context cleanup)
     const disableBtn = el('button', 'token-budget-disable-btn');
     disableBtn.appendChild(icon('ban'));
-    disableBtn.appendChild(document.createTextNode('Disabilita −' + formatTokenSize(v.always)));
+    disableBtn.appendChild(document.createTextNode(t('token.disableBtn', { tok: formatTokenSize(v.always) })));
     disableBtn.title = t('plugin.disableTip', { id: p.id, tok: v.always });
     disableBtn.addEventListener('click', e => {
       e.stopPropagation();
@@ -1432,14 +1432,14 @@ function showTokenBudgetModal(plugins) {
   const modelLabel = model === 'opus' ? 'Opus 4.7' : 'Sonnet 4.6';
   // Intro
   const intro = el('p', 'token-budget-intro');
-  intro.textContent = 'Plugin globali attivi ordinati per peso "always-on" (tokens caricati ad ogni boot di sessione `claude`). Dati estratti dal `plugin-catalog-cache.json` di Claude Code. Valori attuali per modello ' + modelLabel + '. La colonna "Δ Opus" mostra il delta tra Opus 4.7 e Sonnet 4.6 (Opus pesa tipicamente +30-40%).';
+  intro.textContent = t('token.introTopN', { model: modelLabel });
   content.appendChild(intro);
 
   // Table — v1.0.109 colonna delta Opus aggiunta
   const table = el('table', 'token-budget-table');
   const thead = el('thead');
   const trh = el('tr');
-  ['#', 'Plugin', 'Marketplace', modelLabel + ' always', 'On-invoke', 'Δ Opus', 'Totale', ''].forEach(h => trh.appendChild(el('th', null, h)));
+  [t('token.colNumber'), t('token.colPlugin'), t('token.colMarketplace'), t('token.colAlwaysOn', { model: modelLabel }), t('token.colOnInvoke'), t('token.colDeltaOpus'), t('token.colTotal'), ''].forEach(h => trh.appendChild(el('th', null, h)));
   thead.appendChild(trh);
   table.appendChild(thead);
   const tbody = el('tbody');
@@ -1623,7 +1623,7 @@ function renderPlugins() {
   icon.appendChild(iconPath);
   searchWrap.appendChild(icon);
   const searchInp = el('input', 'search-input');
-  searchInp.setAttribute('placeholder', 'Cerca plugin…');
+  searchInp.setAttribute('placeholder', t('search.plugins'));
   searchInp.setAttribute('type', 'text');
   searchInp.value = f.search;
   searchInp.addEventListener('input', () => {
@@ -1783,7 +1783,7 @@ function showPluginContentModal(p) {
   title.appendChild(el('span', 'md-kind-badge md-kind-skill', 'plugin'));
   title.appendChild(document.createTextNode(' ' + p.id));
   const closeBtn = el('button', 'md-close'); closeBtn.appendChild(icon('x'));
-  closeBtn.setAttribute('aria-label', 'Chiudi');
+  closeBtn.setAttribute('aria-label', t('button.close'));
   header.appendChild(title);
   header.appendChild(closeBtn);
 
@@ -2457,7 +2457,7 @@ async function showMarketplaceContentModal(m) {
   title.appendChild(el('span', 'md-kind-badge md-kind-agent', 'marketplace'));
   title.appendChild(document.createTextNode(' ' + m.id));
   const closeBtn = el('button', 'md-close'); closeBtn.appendChild(icon('x'));
-  closeBtn.setAttribute('aria-label', 'Chiudi');
+  closeBtn.setAttribute('aria-label', t('button.close'));
   header.appendChild(title);
   header.appendChild(closeBtn);
 
@@ -3418,7 +3418,7 @@ function showHookDetailsModal(item) {
   header.appendChild(titleWrap);
 
   const copyBtn = btnWithIcon('md-copy', 'copy', t('button.copy'));
-  copyBtn.title = 'Copia il JSON completo di questa configurazione hook';
+  copyBtn.title = t('button.copyHookJson');
   copyBtn.addEventListener('click', () => {
     const json = JSON.stringify({
       event: item.event,
@@ -3645,7 +3645,7 @@ function showMarkdownModal(name, kind, content, fullId) {
   // Bottone copia (sempre disponibile, copia currentContent attuale)
   const copyAllBtn = btnWithIcon('md-copy', 'copy', 'Copia');
   copyAllBtn.setAttribute('aria-label', 'Copia testo completo negli appunti');
-  copyAllBtn.title = 'Copia il contenuto completo del documento';
+  copyAllBtn.title = t('button.copyDocument');
   copyAllBtn.addEventListener('click', async () => {
     try {
       await navigator.clipboard.writeText(currentContent);
@@ -3668,7 +3668,7 @@ function showMarkdownModal(name, kind, content, fullId) {
   cancelBtn.style.display = 'none';
 
   const closeBtn = el('button', 'md-close'); closeBtn.appendChild(icon('x'));
-  closeBtn.setAttribute('aria-label', 'Chiudi');
+  closeBtn.setAttribute('aria-label', t('button.close'));
 
   header.appendChild(title);
   header.appendChild(copyAllBtn);
@@ -4884,8 +4884,8 @@ function buildMcpCard(srv) {
 
   if (srv.connection) {
     const copyBtn = el('button', 'mcp-card-icon-btn');
-    copyBtn.title = 'Copia negli appunti';
-    copyBtn.setAttribute('aria-label', 'Copia');
+    copyBtn.title = t('button.copyToClipboard');
+    copyBtn.setAttribute('aria-label', t('button.copy'));
     copyBtn.appendChild(icon('copy'));
     copyBtn.addEventListener('click', async (e) => {
       e.stopPropagation();
@@ -6180,29 +6180,13 @@ function renderSettings() {
   setContent(wrap);
 }
 
-/* ── ONBOARDING TOUR (idea #7) ────────────────────────────────────────── */
-const TOUR_STEPS = [
-  {
-    title: 'Benvenuto in CLACOROO',
-    body: 'Il pannello visuale per gestire plugin, marketplace, skill e agent del tuo Claude Code. Niente più comandi CLI da ricordare. Ti faccio un giro rapido in 5 step.',
-  },
-  {
-    title: 'Sidebar',
-    body: 'A sinistra trovi 6 sezioni: Dashboard (panoramica), Plugin (gestisci attivi/disattivi), Marketplace (sorgenti dei plugin), Skill e Agent (cataloghi), Impostazioni. Clicca per spostarti.',
-  },
-  {
-    title: 'Plugin',
-    body: 'Ogni plugin ha una card con toggle attiva/disattiva, bottone Aggiorna, Rimuovi, e i nuovi bottoni 📁 (apri nel Finder) e 📝 (apri in VS Code). Filtri e ricerca in alto.',
-  },
-  {
-    title: 'Auto-refresh',
-    body: "L'UI si aggiorna sola quando i file di config di Claude Code cambiano. Le operazioni eseguite qui finiscono in 'Attività recenti' nella Dashboard.",
-  },
-  {
-    title: 'Pronto!',
-    body: 'Esplora liberamente. Puoi rivedere questo tour da Impostazioni → Onboarding → Riavvia tour. Buon lavoro!',
-  },
-];
+/* ── ONBOARDING TOUR ──────────────────────────────────────────────────── */
+// `getTourSteps()` chiamata al render per riflettere la lingua attiva.
+const TOUR_STEP_COUNT = 5;
+function getTourStep(idx) {
+  const n = idx + 1;
+  return { title: t('tour.step' + n + 'Title'), body: t('tour.step' + n + 'Body') };
+}
 
 function showOnboardingTour() {
   if (document.querySelector('.tour-overlay')) return;  // guard double-modal
@@ -6222,9 +6206,9 @@ function showOnboardingTour() {
   const body    = el('p', 'tour-body');
   const counter = el('div', 'tour-counter');
   const actions = el('div', 'tour-actions');
-  const skipBtn = el('button', 'btn btn-sm btn-ghost', 'Salta');
-  const backBtn = el('button', 'btn btn-sm btn-ghost', 'Indietro');
-  const nextBtn = el('button', 'btn btn-sm btn-primary', 'Avanti');
+  const skipBtn = el('button', 'btn btn-sm btn-ghost', t('tour.skip'));
+  const backBtn = el('button', 'btn btn-sm btn-ghost', t('tour.back'));
+  const nextBtn = el('button', 'btn btn-sm btn-primary', t('tour.next'));
 
   function onKey(e) {
     if (e.key === 'Escape') close();
@@ -6237,18 +6221,18 @@ function showOnboardingTour() {
     overlay.remove();
   }
   function renderStep() {
-    const s = TOUR_STEPS[stepIdx];
+    const s = getTourStep(stepIdx);
     title.textContent = s.title;
     body.textContent  = s.body;
-    counter.textContent = (stepIdx + 1) + ' / ' + TOUR_STEPS.length;
+    counter.textContent = (stepIdx + 1) + ' / ' + TOUR_STEP_COUNT;
     backBtn.disabled = stepIdx === 0;
-    nextBtn.textContent = stepIdx === TOUR_STEPS.length - 1 ? 'Inizia' : 'Avanti';
+    nextBtn.textContent = stepIdx === TOUR_STEP_COUNT - 1 ? t('tour.start') : t('tour.next');
     nextBtn.focus();
   }
   skipBtn.addEventListener('click', close);
   backBtn.addEventListener('click', () => { if (stepIdx > 0) { stepIdx--; renderStep(); } });
   nextBtn.addEventListener('click', () => {
-    if (stepIdx < TOUR_STEPS.length - 1) { stepIdx++; renderStep(); }
+    if (stepIdx < TOUR_STEP_COUNT - 1) { stepIdx++; renderStep(); }
     else close();
   });
   document.addEventListener('keydown', onKey);
@@ -6289,28 +6273,28 @@ function buildPaletteItems() {
   const sections = ['dashboard', 'marketplaces', 'plugins', 'skills', 'agents', 'mcp', 'hooks', 'stats', 'config', 'settings'];
   sections.forEach(s => items.push({
     kind: 'action', icon: '→',
-    label: 'Vai a ' + s.charAt(0).toUpperCase() + s.slice(1),
-    sub: 'sezione',
+    label: t('palette.actionGoTo', { name: t('nav.' + (s === 'marketplaces' ? 'marketplace' : s === 'plugins' ? 'plugin' : s === 'skills' ? 'skill' : s === 'agents' ? 'agent' : s)) }),
+    sub: t('palette.sectionKindSection'),
     run: () => switchToSection(s),
   }));
-  items.push({ kind: 'action', icon: '↻', label: 'Ricarica dati', sub: 'azione', run: () => loadData() });
-  items.push({ kind: 'action', icon: '⤓', label: 'Esporta snapshot', sub: 'azione', run: async () => {
+  items.push({ kind: 'action', icon: '↻', label: t('palette.actionReload'), sub: t('palette.sectionAction'), run: () => loadData() });
+  items.push({ kind: 'action', icon: '⤓', label: t('palette.actionExport'), sub: t('palette.sectionAction'), run: async () => {
     const r = await window.claudeAPI.exportSnapshot();
-    if (r.success) toast('Snapshot esportato', 'success');
+    if (r.success) toast(t('palette.toastSnapshot'), 'success');
   }});
-  items.push({ kind: 'action', icon: '⤒', label: 'Importa snapshot', sub: 'azione', run: () => switchToSection('settings') });
-  items.push({ kind: 'action', icon: '📋', label: 'Apri changelog', sub: 'azione', run: () => openChangelogModal() });
-  items.push({ kind: 'action', icon: '🎓', label: 'Riavvia onboarding tour', sub: 'azione', run: () => showOnboardingTour() });
-  items.push({ kind: 'action', icon: '⤓', label: 'Controlla aggiornamenti', sub: 'azione', run: () => runUpdateCheck(true) });
+  items.push({ kind: 'action', icon: '⤒', label: t('palette.actionImport'), sub: t('palette.sectionAction'), run: () => switchToSection('settings') });
+  items.push({ kind: 'action', icon: '📋', label: t('palette.actionChangelog'), sub: t('palette.sectionAction'), run: () => openChangelogModal() });
+  items.push({ kind: 'action', icon: '🎓', label: t('palette.actionRestartTour'), sub: t('palette.sectionAction'), run: () => showOnboardingTour() });
+  items.push({ kind: 'action', icon: '⤓', label: t('palette.actionCheckUpdates'), sub: t('palette.sectionAction'), run: () => runUpdateCheck(true) });
 
   // Plugin
   state.plugins.forEach(p => items.push({
-    kind: 'plugin', icon: '🧩', label: p.id, sub: p.mkt + (p.blocked ? ' · disattivato' : ''),
+    kind: 'plugin', icon: '🧩', label: p.id, sub: p.mkt + (p.blocked ? t('palette.pluginDisabledSuffix') : ''),
     run: () => { switchToSection('plugins'); state.filters.plugins.search = p.id.toLowerCase(); render(); },
   }));
   // Marketplace
   state.mktList.forEach(m => items.push({
-    kind: 'marketplace', icon: '🏪', label: m.id, sub: m.plugins.length + ' plugin',
+    kind: 'marketplace', icon: '🏪', label: m.id, sub: t('palette.pluginsCount', { n: m.plugins.length }),
     run: () => switchToSection('marketplaces'),
   }));
   // Skill
@@ -6336,8 +6320,8 @@ function openCommandPalette() {
 
   const input = el('input', 'palette-input');
   input.type = 'text';
-  input.placeholder = 'Cerca plugin, skill, agent, marketplace o azione…';
-  input.setAttribute('aria-label', 'Command palette');
+  input.placeholder = t('palette.placeholder');
+  input.setAttribute('aria-label', t('palette.ariaLabel'));
 
   const list = el('div', 'palette-list');
   const allItems = buildPaletteItems();
@@ -6440,7 +6424,7 @@ async function openChangelogModal() {
   const header = el('div', 'changelog-header');
   const title = el('div', 'changelog-title', 'Changelog');
   const closeBtn = el('button', 'md-close'); closeBtn.appendChild(icon('x'));
-  closeBtn.setAttribute('aria-label', 'Chiudi');
+  closeBtn.setAttribute('aria-label', t('button.close'));
   header.appendChild(title); header.appendChild(closeBtn);
 
   const body = el('div', 'changelog-body');
@@ -6509,19 +6493,19 @@ function renderUpdateBanner(info) {
   banner.setAttribute('aria-live', 'polite');
   const txt = el('div', 'update-banner-text');
   const dot = el('span', 'update-banner-dot');
-  const msg = el('span', null, 'Nuova versione ');
+  const msg = el('span', null, t('updateBanner.msgPre'));
   const ver = el('strong', null, 'v' + info.latest);
-  const tail = el('span', null, ' disponibile');
+  const tail = el('span', null, t('updateBanner.msgTail'));
   txt.appendChild(dot); txt.appendChild(msg); txt.appendChild(ver); txt.appendChild(tail);
 
   const actions = el('div', 'update-banner-actions');
-  const openBtn = el('button', 'btn btn-sm btn-primary', 'Apri pagina download');
+  const openBtn = el('button', 'btn btn-sm btn-primary', t('updateBanner.openDownload'));
   openBtn.addEventListener('click', () => {
     window.claudeAPI.openExternal(info.url);
   });
-  const laterBtn = el('button', 'btn btn-sm btn-ghost', 'Ricorda più tardi');
+  const laterBtn = el('button', 'btn btn-sm btn-ghost', t('updateBanner.later'));
   laterBtn.addEventListener('click', () => banner.remove());
-  const skipBtn = el('button', 'btn btn-sm btn-ghost', 'Salta questa versione');
+  const skipBtn = el('button', 'btn btn-sm btn-ghost', t('updateBanner.skipVersion'));
   skipBtn.addEventListener('click', () => {
     window.claudeAPI.setState({ skippedVersion: info.latest });
     banner.remove();
