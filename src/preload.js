@@ -13,6 +13,7 @@ const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('claudeAPI', {
   getData:            ()                  => ipcRenderer.invoke('get-data'),
+  refreshHookDeps:    ()                  => ipcRenderer.invoke('hooks:refresh-deps'),
   pluginAction:       (action, pluginId)  => ipcRenderer.invoke('plugin-action',      { action, pluginId }),
   marketplaceAction:  (action, name, src) => ipcRenderer.invoke('marketplace-action', { action, name, source: src }),
   getMarketplaceDetail: (name)            => ipcRenderer.invoke('get-marketplace-detail', name),

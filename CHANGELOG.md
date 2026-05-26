@@ -1,5 +1,18 @@
 # Changelog
 
+## v1.0.90 — 2026-05-26 — Hook dep cache: TTL 60s + refresh esplicito via "↻ Aggiorna"
+
+Feedback utente: ho disinstallato Bun ma le card claude-mem non mostrano "Manca: bun" nemmeno dopo click su "↻ Aggiorna". Root cause: il cache delle availability era in memoria del main process popolato 1 sola volta al boot. Il bottone "↻ Aggiorna" invalidava solo i dati Claude (`get-mcp`, stats), NON il cache `_availabilityCache` di `hookDeps.js` → installazioni/disinstallazioni fatte ad app aperta restavano invisibili fino al restart.
+
+- [FIX] **TTL 60s** sul cache availability (`AVAIL_TTL_MS` in `src/lib/hookDeps.js`): se la cache entry per un tool è più vecchia di 60s, viene rifatta automaticamente al prossimo check. Compromesso fra freshness (test rapidi install/uninstall) e cost (re-spawn di `which`/`shell -lc` per ogni tool è ~1-2s, evitato per chiamate ravvicinate)
+- [FEATURE] **IPC `hooks:refresh-deps`** + bridge preload `refreshHookDeps()`: chiamata esplicita che fa `clearCache()` sul main per forzare re-check immediato di tutti i tool
+- [FEATURE] **Bottone "↻ Aggiorna" topbar** ora invoca `refreshHookDeps()` PRIMA di `loadData()`: l'utente che ha appena installato/disinstalato un tool clicca il bottone e vede il cambio sulla card subito. Title del bottone aggiornato per riflettere il nuovo comportamento
+- [TEST RAPIDO]
+  - Disinstalla Bun: `rm -rf ~/.bun` + rimuovi `export PATH` da `~/.zshrc`
+  - In CLACOROO clicca **↻ Aggiorna** → card claude-mem (5) ora mostrano badge `⚠ Manca: bun`
+  - Reinstalla Bun: `curl -fsSL https://bun.sh/install | bash`
+  - Clicca di nuovo **↻ Aggiorna** → badge spariscono. Niente restart richiesto
+
 ## v1.0.89 — 2026-05-26 — Hook dep detector fix #2: check robusto a 3 livelli (PATH + login shell + fs.existsSync)
 
 Feedback utente: ho installato Bun ma CLACOROO mostra ancora "Manca: bun" sulle card claude-mem. Root cause: Bun installato in `~/.bun/bin/bun` ma `~/.bun/bin` non è nel PATH del processo Electron (eredita PATH minimal di launchd quando lanciato dal Finder, e anche `npm start` non triggera ricarica `.zshrc`). `which bun` chiamato da CLACOROO falliva, anche se nella shell utente `which bun` funziona perfettamente.

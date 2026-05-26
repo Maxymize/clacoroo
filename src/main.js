@@ -558,6 +558,15 @@ ipcMain.handle('get-data', async () => {
   catch (e) { return { ok: false, error: e.message }; }
 });
 
+// v1.0.90 — Refresh forzato del cache delle hook deps. Invocato dal bottone
+// "↻ Aggiorna" della topbar prima del get-data, così se l'utente ha appena
+// installato/disinstalato un tool (es. Bun) vede subito il cambio sulle card
+// senza dover riavviare CLACOROO.
+ipcMain.handle('hooks:refresh-deps', async () => {
+  HOOK_DEPS.clearCache();
+  return { ok: true };
+});
+
 ipcMain.handle('plugin-action', async (_e, { action, pluginId }) => {
   if (!validPluginId(pluginId)) return { success: false, error: 'ID plugin non valido.' };
   const result = await runClaudeArgs(['plugins', action, pluginId]);

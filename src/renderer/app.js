@@ -468,10 +468,14 @@ function render() {
   }
 
   const refreshBtn = el('button', 'btn btn-sm btn-ghost btn-refresh', '↻ Aggiorna');
-  refreshBtn.title = 'Ricarica i dati dai file di configurazione di Claude Code';
+  refreshBtn.title = 'Ricarica i dati dai file di configurazione di Claude Code + ricontrolla le dipendenze hook';
   refreshBtn.addEventListener('click', async () => {
     refreshBtn.disabled = true;
     refreshBtn.textContent = '…';
+    // v1.0.90 — Invalida il cache delle hook deps PRIMA di ricaricare i dati,
+    // così se l'utente ha appena installato/disinstalato un tool (es. Bun)
+    // il badge "Manca: bun" appare/sparisce subito senza riavviare l'app.
+    try { await window.claudeAPI.refreshHookDeps(); } catch { /* graceful */ }
     await loadData();
     refreshBtn.disabled = false;
     refreshBtn.textContent = '↻ Aggiorna';

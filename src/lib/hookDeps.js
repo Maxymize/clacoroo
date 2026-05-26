@@ -213,9 +213,17 @@ function fsFallback(tool) {
   return null;
 }
 
+// v1.0.90 — TTL 60s sul cache delle availability. Senza questo, se l'utente
+// installa/disinstalla un tool con CLACOROO aperto il cache resta stantio
+// fino al restart dell'app (popolato 1 volta al boot). 60s è compromesso fra
+// freshness e cost (re-spawn di which/shell -lc per ogni tool è ~1-2s).
+// Il bottone "↻ Aggiorna" della topbar invoca clearCache() per forzare
+// refresh immediato senza aspettare scadenza naturale.
+const AVAIL_TTL_MS = 60 * 1000;
+
 async function checkAvailabilityOne(tool) {
   const cached = _availabilityCache.get(tool);
-  if (cached) return cached;
+  if (cached && (Date.now() - cached.checkedAt) < AVAIL_TTL_MS) return cached;
 
   // Tentativo 1: which/where standard
   let foundPath = await whichSimple(tool);
