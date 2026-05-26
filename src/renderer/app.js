@@ -2330,13 +2330,24 @@ function buildSkillAgentCard(item, kind) {
   if (item.projectPath) scopeBadge.title = item.projectPath;
   badgeRow.appendChild(scopeBadge);
   if (item.health && item.health.status !== 'ok') {
-    // v1.0.98 — Badge rettangolare proper (era .health-badge cerchio 16x16
-    // pensato per le compact chip; il testo "health: warning" fuorisceva
-    // accavallandosi al scope-badge nelle card).
+    // v1.0.98 — Badge rettangolare proper + tooltip esplicativo arricchito
+    // che spiega cos'è il problema e come può essere risolto. Gli health
+    // issues sono errori del manifest del plugin (autore), non feature
+    // mancanti sul sistema utente — quindi i fix sono: (a) modificare il
+    // file `.md` localmente (viene sovrascritto al prossimo update), o
+    // (b) aprire issue sul repo del plugin per fix permanente upstream.
     const hb = el('span', 'browse-card-health h-' + item.health.status);
     hb.appendChild(icon('triangle-alert'));
     hb.appendChild(document.createTextNode(item.health.status === 'err' ? 'health: errore' : 'health: warning'));
-    hb.title = (item.health.issues || []).join(' · ');
+    const issues = item.health.issues || [];
+    const kindLabel = (item.kind || (item.scope === 'local' ? 'item' : '')); // unused, placeholder
+    hb.title = 'Problemi rilevati nel frontmatter del file .md (manifest dell\'agent/skill):\n\n'
+      + issues.map(i => '  • ' + i).join('\n')
+      + '\n\nQuesto è un errore del manifest del plugin (autore), non un problema della tua installazione.\n\n'
+      + 'Possibili fix:\n'
+      + '  • Aprire issue sul repo del plugin (' + (item.mkt || 'marketplace upstream') + ') per fix permanente\n'
+      + '  • Modificare il frontmatter manualmente nel file .md locale (sarà sovrascritto al prossimo `claude plugins update`)\n\n'
+      + 'L\'agent/skill funziona comunque, ma Claude Code potrebbe non invocarlo correttamente per mancanza di metadati.';
     badgeRow.appendChild(hb);
   }
   if (item.blocked) {

@@ -1,5 +1,21 @@
 # Changelog
 
+## v1.0.98 — 2026-05-26 — Tooltip esplicativo arricchito sui badge health di Skill/Agent
+
+Feedback utente sui warning/errori visibili nelle card Agent: cosa sono e si possono risolvere? Indagine:
+
+- **Cosa sono**: errori del frontmatter YAML del file `.md` (manifest dell'agent/skill), generati da `checkMarkdownHealth()` in `src/lib/markdown.js`. Tipi: `Frontmatter YAML mancante o vuoto` (err), `Campo "name"/"description" mancante` (err), `Description troppo corta` (warn). Sono **errori del plugin author**, non feature mancanti sul sistema utente
+- **Non sono installabili**: il file `.md` malformato vive in `~/.claude/plugins/cache/...` e viene sovrascritto al prossimo update plugin. Non è un tool runtime da installare (come Bun in v1.0.91)
+
+### Fix scelto: documentare nel tooltip (no nuovi bottoni)
+
+- [FEATURE] **Tooltip arricchito** sul badge `.browse-card-health` delle card Skill/Agent: oltre alla lista degli issue, ora spiega:
+  - Cos'è il problema (errore frontmatter `.md`, manifest plugin)
+  - Che NON è un problema dell'installazione utente
+  - I 2 possibili fix: aprire issue sul repo del plugin (`marketplace upstream`) per fix permanente, OPPURE modificare manualmente il frontmatter nel file locale (sapendo che viene sovrascritto al prossimo `claude plugins update`)
+  - Che l'agent/skill funziona comunque ma Claude Code potrebbe non invocarlo correttamente per mancanza di metadati
+- [NOTE] **Niente bottoni "Apri issue" o "Edit frontmatter"** per ora: scelta UX deliberata di tenere la card pulita. Il tooltip educativo è sufficiente per spiegare il problema senza occupare spazio visivo
+
 ## v1.0.97 — 2026-05-26 — Pack M chiusura: vista compatta per Marketplace / Plugin / MCP / Hooks
 
 Completata l'altra metà del **Pack M** dopo v1.0.96 (che ha portato cards a Skill/Agent). Ora **tutte le 6 sezioni** hanno entrambe le viste con switch live nel topbar.
