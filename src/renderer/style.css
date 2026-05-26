@@ -1615,6 +1615,33 @@ body {
   font-style: italic;
 }
 
+/* v1.0.105 — Chip "Vedi tutte (N)" sulla Dashboard come ultimo elemento
+   della griglia di ogni sezione (Marketplace/Plugin/Skill/Agent/MCP/Hooks).
+   Colore CLACOROO accent per distinguerlo dai chip dati. */
+.skill-chip.dashboard-see-all {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  border-left-color: var(--accent);
+  color: var(--accent);
+  font-weight: 600;
+}
+.skill-chip.dashboard-see-all:hover {
+  background: rgba(217,119,87,.28);
+  border-color: var(--accent2);
+  color: var(--accent2);
+  transform: translateY(-1px);
+}
+.skill-chip.dashboard-see-all .inline-icon {
+  width: 12px; height: 12px;
+  margin: 0;
+  vertical-align: 0;
+  flex-shrink: 0;
+}
+.dashboard-see-all-lbl {
+  font-size: 11px;
+  letter-spacing: 0.02em;
+}
+
 /* v1.0.81 — Bottone copia globale nell'header del modal markdown viewer.
    Posizionato fra title e × con margine per non essere troppo vicino al close. */
 .md-copy {

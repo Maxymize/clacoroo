@@ -1,5 +1,37 @@
 # Changelog
 
+## v1.0.105 — 2026-05-26 — Dashboard: sezioni riassuntive Plugin / Skill / Agent / Hooks + "Vedi tutte"
+
+Estensione Dashboard (richiesta utente 2026-05-26): aggiunte 4 nuove sezioni riassuntive (Plugin, Skill, Agent, Hooks) con stesso stile di quelle Marketplace e MCP Server già presenti. Tutte le 6 sezioni ora hanno limite **19 chip + 20° "Vedi tutte (N)"** che porta alla sezione completa.
+
+### Layout Dashboard finale (ordine = sidebar menu)
+
+1. Stima contesto · Quote Claude · KPI Statistiche · Utilizzo Claude Code (invariati)
+2. **Marketplace** (esistente, ora con limite + "Vedi tutte")
+3. **Plugin** (NUOVO) — ordinato per `installedAt` desc
+4. **Skill** (NUOVO) — recency = installedAt del plugin proprietario
+5. **Agent** (NUOVO) — recency = installedAt del plugin proprietario
+6. **MCP server** (esistente, ora con limite + "Vedi tutte")
+7. **Hooks** (NUOVO) — recency = installedAt del plugin proprietario
+8. Attività recenti (invariato)
+
+### Helper condiviso
+
+- [FEATURE] **`renderDashboardSection({container, title, items, buildChip, targetSection, getTimestamp, emptyText})`**: helper riusabile per tutte le sezioni. Sort items per recency (`getTimestamp` desc), slice a 19, ognuna `buildChip(item)` per la pittura, poi aggiunge come 20° chip una "Vedi tutte (N)" cliccabile che fa `switchToSection(targetSection)`. Empty state se zero items
+- [FEATURE] **Chip "Vedi tutte" come ultimo riquadro sempre presente** (anche con < 20 elementi): coerenza UX, sempre lo stesso punto di accesso
+- [STYLE] **`.skill-chip.dashboard-see-all`**: colore CLACOROO accent (`var(--accent-soft)` bg, `var(--accent)` border + text), icona Lucide `external-link` + label "Vedi tutte (N)". Hover scaling + accent2
+
+### Recency / ordinamento
+
+- **Marketplace**: `Date.parse(addedAt || lastUpdated)` desc — fallback a ordine state
+- **Plugin**: `Date.parse(installedAt)` desc — disponibile da v1.0.82 (birthtime cache dir plugin)
+- **Skill / Agent / Hooks**: `installedAt` del plugin proprietario come proxy (più recente plugin → più recenti skill/agent/hook del plugin). Per ora migliore alternativa senza tracking timestamp per-skill in backend
+- **MCP**: ordine return da `claude mcp list` (no recency disponibile, mantengo ordine API)
+
+### Refactor MCP Dashboard
+
+- [REFACTOR] **`paintDashboardMcpChips`** ora applica anche il limite 19 + chip "Vedi tutte" per coerenza con le altre sezioni (prima mostrava TUTTI gli MCP, anche 12+)
+
 ## v1.0.104 — 2026-05-26 — Pack G v2 chiusura COMPLETA: Disable/Enable singolo MCP user-added
 
 Ultimo task del Pack G v2 implementato. Scelta utente: **solo user-added** (remove+add con backup config in state.json). Per plugin-managed e claude.ai builtin l'azione non è offerta perché non praticabile in modo pulito (vedi TASK.md nota tecnica).

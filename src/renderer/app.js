@@ -912,30 +912,125 @@ function renderDashboard() {
   wrap.appendChild(statsSection);
   loadDashboardStats(statsSection, renderToken);
 
-  // Elenco marketplace riassuntivo
-  const mktTitle = el('div', 'list-section-title', 'Marketplace');
-  wrap.appendChild(mktTitle);
+  // v1.0.105 — Sezioni riassuntive dashboard nello stesso ordine della sidebar
+  // (Marketplace → Plugin → Skill → Agent → MCP → Hooks). Tutte usano lo
+  // stesso helper renderDashboardSection con max 19 + 20° "Vedi tutte".
 
-  const mktGrid = el('div', 'skill-grid');
-  state.mktList.forEach(m => {
-    const chip = el('div', 'skill-chip');
-    chip.style.borderLeftColor = mktColor(m.id);
-
-    const dot = el('span');
-    dot.style.cssText = 'width:8px;height:8px;border-radius:50%;flex-shrink:0;background:' + mktColor(m.id);
-    chip.appendChild(dot);
-
-    const name = el('span', 'skill-chip-name', m.id);
-    const cnt  = el('span', 'skill-chip-plugin', m.plugins.length + ' plugin');
-    chip.appendChild(name); chip.appendChild(cnt);
-    mktGrid.appendChild(chip);
+  // 1. Marketplace
+  renderDashboardSection({
+    container: wrap, title: 'Marketplace', targetSection: 'marketplaces',
+    items: state.mktList,
+    getTimestamp: m => Date.parse(m.addedAt || m.lastUpdated || '') || 0,
+    buildChip: (m) => {
+      const chip = el('div', 'skill-chip clickable');
+      chip.title = 'Apri la sezione Marketplace';
+      chip.style.borderLeftColor = mktColor(m.id);
+      const dot = el('span');
+      dot.style.cssText = 'width:8px;height:8px;border-radius:50%;flex-shrink:0;background:' + mktColor(m.id);
+      chip.appendChild(dot);
+      chip.appendChild(el('span', 'skill-chip-name', m.id));
+      chip.appendChild(el('span', 'skill-chip-plugin', m.plugins.length + ' plugin'));
+      chip.addEventListener('click', () => switchToSection('marketplaces'));
+      return chip;
+    },
   });
-  wrap.appendChild(mktGrid);
 
-  // MCP server (v1.0.24) — chip riassuntiva, click → sezione MCP
+  // 2. Plugin
+  renderDashboardSection({
+    container: wrap, title: 'Plugin', targetSection: 'plugins',
+    items: state.plugins,
+    getTimestamp: p => Date.parse(p.installedAt || '') || 0,
+    emptyText: 'Nessun plugin installato.',
+    buildChip: (p) => {
+      const chip = el('div', 'skill-chip clickable' + (p.blocked ? ' blocked' : ''));
+      chip.title = 'Apri la sezione Plugin';
+      chip.style.borderLeftColor = mktColor(p.mkt);
+      const dot = el('span');
+      dot.style.cssText = 'width:8px;height:8px;border-radius:50%;flex-shrink:0;background:' + mktColor(p.mkt);
+      chip.appendChild(dot);
+      chip.appendChild(el('span', 'skill-chip-name', p.id));
+      chip.appendChild(el('span', 'skill-chip-plugin', p.mkt));
+      chip.addEventListener('click', () => switchToSection('plugins'));
+      return chip;
+    },
+  });
+
+  // 3. Skill (recency = installedAt del plugin proprietario)
+  const allSkillItems = state.plugins.flatMap(p =>
+    (p.skills || []).map(s => ({ name: s, plugin: p.id, mkt: p.mkt, fullId: p.fullId, installedAt: p.installedAt }))
+  );
+  renderDashboardSection({
+    container: wrap, title: 'Skill', targetSection: 'skills',
+    items: allSkillItems,
+    getTimestamp: s => Date.parse(s.installedAt || '') || 0,
+    emptyText: 'Nessuna skill disponibile.',
+    buildChip: (s) => {
+      const chip = el('div', 'skill-chip clickable');
+      chip.title = 'Apri la sezione Skill';
+      chip.style.borderLeftColor = mktColor(s.mkt);
+      const dot = el('span');
+      dot.style.cssText = 'width:8px;height:8px;border-radius:50%;flex-shrink:0;background:' + mktColor(s.mkt);
+      chip.appendChild(dot);
+      chip.appendChild(el('span', 'skill-chip-name', s.name));
+      chip.appendChild(el('span', 'skill-chip-plugin', s.plugin));
+      chip.addEventListener('click', () => switchToSection('skills'));
+      return chip;
+    },
+  });
+
+  // 4. Agent (recency = installedAt del plugin proprietario)
+  const allAgentItems = state.plugins.flatMap(p =>
+    (p.agents || []).map(a => ({ name: a, plugin: p.id, mkt: p.mkt, fullId: p.fullId, installedAt: p.installedAt }))
+  );
+  renderDashboardSection({
+    container: wrap, title: 'Agent', targetSection: 'agents',
+    items: allAgentItems,
+    getTimestamp: a => Date.parse(a.installedAt || '') || 0,
+    emptyText: 'Nessun agent disponibile.',
+    buildChip: (a) => {
+      const chip = el('div', 'skill-chip clickable');
+      chip.title = 'Apri la sezione Agent';
+      chip.style.borderLeftColor = '#f97316';
+      const dot = el('span');
+      dot.style.cssText = 'width:8px;height:8px;border-radius:50%;flex-shrink:0;background:#f97316';
+      chip.appendChild(dot);
+      chip.appendChild(el('span', 'skill-chip-name', a.name));
+      chip.appendChild(el('span', 'skill-chip-plugin', a.plugin));
+      chip.addEventListener('click', () => switchToSection('agents'));
+      return chip;
+    },
+  });
+
+  // 5. MCP server — chip riassuntiva async (cache 30s), click → sezione MCP
   const mcpSection = el('div', 'dashboard-mcp-section');
   wrap.appendChild(mcpSection);
   loadDashboardMcp(mcpSection, renderToken);
+
+  // 6. Hooks (recency = installedAt del plugin proprietario)
+  const allHookItems = buildHookList();
+  // Aggiungo installedAt come proxy di recency dal plugin
+  const installedAtMap = {};
+  state.plugins.forEach(p => { installedAtMap[p.fullId] = p.installedAt; });
+  allHookItems.forEach(h => { h.installedAt = installedAtMap[h.fullId] || ''; });
+  renderDashboardSection({
+    container: wrap, title: 'Hooks', targetSection: 'hooks',
+    items: allHookItems,
+    getTimestamp: h => Date.parse(h.installedAt || '') || 0,
+    emptyText: 'Nessun hook configurato dai plugin installati.',
+    buildChip: (h) => {
+      const chip = el('div', 'skill-chip clickable');
+      chip.title = 'Apri la sezione Hooks';
+      const evColor = hookEventColor(h.event);
+      chip.style.borderLeftColor = evColor;
+      const dot = el('span');
+      dot.style.cssText = 'width:8px;height:8px;border-radius:50%;flex-shrink:0;background:' + evColor;
+      chip.appendChild(dot);
+      chip.appendChild(el('span', 'skill-chip-name', h.event));
+      chip.appendChild(el('span', 'skill-chip-plugin', h.pluginId));
+      chip.addEventListener('click', () => switchToSection('hooks'));
+      return chip;
+    },
+  });
 
   // Attività recenti (idea #4)
   const actTitle = el('div', 'list-section-title', 'Attività recenti');
@@ -1050,6 +1145,36 @@ async function loadPluginsContextBar(container, token) {
   lastStatsData = data;
 }
 
+// v1.0.105 — Helper riassuntivo Dashboard: titolo + griglia di max 19 chip
+// + 20° chip "Vedi tutte (N)" colorato accent CLACOROO che porta alla sezione.
+// Tutti gli items vengono ordinati per recency (getTimestamp desc). Se < 20
+// items, il "Vedi tutte" è comunque l'ultimo riquadro per coerenza UX.
+function renderDashboardSection({ container, title, items, buildChip, targetSection, getTimestamp, emptyText }) {
+  container.appendChild(el('div', 'list-section-title', title));
+  if (!items || !items.length) {
+    container.appendChild(el('div', 'mcp-empty', emptyText || 'Nessun elemento.'));
+    return;
+  }
+  const sorted = [...items];
+  if (typeof getTimestamp === 'function') {
+    sorted.sort((a, b) => (getTimestamp(b) || 0) - (getTimestamp(a) || 0));
+  }
+  const MAX_DISPLAY = 19;
+  const grid = el('div', 'skill-grid');
+  sorted.slice(0, MAX_DISPLAY).forEach(item => {
+    grid.appendChild(buildChip(item));
+  });
+  // 20° chip "Vedi tutte" — sempre presente, colore accent CLACOROO
+  const seeAllChip = el('div', 'skill-chip dashboard-see-all clickable');
+  seeAllChip.title = 'Apri la sezione completa ' + title;
+  seeAllChip.appendChild(icon('external-link'));
+  const lbl = el('span', 'dashboard-see-all-lbl', 'Vedi tutte (' + sorted.length + ')');
+  seeAllChip.appendChild(lbl);
+  seeAllChip.addEventListener('click', () => switchToSection(targetSection));
+  grid.appendChild(seeAllChip);
+  container.appendChild(grid);
+}
+
 function paintDashboardMcpChips(container, servers) {
   container.textContent = '';
   container.appendChild(el('div', 'list-section-title', 'MCP server'));
@@ -1057,9 +1182,11 @@ function paintDashboardMcpChips(container, servers) {
     container.appendChild(el('div', 'mcp-empty', 'Nessun MCP server configurato.'));
     return;
   }
+  // v1.0.105 — Limite 19 + 20° "Vedi tutte" coerente con le altre sezioni dashboard
   const grid = el('div', 'skill-grid');
-  const statusColor = { connected: '#22c55e', needsAuth: '#f59e0b', warning: '#f59e0b', error: '#ef4444', unknown: '#b0aea5' };
-  servers.forEach(srv => {
+  const statusColor = { connected: '#22c55e', needsAuth: '#f59e0b', warning: '#f59e0b', error: '#ef4444', unknown: '#b0aea5', disabled: '#b0aea5' };
+  const MAX_DISPLAY = 19;
+  servers.slice(0, MAX_DISPLAY).forEach(srv => {
     const chip = el('div', 'skill-chip clickable');
     chip.style.borderLeftColor = statusColor[srv.status] || '#b0aea5';
     chip.title = 'Vai alla sezione MCP per dettagli';
@@ -1078,6 +1205,13 @@ function paintDashboardMcpChips(container, servers) {
     chip.addEventListener('click', () => switchToSection('mcp'));
     grid.appendChild(chip);
   });
+  // Chip "Vedi tutte" sempre presente come ultimo
+  const seeAllChip = el('div', 'skill-chip dashboard-see-all clickable');
+  seeAllChip.title = 'Apri la sezione completa MCP server';
+  seeAllChip.appendChild(icon('external-link'));
+  seeAllChip.appendChild(el('span', 'dashboard-see-all-lbl', 'Vedi tutte (' + servers.length + ')'));
+  seeAllChip.addEventListener('click', () => switchToSection('mcp'));
+  grid.appendChild(seeAllChip);
   container.appendChild(grid);
 }
 
