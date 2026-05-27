@@ -908,14 +908,14 @@ function setContent(node) {
 function relativeTime(ts) {
   const diff = Date.now() - ts;
   const s = Math.floor(diff / 1000);
-  if (s < 60)     return s + 's fa';
+  if (s < 60)     return t('time.secondsAgo', { n: s });
   const m = Math.floor(s / 60);
-  if (m < 60)     return m + 'm fa';
+  if (m < 60)     return t('time.minutesAgo', { n: m });
   const h = Math.floor(m / 60);
-  if (h < 24)     return h + 'h fa';
+  if (h < 24)     return t('time.hoursAgo', { n: h });
   const d = Math.floor(h / 24);
-  if (d < 30)     return d + 'g fa';
-  return new Date(ts).toLocaleDateString('it-IT');
+  if (d < 30)     return t('time.daysAgo', { n: d });
+  return new Date(ts).toLocaleDateString(t('time.locale'));
 }
 
 /* ── DASHBOARD ────────────────────────────────────────────────────────── */
@@ -1710,7 +1710,7 @@ function renderPlugins() {
     grid.appendChild(no);
   }
 
-  countSpan.textContent = visible + ' di ' + state.plugins.length + ' plugin';
+  countSpan.textContent = t('counter.plugins', { visible, total: state.plugins.length });
   wrap.appendChild(grid);
 
   setContent(wrap);
@@ -1744,7 +1744,7 @@ function applyPluginFilters(grid) {
     if (show) visible++;
   });
   const countEl = grid.previousElementSibling?.querySelector('.section-count');
-  if (countEl) countEl.textContent = visible + ' di ' + state.plugins.length + ' plugin';
+  if (countEl) countEl.textContent = t('counter.plugins', { visible, total: state.plugins.length });
 }
 
 // Helper condiviso dai modal Contenuto plugin / Plugin marketplace:
@@ -1862,12 +1862,12 @@ function showPluginContentModal(p) {
   // (l'utente segnalava che la nota faceva riferimento a bottoni non visibili
   // nel modal: quelli erano sulle plugin card, non qui)
   const sourceActions = el('div', 'plugin-content-source-actions');
-  const finderBtn = btnWithIcon('btn btn-sm btn-ghost btn-with-icon', 'folder', ' Apri nel Finder');
+  const finderBtn = btnWithIcon('btn btn-sm btn-ghost btn-with-icon', 'folder', ' ' + t('pluginCard.openFinder'));
   finderBtn.addEventListener('click', async () => {
     const r = await window.claudeAPI.openPluginPath(p.fullId);
     if (!r.success) toast(t('toast.errorPrefix', { msg: r.error }), 'error');
   });
-  const editorBtn = btnWithIcon('btn btn-sm btn-ghost btn-with-icon', 'code', ' Apri in editor');
+  const editorBtn = btnWithIcon('btn btn-sm btn-ghost btn-with-icon', 'code', ' ' + t('pluginCard.openEditor'));
   editorBtn.addEventListener('click', async () => {
     const r = await window.claudeAPI.openInEditor(p.fullId);
     if (!r.success) toast(t('toast.errorPrefix', { msg: r.error }), 'error');
@@ -1998,7 +1998,7 @@ function buildPluginCard(p) {
   if (p.scope === 'local') {
     const info = el('div', 'pc-local-info', 'read-only · progetto');
     footer.appendChild(info);
-    const openBtn = btnWithIcon('btn btn-sm btn-ghost btn-with-icon', 'folder', ' Apri progetto');
+    const openBtn = btnWithIcon('btn btn-sm btn-ghost btn-with-icon', 'folder', ' ' + t('pluginCard.openFinder'));
     openBtn.title = p.projectPath || '';
     openBtn.addEventListener('click', async () => {
       // shell.openPath è il metodo corretto cross-platform per aprire una directory
@@ -2620,7 +2620,7 @@ function buildMarketplaceCompactRow(m) {
   }
   // Auto-update badge
   if (m.autoUpdate) {
-    const au = el('span', 'compact-row-tag', 'auto-update');
+    const au = el('span', 'compact-row-tag', t('mkt.autoUpdate'));
     row.appendChild(au);
   }
   row.addEventListener('click', () => showMarketplaceContentModal(m));
@@ -2631,7 +2631,7 @@ function renderMarketplaces() {
   const wrap = el('div');
 
   const hdr = el('div', 'section-header');
-  hdr.appendChild(el('span', 'section-count', state.mktList.length + ' marketplace configurati'));
+  hdr.appendChild(el('span', 'section-count', t('mkt.mktConfigured', { n: state.mktList.length })));
 
   // v1.0.97 — Pack M: view switcher cards/compatta per Marketplace
   const mMode = state.viewMode.marketplaces;
@@ -2732,14 +2732,14 @@ function renderMarketplaces() {
       countBtn.disabled = true;
     }
     const autoBadge = el('span', 'badge ' + (m.autoUpdate ? 'b-auto' : 'b-manual'),
-      m.autoUpdate ? 'auto-update' : 'manuale');
+      m.autoUpdate ? t('mkt.autoUpdate') : t('mkt.manualUpdate'));
     meta.appendChild(countBtn);
     meta.appendChild(autoBadge);
     body.appendChild(meta);
 
     if (m.lastUpdated) {
       const d = new Date(m.lastUpdated);
-      const note = el('div', 'mkt-card-note', 'Ultimo aggiornamento: ' + d.toLocaleDateString('it-IT'));
+      const note = el('div', 'mkt-card-note', t('mkt.lastUpdate') + ': ' + d.toLocaleDateString(t('time.locale')));
       body.appendChild(note);
     }
 
@@ -2750,13 +2750,13 @@ function renderMarketplaces() {
     const cardFooter = el('div');
     cardFooter.style.cssText = 'padding:10px 20px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px;';
 
-    const updateMktBtn = el('button', 'btn btn-sm btn-ghost', '↻ Aggiorna');
+    const updateMktBtn = el('button', 'btn btn-sm btn-ghost', '↻ ' + t('mkt.updateBtn'));
     updateMktBtn.addEventListener('click', async () => {
       updateMktBtn.disabled = true; updateMktBtn.textContent = '…';
       const r = await window.claudeAPI.marketplaceAction('update', m.id);
-      if (r.success) toast('Marketplace aggiornato: ' + m.id, 'success');
+      if (r.success) toast(t('mkt.toastUpdated', { id: m.id }), 'success');
       else toast(t('toast.errorPrefix', { msg: r.error }), 'error');
-      updateMktBtn.disabled = false; updateMktBtn.textContent = '↻ Aggiorna';
+      updateMktBtn.disabled = false; updateMktBtn.textContent = '↻ ' + t('mkt.updateBtn');
     });
 
     const removeMktBtn = el('button', 'btn btn-sm btn-danger', t('button.remove'));
@@ -3035,7 +3035,7 @@ function renderHooks() {
   icon.appendChild(iconPath);
   sw.appendChild(icon);
   const inp = el('input', 'search-input');
-  inp.setAttribute('placeholder', 'Cerca matcher, command, plugin…');
+  inp.setAttribute('placeholder', t('search.hooks'));
   inp.setAttribute('type', 'text');
   inp.value = f.search;
   sw.appendChild(inp);
@@ -3137,7 +3137,7 @@ function renderHooks() {
       card.style.display = show ? '' : 'none';
       if (show) visible++;
     });
-    countEl.textContent = visible + ' di ' + all.length;
+    countEl.textContent = t('counter.items', { visible, total: all.length });
   }
 
   inp.addEventListener('input', applyFilters);
@@ -3269,7 +3269,7 @@ function buildHookCard(item) {
   detailBtn.addEventListener('click', e => { e.stopPropagation(); showHookDetailsModal(item); });
   foot.appendChild(detailBtn);
   if (item.sourcePath) {
-    const openBtn = btnWithIcon('btn btn-sm btn-ghost', 'folder-open', 'Apri hooks.json');
+    const openBtn = btnWithIcon('btn btn-sm btn-ghost', 'folder-open', t('button.openHooksJson'));
     openBtn.addEventListener('click', e => {
       e.stopPropagation();
       window.claudeAPI.openDirectory(item.sourcePath);
@@ -3468,7 +3468,7 @@ function showHookDetailsModal(item) {
     // suggerimento di installazione cliccando.
     if (Array.isArray(h.detectedDeps) && h.detectedDeps.length) {
       const depsRow = el('div', 'hook-handler-deps');
-      depsRow.appendChild(el('span', 'hook-handler-deps-label', 'Dipendenze CLI'));
+      depsRow.appendChild(el('span', 'hook-handler-deps-label', t('hooksPage.depsLabel')));
       h.detectedDeps.forEach(tool => {
         const info = avail[tool] || { installed: false, installHint: '' };
         const pill = el('span', 'hook-dep-pill' + (info.installed ? ' dep-ok' : ' dep-miss'),
@@ -3643,7 +3643,7 @@ function showMarkdownModal(name, kind, content, fullId) {
   title.appendChild(document.createTextNode(' ' + name));
 
   // Bottone copia (sempre disponibile, copia currentContent attuale)
-  const copyAllBtn = btnWithIcon('md-copy', 'copy', 'Copia');
+  const copyAllBtn = btnWithIcon('md-copy', 'copy', t('button.copy'));
   copyAllBtn.setAttribute('aria-label', 'Copia testo completo negli appunti');
   copyAllBtn.title = t('button.copyDocument');
   copyAllBtn.addEventListener('click', async () => {
@@ -3656,10 +3656,10 @@ function showMarkdownModal(name, kind, content, fullId) {
   });
 
   // v1.0.99 — Bottone Modifica/Salva/Annulla (solo se fullId presente)
-  const editBtn = btnWithIcon('md-copy', 'pencil', 'Modifica');
+  const editBtn = btnWithIcon('md-copy', 'pencil', t('button.edit'));
   editBtn.title = 'Modifica il file .md (modifiche locali, sovrascritte al prossimo `claude plugins update`)';
 
-  const saveBtn   = btnWithIcon('md-copy md-save-btn', 'check', 'Salva');
+  const saveBtn   = btnWithIcon('md-copy md-save-btn', 'check', t('button.save'));
   saveBtn.title   = 'Salva le modifiche sul file .md locale';
   saveBtn.style.display = 'none';
 
@@ -3850,7 +3850,7 @@ function renderListSection(items, key, buildChip, searchFn, gridCls, sortConfig)
       chip.style.display = show ? '' : 'none';
       if (show) visible++;
     });
-    countEl.textContent = visible + ' di ' + items.length;
+    countEl.textContent = t('counter.items', { visible, total: items.length });
   }
 
   items.forEach(item => {
@@ -4147,11 +4147,7 @@ function buildContextBreakdown(cb, opts = {}) {
   wrap.appendChild(legend);
 
   if (!hideNote) {
-    const note = el('div', 'context-note',
-      'Per skill e agent conta SOLO il frontmatter YAML (indice di discovery), non il body completo — ' +
-      'che viene caricato solo quando la skill è effettivamente invocata. ' +
-      'MCP servers: stima ~400 token per server connesso (il valore reale dipende dal numero di tool esposti). ' +
-      'Non include: messaggi sessione, autocompact buffer, custom agents (richiede sessione live).');
+    const note = el('div', 'context-note', t('statsPage.contextEstimateLong'));
     wrap.appendChild(note);
   }
 
@@ -4287,13 +4283,11 @@ function renderStatsModels(container, data) {
   }
   const total = Object.values(models).reduce((s, u) => s + sumAllTypes(u), 0) || 1;
 
-  container.appendChild(el('div', 'list-section-title', 'Token per modello'));
+  container.appendChild(el('div', 'list-section-title', t('statsPage.tokensPerModel')));
   // v1.0.43 — Nota esplicativa per chiarire che le % rappresentano la
   // distribuzione del tuo uso fra modelli (somma = 100%), non una quota o
   // un limite. Le quote vere sono nelle barre Quote Claude della Dashboard.
-  container.appendChild(el('div', 'models-section-note',
-    'Distribuzione del tuo uso fra i modelli da quando hai iniziato (la somma di tutte le barre fa 100%). ' +
-    'Non è una quota: per le quote sessione/settimana vedi "Quote Claude" in Dashboard o pannello Account.'));
+  container.appendChild(el('div', 'models-section-note', t('statsPage.modelsNote')));
   Object.entries(models)
     .sort((a, b) => sumAllTypes(b[1]) - sumAllTypes(a[1]))
     .forEach(([model, u]) => {
@@ -4308,10 +4302,12 @@ function renderStatsModels(container, data) {
       row.appendChild(bar);
       row.appendChild(el('div', 'model-val', fmtNum(sum) + ' (' + pct + '%)'));
       const detail = el('div', 'model-detail',
-        'in ' + fmtNum(u.inputTokens||0) +
-        ' · out ' + fmtNum(u.outputTokens||0) +
-        ' · cache-read ' + fmtNum(u.cacheReadInputTokens||0) +
-        ' · cache-create ' + fmtNum(u.cacheCreationInputTokens||0));
+        t('statsPage.modelDetail', {
+          input: fmtNum(u.inputTokens||0),
+          output: fmtNum(u.outputTokens||0),
+          cacheRead: fmtNum(u.cacheReadInputTokens||0),
+          cacheCreate: fmtNum(u.cacheCreationInputTokens||0),
+        }));
       container.appendChild(row);
       container.appendChild(detail);
     });
@@ -4319,7 +4315,7 @@ function renderStatsModels(container, data) {
   // Daily histogram con tooltip flottante
   const dmt = data.cache.dailyModelTokens || [];
   if (dmt.length) {
-    container.appendChild(el('div', 'list-section-title', 'Token giornalieri'));
+    container.appendChild(el('div', 'list-section-title', t('statsPage.tokensDaily')));
     const last30 = dmt.slice(-30);
     const maxDay = Math.max(...last30.map(d => Object.values(d.tokensByModel || {}).reduce((s, v) => s + v, 0)));
 
@@ -4335,7 +4331,7 @@ function renderStatsModels(container, data) {
       bar.style.height = h + '%';
       bar.addEventListener('mouseenter', e => {
         const byModel = d.tokensByModel || {};
-        const lines = [d.date, fmtNum(total) + ' token totali'];
+        const lines = [d.date, t('statsPage.dailyTooltipTotal', { n: fmtNum(total) })];
         Object.entries(byModel)
           .sort((a, b) => b[1] - a[1])
           .slice(0, 3)
@@ -4366,12 +4362,12 @@ function renderStatsModels(container, data) {
     chartWrap.appendChild(chart);
     chartWrap.appendChild(tip);
     container.appendChild(chartWrap);
-    container.appendChild(el('div', 'daily-chart-legend', 'Ultimi 30 giorni — hover per dettagli per modello'));
+    container.appendChild(el('div', 'daily-chart-legend', t('statsPage.dailyLegend')));
   }
 }
 
 function renderStatsProjects(container, data) {
-  container.appendChild(el('div', 'list-section-title', 'Progetti Claude Code'));
+  container.appendChild(el('div', 'list-section-title', t('statsPage.projectsTitle')));
 
   // v1.0.45 — Filtra i progetti "fantasma" (0 sessioni, 0 token): tipicamente
   // directory dove Claude Code è stato aperto una volta ma senza interazioni
@@ -4405,23 +4401,21 @@ function renderStatsProjects(container, data) {
       return cell;
     }
     meta.appendChild(statCell(
-      fmtNum(p.totalTokens || 0), 'token',
-      'Token totali aggregati dai file JSONL di sessione'));
+      fmtNum(p.totalTokens || 0), t('statsPage.statTokens'),
+      t('statsPage.statTokensTip')));
     meta.appendChild(statCell(
-      fmtNum(p.messages || 0), 'messaggi',
-      'Singole interazioni user/assistant nelle sessioni'));
+      fmtNum(p.messages || 0), t('statsPage.statMessages'),
+      t('statsPage.statMessagesTip')));
     meta.appendChild(statCell(
-      String(p.sessions || 0), p.sessions === 1 ? 'sessione' : 'sessioni',
-      'Sessioni riprendibili (file .jsonl ancora presenti in ~/.claude/projects/)'));
+      String(p.sessions || 0), p.sessions === 1 ? t('statsPage.statSession') : t('statsPage.statSessions'),
+      t('statsPage.statSessionsTip')));
     row.appendChild(meta);
 
     container.appendChild(row);
   });
 
   container.appendChild(el('div', 'daily-chart-legend',
-    'Mostrati i primi ' + sorted.length + ' progetti — token aggregati dai file JSONL di sessione. ' +
-    'Il count "sessioni" rappresenta i file di sessione ancora presenti e riprendibili (con `claude --continue`), ' +
-    'non il numero totale di volte che hai aperto Claude Code nel progetto.'));
+    t('statsPage.projectsLong', { shown: sorted.length })));
 }
 
 // v1.0.38 — Config promossa a sezione sidebar standalone.
@@ -4433,7 +4427,7 @@ async function renderConfig() {
   if (statsCache && statsCache.settings) {
     renderConfigContent(wrap, statsCache);
   } else {
-    wrap.appendChild(el('div', 'stats-loading', 'Caricamento configurazione…'));
+    wrap.appendChild(el('div', 'stats-loading', t('status.loadingConfig')));
   }
   const data = await window.claudeAPI.getStats();
   if (state.section !== 'config') return;
@@ -4444,10 +4438,8 @@ async function renderConfig() {
 }
 
 function renderConfigContent(container, data) {
-  container.appendChild(el('div', 'list-section-title', 'Configurazione Claude Code'));
-  const warn = el('div', 'stats-warning',
-    'Le modifiche qui sono immediate — equivalenti a `claude /config`. Modifica con cautela: '
-    + 'la sintassi/valori errati possono rompere Claude Code.');
+  container.appendChild(el('div', 'list-section-title', t('config.pageTitle')));
+  const warn = el('div', 'stats-warning', t('config.warning'));
   container.appendChild(warn);
 
   const settings = data.settings || {};
@@ -4508,7 +4500,7 @@ function renderConfigContent(container, data) {
           if (r.success) {
             settings[key] = v;
             if (statsCache && statsCache.settings) statsCache.settings[key] = v;
-            toast(label + ' → ' + v, 'success');
+            toast(t('config.toastSetTo', { label, value: v }), 'success');
           } else {
             // revert
             const prevIdx = values.indexOf(previous);
@@ -4541,10 +4533,10 @@ function renderConfigContent(container, data) {
           // fs.watchFile scatta 'config-changed' che re-renderizza)
           settings[key] = input.checked;
           if (statsCache && statsCache.settings) statsCache.settings[key] = input.checked;
-          toast(label + (input.checked ? ' attivato' : ' disattivato'), 'success');
+          toast(t(input.checked ? 'config.toastEnabled' : 'config.toastDisabled', { label }), 'success');
         } else {
           input.checked = !input.checked;  // revert UI
-          toast('Errore salvataggio: ' + r.error, 'error');
+          toast(t('config.toastSaveError', { msg: r.error }), 'error');
         }
       });
       row.appendChild(toggleWrap);
@@ -4561,9 +4553,9 @@ function renderConfigContent(container, data) {
         if (r.success) {
           settings[key] = input.value;
           if (statsCache && statsCache.settings) statsCache.settings[key] = input.value;
-          toast(label + ' impostato a: ' + input.value, 'success');
+          toast(t('config.toastSetTo', { label, value: input.value }), 'success');
         } else {
-          toast('Errore salvataggio: ' + r.error, 'error');
+          toast(t('config.toastSaveError', { msg: r.error }), 'error');
         }
       });
     }
@@ -4574,32 +4566,32 @@ function renderConfigContent(container, data) {
   // v1.0.40 — Tutte le opzioni di Configurazione sono **per Claude Code** (TUI
   // terminale e IDE plugin). Non hanno effetto sulla UI di CLACOROO.
   // Schema corretto verificato da claude-code-settings.schema.json
-  configRow('alwaysThinkingEnabled', 'Always Thinking', 'toggle',
-    null, 'Abilita il ragionamento esteso sui modelli che lo supportano. Effetto interno al modello: non c\'è un\'animazione, ma le risposte sono più ragionate.');
+  configRow('alwaysThinkingEnabled', t('config.alwaysThinking'), 'toggle',
+    null, t('config.alwaysThinkingDesc'));
 
   // Voice: schema corretto è voice.enabled (oggetto nested), NON voiceEnabled top-level
   voiceConfigRow(container, settings);
 
-  configRow('model', 'Modello predefinito', 'select',
+  configRow('model', t('config.modelLabel'), 'select',
     ['default', 'claude-opus-4-7', 'claude-sonnet-4-6', 'claude-haiku-4-5-20251001'],
-    'Modello scelto da Claude Code per ogni nuova sessione (override del default).');
+    t('config.modelDesc'));
 
   // v1.0.30/32 — Effort level: slider a pallini stile VS Code (5 livelli).
-  configRow('effortLevel', 'Effort', 'dots',
+  configRow('effortLevel', t('config.effortLabel'), 'dots',
     ['low', 'medium', 'high', 'xhigh', 'max'],
-    'Intensità del ragionamento (più alto = più cura, più token, più lento).');
+    t('config.effortDesc'));
 
   // Theme: tutti i valori dallo schema ufficiale. Si applica alla UI di
   // Claude Code (terminale + IDE), non a CLACOROO.
-  configRow('theme', 'Tema (Claude Code)', 'select',
+  configRow('theme', t('config.themeLabel'), 'select',
     ['auto', 'dark', 'light', 'dark-daltonized', 'light-daltonized', 'dark-ansi', 'light-ansi'],
-    'Tema della UI di Claude Code nel terminale e nel plugin IDE. Non ha effetto sul tema di CLACOROO.');
+    t('config.themeDesc'));
 
   // Language: nomi capitalized accettati dallo schema (italian, spanish, ...).
   // Cambia la lingua delle RISPOSTE di Claude, non l'interfaccia CLACOROO.
-  configRow('language', 'Lingua risposte', 'select',
+  configRow('language', t('config.languageLabel'), 'select',
     ['', 'English', 'Italian', 'Spanish', 'French', 'German', 'Portuguese', 'Japanese', 'Chinese'],
-    'Lingua preferita per le risposte di Claude (e dictation vocale). Non cambia la lingua di CLACOROO.');
+    t('config.languageDesc'));
 }
 
 // Riga custom per voice.enabled (campo nested in settings.json — lo schema
@@ -4608,9 +4600,8 @@ function renderConfigContent(container, data) {
 function voiceConfigRow(container, settings) {
   const row = el('div', 'settings-row');
   const left = el('div');
-  left.appendChild(el('div', 'settings-row-label', 'Voice'));
-  left.appendChild(el('div', 'settings-row-desc',
-    '~/.claude/settings.json → voice.enabled · Abilita la dictation hold-to-talk / tap-to-toggle nella TUI Claude Code'));
+  left.appendChild(el('div', 'settings-row-label', t('config.voiceLabel')));
+  left.appendChild(el('div', 'settings-row-desc', t('config.voiceDesc')));
   row.appendChild(left);
 
   const voice = settings.voice || {};
@@ -4631,7 +4622,7 @@ function voiceConfigRow(container, settings) {
     if (r.success) {
       settings.voice = next;
       if (statsCache?.settings) statsCache.settings.voice = next;
-      toast('Voice ' + (input.checked ? 'attivato' : 'disattivato'), 'success');
+      toast(t(input.checked ? 'config.toastEnabled' : 'config.toastDisabled', { label: t('config.voiceLabel') }), 'success');
     } else {
       input.checked = !input.checked;
       toast('Errore salvataggio: ' + r.error, 'error');
@@ -4660,7 +4651,7 @@ async function renderMcp() {
   sPath.setAttribute('d', 'M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z');
   sicon.appendChild(sPath); searchWrap.appendChild(sicon);
   const searchInp = el('input', 'search-input');
-  searchInp.setAttribute('placeholder', 'Cerca server MCP…');
+  searchInp.setAttribute('placeholder', t('mcpCard.searchPh'));
   searchInp.setAttribute('type', 'text');
   searchInp.value = mcpFilter.search;
   searchInp.addEventListener('input', () => {
@@ -4719,7 +4710,7 @@ async function renderMcp() {
     await window.claudeAPI.setState({ mcpSort: key });
     renderMcp();
   }));
-  const refreshBtn = btnWithIcon('btn btn-sm btn-ghost', 'rotate-cw', 'Aggiorna stato live');
+  const refreshBtn = btnWithIcon('btn btn-sm btn-ghost', 'rotate-cw', t('mcpCard.refreshLive'));
   refreshBtn.title = 'Esegue `claude mcp list` con health-check (può richiedere qualche secondo)';
   refreshBtn.addEventListener('click', async () => {
     refreshBtn.disabled = true;
@@ -4731,7 +4722,7 @@ async function renderMcp() {
     refreshBtn.disabled = false;
     refreshBtn.textContent = '';
     refreshBtn.appendChild(icon('rotate-cw'));
-    refreshBtn.appendChild(document.createTextNode('Aggiorna stato live'));
+    refreshBtn.appendChild(document.createTextNode(t('mcpCard.refreshLive')));
     renderMcp();
   });
   headerRow.appendChild(refreshBtn);
@@ -4788,7 +4779,7 @@ async function renderMcp() {
     grid.appendChild(el('div', 'no-results', t('empty.noMcpResults')));
   }
   const connectedCount = servers.filter(s => s.status === 'connected').length;
-  countSpan.textContent = visible + ' di ' + servers.length + ' server · ' + connectedCount + ' connessi';
+  countSpan.textContent = t('counter.mcpServers', { visible, total: servers.length, connected: connectedCount });
 }
 
 function applyMcpFilters(wrap) {
@@ -4809,7 +4800,7 @@ function applyMcpFilters(wrap) {
   const countSpan = wrap.querySelector('.section-count');
   if (countSpan && mcpCache.servers) {
     const connected = mcpCache.servers.filter(s => s.status === 'connected').length;
-    countSpan.textContent = visible + ' di ' + mcpCache.servers.length + ' server · ' + connected + ' connessi';
+    countSpan.textContent = t('counter.mcpServers', { visible, total: mcpCache.servers.length, connected });
   }
 }
 
@@ -4952,36 +4943,36 @@ function buildMcpCard(srv) {
   if (srv.status === 'connected' || !srv.reconnect) {
     const hint = el('div', 'mcp-card-hint',
       srv.status === 'connected'
-        ? 'Connesso · niente azioni necessarie'
-        : 'Solo lettura · azioni in arrivo');
+        ? t('mcpCard.connectedHint')
+        : t('mcpCard.readOnlyHint'));
     footer.appendChild(hint);
     const actionsWrap = el('div', 'mcp-card-actions');
     // v1.0.103 — Bottone "Tools" sempre visibile su connected (backend
     // filtra cosa è supportato; HTTP/OAuth ricevono errore graceful)
     if (srv.status === 'connected') {
-      const toolsBtn = btnWithIcon('btn btn-sm btn-ghost', 'eye', 'Tools');
-      toolsBtn.title = 'Mostra i tools esposti da questo server MCP (tools/list via JSON-RPC)';
+      const toolsBtn = btnWithIcon('btn btn-sm btn-ghost', 'eye', t('mcpCard.toolsBtn'));
+      toolsBtn.title = t('mcpCard.toolsBtnTip');
       toolsBtn.addEventListener('click', e => { e.stopPropagation(); showMcpToolsModal(srv); });
       actionsWrap.appendChild(toolsBtn);
     }
     // v1.0.104 — Disabilita (solo user-added attivi): salva config in state
     // + remove via CLI. Re-abilitabile dopo via il bottone "Abilita".
     if (isUserAdded && srv.status !== 'disabled') {
-      const disableBtn = btnWithIcon('btn btn-sm btn-ghost', 'ban', 'Disabilita');
-      disableBtn.title = 'Disabilita questo server: lo rimuove da Claude Code ma salva la config in CLACOROO per ri-attivarlo dopo';
+      const disableBtn = btnWithIcon('btn btn-sm btn-ghost', 'ban', t('mcpCard.disableBtn'));
+      disableBtn.title = t('mcpCard.disableBtnTip');
       disableBtn.addEventListener('click', e => { e.stopPropagation(); confirmAndDisableMcp(srv); });
       actionsWrap.appendChild(disableBtn);
     }
     // v1.0.104 — Abilita: server attualmente disabilitato → re-add con config salvata
     if (srv.status === 'disabled') {
-      const enableBtn = btnWithIcon('btn btn-sm btn-primary', 'check', 'Abilita');
-      enableBtn.title = 'Re-aggiunge questo server a Claude Code usando la config salvata in CLACOROO';
+      const enableBtn = btnWithIcon('btn btn-sm btn-primary', 'check', t('mcpCard.enableBtn'));
+      enableBtn.title = t('mcpCard.enableBtnTip');
       enableBtn.addEventListener('click', e => { e.stopPropagation(); enableMcp(srv); });
       actionsWrap.appendChild(enableBtn);
     }
     if (isUserAdded) {
-      const rmBtn = btnWithIcon('btn btn-sm btn-ghost', 'trash-2', 'Rimuovi');
-      rmBtn.title = 'Rimuove questo server con `claude mcp remove ' + srv.id + '`';
+      const rmBtn = btnWithIcon('btn btn-sm btn-ghost', 'trash-2', t('mcpCard.removeBtn'));
+      rmBtn.title = t('mcpCard.removeBtnTip', { id: srv.id });
       rmBtn.addEventListener('click', e => { e.stopPropagation(); confirmAndRemoveMcp(srv); });
       actionsWrap.appendChild(rmBtn);
     }
@@ -5072,7 +5063,7 @@ async function showMcpToolsModal(srv) {
 
   const content = el('div', 'md-content');
   const loading = el('div', 'mcp-tools-loading');
-  loading.textContent = 'Interrogo il server MCP via JSON-RPC (tools/list)…';
+  loading.textContent = t('mcpCard.queryingServer', { name: srv.id });
   content.appendChild(loading);
 
   function onKey(e) { if (e.key === 'Escape') close(); }
@@ -5093,19 +5084,19 @@ async function showMcpToolsModal(srv) {
     const errBox = el('div', 'mcp-tools-error');
     errBox.appendChild(icon('triangle-alert'));
     const txt = el('div', 'mcp-tools-error-text');
-    txt.appendChild(el('strong', null, 'Tools list non disponibile'));
-    txt.appendChild(el('div', null, r.error || 'Errore sconosciuto'));
+    txt.appendChild(el('strong', null, t('mcpCard.toolsListUnavailable')));
+    txt.appendChild(el('div', null, r.error || t('modalMkt.errUnknown')));
     errBox.appendChild(txt);
     content.appendChild(errBox);
     return;
   }
   const tools = r.tools || [];
   if (!tools.length) {
-    content.appendChild(el('div', 'mcp-tools-empty', 'Il server è connesso ma non espone tool (tools/list ha ritornato lista vuota).'));
+    content.appendChild(el('div', 'mcp-tools-empty', t('mcpCard.noTools')));
     return;
   }
   const summary = el('div', 'mcp-tools-summary');
-  summary.textContent = tools.length + ' tool ' + (tools.length === 1 ? 'esposto' : 'esposti') + ' dal server';
+  summary.textContent = t('mcpCard.toolsCount', { n: tools.length, verb: tools.length === 1 ? t('mcpCard.toolExposed') : t('mcpCard.toolsExposed') });
   content.appendChild(summary);
 
   const list = el('div', 'mcp-tools-list');
@@ -5687,7 +5678,7 @@ function buildUsageBar(label, band, color) {
   wrap.appendChild(track);
 
   const reset = el('div', 'usage-bar-reset');
-  const resetTxt = band && band.resetsAt ? 'Si azzera ' + formatResetTime(band.resetsAt) : '';
+  const resetTxt = band && band.resetsAt ? t('settingsExtra.quotaResetsAt', { when: formatResetTime(band.resetsAt) }) : '';
   reset.textContent = resetTxt;
   wrap.appendChild(reset);
   return wrap;
@@ -5698,26 +5689,26 @@ function paintUsageBars(container, usageData, opts = {}) {
   container.textContent = '';
   if (!usageData) {
     container.appendChild(el('div', 'usage-loading',
-      compact ? 'Caricamento usage…' : 'Caricamento quote sessione/settimana…'));
+      compact ? t('settingsExtra.usageLoading') : t('settingsExtra.usageLoadingFull')));
     return;
   }
   if (!usageData.ok) {
-    const err = el('div', 'usage-error', '⚠ Impossibile leggere usage: ' + (usageData.error || 'errore'));
+    const err = el('div', 'usage-error', t('settingsExtra.usageReadErr', { msg: usageData.error || 'error' }));
     container.appendChild(err);
     return;
   }
   const d = usageData.data || {};
   if (!compact) {
-    container.appendChild(el('div', 'usage-section-title', 'Usage corrente'));
+    container.appendChild(el('div', 'usage-section-title', t('settingsExtra.usageCurrent')));
   }
   const grid = el('div', 'usage-grid' + (compact ? ' usage-grid-compact' : ''));
-  grid.appendChild(buildUsageBar('Session (5h)',    d.fiveHour,       '#6a9bcc'));
-  grid.appendChild(buildUsageBar('Weekly (7d)',     d.sevenDay,       '#788c5d'));
-  grid.appendChild(buildUsageBar('Weekly Sonnet',   d.sevenDaySonnet, '#d97757'));
+  grid.appendChild(buildUsageBar(t('settingsExtra.usageBarSession'),      d.fiveHour,       '#6a9bcc'));
+  grid.appendChild(buildUsageBar(t('settingsExtra.usageBarWeekly'),       d.sevenDay,       '#788c5d'));
+  grid.appendChild(buildUsageBar(t('settingsExtra.usageBarWeeklySonnet'), d.sevenDaySonnet, '#d97757'));
   container.appendChild(grid);
 
   if (!compact) {
-    const link = el('button', 'usage-link', 'Gestisci usage su claude.ai →');
+    const link = el('button', 'usage-link', t('settingsExtra.manageUsageLink'));
     link.addEventListener('click', () =>
       window.claudeAPI.openExternal('https://claude.ai/settings/usage'));
     container.appendChild(link);
@@ -6056,37 +6047,37 @@ function renderSettings() {
     togWrap.appendChild(togInp); togWrap.appendChild(togTrack); togWrap.appendChild(togThumb);
     togInp.addEventListener('change', async () => {
       await window.claudeAPI.setState({ updateCheckDisabled: !togInp.checked });
-      toast(togInp.checked ? 'Controllo automatico attivato' : 'Controllo automatico disattivato', 'info');
+      toast(togInp.checked ? t('settingsExtra.autoCheckOn') : t('settingsExtra.autoCheckOff'), 'info');
     });
     rowAuto.appendChild(togWrap);
     gUpd.appendChild(rowAuto);
   })();
 
   // Backup snapshot (idea #5)
-  const g6 = group('Backup snapshot');
+  const g6 = group(t('settingsExtra.backupTitle'));
   const snapRow = el('div', 'settings-row');
   const snapLeft = el('div');
-  snapLeft.appendChild(el('div', 'settings-row-label', 'Snapshot configurazione'));
-  snapLeft.appendChild(el('div', 'settings-row-desc', 'Esporta o importa un file .clacoroo (marketplaces + plugin + blocklist). Utile per backup o migrazione su altro Mac.'));
+  snapLeft.appendChild(el('div', 'settings-row-label', t('settingsExtra.snapshotTitle')));
+  snapLeft.appendChild(el('div', 'settings-row-desc', t('settingsExtra.snapshotDesc')));
   snapRow.appendChild(snapLeft);
   const snapBtns = el('div');
   snapBtns.style.cssText = 'display:flex;gap:6px;';
-  const exportBtn = btnWithIcon('btn btn-sm btn-ghost btn-with-icon', 'download', ' Esporta');
+  const exportBtn = btnWithIcon('btn btn-sm btn-ghost btn-with-icon', 'download', ' ' + t('settingsExtra.exportBtn'));
   exportBtn.addEventListener('click', async () => {
     const r = await window.claudeAPI.exportSnapshot();
-    if (r.success) toast('Snapshot esportato in ' + r.path, 'success');
-    else if (r.error !== 'Annullato') toast('Errore export: ' + r.error, 'error');
+    if (r.success) toast(t('settingsExtra.snapExported', { path: r.path }), 'success');
+    else if (r.error !== t('uiErr.cancelled')) toast(t('settingsExtra.snapExportErr', { msg: r.error }), 'error');
   });
-  const importBtn = btnWithIcon('btn btn-sm btn-primary btn-with-icon', 'upload', ' Importa');
+  const importBtn = btnWithIcon('btn btn-sm btn-primary btn-with-icon', 'upload', ' ' + t('settingsExtra.importBtn'));
   importBtn.addEventListener('click', async () => {
     const r = await window.claudeAPI.importSnapshot();
     if (!r.success) {
-      if (r.error !== 'Annullato') toast('Errore import: ' + r.error, 'error');
+      if (r.error !== t('uiErr.cancelled')) toast(t('settingsExtra.snapImportErr', { msg: r.error }), 'error');
       return;
     }
     const { mktToAdd, pluginsToInstall } = r.preview;
     if (!mktToAdd.length && !pluginsToInstall.length) {
-      toast('Snapshot già allineato — niente da applicare', 'info');
+      toast(t('settingsExtra.snapAlreadyAligned'), 'info');
       return;
     }
     const choice = await window.claudeAPI.confirmDialog({
@@ -6100,12 +6091,12 @@ function renderSettings() {
     importBtn.textContent = t('confirm.applySnapshot.progress');
     const a = await window.claudeAPI.applySnapshot(r.preview);
     importBtn.disabled = false;
-    importBtn.textContent = ' Importa';
+    importBtn.textContent = ' ' + t('settingsExtra.importBtn');
     importBtn.prepend(icon('upload'));
-    if (a.success) toast('Snapshot applicato (' + a.log.length + ' azioni)', 'success');
+    if (a.success) toast(t('settingsExtra.snapApplied', { n: a.log.length }), 'success');
     else {
       const failed = a.log.filter(l => !l.success).length;
-      toast(failed + ' azioni fallite, vedi Attività recenti', 'warn');
+      toast(t('settingsExtra.snapFailed', { n: failed }), 'warn');
     }
     await loadData();
   });
@@ -6115,13 +6106,13 @@ function renderSettings() {
   g6.appendChild(snapRow);
 
   // Onboarding (idea #7)
-  const g5 = group('Onboarding');
+  const g5 = group(t('settingsExtra.onboardingTitle'));
   const tourRow = el('div', 'settings-row');
   const tourLeft = el('div');
-  tourLeft.appendChild(el('div', 'settings-row-label', 'Tour di benvenuto'));
-  tourLeft.appendChild(el('div', 'settings-row-desc', '5 step rapidi che spiegano le sezioni e le funzioni principali'));
+  tourLeft.appendChild(el('div', 'settings-row-label', t('settingsExtra.welcomeTour')));
+  tourLeft.appendChild(el('div', 'settings-row-desc', t('settingsExtra.welcomeTourDesc')));
   tourRow.appendChild(tourLeft);
-  const restartBtn = el('button', 'btn btn-sm btn-primary', 'Riavvia tour');
+  const restartBtn = el('button', 'btn btn-sm btn-primary', t('settingsExtra.restartTour'));
   restartBtn.addEventListener('click', () => {
     showOnboardingTour();
   });
@@ -6129,10 +6120,10 @@ function renderSettings() {
   g5.appendChild(tourRow);
 
   // v1.0.40 — Informazioni compatta: una sola riga con nome + versione + bottone changelog
-  const g3 = group('Informazioni');
+  const g3 = group(t('settingsExtra.infoTitle'));
   const infoRow = el('div', 'settings-row');
   const infoLeft = el('div');
-  infoLeft.appendChild(el('div', 'settings-row-label', 'CLACOROO'));
+  infoLeft.appendChild(el('div', 'settings-row-label', t('settingsExtra.appName')));
   const platformLabel = ({ darwin: 'macOS', win32: 'Windows', linux: 'Linux' })[d.platform] || d.platform;
   infoLeft.appendChild(el('div', 'settings-row-desc', platformLabel));
   infoRow.appendChild(infoLeft);
@@ -6142,8 +6133,8 @@ function renderSettings() {
   // unica di verità, così footer sidebar e Impostazioni mostrano sempre lo
   // stesso valore senza dover sincronizzare manualmente più punti del codice.
   const verVal = el('div', 'settings-row-val', d.appVersion || _currentAppVersion || '?');
-  const chBtn = btnWithIcon('btn btn-sm btn-green btn-with-icon', 'changelog', ' Changelog');
-  chBtn.title = 'Mostra storico versioni';
+  const chBtn = btnWithIcon('btn btn-sm btn-green btn-with-icon', 'changelog', ' ' + t('settingsExtra.changelogBtn'));
+  chBtn.title = t('settingsExtra.changelogTip');
   chBtn.addEventListener('click', () => openChangelogModal());
   infoRight.appendChild(verVal);
   infoRight.appendChild(chBtn);
@@ -6153,14 +6144,14 @@ function renderSettings() {
   // v1.0.65 — Riga Licenza: AGPL-3.0-or-later + copyright MAXYMIZE
   const licRow = el('div', 'settings-row');
   const licLeft = el('div');
-  licLeft.appendChild(el('div', 'settings-row-label', 'Licenza'));
-  licLeft.appendChild(el('div', 'settings-row-desc', '© 2026 MAXYMIZE'));
+  licLeft.appendChild(el('div', 'settings-row-label', t('settingsExtra.licenseLabel')));
+  licLeft.appendChild(el('div', 'settings-row-desc', t('settingsExtra.licenseCopy')));
   licRow.appendChild(licLeft);
   const licRight = el('div');
   licRight.style.cssText = 'display:flex;gap:10px;align-items:center;';
   const licVal = el('div', 'settings-row-val', 'AGPL-3.0-or-later');
-  const licBtn = el('button', 'btn btn-sm btn-ghost', 'Testo licenza');
-  licBtn.title = 'Apri il testo completo della GNU AGPL v3 su gnu.org';
+  const licBtn = el('button', 'btn btn-sm btn-ghost', t('settingsExtra.licenseText'));
+  licBtn.title = t('settingsExtra.licenseTip');
   licBtn.addEventListener('click', () => {
     window.claudeAPI.openExternal('https://www.gnu.org/licenses/agpl-3.0');
   });
@@ -6172,9 +6163,8 @@ function renderSettings() {
   // v1.0.74 — Disclaimer Anthropic: in fondo alla sezione "Informazioni",
   // sotto la riga Licenza.
   const disclaimerBox = el('div', 'settings-disclaimer');
-  disclaimerBox.appendChild(el('div', 'settings-disclaimer-title', '⚠ Disclaimer'));
-  disclaimerBox.appendChild(el('div', 'settings-disclaimer-body',
-    'CLACOROO è un tool indipendente di terze parti e NON è affiliato, sponsorizzato né approvato da Anthropic, PBC. È un progetto autonomo sviluppato e mantenuto da MAXYMIZE con il solo scopo di rendere più facile l\'utilizzo della CLI ufficiale Claude Code attraverso un\'interfaccia grafica. "Claude" e "Anthropic" sono marchi registrati di Anthropic, PBC.'));
+  disclaimerBox.appendChild(el('div', 'settings-disclaimer-title', t('settingsExtra.disclaimerTitle')));
+  disclaimerBox.appendChild(el('div', 'settings-disclaimer-body', t('settingsExtra.disclaimer')));
   g3.appendChild(disclaimerBox);
 
   setContent(wrap);

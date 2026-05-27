@@ -1,5 +1,52 @@
 # Changelog
 
+## v1.1.1 — 2026-05-27 — Pack N fix: audit residui IT (Dashboard/Marketplace/MCP/Hooks/Stats/Config/Settings)
+
+Smoke test post-v1.1.0 ha rivelato che la coverage stimata al 97% era ottimistica: l'audit utente in EN ha trovato **molte stringhe ancora hardcoded in italiano** sparse fra Dashboard, Marketplace, Plugin, Skill/Agent modal, MCP, Hooks, Stats, Claude Config (pagina intera!) e Settings (sezioni snapshot/onboarding/informazioni/disclaimer + usage section). Questo commit le copre.
+
+### Locales — 11 nuovi namespace / +150 chiavi
+
+- **`time.*`**: relativeTime formatting (Ns/Nm/Nh/Nd ago + locale per toLocaleDateString) — risolve "ore fa"/"giorno fa" sempre in IT
+- **`counter.*`**: "X di Y plugin/server", "vedi tutte (N)", "top N · M attivi" — interpolazione completa
+- **`dash.*`**: tooltip Dashboard chip + quota reset countdown
+- **`mkt.*`**: lastUpdate, autoUpdate/manual, updateBtn, mktConfigured{n}, toast updated, install counter — Marketplace card completo
+- **`pluginCard.*`**: openFinder/openEditor + tooltip + 5 contextual tip per badge skills/agents/mcp/hook/always-tokens
+- **`mcpCard.*`**: refreshLive, searchPh, toolsBtn+tip, queryingServer{name}, toolsModalTitle, toolsCount{n,verb}, 6 status help text (connected/needsAuth/error/unknown/disabled/builtin), connectedHint, readOnlyHint, 3 button + tip (disable/enable/remove)
+- **`hooksPage.*`**: openBtn+tip, depsLabel, counter, handler/matcher count
+- **`statsPage.*`**: contextEstimateLong (frontmatter desc), pluginsByWeight subtitle, modelsTabDesc, last30Hover, tokensPerModel, tokensDaily, projectsTitle, projectsFooter+Long, statTokens/Messages/Session/Sessions + tooltip, modelsNote, dailyLegend, modelDetail con interpolazione
+- **`config.*`** (15): pageTitle, warning, alwaysThinking+desc, voiceLabel+desc, modelLabel+desc, effortLabel+desc, themeLabel+desc, languageLabel+desc, 3 toast pattern (setTo/enabled/disabled) + saveError — pagina Claude Config INTERA
+- **`settingsExtra.*`**: snapshot title+desc + 6 toast variants, onboardingTitle+welcomeTour+desc+restartTour, infoTitle+appName+licenseLabel+licenseText+disclaimer, usageCurrent+manageUsage, quotaResetsAt+usageLoading+barLabels
+- **`status.loadingConfig`**: caricamento Claude Config
+
+### Migrazione
+
+- [REFACTOR] **`relativeTime()`** completamente migrato — non più "s fa"/"g fa" hardcoded
+- [REFACTOR] **5 counter "X di Y"** (Plugin/Skill/Agent/MCP/Hook) → `t('counter.*')` con interpolazione
+- [REFACTOR] **MCP card** (refresh button + search placeholder + 6 status help + 4 button + 3 tooltip + modal Tools intera)
+- [REFACTOR] **Hooks page** (Apri button + Dipendenze CLI label + counter + search hooks placeholder via existing key)
+- [REFACTOR] **Plugin card** (Apri nel Finder/Editor buttons + 5 tooltip skill/agent/mcp/hook/always-tokens)
+- [REFACTOR] **Skill/Agent modal** (Copia/Modifica/Salva buttons)
+- [REFACTOR] **Marketplace** (count header + Aggiorna button + lastUpdate row + auto/manual badge + toast updated)
+- [REFACTOR] **Stats Overview**: context estimate long note migrato
+- [REFACTOR] **Stats Models tab**: tab desc + token per modello + token giornalieri + hover legend + model detail con interpolazione
+- [REFACTOR] **Stats Projects tab**: title + 3 stat cells + tooltip + footer long con interpolazione
+- [REFACTOR] **Claude Config**: pagina INTERA (title + warning + 5 configRow + voice + 3 toast pattern)
+- [REFACTOR] **Settings extra**: Backup snapshot (title + export/import + 5 toast), Onboarding (Tour di benvenuto + Riavvia), Informazioni (CLACOROO + Licenza + Testo licenza + Disclaimer)
+- [REFACTOR] **Usage bars**: title "Usage corrente" + 3 bar labels + reset countdown + manage link
+
+### Numeri
+
+- **602 chiavi** locale per lingua (era 451 in v1.1.0): +151 chiavi
+- **562 chiamate `t()`** in app.js (era 463 in v1.1.0): +99 nuove call site
+- Shape IT↔EN audit script passa: 602 = 602, 0 chiavi mancanti
+
+### Coverage finale stimata
+
+- ✅ **~99%** delle stringhe user-visible migrate (rimangono solo edge case: HOOK_EVENT_DOCS long descriptions, About dialog Electron menu, 1-2 toast errori molto contestuali)
+- Pagina **Claude Config** ora completamente bilingue (prima era 100% IT)
+- Pagina **Stats** completata (Models + Projects tabs + context note + KPI)
+- Tutta la pagina **Impostazioni** (compresi Snapshot/Onboarding/Informazioni/Disclaimer) ora bilingue
+
 ## v1.1.0 — 2026-05-26 — 🎉 Bilingual release: Pack N closure (Italian + English completi)
 
 **Milestone bilingue di CLACOROO.** Chiusura formale di Pack N — il primo bump minor (1.0.x → 1.1.0) della serie, riservato al cambiamento semantico più grande dell'app dal lancio: l'intera UI è ora multilingua con auto-detect lingua sistema operativo + override manuale persistito.
