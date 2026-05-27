@@ -14,6 +14,7 @@ const path = require('path');
 const fs   = require('fs');
 const os   = require('os');
 const { execFile, execFileSync } = require('child_process');
+const crypto = require('crypto');
 
 // Override generic "Electron" name + icon for dev mode (in production the
 // .icns from electron-builder takes precedence in the .app bundle).
@@ -506,14 +507,41 @@ function createWindow() {
   // of fs.watch because atomic-save tools (Claude Code CLI, VS Code, ecc.)
   // do rename+replace which breaks fs.watch on macOS; polling at 1s is robust
   // and the cost is negligible (4 stat syscalls/sec).
-  [INSTALLED, BLOCKLIST, MARKETPLACES, SETTINGS].forEach(f => {
-    fs.watchFile(f, { interval: 1000 }, (curr, prev) => {
-      if (curr.mtimeMs === prev.mtimeMs) return;
-      STATS_CACHE = null;  // ogni cambio config impatta contextBreakdown/stats
-      MCP_CACHE   = null;  // plugin abilitati cambiano → set server MCP cambia
+  //
+  // v1.1.5 — Toast spam fix: settings.json viene riscritto periodicamente da
+  // Claude Code (telemetria/MRU/contatori) senza cambi user-visible. mtime
+  // cambia ma il contenuto può essere identico (o cambiare solo in chiavi che
+  // non influenzano la UI di CLACOROO). Combo:
+  //   (a) Diff content via hash SHA-1 → ignora se contenuto identico
+  //   (b) Debounce 2s → aggrega burst di scritture (write + fsync, ecc.)
+  const lastConfigHash = {};
+  let configChangeTimer = null;
+  function notifyConfigChanged() {
+    if (configChangeTimer) clearTimeout(configChangeTimer);
+    configChangeTimer = setTimeout(() => {
+      configChangeTimer = null;
+      STATS_CACHE = null;
+      MCP_CACHE   = null;
       if (mainWindow && !mainWindow.isDestroyed()) {
         mainWindow.webContents.send('config-changed');
       }
+    }, 2000);
+  }
+  function hashFileSync(p) {
+    try {
+      const buf = fs.readFileSync(p);
+      return crypto.createHash('sha1').update(buf).digest('hex');
+    } catch { return null; }
+  }
+  [INSTALLED, BLOCKLIST, MARKETPLACES, SETTINGS].forEach(f => {
+    lastConfigHash[f] = hashFileSync(f);
+    fs.watchFile(f, { interval: 1000 }, (curr, prev) => {
+      if (curr.mtimeMs === prev.mtimeMs) return;
+      const newHash = hashFileSync(f);
+      // mtime cambiato ma contenuto identico → no-op silenzioso
+      if (newHash && newHash === lastConfigHash[f]) return;
+      lastConfigHash[f] = newHash;
+      notifyConfigChanged();
     });
   });
 

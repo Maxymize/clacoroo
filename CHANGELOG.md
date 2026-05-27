@@ -2,6 +2,30 @@
 
 > Italiano (canonico). English translation: [CHANGELOG.en.md](./CHANGELOG.en.md) — allineato a ogni release.
 
+## v1.1.5 — 2026-05-27 — Fix toast spam "config changed" + MCP card footer sempre in basso
+
+Due fix UX richiesti dall'utente, raccolti in un'unica release.
+
+### Fix toast spam "Configuration changed — reloading…" (~ogni minuto)
+
+Problema noto da v1.0.110 (segnalato 2026-05-26 con screenshot, documentato in TASK.md come bug minore con 4 opzioni di fix). Causa: `fs.watchFile` polling 1s su `~/.claude/settings.json` che Claude Code riscrive periodicamente per telemetria/MRU/contatori, anche senza modifiche user-visible. Ogni cambio mtime → toast + full reload.
+
+- [FIX] **Combo `diff content (hash SHA-1) + debounce 2s`** in `src/main.js`. Implementata l'opzione preferita fra le 4 documentate:
+  - **Hash content**: prima di notificare, calcoliamo SHA-1 del file. Se identico al precedente → no-op silenzioso (mtime cambiato ma contenuto invariato). Cost: ~0.1ms per file < 100KB, trascurabile
+  - **Debounce 2s**: aggreghiamo burst di scritture (write + fsync, save atomico in 2 passi, ecc.) in una sola notification. Niente più due toast consecutivi
+  - Vale per tutti e 4 i file monitorati: `installed_plugins.json`, `blocklist.json`, `known_marketplaces.json`, `settings.json`
+- [QUALITY] Mantenuto il watcher polling 1s (fs.watch nativo non funziona su macOS con rename+replace atomic save). Aggiunta solo logica di filtro a valle. Codice in 30 righe nette, chiaro e testabile
+
+### Fix MCP card layout: footer sempre alla base
+
+- [STYLE] **`.mcp-card`** → `display: flex; flex-direction: column;` (era block default)
+- [STYLE] **`.mcp-card-body`** → `flex: 1 1 auto` per occupare lo spazio extra e spingere `.mcp-card-footer` sempre alla base, indipendentemente dal contenuto
+- Risultato: card della stessa riga (es. neon + cloudflare-docs sopra Google Drive + Calendar) hanno footer allineato alla base anche quando hanno meno contenuto del vicino
+
+### Bilingual CHANGELOG
+
+- [DOCS] Entry sincronizzata in `CHANGELOG.en.md` (regola formalizzata)
+
 ## v1.1.4 — 2026-05-27 — Pack N residui round 3: MCP card label, plugin/agent tooltip, Hook plugin dropdown, Changelog viewer lang-aware
 
 Terzo audit utente post-v1.1.3 ha trovato altri residui. Migrate: label MCP card "Comando"/"Transport"/"URL", tooltip plugin card "Apri sorgente nel Finder/in VS Code" + "Vedi contenuto plugin", long tooltip health warning agent/skill, Hook page filter labels (Evento/Scope/Plugin + "Tutti (N)"), e **changelog viewer ora lang-aware**: legge `CHANGELOG.md` per IT o `CHANGELOG.<lang>.md` per altre lingue (fallback su canonico se manca).

@@ -3308,6 +3308,11 @@ body {
   border-radius: var(--radius);
   overflow: hidden;
   position: relative;
+  /* v1.1.5 — column flex + body flex:1 spinge il footer (.mcp-card-footer)
+     sempre alla base della card, indipendentemente dal contenuto. La grid
+     padre allinea le card della stessa riga alla max altezza (stretch). */
+  display: flex;
+  flex-direction: column;
 }
 .mcp-card::before {
   content: "";
@@ -3354,7 +3359,7 @@ body {
 .mcp-badge-disabled  { background: rgba(176, 174, 165, .18); color: var(--text-muted); border: 1px dashed var(--border2); }
 .mcp-card[data-disabled="true"] { opacity: 0.7; }
 
-.mcp-card-body { padding: 0 14px 12px 18px; }
+.mcp-card-body { padding: 0 14px 12px 18px; flex: 1 1 auto; }
 .mcp-card-row {
   display: flex; align-items: baseline; gap: 8px;
   font-size: 11px;
