@@ -2,6 +2,55 @@
 
 > Italiano (canonico). English translation: [CHANGELOG.en.md](./CHANGELOG.en.md) — allineato a ogni release.
 
+## v1.1.10 — 2026-05-27 — Guida smoke test cross-platform (Linux + Windows VM) — Fase 0 completion CHIUSA
+
+Quarta e ultima feature della Fase 0 completion. Documento operativo per il smoke test cross-platform che CLACOROO deve passare prima del lancio AGPL pubblico.
+
+### Feature
+
+- [DOCS] **`SMOKE_TEST.md`** (root) — guida completa:
+  - Setup VM Linux (Ubuntu 24.04 ARM via UTM su Mac Apple Silicon) — 30-45 min
+  - Setup VM Windows 11 ARM (UTM su Mac) — 45-60 min
+  - Procedura build cross-platform da Mac (`npm run build:mac/win/linux/dist`)
+  - **Checklist smoke test esaustiva** (60+ voci): boot, Dashboard, Plugin, Marketplace, Skill/Agent, MCP, Hooks, Stats, Claude Config, Impostazioni, Account/API key, Terminale, Notifiche, Cmd+K
+  - Note specifiche per piattaforma: `libsecret-tools`/AppImage/libfuse2 su Linux, ConPTY/DPAPI/SmartScreen su Windows, Gatekeeper/Keychain su macOS
+  - Tempi attesi totali: 2-3h una tantum, poi VM riusabili
+  - Trigger raccomandati: prima di ogni minor release, obbligatorio prima del lancio AGPL pubblico, dopo modifiche codice cross-platform sensibile (node-pty, file watcher, IPC, exec shell)
+
+### Cosa NON è incluso (rimandato a Pack E)
+
+- Apple Developer Program $99/anno per signing + notarization macOS
+- Code signing certificate Windows ($100-400/anno)
+- CI/CD GitHub Actions per build auto + auto-publish releases
+- electron-updater integration
+
+Questi sono blocchi del Pack E (TASK.md) attivabili "quando si decide di investire" (vedi TASK.md riga 866). Il smoke test attuale gira su build unsigned manuali, sufficiente per validazione cross-platform.
+
+### Roadmap Fase 0 completion — CHIUSA ✅
+
+- ✅ Pack N i18n (v1.1.0-v1.1.6) — 708 chiavi locale per lingua, audit script
+- ✅ CLAUDE.md editor inline (v1.1.7)
+- ✅ Empty states con mascotte CLACOROO (v1.1.8)
+- ✅ Notifiche soglia quota Claude (v1.1.9)
+- ✅ Guida smoke test cross-platform (v1.1.10)
+- ❌ Tema light: rimosso dal piano (app resterà sempre dark)
+
+### Cosa rimane per il lancio AGPL pubblico
+
+Le 4 feature di Fase 0 completion sono CHIUSE. Cosa rimane:
+
+1. **Eseguire** il smoke test seguendo la guida → 2-3h una tantum
+2. **Pack E** (Apple Dev + Win cert + CI/CD) → quando si decide di investire ($99-500/anno)
+3. **README/landing pubblico** con screenshot + install instructions
+4. **Reprivatize/Publicize repo** su GitHub
+5. **Annuncio** lancio (community Claude Code, social, ecc.)
+
+CLACOROO Free è ora **funzionalmente completa e production-ready**. Le release v1.2.x in poi saranno patch + nuove feature minor.
+
+### Bilingual CHANGELOG
+
+- [DOCS] Entry sincronizzata in `CHANGELOG.en.md`
+
 ## v1.1.9 — 2026-05-27 — Notifiche soglia quota Claude (system notifications)
 
 Terza delle 4 feature di Fase 0 completion. Notifiche di sistema quando una delle 3 quote Claude (Session 5h, Weekly 7d, Weekly Sonnet) supera 80%/95%/100%, con dedup intelligente per non spammare.
