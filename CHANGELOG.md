@@ -2,6 +2,54 @@
 
 > Italiano (canonico). English translation: [CHANGELOG.en.md](./CHANGELOG.en.md) — allineato a ogni release.
 
+## v1.1.9 — 2026-05-27 — Notifiche soglia quota Claude (system notifications)
+
+Terza delle 4 feature di Fase 0 completion. Notifiche di sistema quando una delle 3 quote Claude (Session 5h, Weekly 7d, Weekly Sonnet) supera 80%/95%/100%, con dedup intelligente per non spammare.
+
+### Feature
+
+- [FEATURE] **Polling automatico ogni 10 min** della quota corrente via `getUsage()` IPC + check soglie. Primo check dopo 30s dal boot (lascia tempo alla cache usage di popolarsi)
+- [FEATURE] **3 livelli soglia per band**: 80% (warning ⚠), 95% (critical 🚨), 100% (exhausted 🛑). Per ognuna 3 bande: `fiveHour` / `sevenDay` / `sevenDaySonnet`
+- [FEATURE] **System notification nativa** via `claudeAPI.showNotification(title, body)` (Electron Notification API)
+- [FEATURE] **Dedup intelligente**: stessa soglia + stessa band → notifica solo se passate >12h dall'ultima (`QUOTA_COOLDOWN_MS`). Se la quota scende (rinnovo settimanale/sessione) → reset state per quella band, prossimo passaggio della soglia ri-notifica
+- [FEATURE] **Toggle ON/OFF** in Settings → Notifiche (default ON, opt-out persistito in `state.notifyQuota`)
+- [FEATURE] **State persisted**: `state.quotaLastNotified[band] = { level, at }` per dedup persistente fra restart app
+
+### Behavior esempio
+
+- Sei al 75% Weekly → no notifica
+- Sali a 81% Weekly → notifica "⚠ Quota Claude Weekly (7d): 80% — Sei al 81% della tua quota Weekly (7d). Resta in 3g."
+- Sali a 85% Weekly → no notifica (stessa soglia 80, in cooldown 12h)
+- Sali a 96% Weekly → notifica "🚨 Quota Claude Weekly (7d): 95% — Sei al 96% della quota Weekly (7d), quasi esaurita. Si azzera in 3g."
+- Raggiungi 100% → notifica "🛑 Quota Claude Weekly (7d) esaurita..."
+- Weekly si azzera (lunedì) → state reset per `sevenDay`, prossimo 80% ri-notifica regolarmente
+
+### Locales — 14 nuove chiavi (708 totali)
+
+- **`settingsExtra.notify*`** (4): notifyTitle, notifyQuotaLabel, notifyQuotaDesc, notifyQuotaOn/Off
+- **`settingsExtra.quotaNotif*`** (6): title80/95/100 + body80/95/100 con interpolazione `{band}`, `{pct}`, `{remaining}`, `{when}`
+- **`settingsExtra.band*`** (3): bandSession, bandWeekly, bandWeeklySonnet
+- **`state.notifyQuota`** (default `true`) + **`state.quotaLastNotified`** (object) persistiti in state.json
+
+### Privacy & noise
+
+- Solo notifiche sopra soglia (mai notifiche "tutto ok")
+- Cooldown 12h previene spam (mai più di 1 notifica per band+livello in mezza giornata)
+- Toggle off totale per chi non le vuole
+- Niente raccolta dati esterna: i percentuali sono già visibili nelle barre Quote Claude della Dashboard
+
+### Bilingual CHANGELOG
+
+- [DOCS] Entry sincronizzata in `CHANGELOG.en.md`
+
+### Roadmap Fase 0 completion
+
+- ✅ Pack N i18n (v1.1.0-v1.1.6)
+- ✅ CLAUDE.md editor inline (v1.1.7)
+- ✅ Empty states con mascotte CLACOROO (v1.1.8)
+- ✅ Notifiche soglia quota Claude (v1.1.9)
+- ⏳ Smoke test Windows + Linux VM (v1.1.10) — ultima feature prima del lancio AGPL pubblico
+
 ## v1.1.8 — 2026-05-27 — Empty states con mascotte CLACOROO
 
 Seconda delle 4 feature di Fase 0 completion. Sezioni completamente vuote (Plugin/Skill/Agent/MCP/Hooks/Marketplaces) ora mostrano la mascotte CLACOROO + titolo + descrizione + CTA contestuale invece di un semplice testo "Nessun X" che dava sensazione di app rotta.

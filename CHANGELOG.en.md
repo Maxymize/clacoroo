@@ -2,6 +2,54 @@
 
 > English translation of [CHANGELOG.md](./CHANGELOG.md) (Italian, canonical). Updated in sync with each release.
 
+## v1.1.9 — 2026-05-27 — Claude quota threshold notifications (system notifications)
+
+Third of the 4 Phase 0 completion features. System notifications when one of the 3 Claude quotas (Session 5h, Weekly 7d, Weekly Sonnet) exceeds 80%/95%/100%, with smart dedup to avoid spamming.
+
+### Feature
+
+- [FEATURE] **Automatic polling every 10 min** of the current quota via `getUsage()` IPC + threshold check. First check 30s after boot (gives time to usage cache to populate)
+- [FEATURE] **3 threshold levels per band**: 80% (warning ⚠), 95% (critical 🚨), 100% (exhausted 🛑). For each, 3 bands: `fiveHour` / `sevenDay` / `sevenDaySonnet`
+- [FEATURE] **Native system notification** via `claudeAPI.showNotification(title, body)` (Electron Notification API)
+- [FEATURE] **Smart dedup**: same threshold + same band → notification only if >12h since last (`QUOTA_COOLDOWN_MS`). If quota drops (weekly/session reset) → state reset for that band, next threshold crossing re-notifies
+- [FEATURE] **ON/OFF toggle** in Settings → Notifications (default ON, opt-out persisted in `state.notifyQuota`)
+- [FEATURE] **State persisted**: `state.quotaLastNotified[band] = { level, at }` for persistent dedup across app restarts
+
+### Example behavior
+
+- You're at 75% Weekly → no notification
+- You hit 81% Weekly → notification "⚠ Claude Weekly (7d) quota: 80% — You're at 81% of your Weekly (7d) quota. in 3d remaining."
+- You hit 85% Weekly → no notification (same threshold 80, in 12h cooldown)
+- You hit 96% Weekly → notification "🚨 Claude Weekly (7d) quota: 95% — You're at 96% of Weekly (7d) quota, almost exhausted. Resets in 3d."
+- You reach 100% → notification "🛑 Claude Weekly (7d) quota exhausted..."
+- Weekly resets (Monday) → state reset for `sevenDay`, next 80% re-notifies normally
+
+### Locales — 14 new keys (708 total)
+
+- **`settingsExtra.notify*`** (4): notifyTitle, notifyQuotaLabel, notifyQuotaDesc, notifyQuotaOn/Off
+- **`settingsExtra.quotaNotif*`** (6): title80/95/100 + body80/95/100 with interpolation `{band}`, `{pct}`, `{remaining}`, `{when}`
+- **`settingsExtra.band*`** (3): bandSession, bandWeekly, bandWeeklySonnet
+- **`state.notifyQuota`** (default `true`) + **`state.quotaLastNotified`** (object) persisted in state.json
+
+### Privacy & noise
+
+- Only notifications above threshold (never "all ok" notifications)
+- 12h cooldown prevents spam (never more than 1 notification per band+level in half a day)
+- Full toggle off for those who don't want them
+- No external data collection: percentages are already visible in the Dashboard Claude Quotes bars
+
+### Bilingual CHANGELOG
+
+- [DOCS] Entry synced in `CHANGELOG.en.md`
+
+### Phase 0 completion roadmap
+
+- ✅ Pack N i18n (v1.1.0-v1.1.6)
+- ✅ Inline CLAUDE.md editor (v1.1.7)
+- ✅ Empty states with CLACOROO mascot (v1.1.8)
+- ✅ Claude quota threshold notifications (v1.1.9)
+- ⏳ Windows + Linux VM smoke test (v1.1.10) — last feature before public AGPL launch
+
 ## v1.1.8 — 2026-05-27 — Empty states with CLACOROO mascot
 
 Second of the 4 Phase 0 completion features. Fully empty sections (Plugin/Skill/Agent/MCP/Hooks/Marketplaces) now show the CLACOROO mascot + title + description + contextual CTA instead of a plain "No X" text that gave a broken-app feeling.

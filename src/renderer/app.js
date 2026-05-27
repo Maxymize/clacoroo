@@ -303,6 +303,11 @@ const state = {
   tokenModel: 'sonnet',
   // Scelta utente esplicita. Vuota = auto-detect OS ad ogni avvio.
   locale: '',
+  // v1.1.9 — Notifiche soglia quota Claude (system-level). Default: ON.
+  // false = opt-out esplicito. Restorato in init() da appState.
+  notifyQuota: true,
+  // Dedup notifiche quota: { fiveHour: {level, at}, sevenDay: {...}, ... }
+  quotaLastNotified: {},
 };
 
 const MKT_SORTERS = {
@@ -595,12 +600,19 @@ async function init() {
   if (appState.tokenModel === 'opus' || appState.tokenModel === 'sonnet') {
     state.tokenModel = appState.tokenModel;
   }
+  // v1.1.9 — restore notifiche quota (opt-out: false esplicito)
+  if (appState.notifyQuota === false) state.notifyQuota = false;
+  if (appState.quotaLastNotified && typeof appState.quotaLastNotified === 'object') {
+    state.quotaLastNotified = appState.quotaLastNotified;
+  }
   if (appState.lastSection && appState.lastSection !== 'dashboard') {
     switchToSection(appState.lastSection);
   }
   if (!appState.onboardingShown) showOnboardingTour();
   // v1.0.09 — Soft auto-update: check all'avvio + ogni 24h se app rimane aperta
   scheduleUpdateCheck();
+  // v1.1.9 — Notifiche soglia quota Claude: polling 10 min con dedup 12h
+  scheduleQuotaCheck();
   // v1.0.29 — Pack A: pill account sempre visibile in sidebar
   bootSidebarAccount();
   // v1.0.67 — Pack B: Terminale integrato (drawer + multi-tab)
@@ -610,6 +622,71 @@ async function init() {
 function scheduleUpdateCheck() {
   runUpdateCheck(false);
   setInterval(() => runUpdateCheck(false), 24 * 60 * 60 * 1000);
+}
+
+// v1.1.9 — Quota threshold notifications. Polling ogni 10 min, dedup per
+// soglia (80/95/100) con cooldown 12h via state.json.
+const QUOTA_BANDS = [
+  { key: 'fiveHour',       i18nKey: 'settingsExtra.bandSession' },
+  { key: 'sevenDay',       i18nKey: 'settingsExtra.bandWeekly' },
+  { key: 'sevenDaySonnet', i18nKey: 'settingsExtra.bandWeeklySonnet' },
+];
+const QUOTA_COOLDOWN_MS = 12 * 60 * 60 * 1000;
+function thresholdLevel(pct) {
+  if (pct >= 100) return 100;
+  if (pct >= 95)  return 95;
+  if (pct >= 80)  return 80;
+  return 0;
+}
+function scheduleQuotaCheck() {
+  // Primo check al boot dopo 30s (lascia tempo a usage cache di popolarsi)
+  setTimeout(() => runQuotaCheck(), 30 * 1000);
+  setInterval(() => runQuotaCheck(), 10 * 60 * 1000);
+}
+async function runQuotaCheck() {
+  if (state.notifyQuota === false) return;  // opt-out esplicito
+  let usageRes;
+  try { usageRes = await window.claudeAPI.getUsage({}); } catch { return; }
+  if (!usageRes || !usageRes.ok) return;
+  const data = usageRes.data || {};
+  const last = state.quotaLastNotified || {};
+  let stateMutated = false;
+  for (const band of QUOTA_BANDS) {
+    const b = data[band.key];
+    if (!b || !Number.isFinite(b.utilization)) continue;
+    const pct = Math.min(100, Math.max(0, b.utilization));
+    const level = thresholdLevel(pct);
+    const prev = last[band.key] || { level: 0, at: 0 };
+    // Reset state se la quota è scesa sotto la soglia (rinnovo settimanale/sessione)
+    if (level < prev.level) {
+      last[band.key] = { level, at: Date.now() };
+      stateMutated = true;
+      continue;
+    }
+    if (level === 0) continue;
+    if (level === prev.level && (Date.now() - prev.at) < QUOTA_COOLDOWN_MS) continue;
+    // Notifica
+    const bandName = t(band.i18nKey);
+    const when = b.resetsAt ? formatResetTime(b.resetsAt) : '';
+    let title, body;
+    if (level === 100) {
+      title = t('settingsExtra.quotaNotifTitle100', { band: bandName });
+      body  = t('settingsExtra.quotaNotifBody100',  { band: bandName, when });
+    } else if (level === 95) {
+      title = t('settingsExtra.quotaNotifTitle95',  { band: bandName });
+      body  = t('settingsExtra.quotaNotifBody95',   { band: bandName, pct: Math.floor(pct), when });
+    } else {
+      title = t('settingsExtra.quotaNotifTitle80',  { band: bandName });
+      body  = t('settingsExtra.quotaNotifBody80',   { band: bandName, pct: Math.floor(pct), remaining: when || '?' });
+    }
+    try { window.claudeAPI.showNotification(title, body); } catch {}
+    last[band.key] = { level, at: Date.now() };
+    stateMutated = true;
+  }
+  if (stateMutated) {
+    state.quotaLastNotified = last;
+    try { await window.claudeAPI.setState({ quotaLastNotified: last }); } catch {}
+  }
 }
 
 async function runUpdateCheck(force) {
@@ -6310,6 +6387,27 @@ function renderSettings() {
     rowAuto.appendChild(togWrap);
     gUpd.appendChild(rowAuto);
   })();
+
+  // v1.1.9 — Notifiche soglia quota Claude
+  const gNotify = group(t('settingsExtra.notifyTitle'));
+  const notifRow = el('div', 'settings-row');
+  const notifLeft = el('div');
+  notifLeft.appendChild(el('div', 'settings-row-label', t('settingsExtra.notifyQuotaLabel')));
+  notifLeft.appendChild(el('div', 'settings-row-desc', t('settingsExtra.notifyQuotaDesc')));
+  notifRow.appendChild(notifLeft);
+  const notifToggle = el('label', 'toggle');
+  const notifInp = el('input'); notifInp.type = 'checkbox';
+  notifInp.checked = state.notifyQuota !== false;
+  notifToggle.appendChild(notifInp);
+  notifToggle.appendChild(el('span', 'toggle-track'));
+  notifToggle.appendChild(el('span', 'toggle-thumb'));
+  notifInp.addEventListener('change', async () => {
+    state.notifyQuota = notifInp.checked;
+    await window.claudeAPI.setState({ notifyQuota: state.notifyQuota });
+    toast(notifInp.checked ? t('settingsExtra.notifyQuotaOn') : t('settingsExtra.notifyQuotaOff'), 'info');
+  });
+  notifRow.appendChild(notifToggle);
+  gNotify.appendChild(notifRow);
 
   // Backup snapshot (idea #5)
   const g6 = group(t('settingsExtra.backupTitle'));
