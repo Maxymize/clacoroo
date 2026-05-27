@@ -201,6 +201,37 @@ async function changeLocale(lang) {
   render();
 }
 
+// "Usa lingua sistema": reset persistito + switch live alla lingua rilevata.
+// Se OS è su una lingua non supportata (es. fr/es/de), fallback su EN come
+// per il boot. Ritorna info per toast: lingua applicata + se è fallback.
+async function applySystemLocale() {
+  state.locale = '';
+  await window.claudeAPI.setState({ locale: '' });
+  let rawOsLang = '';
+  try {
+    const sysRes = await window.claudeAPI.getSystemLocale();
+    rawOsLang = (sysRes && (sysRes.locale || sysRes.systemLocale)) || '';
+  } catch {}
+  const next = resolveLocale(rawOsLang);
+  const osPrefix = (rawOsLang || '').toLowerCase().split(/[-_]/)[0];
+  const isFallback = !!osPrefix && !LOCALES[osPrefix];
+  setLocale(next);
+  applyStaticI18n();
+  render();
+  return { applied: next, detected: osPrefix || 'unknown', isFallback };
+}
+
+// Restituisce il nome localizzato di una lingua (es. 'it' → "Italiano" in IT,
+// "Italian" in EN). Usa Intl.DisplayNames (Chromium 130+, Electron 36+).
+// Fallback al codice lingua se l'API non disponibile.
+function languageDisplayName(langCode) {
+  try {
+    return new Intl.DisplayNames([activeLang], { type: 'language' }).of(langCode);
+  } catch {
+    return langCode;
+  }
+}
+
 /* ── STATE ────────────────────────────────────────────────────────────── */
 const state = {
   rawData:   null,
@@ -5822,19 +5853,22 @@ function renderSettings() {
     toast(t('toast.saved'), 'success');
   });
   langRight.appendChild(langSel);
-  // Reset locale persistita: al prossimo avvio l'app ri-fa auto-detect OS.
-  // La lingua attiva NON cambia subito (l'utente la riavrà al riavvio).
-  if (state.locale) {
-    const sysBtn = el('button', 'btn btn-sm btn-ghost', t('settings.useSystemLang'));
-    sysBtn.title = t('settings.useSystemLangTooltip');
-    sysBtn.addEventListener('click', async () => {
-      state.locale = '';
-      await window.claudeAPI.setState({ locale: '' });
-      toast(t('settings.useSystemLang'), 'info');
-      renderSettings();
-    });
-    langRight.appendChild(sysBtn);
-  }
+  // Sempre visibile: applica la lingua OS al volo. Se OS è su lingua non
+  // supportata (es. fr/es/de), fallback EN con toast esplicativo. Reset
+  // persistito così al riavvio rifa auto-detect (se l'utente cambia lingua OS).
+  const sysBtn = el('button', 'btn btn-sm btn-ghost', t('settings.useSystemLang'));
+  sysBtn.title = t('settings.useSystemLangTooltip');
+  sysBtn.addEventListener('click', async () => {
+    const info = await applySystemLocale();
+    const appliedName = languageDisplayName(info.applied);
+    if (info.isFallback) {
+      const detectedName = languageDisplayName(info.detected) || info.detected;
+      toast(t('settings.systemLangFallback', { detected: detectedName, fallback: appliedName }), 'info');
+    } else {
+      toast(t('settings.systemLangApplied', { lang: appliedName }), 'success');
+    }
+  });
+  langRight.appendChild(sysBtn);
   langRow.appendChild(langRight);
   gLang.appendChild(langRow);
 

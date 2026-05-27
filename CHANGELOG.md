@@ -2,6 +2,34 @@
 
 > Italiano (canonico). English translation: [CHANGELOG.en.md](./CHANGELOG.en.md) — allineato a ogni release.
 
+## v1.1.6 — 2026-05-27 — Fix bottone "Usa lingua sistema" → switch live + fallback EN per lingue non supportate
+
+Bug segnalato: il bottone "Usa lingua sistema" in Impostazioni → Aspetto resettava `state.locale` ma NON faceva switch immediato alla lingua OS (la lingua attiva cambiava solo al prossimo riavvio app, comportamento contro-intuitivo). Inoltre se l'OS è su una lingua non supportata (es. francese, spagnolo, tedesco) il comportamento non era trasparente.
+
+### Fix
+
+- [FIX] **`applySystemLocale()`** nuovo helper async nel blocco i18n: reset persistito + chiamata IPC `getSystemLocale()` + `resolveLocale()` + `setLocale()` + `applyStaticI18n()` + `render()` immediato. Ritorna info su lingua applicata + flag se è fallback
+- [FIX] **Bottone "Usa lingua sistema"** ora SEMPRE visibile (non più condizionale a `state.locale` settato). Click → switch live + toast informativo
+- [FEATURE] **Fallback esplicito EN** per OS su lingue non supportate (`fr`/`es`/`de`/etc.): toast informativo "Sistema in Français (non ancora supportato) — fallback su English". `resolveLocale()` già implementava la logica di fallback, ma l'utente non ne riceveva feedback
+- [FEATURE] **`languageDisplayName(langCode)`** helper: usa `Intl.DisplayNames` (Chromium 130+, Electron 36+) per ottenere il nome localizzato di qualsiasi lingua (es. 'it' → "Italiano" se UI in IT, "Italian" se UI in EN). Fallback al codice lingua se API non disponibile
+
+### Locales — 2 nuove chiavi (669 totali)
+
+- **`settings.systemLangApplied`**: 'Lingua sistema applicata: {lang}' / 'System language applied: {lang}' (toast success caso normale)
+- **`settings.systemLangFallback`**: 'Sistema in {detected} (non ancora supportato) — fallback su {fallback}' (toast info caso fallback EN)
+- **Aggiornato `settings.useSystemLangTooltip`**: ora menziona esplicitamente il fallback EN per lingue non supportate
+
+### Comportamento dopo fix
+
+- **OS in italiano, UI in inglese, click "Use system language"** → UI switcha live a italiano, toast "Lingua sistema applicata: Italiano" ✅
+- **OS in italiano, UI in italiano, click "Usa lingua sistema"** → no-op visibile, toast "Lingua sistema applicata: Italiano"
+- **OS in francese, UI in inglese, click "Use system language"** → UI resta in inglese (correttamente, EN è già il fallback), toast info "System on French (not yet supported) — fallback to English"
+- **OS in francese, UI in italiano, click "Usa lingua sistema"** → UI switcha live a inglese (fallback), toast info "Sistema in Francese (non ancora supportato) — fallback su English"
+
+### Bilingual CHANGELOG
+
+- [DOCS] Entry sincronizzata in `CHANGELOG.en.md` (regola formalizzata)
+
 ## v1.1.5 — 2026-05-27 — Fix toast spam "config changed" + MCP card footer sempre in basso
 
 Due fix UX richiesti dall'utente, raccolti in un'unica release.
