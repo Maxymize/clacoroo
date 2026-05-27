@@ -404,6 +404,9 @@ window.LOCALES.it = {
     // Generic reconnect label
     reconnectLabel:       'Reconnect',
     needsAuthCaption:     'Needs authentication',
+    transportLabel:       'Transport',
+    urlLabel:             'URL',
+    commandLabel:         'Comando',
   },
 
   // Token budget subtitle (Dashboard "Plugins by weight")
@@ -489,6 +492,11 @@ window.LOCALES.it = {
     openEditor:     'Apri in editor',
     openFinderTip:  'Apri la cartella del plugin nel Finder',
     openEditorTip:  'Apri la cartella del plugin nell\'editor predefinito',
+    openSourceFinder:'Apri sorgente nel Finder',
+    openSourceEditor:'Apri sorgente in VS Code',
+    detailsTip:     'Vedi contenuto plugin',
+    healthLong:     'Problemi rilevati nel frontmatter del file .md (manifest dell\'agent/skill):\n\n{issues}\n\nQuesto è un errore del manifest del plugin (autore), non un problema della tua installazione.\n\nPossibili fix:\n  • Aprire issue sul repo del plugin ({repo}) per fix permanente\n  • Modificare il frontmatter manualmente nel file .md locale (sarà sovrascritto al prossimo `claude plugins update`)\n\nL\'agent/skill funziona comunque, ma Claude Code potrebbe non invocarlo correttamente per mancanza di metadati.',
+    healthRepoFallback:'marketplace upstream',
     skillsTip:      'Skill in questo plugin — click per vedere lista e dettagli',
     agentsTip:      'Agent in questo plugin — click per vedere lista',
     mcpTip:         'Plugin esporta uno o più MCP server — click per dettagli',
@@ -536,6 +544,10 @@ window.LOCALES.it = {
     counter:        '{visible} di {total} hook',
     handlerCount:   '{n} handler',
     matcherCount:   '{n} matcher',
+    eventLabel:     'EVENTO:',
+    scopeLabel:     'SCOPE:',
+    pluginLabel:    'PLUGIN:',
+    allWithCount:   'Tutti ({n})',
   },
 
   // Stats sub-pages (overview body, models, projects)

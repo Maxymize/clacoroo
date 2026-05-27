@@ -399,6 +399,9 @@ window.LOCALES.en = {
     tipClearCache:        'Removes the entry from mcp-needs-auth-cache.json (does not touch real tokens)',
     reconnectLabel:       'Reconnect',
     needsAuthCaption:     'Needs authentication',
+    transportLabel:       'Transport',
+    urlLabel:             'URL',
+    commandLabel:         'Command',
   },
 
   // Token budget subtitle (Dashboard "Plugins by weight")
@@ -484,6 +487,11 @@ window.LOCALES.en = {
     openEditor:     'Open in editor',
     openFinderTip:  'Open the plugin folder in Finder',
     openEditorTip:  'Open the plugin folder in the default editor',
+    openSourceFinder:'Open source in Finder',
+    openSourceEditor:'Open source in VS Code',
+    detailsTip:     'See plugin contents',
+    healthLong:     'Issues detected in the .md file frontmatter (agent/skill manifest):\n\n{issues}\n\nThis is a plugin manifest error (author\'s), not a problem with your installation.\n\nPossible fixes:\n  • Open an issue on the plugin repo ({repo}) for a permanent fix\n  • Manually edit the frontmatter in the local .md file (will be overwritten on the next `claude plugins update`)\n\nThe agent/skill still works, but Claude Code may not invoke it correctly due to missing metadata.',
+    healthRepoFallback:'upstream marketplace',
     skillsTip:      'Skills in this plugin — click to see list and details',
     agentsTip:      'Agents in this plugin — click to see list',
     mcpTip:         'Plugin exports one or more MCP servers — click for details',
@@ -531,6 +539,10 @@ window.LOCALES.en = {
     counter:        '{visible} of {total} hooks',
     handlerCount:   '{n} handlers',
     matcherCount:   '{n} matchers',
+    eventLabel:     'EVENT:',
+    scopeLabel:     'SCOPE:',
+    pluginLabel:    'PLUGIN:',
+    allWithCount:   'All ({n})',
   },
 
   // Stats sub-pages (overview body, models, projects)

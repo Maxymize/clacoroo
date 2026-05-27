@@ -2,6 +2,40 @@
 
 > English translation of [CHANGELOG.md](./CHANGELOG.md) (Italian, canonical). Updated in sync with each release.
 
+## v1.1.4 — 2026-05-27 — Pack N round-3 residuals: MCP card label, plugin/agent tooltip, Hook plugin dropdown, language-aware Changelog viewer
+
+Third user audit after v1.1.3 found more residuals. Migrated: MCP card labels "Command"/"Transport"/"URL", plugin card tooltips "Open source in Finder/VS Code" + "See plugin contents", agent/skill health-warning long tooltip, Hooks page filter labels (Event/Scope/Plugin + "All (N)"), and **changelog viewer is now language-aware**: reads `CHANGELOG.md` for IT or `CHANGELOG.<lang>.md` for other languages (fallback to canonical if missing).
+
+### Language-aware Changelog viewer (CRITICAL)
+
+- [REFACTOR] **`src/lib/changelog.js → resolveChangelogPath(lang)`**: looks for `CHANGELOG.<lang>.md` first, falls back to the canonical `CHANGELOG.md` if translation is missing. Scalable approach: adding a language means ONLY creating `CHANGELOG.<lang>.md` with the same shape
+- [REFACTOR] **IPC `get-changelog`** now accepts `{ lang }` param. Renderer passes `activeLang`. No more it/en mix when the user is in EN
+- [REFACTOR] **`preload.js getChangelog(lang)`** + **`renderer openChangelogModal`** pass the active language
+
+### Locales — +12 keys (655 → 667)
+
+- **Extended `mcpReconnect.*`**: transportLabel, urlLabel, commandLabel (MCP card label "TRANSPORT" / "URL" / "COMMAND")
+- **Extended `pluginCard.*`**: openSourceFinder, openSourceEditor, detailsTip, healthLong (long tooltip with interpolation `{issues}` + `{repo}` for agent/skill health warning badge), healthRepoFallback
+- **Extended `hooksPage.*`**: eventLabel, scopeLabel, pluginLabel, allWithCount{n} (Hooks page filters)
+
+### Migration
+
+- [REFACTOR] **MCP card label "Command"** → `t('mcpReconnect.commandLabel')` (dynamic stdio vs URL)
+- [REFACTOR] **MCP card label "Transport"** → `t('mcpReconnect.transportLabel')`
+- [REFACTOR] **Plugin card tooltip "Open source in Finder"** + "Open source in VS Code" + "See plugin contents" → `pluginCard.openSourceFinder/Editor/detailsTip`
+- [REFACTOR] **Health warning long tooltip** (browse-card agent/skill): full text with `{issues}` array interpolated + `{repo}` fallback "upstream marketplace"
+- [REFACTOR] **Hook filter labels**: "Event:" / "Scope:" / "Plugin:" + "All (N)" dropdown → `hooksPage.*`
+
+### Numbers
+
+- **667 locale keys** per language (was 655 in v1.1.3): +12 keys
+- Audit script passes: 667 = 667, 0 interpolation mismatch
+- 4 files modified: `src/renderer/app.js`, `src/renderer/locales/it.js + en.js`, `src/lib/changelog.js`, `src/main.js`, `src/preload.js`
+
+### Bilingual CHANGELOG
+
+- [DOCS] Updated `CHANGELOG.en.md` with v1.1.4 entry in English (formalized rule)
+
 ## v1.1.3 — 2026-05-27 — Pack N round-2 residuals: token-budget, marketplace card, sidebar, API key, MCP reconnect (i18n-aware backend)
 
 Second user audit after v1.1.2 revealed more IT residuals. Migrated Dashboard strings (token-budget subtitle), Marketplace card counter, "See all (N)" Dashboard chips, sidebar "Support", Settings → API key buttons (Test/Save/Reconfigure/Replace/Remove), MCP card reconnect (backend `lib/mcp.js` now returns i18n keys instead of localized strings).

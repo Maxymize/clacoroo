@@ -3,20 +3,26 @@
 const fs   = require('fs');
 const path = require('path');
 
-// CHANGELOG.md è alla root del progetto (in dev e prod via app.asar)
-function resolveChangelogPath() {
+// Risolve il file CHANGELOG da leggere in base alla lingua. `it` (default) →
+// `CHANGELOG.md` (canonico); altre lingue → `CHANGELOG.<lang>.md` se esiste,
+// fallback su canonico. In dev legge dalla root del progetto, in produzione
+// dall'app.asar (i file sono inclusi via package.json build.files).
+function resolveChangelogPath(lang) {
+  const fileName = (lang && lang !== 'it') ? 'CHANGELOG.' + lang + '.md' : 'CHANGELOG.md';
   const candidates = [
-    path.join(__dirname, '..', '..', 'CHANGELOG.md'),  // dev
-    path.join(process.resourcesPath || '', 'app.asar', 'CHANGELOG.md'),  // prod packaged
+    path.join(__dirname, '..', '..', fileName),  // dev
+    path.join(process.resourcesPath || '', 'app.asar', fileName),  // prod packaged
   ];
   for (const p of candidates) {
     if (p && fs.existsSync(p)) return p;
   }
+  // Fallback su CHANGELOG.md canonico se la traduzione non esiste
+  if (fileName !== 'CHANGELOG.md') return resolveChangelogPath('it');
   return null;
 }
 
-function readChangelogRaw() {
-  const p = resolveChangelogPath();
+function readChangelogRaw(lang) {
+  const p = resolveChangelogPath(lang);
   if (!p) return null;
   try { return fs.readFileSync(p, 'utf8'); }
   catch { return null; }

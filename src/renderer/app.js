@@ -2055,12 +2055,12 @@ function buildPluginCard(p) {
   const actions = el('div', 'pc-actions');
 
   const detailsBtn = el('button', 'btn btn-sm btn-ghost btn-icon');
-  detailsBtn.dataset.tt = 'Vedi contenuto plugin';
+  detailsBtn.dataset.tt = t('pluginCard.detailsTip');
   detailsBtn.appendChild(icon('eye'));
   detailsBtn.addEventListener('click', () => showPluginContentModal(p));
 
   const finderBtn = el('button', 'btn btn-sm btn-ghost btn-icon');
-  finderBtn.dataset.tt = 'Apri sorgente nel Finder';
+  finderBtn.dataset.tt = t('pluginCard.openSourceFinder');
   finderBtn.appendChild(icon('folder-open'));
   finderBtn.addEventListener('click', async () => {
     const r = await window.claudeAPI.openPluginPath(p.fullId);
@@ -2068,7 +2068,7 @@ function buildPluginCard(p) {
   });
 
   const codeBtn = el('button', 'btn btn-sm btn-ghost btn-icon');
-  codeBtn.dataset.tt = 'Apri sorgente in VS Code';
+  codeBtn.dataset.tt = t('pluginCard.openSourceEditor');
   codeBtn.appendChild(icon('code'));
   codeBtn.addEventListener('click', async () => {
     const r = await window.claudeAPI.openInEditor(p.fullId);
@@ -2927,13 +2927,10 @@ function buildSkillAgentCard(item, kind) {
     hb.appendChild(icon('triangle-alert'));
     hb.appendChild(document.createTextNode(item.health.status === 'err' ? t('badge.healthError') : t('badge.healthWarn')));
     const issues = item.health.issues || [];
-    hb.title = 'Problemi rilevati nel frontmatter del file .md (manifest dell\'agent/skill):\n\n'
-      + issues.map(i => '  • ' + i).join('\n')
-      + '\n\nQuesto è un errore del manifest del plugin (autore), non un problema della tua installazione.\n\n'
-      + 'Possibili fix:\n'
-      + '  • Aprire issue sul repo del plugin (' + (item.mkt || 'marketplace upstream') + ') per fix permanente\n'
-      + '  • Modificare il frontmatter manualmente nel file .md locale (sarà sovrascritto al prossimo `claude plugins update`)\n\n'
-      + 'L\'agent/skill funziona comunque, ma Claude Code potrebbe non invocarlo correttamente per mancanza di metadati.';
+    hb.title = t('pluginCard.healthLong', {
+      issues: issues.map(i => '  • ' + i).join('\n'),
+      repo: item.mkt || t('pluginCard.healthRepoFallback'),
+    });
     badgeRow.appendChild(hb);
   }
   if (item.blocked) {
@@ -3054,7 +3051,7 @@ function renderHooks() {
   const filterRow = el('div', 'hook-filter-row');
   const events = Array.from(new Set(all.map(h => h.event))).sort();
   const evWrap = el('div', 'hook-filter-group');
-  evWrap.appendChild(el('span', 'hook-filter-label', 'Evento:'));
+  evWrap.appendChild(el('span', 'hook-filter-label', t('hooksPage.eventLabel')));
   const evAll = el('button', 'hook-filter-chip' + (f.event === 'all' ? ' active' : ''), t('filter.all'));
   evAll.addEventListener('click', () => { state.filters.hooks.event = 'all'; renderHooks(); });
   evWrap.appendChild(evAll);
@@ -3069,7 +3066,7 @@ function renderHooks() {
   filterRow.appendChild(evWrap);
 
   const scWrap = el('div', 'hook-filter-group');
-  scWrap.appendChild(el('span', 'hook-filter-label', 'Scope:'));
+  scWrap.appendChild(el('span', 'hook-filter-label', t('hooksPage.scopeLabel')));
   ['all', 'global', 'local'].forEach(key => {
     const lbl = key === 'all' ? t('filter.all') : (key === 'global' ? t('filter.globals') : t('filter.locals'));
     const chip = el('button', 'hook-filter-chip' + (f.scope === key ? ' active' : ''), lbl);
@@ -3084,11 +3081,11 @@ function renderHooks() {
   const plugins = Array.from(new Set(all.map(h => h.pluginId))).sort();
   if (plugins.length > 1) {
     const plWrap = el('div', 'hook-filter-group');
-    plWrap.appendChild(el('span', 'hook-filter-label', 'Plugin:'));
+    plWrap.appendChild(el('span', 'hook-filter-label', t('hooksPage.pluginLabel')));
     const sel = el('select', 'hook-filter-select');
     const optAll = document.createElement('option');
     optAll.value = 'all';
-    optAll.textContent = 'Tutti (' + plugins.length + ')';
+    optAll.textContent = t('hooksPage.allWithCount', { n: plugins.length });
     if (f.plugin === 'all') optAll.selected = true;
     sel.appendChild(optAll);
     plugins.forEach(p => {
@@ -4869,12 +4866,12 @@ function buildMcpCard(srv) {
   // Body: transport + connection (mono)
   const body = el('div', 'mcp-card-body');
   const transportRow = el('div', 'mcp-card-row');
-  transportRow.appendChild(el('span', 'mcp-card-label', 'Transport'));
+  transportRow.appendChild(el('span', 'mcp-card-label', t('mcpReconnect.transportLabel')));
   transportRow.appendChild(el('span', 'mcp-card-value mcp-card-transport-' + srv.transport, srv.transport.toUpperCase()));
   body.appendChild(transportRow);
 
   const connRow = el('div', 'mcp-card-row');
-  connRow.appendChild(el('span', 'mcp-card-label', srv.transport === 'stdio' ? 'Comando' : 'URL'));
+  connRow.appendChild(el('span', 'mcp-card-label', srv.transport === 'stdio' ? t('mcpReconnect.commandLabel') : t('mcpReconnect.urlLabel')));
 
   const connWrap = el('div', 'mcp-card-conn-wrap');
   const conn = el('code', 'mcp-card-conn');
@@ -6410,7 +6407,7 @@ document.addEventListener('keydown', e => {
 /* ── CHANGELOG MODAL (v1.0.10) ────────────────────────────────────────── */
 async function openChangelogModal() {
   if (document.querySelector('.changelog-overlay')) return;
-  const versions = await window.claudeAPI.getChangelog();
+  const versions = await window.claudeAPI.getChangelog(activeLang);
   if (!versions || !versions.length) {
     toast('Changelog non disponibile', 'error');
     return;

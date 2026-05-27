@@ -857,8 +857,8 @@ ipcMain.handle('get-marketplace-detail', async (_e, marketplaceName) => {
 ipcMain.handle('get-activity-log', async () => readActivityLog());
 ipcMain.handle('clear-activity-log', async () => clearActivityLog());
 
-ipcMain.handle('get-changelog', async () => {
-  const raw = readChangelogRaw();
+ipcMain.handle('get-changelog', async (_e, { lang } = {}) => {
+  const raw = readChangelogRaw(lang);
   return raw ? parseChangelog(raw) : [];
 });
 
