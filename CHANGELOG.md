@@ -1,5 +1,36 @@
 # Changelog
 
+> Italiano (canonico). English translation: [CHANGELOG.en.md](./CHANGELOG.en.md) — allineato a ogni release.
+
+## v1.1.2 — 2026-05-27 — Architettura i18n scalabile + CHANGELOG bilingue + audit script
+
+Setup formale dell'infrastruttura i18n per renderla pronta a nuove lingue senza dover fare ricerche di stringhe sparse ad ogni release. Risposta diretta al feedback utente post-v1.1.1: "tutto sia mappato per la traduzione, non bisogna ogni volta andare a fare la ricerca di parole ancora in italiano o in inglese".
+
+### Architettura
+
+- [FEATURE] **`scripts/audit-locales.js`** — script permanente che verifica shape di tutti i `src/renderer/locales/*.js`. Confronta automaticamente ogni lingua con la reference (`it`), segnala chiavi mancanti/extra + variabili `{var}` di interpolazione disallineate. Rileva nuove lingue senza modifica config. Exit code != 0 su mismatch (CI-friendly)
+- [FEATURE] **`npm run audit:locales`** — alias del comando, da eseguire pre-commit ogni volta che si toccano locales o si aggiunge una nuova feature con stringhe UI
+- [FEATURE] **`src/renderer/locales/README.md`** — guida step-by-step (8 passi) per aggiungere una nuova lingua. Documenta: come copiare il template, come registrare il file in `index.html`, come aggiungere l'opzione nel dropdown Settings, come usare `t()` con interpolazione, convenzioni naming chiavi, cosa NON tradurre (brand/tecnici)
+- [DOCS] **CLAUDE.md** sezione **i18n** completa: regola d'oro `t('namespace.key')`, regola CHANGELOG bilingue (IT + EN), workflow per nuove stringhe, **Strict NO-GO** list (stringhe hardcoded, `toLocaleDateString('it-IT')`, concat `+ 'fa'`, costanti module-level con label fisso). Aggiornata anche sezione Versioning per riflettere formato `1.x.yy` da v1.1.0
+
+### CHANGELOG bilingue (nuova regola dal 2026-05-27)
+
+- [FEATURE] **`CHANGELOG.en.md`** — traduzione integrale di tutte le 121 versioni (v1.0.01 → v1.1.1) in inglese fluente. Mantiene identica shape: stessi titoli versione, stesse sezioni, stessi bullet, stessi prefix `[FEATURE]/[REFACTOR]/[STYLE]/...`. Brand/tecnici/code snippets non tradotti
+- [DOCS] **`CHANGELOG.md`** ora porta un header `> Italiano (canonico). English translation: CHANGELOG.en.md` per linkare la traduzione
+- [BUILD] `package.json` `build.files` include ora `CHANGELOG.en.md` nei pacchetti distribuiti
+- [REGOLA] Ogni release futura **deve** aggiornare entrambi i CHANGELOG (IT canonico + EN traduzione)
+
+### Memory persistente
+
+- [DOCS] **Memory `i18n-changelog-bilingual.md`** registra la regola per i contesti futuri: CHANGELOG bilingue obbligatorio, `t()` per ogni stringa UI, `npm run audit:locales` pre-commit, guida nuove lingue in `locales/README.md`
+
+### Coverage finale
+
+- ✅ Architettura scalabile per N lingue (basta `cp en.js fr.js` + tradurre + registrare in `index.html` + aggiungere option dropdown)
+- ✅ Audit shape automatico — niente più sorprese di chiavi mancanti
+- ✅ CHANGELOG bilingue allineato (121 versioni IT + 121 EN)
+- ⏳ Residui IT segnalati dall'utente post-v1.1.1 (saranno in v1.1.3 dopo ricezione lista completa)
+
 ## v1.1.1 — 2026-05-27 — Pack N fix: audit residui IT (Dashboard/Marketplace/MCP/Hooks/Stats/Config/Settings)
 
 Smoke test post-v1.1.0 ha rivelato che la coverage stimata al 97% era ottimistica: l'audit utente in EN ha trovato **molte stringhe ancora hardcoded in italiano** sparse fra Dashboard, Marketplace, Plugin, Skill/Agent modal, MCP, Hooks, Stats, Claude Config (pagina intera!) e Settings (sezioni snapshot/onboarding/informazioni/disclaimer + usage section). Questo commit le copre.
