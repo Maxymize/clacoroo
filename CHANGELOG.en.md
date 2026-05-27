@@ -2,6 +2,45 @@
 
 > English translation of [CHANGELOG.md](./CHANGELOG.md) (Italian, canonical). Updated in sync with each release.
 
+## v1.1.3 — 2026-05-27 — Pack N round-2 residuals: token-budget, marketplace card, sidebar, API key, MCP reconnect (i18n-aware backend)
+
+Second user audit after v1.1.2 revealed more IT residuals. Migrated Dashboard strings (token-budget subtitle), Marketplace card counter, "See all (N)" Dashboard chips, sidebar "Support", Settings → API key buttons (Test/Save/Reconfigure/Replace/Remove), MCP card reconnect (backend `lib/mcp.js` now returns i18n keys instead of localized strings).
+
+### Locales — 6 new namespaces / +53 keys (602 → 655)
+
+- **`tokenBudget.*` (5)**: totalAlways{model}, subtitle{n,tok}, introInvoke{tok}, titleTooltip (id/mkt/always/invoke), summaryAllInvoke{tok,sonnet}
+- **`mcpReconnect.*` (15)**: type/desc for 3 scenarios (claudeAiOauth / httpOauth / stdioWrapper), 3 action labels (reauthClaudeAi / openMcpInClaude / clearAuthCache), 2 tooltips (openTerminal{cmd} / clearCache), reconnectLabel, needsAuthCaption
+- **`sidebar.*` (9)**: support + 8 keys for 3 donation buttons (title + aria-label for GitHub Sponsors / BMAC / PayPal)
+- **`apikeyBtn.*` (18)**: testConnection, saveKey, reconfigure*, replace*, testing, saving, enterKey, keyValid + keyValidWithCount{n}, errPrefix{msg} + errFallback + errSavePrefix, testStoredTip, replaceFormDesc, removeBtn + removeTip
+- **Extended `counter.cardPlugins`**: "{n} plugins" for marketplace card counter
+- **Extended `mkt.installedSlash` + installedTip + repoPrefix**: marketplace card compact row counter
+
+### Backend i18n-aware (CRITICAL for new languages)
+
+- [REFACTOR] **`src/lib/mcp.js` → `detectReconnectType()`**: backend NO LONGER returns Italian strings (`typeLabel`, `description`, `label`). Returns ONLY locale keys (`typeLabelKey`, `descriptionKey`, `labelKey`). The renderer calls `t(key)` with the active language. Pattern reusable for any future backend feature with user-facing strings
+- Benefit: adding a new language only means adding the `locales/<lang>.js` file, no backend change
+
+### UI migration
+
+- [REFACTOR] **Dashboard token-budget**: title "Opus 4.7 total always-on: X tok" + subtitle "· N active plugins · potential on-invoke Y tok" + "+Z on-invoke" + row tooltip + summary modal table
+- [REFACTOR] **"See all (N)" chip** Dashboard summary (Marketplaces + MCP)
+- [REFACTOR] **Marketplace card** chip "N plugins" suffix + compact row "X / Y plugins" + tooltip "Installed / Available"
+- [REFACTOR] **Sidebar** "Support" label + 3 donation tooltips + aria-label wrap — via new `data-i18n-title` and `data-i18n-aria` attributes added to `applyStaticI18n()`
+- [REFACTOR] **`applyStaticI18n()`** extended: in addition to `data-i18n` (textContent), now handles `data-i18n-title` (title attr) and `data-i18n-aria` (aria-label) for static HTML nodes
+- [REFACTOR] **Settings → API key panel**: testBtn (Test connection), saveBtn (Save key), reconfigureBtn (⚙ Reconfigure helper), replaceBtn (↻ Replace), removeBtn (Remove) + all tooltips + toast feedback (apiKeyHelper reconfigured / Reconfiguration error)
+- [REFACTOR] **MCP card reconnect** type badge (typeLabel/description) + 3 actions buttons + terminal/cache tooltips + "Reconnect" label
+
+### Numbers
+
+- **655 locale keys** per language (was 602 in v1.1.2): +53 keys
+- Audit script passes: 655 = 655, 0 interpolation mismatch
+- 3 files modified: `src/renderer/app.js`, `src/renderer/locales/it.js + en.js`, `src/lib/mcp.js`, `src/renderer/index.html`
+
+### Bilingual CHANGELOG
+
+- [DOCS] Updated `CHANGELOG.en.md` with v1.1.3 entry in English, perfectly aligned with the IT canonical
+- From now on: every CLACOROO release **must** update both CHANGELOGs in the same commit (formal rule registered in `CLAUDE.md` + memory `i18n-changelog-bilingual.md`)
+
 ## v1.1.2 — 2026-05-27 — Scalable i18n architecture + bilingual CHANGELOG + audit script
 
 Formal setup of i18n infrastructure to make it ready for new languages without having to grep for scattered strings at every release. Direct response to user feedback after v1.1.1: "everything must be mapped for translation, no more grepping for words still in Italian or English every time".

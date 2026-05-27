@@ -2,6 +2,45 @@
 
 > Italiano (canonico). English translation: [CHANGELOG.en.md](./CHANGELOG.en.md) — allineato a ogni release.
 
+## v1.1.3 — 2026-05-27 — Pack N residui round 2: token-budget, marketplace card, sidebar, API key, MCP reconnect (backend i18n-aware)
+
+Secondo audit utente post-v1.1.2 ha rivelato altri residui IT. Migrate stringhe Dashboard (token-budget subtitle), Marketplace card counter, "Vedi tutte (N)" chips Dashboard, sidebar "Supporta", Settings → API key buttons (Test/Salva/Riconfigura/Sostituisci/Rimuovi), MCP card reconnect (backend `lib/mcp.js` ora ritorna chiavi i18n invece di stringhe localizzate).
+
+### Locales — 6 nuovi namespace / +53 chiavi (602 → 655)
+
+- **`tokenBudget.*` (5)**: totalAlways{model}, subtitle{n,tok}, introInvoke{tok}, titleTooltip (id/mkt/always/invoke), summaryAllInvoke{tok,sonnet}
+- **`mcpReconnect.*` (15)**: type/desc per 3 scenari (claudeAiOauth / httpOauth / stdioWrapper), 3 action labels (reauthClaudeAi / openMcpInClaude / clearAuthCache), 2 tooltip (openTerminal{cmd} / clearCache), reconnectLabel, needsAuthCaption
+- **`sidebar.*` (9)**: support + 8 chiavi per 3 bottoni donazione (title + aria-label per GitHub Sponsors / BMAC / PayPal)
+- **`apikeyBtn.*` (18)**: testConnection, saveKey, reconfigure*, replace*, testing, saving, enterKey, keyValid + keyValidWithCount{n}, errPrefix{msg} + errFallback + errSavePrefix, testStoredTip, replaceFormDesc, removeBtn + removeTip
+- **Esteso `counter.cardPlugins`**: "{n} plugin" per marketplace card counter
+- **Esteso `mkt.installedSlash` + installedTip + repoPrefix**: marketplace card compact row counter
+
+### Backend i18n-aware (CRITICO per nuove lingue)
+
+- [REFACTOR] **`src/lib/mcp.js` → `detectReconnectType()`**: backend NON ritorna più stringhe italiane (`typeLabel`, `description`, `label`). Ritorna SOLO chiavi locale (`typeLabelKey`, `descriptionKey`, `labelKey`). Il renderer fa `t(key)` con la lingua attiva. Pattern replicabile per future feature backend con stringhe user-facing
+- Beneficio: aggiungere una nuova lingua significa SOLO aggiungere il file `locales/<lang>.js`, niente modifica al backend
+
+### Migrazione UI
+
+- [REFACTOR] **Dashboard token-budget**: title "Opus 4.7 totale always-on: X tok" + subtitle "· N plugin attivi · on-invoke potenziale Y tok" + "+Z on-invoke" + tooltip row + summary tabella modal
+- [REFACTOR] **"Vedi tutte (N)" chip** Dashboard summary (Marketplaces + MCP)
+- [REFACTOR] **Marketplace card** chip "N plugin" suffix + compact row "X / Y plugin" + tooltip "Installati / Disponibili"
+- [REFACTOR] **Sidebar** label "Supporta" + 3 tooltip donazione + aria-label wrap — via nuovi attributi `data-i18n-title` e `data-i18n-aria` aggiunti a `applyStaticI18n()`
+- [REFACTOR] **`applyStaticI18n()`** esteso: oltre `data-i18n` (textContent), ora gestisce anche `data-i18n-title` (title attr) e `data-i18n-aria` (aria-label) per nodi HTML statici
+- [REFACTOR] **Settings → API key panel**: testBtn (Test connessione → Test connection), saveBtn (Salva chiave → Save key), reconfigureBtn (⚙ Riconfigura helper), replaceBtn (↻ Sostituisci), removeBtn (Rimuovi) + tutti i tooltip + toast feedback (Helper apiKeyHelper riconfigurato / Errore riconfigurazione)
+- [REFACTOR] **MCP card reconnect type badge** (typeLabel/description) + 3 actions buttons + tooltip terminal/cache + reconnect label "Reconnect"
+
+### Numeri
+
+- **655 chiavi** locale per lingua (era 602 in v1.1.2): +53 chiavi
+- Audit script passa: 655 = 655, 0 mismatch interpolazione
+- 3 file modificati: `src/renderer/app.js`, `src/renderer/locales/it.js + en.js`, `src/lib/mcp.js`, `src/renderer/index.html`
+
+### CHANGELOG bilingue
+
+- [DOCS] Aggiornato `CHANGELOG.en.md` con entry v1.1.3 in inglese, mantenuta perfettamente allineata al canonico IT
+- Da ora in poi: ogni release CLACOROO **deve** aggiornare entrambi i CHANGELOG nella stessa commit (regola formale registrata in `CLAUDE.md` + memory `i18n-changelog-bilingual.md`)
+
 ## v1.1.2 — 2026-05-27 — Architettura i18n scalabile + CHANGELOG bilingue + audit script
 
 Setup formale dell'infrastruttura i18n per renderla pronta a nuove lingue senza dover fare ricerche di stringhe sparse ad ogni release. Risposta diretta al feedback utente post-v1.1.1: "tutto sia mappato per la traduzione, non bisogna ogni volta andare a fare la ricerca di parole ancora in italiano o in inglese".

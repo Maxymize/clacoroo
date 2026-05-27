@@ -189,19 +189,21 @@ function fastEstimate(blockedFullIds) {
 //
 // Ritorna sempre un oggetto strutturato { type, description, actions[] }
 // con actions immutabili dal punto di vista renderer (kind + label + payload).
+// v1.1.3 — Pack N residui round 2: backend ritorna SOLO chiavi locale.
+// Il renderer fa lookup via `t('mcpReconnect.<key>')` così le stringhe seguono
+// la lingua attiva dell'utente (it/en/futuro). Niente più stringhe italiane
+// hardcoded nel backend. Vedi src/renderer/locales/it.js → namespace `mcpReconnect`.
 function detectReconnectType(srv) {
   if (!srv) return null;
 
   if (srv.scope === 'builtin') {
     return {
       type: 'claude-ai-oauth',
-      typeLabel: 'OAuth claude.ai',
-      description: 'MCP integrato di Claude.ai. La riautorizzazione avviene dal sito web (i token vivono lato server).',
+      typeLabelKey: 'mcpReconnect.typeClaudeAiOauth',
+      descriptionKey: 'mcpReconnect.descClaudeAiOauth',
       actions: [
-        // v1.0.102 — Label senza emoji prefix: il renderer aggiunge un'icona
-        // Lucide in base al `kind` (external-link / terminal / ban).
-        { kind: 'open-url', label: 'Riautorizza su claude.ai', url: 'https://claude.ai/settings/connectors' },
-        { kind: 'clear-cache', label: 'Rimuovi da cache "Needs auth"' },
+        { kind: 'open-url', labelKey: 'mcpReconnect.actReauthClaudeAi', url: 'https://claude.ai/settings/connectors' },
+        { kind: 'clear-cache', labelKey: 'mcpReconnect.actClearAuthCache' },
       ],
     };
   }
@@ -209,11 +211,11 @@ function detectReconnectType(srv) {
   if (srv.transport === 'http' || srv.transport === 'sse') {
     return {
       type: 'http-oauth',
-      typeLabel: 'OAuth via /mcp in claude',
-      description: 'Server HTTP/SSE gestito dal plugin. Apriamo `claude` e ti portiamo al menu `/mcp` di Claude Code, da dove puoi fare auth/reconnect direttamente.',
+      typeLabelKey: 'mcpReconnect.typeHttpOauth',
+      descriptionKey: 'mcpReconnect.descHttpOauth',
       actions: [
-        { kind: 'open-terminal', label: 'Apri /mcp in claude', command: 'claude', preDigit: '/mcp' },
-        { kind: 'clear-cache', label: 'Rimuovi da cache "Needs auth"' },
+        { kind: 'open-terminal', labelKey: 'mcpReconnect.actOpenMcpInClaude', command: 'claude', preDigit: '/mcp' },
+        { kind: 'clear-cache', labelKey: 'mcpReconnect.actClearAuthCache' },
       ],
     };
   }
@@ -222,11 +224,11 @@ function detectReconnectType(srv) {
   // (mcp-remote / proxy) sta facendo OAuth verso un servizio remoto.
   return {
     type: 'stdio-wrapper',
-    typeLabel: 'Wrapper stdio',
-    description: 'Server stdio locale. Se richiede auth, è un wrapper (es. mcp-remote) a fare OAuth — il menu `/mcp` di Claude Code ti fa gestire il reconnect.',
+    typeLabelKey: 'mcpReconnect.typeStdioWrapper',
+    descriptionKey: 'mcpReconnect.descStdioWrapper',
     actions: [
-      { kind: 'open-terminal', label: 'Apri /mcp in claude', command: 'claude', preDigit: '/mcp' },
-      { kind: 'clear-cache', label: 'Rimuovi da cache "Needs auth"' },
+      { kind: 'open-terminal', labelKey: 'mcpReconnect.actOpenMcpInClaude', command: 'claude', preDigit: '/mcp' },
+      { kind: 'clear-cache', labelKey: 'mcpReconnect.actClearAuthCache' },
     ],
   };
 }

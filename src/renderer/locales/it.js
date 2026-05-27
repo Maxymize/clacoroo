@@ -381,6 +381,77 @@ window.LOCALES.it = {
     seeAll:         'Vedi tutte',
     seeAllN:        'Vedi tutte ({n})',
     topNActive:     'Top {n} · {total} plugin attivi',
+    cardPlugins:    '{n} plugin',
+  },
+
+  // MCP reconnect strings (backend mcp.js usa key codes, renderer fa lookup)
+  mcpReconnect: {
+    // Reconnect type labels (badge)
+    typeClaudeAiOauth:    'OAuth claude.ai',
+    typeHttpOauth:        'OAuth via /mcp in claude',
+    typeStdioWrapper:     'Wrapper stdio',
+    // Reconnect type descriptions (tooltip + footer hint)
+    descClaudeAiOauth:    'MCP integrato di Claude.ai. La riautorizzazione avviene dal sito web (i token vivono lato server).',
+    descHttpOauth:        'Server HTTP/SSE gestito dal plugin. Apriamo `claude` e ti portiamo al menu `/mcp` di Claude Code, da dove puoi fare auth/reconnect direttamente.',
+    descStdioWrapper:     'Server stdio locale. Se richiede auth, è un wrapper (es. mcp-remote) a fare OAuth — il menu `/mcp` di Claude Code ti fa gestire il reconnect.',
+    // Action labels (button text)
+    actReauthClaudeAi:    'Riautorizza su claude.ai',
+    actOpenMcpInClaude:   'Apri /mcp in claude',
+    actClearAuthCache:    'Rimuovi da cache "Needs auth"',
+    // Action tooltip
+    tipOpenTerminal:      'Apre nuovo tab terminale e lancia: {cmd}',
+    tipClearCache:        'Cancella entry da mcp-needs-auth-cache.json (non tocca i token reali)',
+    // Generic reconnect label
+    reconnectLabel:       'Reconnect',
+    needsAuthCaption:     'Needs authentication',
+  },
+
+  // Token budget subtitle (Dashboard "Plugins by weight")
+  tokenBudget: {
+    totalAlways:    '{model} totale always-on:',
+    subtitle:       '· {n} plugin attivi · on-invoke potenziale {tok} tok',
+    introInvoke:    '+{tok} on-invoke',
+    titleTooltip:   '{id} ({mkt})\\nalways-on: {always} tok\\non-invoke: {invoke} tok',
+    summaryAllInvoke:'{tok} tok on-invoke — Sonnet {sonnet}',
+  },
+
+  // Sidebar
+  sidebar: {
+    support:        'Supporta',
+    supportAriaWrap:'Supporta CLACOROO',
+    tipGithub:      'Sponsor su GitHub (GitHub raddoppia 1:1 le donazioni nei primi 12 mesi)',
+    tipBmac:        'Offrimi un caffè (Buy Me a Coffee)',
+    tipPaypal:      'Dona via PayPal',
+    ariaGithub:     'Sponsor su GitHub',
+    ariaBmac:       'Buy Me a Coffee',
+    ariaPaypal:     'Dona via PayPal',
+  },
+
+  // API key buttons & toast
+  apikeyBtn: {
+    testConnection: 'Test connessione',
+    saveKey:        'Salva chiave',
+    reconfigure:    'Riconfigura',
+    replace:        'Sostituisci',
+    testing:        'Test in corso…',
+    saving:         'Salvataggio…',
+    enterKey:       'Inserisci una chiave',
+    keyValid:       '✓ Chiave valida',
+    keyValidWithCount:'✓ Chiave valida · {n} modelli accessibili',
+    errPrefix:      '✗ {msg}',
+    errFallback:    'Errore',
+    errSavePrefix:  '✗ Errore salvataggio',
+    testStoredTip:  'Verifica che la chiave salvata sia valida (GET /v1/models)',
+    replaceBtn:     '↻ Sostituisci',
+    replaceTip:     'Inserisci una nuova chiave (sostituisce quella corrente)',
+    replaceFormDesc:'Incolla una nuova chiave per attivarla (sostituisce l\'eventuale chiave già salvata).',
+    reconfigureBtn: '⚙ Riconfigura helper',
+    reconfigureTip: 'Riallinea il campo apiKeyHelper di settings.json al path corretto (senza reinserire la chiave)',
+    reconfiguring:  'Riconfiguro…',
+    reconfigOk:     'Helper apiKeyHelper riconfigurato',
+    reconfigErr:    'Errore riconfigurazione: {msg}',
+    removeBtn:      'Rimuovi',
+    removeTip:      'Rimuove la chiave dal Keychain e il campo apiKeyHelper da settings.json',
   },
 
   // Dashboard / MCP / various tooltips
@@ -407,6 +478,9 @@ window.LOCALES.it = {
     toastUpdateErr: 'Errore aggiornamento marketplace: {msg}',
     plusInstall:    '+ Installa',
     plgInstallTip:  '{installed} installati su {total} disponibili',
+    installedSlash: '{installed} / {available} plugin',
+    installedTip:   'Installati / Disponibili nel marketplace',
+    repoPrefix:     'github.com/{repo}',
   },
 
   // Plugin card extra buttons + tooltip

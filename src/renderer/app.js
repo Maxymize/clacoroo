@@ -775,6 +775,14 @@ function applyStaticI18n() {
     const key = node.getAttribute('data-i18n');
     if (key) node.textContent = t(key);
   });
+  document.querySelectorAll('[data-i18n-title]').forEach(node => {
+    const key = node.getAttribute('data-i18n-title');
+    if (key) node.title = t(key);
+  });
+  document.querySelectorAll('[data-i18n-aria]').forEach(node => {
+    const key = node.getAttribute('data-i18n-aria');
+    if (key) node.setAttribute('aria-label', t(key));
+  });
 }
 
 /* ── RENDER DISPATCHER ────────────────────────────────────────────────── */
@@ -1050,7 +1058,7 @@ function renderDashboard() {
       dot.style.cssText = 'width:8px;height:8px;border-radius:50%;flex-shrink:0;background:' + mktColor(m.id);
       chip.appendChild(dot);
       chip.appendChild(el('span', 'skill-chip-name', m.id));
-      chip.appendChild(el('span', 'skill-chip-plugin', m.plugins.length + ' plugin'));
+      chip.appendChild(el('span', 'skill-chip-plugin', t('counter.cardPlugins', { n: m.plugins.length })));
       chip.addEventListener('click', () => switchToSection('marketplaces'));
       return chip;
     },
@@ -1332,9 +1340,9 @@ function renderTokenBudgetSection(container, plugins, opts = {}) {
 
   // Summary line
   const summary = el('div', 'token-budget-summary');
-  summary.appendChild(el('span', 'token-budget-total-label', modelLabel + ' totale always-on:'));
+  summary.appendChild(el('span', 'token-budget-total-label', t('tokenBudget.totalAlways', { model: modelLabel })));
   summary.appendChild(el('strong', 'token-budget-total-val', formatTokenSize(totalAlways) + ' tok'));
-  summary.appendChild(el('span', 'token-budget-sub', '· ' + sorted.length + ' plugin attivi · on-invoke potenziale ' + formatTokenSize(totalInvoke) + ' tok'));
+  summary.appendChild(el('span', 'token-budget-sub', t('tokenBudget.subtitle', { n: sorted.length, tok: formatTokenSize(totalInvoke) })));
   if (mode === 'full') {
     const pctCtx = ((totalAlways / 200000) * 100).toFixed(1);
     summary.appendChild(el('span', 'token-budget-sub', '· ' + pctCtx + '% del context window (200K)'));
@@ -1346,7 +1354,7 @@ function renderTokenBudgetSection(container, plugins, opts = {}) {
   top.forEach((p, idx) => {
     const v = tokenValuesFor(p, model);
     const row = el('div', 'token-budget-row');
-    row.title = p.id + ' (' + p.mkt + ')\nalways-on: ' + v.always + ' tok\non-invoke: ' + v.invoke + ' tok';
+    row.title = t('tokenBudget.titleTooltip', { id: p.id, mkt: p.mkt, always: v.always, invoke: v.invoke }).replace(/\\n/g, '\n');
     if (mode === 'full') {
       row.appendChild(el('span', 'token-budget-rank-inline', '#' + (idx + 1)));
     }
@@ -1367,7 +1375,7 @@ function renderTokenBudgetSection(container, plugins, opts = {}) {
     row.appendChild(barCol);
     row.appendChild(el('span', 'token-budget-val-always', formatTokenSize(v.always) + ' tok'));
     const invoke = el('span', 'token-budget-val-invoke');
-    invoke.textContent = '+' + formatTokenSize(v.invoke) + ' on-invoke';
+    invoke.textContent = t('tokenBudget.introInvoke', { tok: formatTokenSize(v.invoke) });
     row.appendChild(invoke);
     // v1.0.109 — Bottone Disabilita inline (quick context cleanup)
     const disableBtn = el('button', 'token-budget-disable-btn');
@@ -1497,7 +1505,7 @@ function showTokenBudgetModal(plugins) {
   const totalAlwaysOpus   = sortedPlugins.reduce((s, p) => s + tokenValuesFor(p, 'opus').always, 0);
   const footer = el('div', 'token-budget-modal-footer');
   footer.textContent = modelLabel + ' totale: ' + formatTokenSize(totalAlways) + ' tok always-on (peso fisso) + ' +
-    formatTokenSize(totalInvoke) + ' tok on-invoke — Sonnet ' + formatTokenSize(totalAlwaysSonnet) +
+    t('tokenBudget.summaryAllInvoke', { tok: formatTokenSize(totalInvoke), sonnet: formatTokenSize(totalAlwaysSonnet) }) +
     ' vs Opus ' + formatTokenSize(totalAlwaysOpus) + ' (delta ' + formatTokenSize(totalAlwaysOpus - totalAlwaysSonnet) + ' tok)';
   content.appendChild(footer);
 
@@ -1537,7 +1545,7 @@ function renderDashboardSection({ container, title, items, buildChip, targetSect
   const seeAllChip = el('div', 'skill-chip dashboard-see-all clickable');
   seeAllChip.title = t('plugin.openFullSection', { title });
   seeAllChip.appendChild(icon('external-link'));
-  const lbl = el('span', 'dashboard-see-all-lbl', 'Vedi tutte (' + sorted.length + ')');
+  const lbl = el('span', 'dashboard-see-all-lbl', t('counter.seeAllN', { n: sorted.length }));
   seeAllChip.appendChild(lbl);
   seeAllChip.addEventListener('click', () => switchToSection(targetSection));
   grid.appendChild(seeAllChip);
@@ -1578,7 +1586,7 @@ function paintDashboardMcpChips(container, servers) {
   const seeAllChip = el('div', 'skill-chip dashboard-see-all clickable');
   seeAllChip.title = 'Apri la sezione completa MCP server';
   seeAllChip.appendChild(icon('external-link'));
-  seeAllChip.appendChild(el('span', 'dashboard-see-all-lbl', 'Vedi tutte (' + servers.length + ')'));
+  seeAllChip.appendChild(el('span', 'dashboard-see-all-lbl', t('counter.seeAllN', { n: servers.length })));
   seeAllChip.addEventListener('click', () => switchToSection('mcp'));
   grid.appendChild(seeAllChip);
   container.appendChild(grid);
@@ -2610,8 +2618,8 @@ function buildMarketplaceCompactRow(m) {
   row.appendChild(el('span', 'compact-row-name', m.id));
   // Count X/Y
   const count = el('span', 'compact-row-counts');
-  count.textContent = (m.installed || 0) + ' / ' + (m.available || 0) + ' plugin';
-  count.title = 'Installati / Disponibili nel marketplace';
+  count.textContent = t('mkt.installedSlash', { installed: m.installed || 0, available: m.available || 0 });
+  count.title = t('mkt.installedTip');
   row.appendChild(count);
   // Repo
   if (m.repo) {
@@ -4924,9 +4932,9 @@ function buildMcpCard(srv) {
   // solo per server che NON sono connected (per non rumoreggiare il caso ok).
   if (srv.reconnect && srv.status !== 'connected') {
     const rcRow = el('div', 'mcp-card-reconnect-type');
-    rcRow.appendChild(el('span', 'mcp-rc-label', 'Reconnect'));
-    const typeBadge = el('span', 'mcp-rc-type mcp-rc-type-' + srv.reconnect.type, srv.reconnect.typeLabel);
-    typeBadge.title = srv.reconnect.description;
+    rcRow.appendChild(el('span', 'mcp-rc-label', t('mcpReconnect.reconnectLabel')));
+    const typeBadge = el('span', 'mcp-rc-type mcp-rc-type-' + srv.reconnect.type, t(srv.reconnect.typeLabelKey));
+    typeBadge.title = t(srv.reconnect.descriptionKey);
     rcRow.appendChild(typeBadge);
     body.appendChild(rcRow);
   }
@@ -4981,28 +4989,29 @@ function buildMcpCard(srv) {
     const actionsWrap = el('div', 'mcp-card-actions');
     srv.reconnect.actions.forEach(act => {
       // v1.0.102 — Label backend ora già pulite (no emoji prefix), niente strip.
+      // v1.1.3 — backend ritorna labelKey (chiave i18n), renderer fa t()
       const iconByKind = {
         'open-url': 'external-link',
         'open-terminal': 'terminal',
         'clear-cache': 'ban',
       };
       const btn = btnWithIcon('btn btn-sm ' + (act.kind === 'clear-cache' ? 'btn-ghost' : 'btn-primary'),
-        iconByKind[act.kind] || 'play', act.label || '');
+        iconByKind[act.kind] || 'play', act.labelKey ? t(act.labelKey) : (act.label || ''));
       btn.title = act.kind === 'open-url' ? act.url
-        : act.kind === 'open-terminal' ? ('Apre nuovo tab terminale e lancia: ' + act.command)
-        : 'Cancella entry da mcp-needs-auth-cache.json (non tocca i token reali)';
+        : act.kind === 'open-terminal' ? t('mcpReconnect.tipOpenTerminal', { cmd: act.command })
+        : t('mcpReconnect.tipClearCache');
       btn.addEventListener('click', e => { e.stopPropagation(); runMcpReconnectAction(srv, act); });
       actionsWrap.appendChild(btn);
     });
     // v1.0.94 — bottone Rimuovi anche nel footer "needsAuth" se user-added
     if (isUserAdded) {
-      const rmBtn = btnWithIcon('btn btn-sm btn-ghost', 'trash-2', 'Rimuovi');
-      rmBtn.title = 'Rimuove questo server con `claude mcp remove ' + srv.id + '`';
+      const rmBtn = btnWithIcon('btn btn-sm btn-ghost', 'trash-2', t('mcpCard.removeBtn'));
+      rmBtn.title = t('mcpCard.removeBtnTip', { id: srv.id });
       rmBtn.addEventListener('click', e => { e.stopPropagation(); confirmAndRemoveMcp(srv); });
       actionsWrap.appendChild(rmBtn);
     }
     footer.appendChild(actionsWrap);
-    const desc = el('div', 'mcp-card-hint', srv.reconnect.description);
+    const desc = el('div', 'mcp-card-hint', t(srv.reconnect.descriptionKey));
     footer.appendChild(desc);
   }
   card.appendChild(footer);
@@ -5466,32 +5475,34 @@ function appendApiKeyForm(card, container) {
   form.appendChild(showWrap);
 
   const actions = el('div', 'apikey-actions');
-  const testBtn = el('button', 'btn btn-sm btn-ghost', 'Test connessione');
-  const saveBtn = el('button', 'btn btn-sm btn-primary', 'Salva chiave');
+  const testBtn = el('button', 'btn btn-sm btn-ghost', t('apikeyBtn.testConnection'));
+  const saveBtn = el('button', 'btn btn-sm btn-primary', t('apikeyBtn.saveKey'));
 
   const statusInline = el('div', 'apikey-inline-status');
 
   testBtn.addEventListener('click', async () => {
     const k = input.value.trim();
-    if (!k) return setInline(statusInline, 'Inserisci una chiave', 'error');
+    if (!k) return setInline(statusInline, t('apikeyBtn.enterKey'), 'error');
     testBtn.disabled = saveBtn.disabled = true;
-    testBtn.textContent = 'Test in corso…';
+    testBtn.textContent = t('apikeyBtn.testing');
     setInline(statusInline, '', '');
     const r = await window.claudeAPI.apiKey.test(k);
     testBtn.disabled = saveBtn.disabled = false;
-    testBtn.textContent = 'Test connessione';
+    testBtn.textContent = t('apikeyBtn.testConnection');
     if (r.ok) {
-      setInline(statusInline, `✓ Chiave valida${r.modelCount ? ` · ${r.modelCount} modelli accessibili` : ''}`, 'ok');
+      setInline(statusInline,
+        r.modelCount ? t('apikeyBtn.keyValidWithCount', { n: r.modelCount }) : t('apikeyBtn.keyValid'),
+        'ok');
     } else {
-      setInline(statusInline, '✗ ' + (r.error || 'Errore'), 'error');
+      setInline(statusInline, t('apikeyBtn.errPrefix', { msg: r.error || t('apikeyBtn.errFallback') }), 'error');
     }
   });
 
   saveBtn.addEventListener('click', async () => {
     const k = input.value.trim();
-    if (!k) return setInline(statusInline, 'Inserisci una chiave', 'error');
+    if (!k) return setInline(statusInline, t('apikeyBtn.enterKey'), 'error');
     testBtn.disabled = saveBtn.disabled = true;
-    saveBtn.textContent = 'Salvataggio…';
+    saveBtn.textContent = t('apikeyBtn.saving');
     const r = await window.claudeAPI.apiKey.activate(k);
     if (r.ok) {
       input.value = '';
@@ -5499,8 +5510,8 @@ function appendApiKeyForm(card, container) {
       await loadApiKeyPanel(container);
     } else {
       testBtn.disabled = saveBtn.disabled = false;
-      saveBtn.textContent = 'Salva chiave';
-      setInline(statusInline, '✗ ' + (r.error || 'Errore salvataggio'), 'error');
+      saveBtn.textContent = t('apikeyBtn.saveKey');
+      setInline(statusInline, t('apikeyBtn.errPrefix', { msg: r.error || t('apikeyBtn.errSavePrefix') }), 'error');
     }
   });
 
@@ -5520,56 +5531,55 @@ function setInline(node, text, kind) {
 function renderApiKeyForm(container) {
   container.textContent = '';
   const card = el('div', 'apikey-card');
-  card.appendChild(el('div', 'apikey-desc',
-    'Incolla una nuova chiave per attivarla (sostituisce l\'eventuale chiave già salvata).'));
+  card.appendChild(el('div', 'apikey-desc', t('apikeyBtn.replaceFormDesc')));
   appendApiKeyForm(card, container);
   container.appendChild(card);
 }
 
 function makeTestBtn() {
-  const btn = el('button', 'btn btn-sm btn-ghost', 'Test connessione');
-  btn.title = 'Verifica che la chiave salvata sia valida (GET /v1/models)';
+  const btn = el('button', 'btn btn-sm btn-ghost', t('apikeyBtn.testConnection'));
+  btn.title = t('apikeyBtn.testStoredTip');
   btn.addEventListener('click', async () => {
     btn.disabled = true;
-    btn.textContent = 'Test in corso…';
+    btn.textContent = t('apikeyBtn.testing');
     const r = await window.claudeAPI.apiKey.testStored();
     btn.disabled = false;
-    btn.textContent = 'Test connessione';
-    if (r.ok) toast(`✓ Chiave valida · ${r.modelCount || '?'} modelli accessibili`, 'success');
-    else toast('✗ ' + (r.error || 'Errore'), 'error');
+    btn.textContent = t('apikeyBtn.testConnection');
+    if (r.ok) toast(t('apikeyBtn.keyValidWithCount', { n: r.modelCount || '?' }), 'success');
+    else toast(t('apikeyBtn.errPrefix', { msg: r.error || t('apikeyBtn.errFallback') }), 'error');
   });
   return btn;
 }
 
 function makeReplaceBtn(container) {
-  const btn = el('button', 'btn btn-sm btn-ghost', '↻ Sostituisci');
-  btn.title = 'Inserisci una nuova chiave (sostituisce quella corrente)';
+  const btn = el('button', 'btn btn-sm btn-ghost', t('apikeyBtn.replaceBtn'));
+  btn.title = t('apikeyBtn.replaceTip');
   btn.addEventListener('click', () => renderApiKeyForm(container));
   return btn;
 }
 
 function makeReconfigureBtn(container) {
-  const btn = el('button', 'btn btn-sm btn-ghost', '⚙ Riconfigura helper');
-  btn.title = 'Riallinea il campo apiKeyHelper di settings.json al path corretto (senza reinserire la chiave)';
+  const btn = el('button', 'btn btn-sm btn-ghost', t('apikeyBtn.reconfigureBtn'));
+  btn.title = t('apikeyBtn.reconfigureTip');
   btn.addEventListener('click', async () => {
     btn.disabled = true;
-    btn.textContent = 'Riconfiguro…';
+    btn.textContent = t('apikeyBtn.reconfiguring');
     const r = await window.claudeAPI.apiKey.reconfigure();
     if (r.ok) {
-      toast('Helper apiKeyHelper riconfigurato', 'success');
+      toast(t('apikeyBtn.reconfigOk'), 'success');
       await loadApiKeyPanel(container);
     } else {
       btn.disabled = false;
-      btn.textContent = '⚙ Riconfigura helper';
-      toast('Errore riconfigurazione: ' + (r.error || 'sconosciuto'), 'error');
+      btn.textContent = t('apikeyBtn.reconfigureBtn');
+      toast(t('apikeyBtn.reconfigErr', { msg: r.error || t('mcp.status.unknown') }), 'error');
     }
   });
   return btn;
 }
 
 function makeRemoveBtn(container) {
-  const btn = el('button', 'btn btn-sm btn-danger', 'Rimuovi');
-  btn.title = 'Rimuove la chiave dal Keychain e il campo apiKeyHelper da settings.json';
+  const btn = el('button', 'btn btn-sm btn-danger', t('apikeyBtn.removeBtn'));
+  btn.title = t('apikeyBtn.removeTip');
   btn.addEventListener('click', async () => {
     const ok = await window.claudeAPI.confirmDialog({
       title:   t('confirm.removeApiKey.title'),

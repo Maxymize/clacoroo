@@ -381,6 +381,72 @@ window.LOCALES.en = {
     seeAll:         'See all',
     seeAllN:        'See all ({n})',
     topNActive:     'Top {n} · {total} active plugins',
+    cardPlugins:    '{n} plugins',
+  },
+
+  // MCP reconnect strings (backend mcp.js uses key codes, renderer looks up)
+  mcpReconnect: {
+    typeClaudeAiOauth:    'OAuth claude.ai',
+    typeHttpOauth:        'OAuth via /mcp in claude',
+    typeStdioWrapper:     'stdio wrapper',
+    descClaudeAiOauth:    'Built-in MCP from Claude.ai. Re-authorization happens on the website (tokens live server-side).',
+    descHttpOauth:        'HTTP/SSE server managed by the plugin. We open `claude` and take you to Claude Code\'s `/mcp` menu, where you can auth/reconnect directly.',
+    descStdioWrapper:     'Local stdio server. If it requires auth, a wrapper (e.g. mcp-remote) handles OAuth — Claude Code\'s `/mcp` menu manages the reconnect.',
+    actReauthClaudeAi:    'Re-authorize on claude.ai',
+    actOpenMcpInClaude:   'Open /mcp in claude',
+    actClearAuthCache:    'Remove from "Needs auth" cache',
+    tipOpenTerminal:      'Opens a new terminal tab and runs: {cmd}',
+    tipClearCache:        'Removes the entry from mcp-needs-auth-cache.json (does not touch real tokens)',
+    reconnectLabel:       'Reconnect',
+    needsAuthCaption:     'Needs authentication',
+  },
+
+  // Token budget subtitle (Dashboard "Plugins by weight")
+  tokenBudget: {
+    totalAlways:    '{model} total always-on:',
+    subtitle:       '· {n} active plugins · potential on-invoke {tok} tok',
+    introInvoke:    '+{tok} on-invoke',
+    titleTooltip:   '{id} ({mkt})\\nalways-on: {always} tok\\non-invoke: {invoke} tok',
+    summaryAllInvoke:'{tok} tok on-invoke — Sonnet {sonnet}',
+  },
+
+  // Sidebar
+  sidebar: {
+    support:        'Support',
+    supportAriaWrap:'Support CLACOROO',
+    tipGithub:      'Sponsor on GitHub (GitHub matches 1:1 in the first 12 months)',
+    tipBmac:        'Buy me a coffee',
+    tipPaypal:      'Donate via PayPal',
+    ariaGithub:     'Sponsor on GitHub',
+    ariaBmac:       'Buy Me a Coffee',
+    ariaPaypal:     'Donate via PayPal',
+  },
+
+  // API key buttons & toast
+  apikeyBtn: {
+    testConnection: 'Test connection',
+    saveKey:        'Save key',
+    reconfigure:    'Reconfigure',
+    replace:        'Replace',
+    testing:        'Testing…',
+    saving:         'Saving…',
+    enterKey:       'Enter a key',
+    keyValid:       '✓ Valid key',
+    keyValidWithCount:'✓ Valid key · {n} models accessible',
+    errPrefix:      '✗ {msg}',
+    errFallback:    'Error',
+    errSavePrefix:  '✗ Save error',
+    testStoredTip:  'Verify that the saved key is valid (GET /v1/models)',
+    replaceBtn:     '↻ Replace',
+    replaceTip:     'Enter a new key (replaces the current one)',
+    replaceFormDesc:'Paste a new key to activate it (replaces any existing saved key).',
+    reconfigureBtn: '⚙ Reconfigure helper',
+    reconfigureTip: 'Re-align the apiKeyHelper field in settings.json to the correct path (without re-entering the key)',
+    reconfiguring:  'Reconfiguring…',
+    reconfigOk:     'apiKeyHelper reconfigured',
+    reconfigErr:    'Reconfiguration error: {msg}',
+    removeBtn:      'Remove',
+    removeTip:      'Removes the key from the Keychain and the apiKeyHelper field from settings.json',
   },
 
   // Dashboard / MCP / various tooltips
@@ -407,6 +473,9 @@ window.LOCALES.en = {
     toastUpdateErr: 'Marketplace update error: {msg}',
     plusInstall:    '+ Install',
     plgInstallTip:  '{installed} installed of {total} available',
+    installedSlash: '{installed} / {available} plugins',
+    installedTip:   'Installed / Available in the marketplace',
+    repoPrefix:     'github.com/{repo}',
   },
 
   // Plugin card extra buttons + tooltip
