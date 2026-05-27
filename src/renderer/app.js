@@ -135,6 +135,27 @@ function sectionTitle(text, iconName) {
   return t;
 }
 
+// v1.1.8 — Empty state "full page" con mascotte CLACOROO. Usato quando una
+// sezione (Plugin/Skill/Agent/MCP/Hooks/Marketplace) è completamente vuota.
+// `cta` opzionale: { label, onClick } per un bottone arancione che porta
+// l'utente alla soluzione (es. "Vai a Marketplace" da sezione Plugin vuota).
+function buildMascotEmpty(opts) {
+  const wrap = el('div', 'empty-mascot');
+  const img = el('img', 'empty-mascot-img');
+  img.src = 'clacoroo.svg';
+  img.alt = '';
+  img.setAttribute('aria-hidden', 'true');
+  wrap.appendChild(img);
+  wrap.appendChild(el('h2', 'empty-mascot-title', opts.title));
+  wrap.appendChild(el('p', 'empty-mascot-msg', opts.message));
+  if (opts.cta) {
+    const btn = el('button', 'btn btn-primary empty-mascot-cta', opts.cta.label);
+    btn.addEventListener('click', opts.cta.onClick);
+    wrap.appendChild(btn);
+  }
+  return wrap;
+}
+
 /* ── i18n ──────────────────────────────────────────────────────────────── */
 // `window.LOCALES` popolato dai <script> locales/<lang>.js prima di app.js.
 // `activeLang` = runtime; `state.locale` = scelta utente persistita (vuota
@@ -1645,6 +1666,17 @@ function renderPlugins() {
 
   const wrap = el('div');
 
+  // v1.1.8 — Empty state "full page" con mascotte se nessun plugin installato
+  if (!state.plugins.length) {
+    wrap.appendChild(buildMascotEmpty({
+      title: t('empty.bigNoPluginTitle'),
+      message: t('empty.bigNoPluginMsg'),
+      cta: { label: t('empty.bigNoPluginCta'), onClick: () => switchToSection('marketplaces') },
+    }));
+    setContent(wrap);
+    return;
+  }
+
   // Stima contesto in cima — aggiornata in tempo reale a ogni toggle/enable/disable
   const ctxSection = el('div', 'plugins-context-section');
   wrap.appendChild(ctxSection);
@@ -2669,6 +2701,17 @@ function buildMarketplaceCompactRow(m) {
 function renderMarketplaces() {
   const wrap = el('div');
 
+  // v1.1.8 — Empty state mascotte se nessun marketplace aggiunto
+  if (!state.mktList.length) {
+    wrap.appendChild(buildMascotEmpty({
+      title: t('empty.bigNoMktTitle'),
+      message: t('empty.bigNoMktMsg'),
+      cta: { label: t('empty.bigNoMktCta'), onClick: () => showAddMarketplaceModal() },
+    }));
+    setContent(wrap);
+    return;
+  }
+
   const hdr = el('div', 'section-header');
   hdr.appendChild(el('span', 'section-count', t('mkt.mktConfigured', { n: state.mktList.length })));
 
@@ -2854,6 +2897,11 @@ function renderSkills() {
         section: 'skills', mode,
         onChange: (m) => setViewMode('skills', m),
       },
+    },
+    {
+      title: t('empty.bigNoSkillTitle'),
+      message: t('empty.bigNoSkillMsg'),
+      cta: { label: t('empty.bigGoToPlugin'), onClick: () => switchToSection('plugins') },
     });
 }
 
@@ -2888,6 +2936,11 @@ function renderAgents() {
         section: 'agents', mode,
         onChange: (m) => setViewMode('agents', m),
       },
+    },
+    {
+      title: t('empty.bigNoAgentTitle'),
+      message: t('empty.bigNoAgentMsg'),
+      cta: { label: t('empty.bigGoToPlugin'), onClick: () => switchToSection('plugins') },
     });
 }
 
@@ -3182,9 +3235,11 @@ function renderHooks() {
   wrap.appendChild(grid);
 
   if (!all.length) {
-    const empty = el('div', 'empty-state');
-    empty.appendChild(el('p', '', t('empty.noHooksInstall')));
-    setContent(empty);
+    setContent(buildMascotEmpty({
+      title: t('empty.bigNoHookTitle'),
+      message: t('empty.bigNoHookMsg'),
+      cta: { label: t('empty.bigGoToPlugin'), onClick: () => switchToSection('plugins') },
+    }));
     return;
   }
 
@@ -3962,9 +4017,16 @@ async function showClaudeMdEditor(filePath, displayName) {
 // nell'header per esporre il dropdown sort (usato da renderSkills/renderAgents).
 // v1.0.96 — `sortConfig.viewSwitcher = {section, mode, onChange}` opzionale
 // aggiunge il toggle vista cards/compatta accanto al sort dropdown.
-function renderListSection(items, key, buildChip, searchFn, gridCls, sortConfig) {
+function renderListSection(items, key, buildChip, searchFn, gridCls, sortConfig, mascotEmpty) {
   const f = state.filters[key] || { search: '' };
   const wrap = el('div');
+
+  // v1.1.8 — Empty state "full page" con mascotte se nessun item del tutto
+  if (mascotEmpty && (!items || !items.length)) {
+    wrap.appendChild(buildMascotEmpty(mascotEmpty));
+    setContent(wrap);
+    return;
+  }
 
   // search
   const bar = el('div', 'filter-bar');
@@ -4919,7 +4981,12 @@ async function renderMcp() {
 
   const rawServers = [...(mcpCache.servers || []), ...disabledServers];
   if (!rawServers.length) {
-    grid.appendChild(el('div', 'mcp-empty', t('empty.noMcp')));
+    grid.textContent = '';
+    wrap.appendChild(buildMascotEmpty({
+      title: t('empty.bigNoMcpTitle'),
+      message: t('empty.bigNoMcpMsg'),
+      cta: { label: t('empty.bigNoMcpCta'), onClick: () => showAddMcpModal() },
+    }));
     return;
   }
 

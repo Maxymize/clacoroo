@@ -2,6 +2,46 @@
 
 > English translation of [CHANGELOG.md](./CHANGELOG.md) (Italian, canonical). Updated in sync with each release.
 
+## v1.1.8 — 2026-05-27 — Empty states with CLACOROO mascot
+
+Second of the 4 Phase 0 completion features. Fully empty sections (Plugin/Skill/Agent/MCP/Hooks/Marketplaces) now show the CLACOROO mascot + title + description + contextual CTA instead of a plain "No X" text that gave a broken-app feeling.
+
+### Feature
+
+- [FEATURE] **`buildMascotEmpty(opts)`** helper in the renderer: centered card with CLACOROO mascot (clacoroo.svg) animated in idle "breath", H2 title, explanatory description, optional CTA button that takes the user to the solution
+- [STYLE] **CSS `.empty-mascot` + `.empty-mascot-img/title/msg/cta`** in style.css: centered flex layout, 64px padding, 520px max-width, `emptyMascotBreath` 4s infinite animation (translateY -4px + scale 1.03)
+- [FEATURE] **6 empty states migrated** to mascot:
+  - **Empty Plugin section** → "No plugin installed" + CTA "Go to Marketplace"
+  - **Empty Skill section** → "No skill available" + CTA "Go to Plugins"
+  - **Empty Agent section** → "No agent available" + CTA "Go to Plugins"
+  - **Empty MCP section** → "No MCP server configured" + CTA "Add MCP" (opens showAddMcpModal)
+  - **Empty Hooks section** → "No hook configured" + CTA "Go to Plugins"
+  - **Empty Marketplaces section** → "No marketplace added" + CTA "Add marketplace" (opens showAddMarketplaceModal)
+- [REFACTOR] **`renderListSection()`** extended with optional `mascotEmpty` parameter: used by renderSkills + renderAgents to show the mascot when items.length === 0
+
+### Locales — 16 new keys (694 total)
+
+- **`empty.big*`** (16): bigNoPluginTitle/Msg/Cta, bigNoSkillTitle/Msg, bigNoAgentTitle/Msg, bigNoMcpTitle/Msg/Cta, bigNoHookTitle/Msg, bigNoMktTitle/Msg/Cta, bigGoToPlugin (shared CTA)
+- Smaller inline empty states ("no results filter") remain textual via `empty.noPluginResults/noMcpResults/etc.`
+
+### UX coverage
+
+- ✅ All main sections (Plugin/Skill/Agent/MCP/Hooks/Marketplace) show the mascot when empty
+- Clear distinction between "totally empty" (mascot + CTA) and "filtered to 0" (plain "no results" text)
+- Reuses existing mascot (`assets/clacoroo.svg`), no new assets
+
+### Bilingual CHANGELOG
+
+- [DOCS] Entry synced in `CHANGELOG.en.md`
+
+### Phase 0 completion roadmap
+
+- ✅ Pack N i18n (v1.1.0-v1.1.6)
+- ✅ Inline CLAUDE.md editor (v1.1.7)
+- ✅ Empty states with CLACOROO mascot (v1.1.8)
+- ⏳ Claude quota threshold system notifications (v1.1.9)
+- ⏳ Windows + Linux VM smoke test (v1.1.10)
+
 ## v1.1.7 — 2026-05-27 — Inline CLAUDE.md editor (global + per tracked project)
 
 First of the 4 Phase 0 completion features confirmed by the user to close the Free version before the public AGPL launch.

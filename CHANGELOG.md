@@ -2,6 +2,46 @@
 
 > Italiano (canonico). English translation: [CHANGELOG.en.md](./CHANGELOG.en.md) — allineato a ogni release.
 
+## v1.1.8 — 2026-05-27 — Empty states con mascotte CLACOROO
+
+Seconda delle 4 feature di Fase 0 completion. Sezioni completamente vuote (Plugin/Skill/Agent/MCP/Hooks/Marketplaces) ora mostrano la mascotte CLACOROO + titolo + descrizione + CTA contestuale invece di un semplice testo "Nessun X" che dava sensazione di app rotta.
+
+### Feature
+
+- [FEATURE] **`buildMascotEmpty(opts)`** helper nel renderer: card centrata con mascotte CLACOROO (clacoroo.svg) animata in "respiro" idle, titolo H2, descrizione esplicativa, bottone CTA opzionale che porta alla soluzione
+- [STYLE] **CSS `.empty-mascot` + `.empty-mascot-img/title/msg/cta`** in style.css: layout flex centrato, padding 64px, max-width 520px, animazione `emptyMascotBreath` 4s infinite (translateY -4px + scale 1.03)
+- [FEATURE] **6 empty state migrati** a mascotte:
+  - **Plugin section vuota** → "Nessun plugin installato" + CTA "Vai al Marketplace"
+  - **Skill section vuota** → "Nessuna skill disponibile" + CTA "Vai a Plugin"
+  - **Agent section vuota** → "Nessun agent disponibile" + CTA "Vai a Plugin"
+  - **MCP section vuota** → "Nessun MCP server configurato" + CTA "Aggiungi MCP" (apre showAddMcpModal)
+  - **Hooks section vuota** → "Nessun hook configurato" + CTA "Vai a Plugin"
+  - **Marketplaces section vuota** → "Nessun marketplace aggiunto" + CTA "Aggiungi marketplace" (apre showAddMarketplaceModal)
+- [REFACTOR] **`renderListSection()`** esteso con parametro opzionale `mascotEmpty`: usato da renderSkills + renderAgents per mostrare mascotte quando items.length === 0
+
+### Locales — 16 nuove chiavi (694 totali)
+
+- **`empty.big*`** (16): bigNoPluginTitle/Msg/Cta, bigNoSkillTitle/Msg, bigNoAgentTitle/Msg, bigNoMcpTitle/Msg/Cta, bigNoHookTitle/Msg, bigNoMktTitle/Msg/Cta, bigGoToPlugin (CTA condiviso)
+- Empty inline più piccoli ("nessun risultato filtri") restano testuali via `empty.noPluginResults/noMcpResults/etc.`
+
+### Coverage UX
+
+- ✅ Tutte le sezioni principali (Plugin/Skill/Agent/MCP/Hooks/Marketplace) mostrano mascotte quando vuote
+- Distinzione chiara fra "vuoto totale" (mascotte + CTA) e "filtrato a 0" (testo semplice "no results")
+- Mascotte già esistente (`assets/clacoroo.svg`) riusata, niente nuovi asset
+
+### Bilingual CHANGELOG
+
+- [DOCS] Entry sincronizzata in `CHANGELOG.en.md`
+
+### Roadmap Fase 0 completion
+
+- ✅ Pack N i18n (v1.1.0-v1.1.6)
+- ✅ CLAUDE.md editor inline (v1.1.7)
+- ✅ Empty states con mascotte CLACOROO (v1.1.8)
+- ⏳ Notifiche soglia quota Claude system-level (v1.1.9)
+- ⏳ Smoke test Windows + Linux VM (v1.1.10)
+
 ## v1.1.7 — 2026-05-27 — CLAUDE.md editor inline (globale + per progetto tracciato)
 
 Prima delle 4 feature di Fase 0 completion confermate dall'utente per chiudere la versione Free prima del lancio pubblico AGPL.
