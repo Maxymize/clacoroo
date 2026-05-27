@@ -46,6 +46,8 @@
       "node_modules/node-pty/**/*"
     ],
     "compression": "normal",
+    "npmRebuild": false,
+    "buildDependenciesFromSource": false,
     "mac": {
       "category": "public.app-category.developer-tools",
       "target": [
