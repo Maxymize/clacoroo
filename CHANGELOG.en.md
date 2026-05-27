@@ -2,439 +2,66 @@
 
 > English translation of [CHANGELOG.md](./CHANGELOG.md) (Italian, canonical). Updated in sync with each release.
 
-## v1.1.10 — 2026-05-27 — Cross-platform smoke test guide (Linux + Windows VM) — Phase 0 completion CLOSED
+## v1.1.11 — 2026-05-27 — CHANGELOG cleanup + "concise entries" rule
 
-Fourth and last feature of Phase 0 completion. Operational document for the cross-platform smoke test CLACOROO must pass before the public AGPL launch.
+- [DOCS] Rewrote entries from v1.1.0 to v1.1.10 in concise form (max 3-6 badged bullets). Removed internal implementation details, file paths, function names, future roadmap and strategic status from entries — only user-visible changes remain
+- [DOCS] Formalized the CHANGELOG style rule: entries are user-facing (in-app Changelog modal), so they must stay concise. Technical details live in commit messages
 
-### Feature
+## v1.1.10 — 2026-05-27 — Cross-platform smoke test guide
 
-- [DOCS] **`SMOKE_TEST.md`** (root) — complete guide:
-  - Linux VM setup (Ubuntu 24.04 ARM via UTM on Mac Apple Silicon) — 30-45 min
-  - Windows 11 ARM VM setup (UTM on Mac) — 45-60 min
-  - Cross-platform build procedure from Mac (`npm run build:mac/win/linux/dist`)
-  - **Exhaustive smoke test checklist** (60+ items): boot, Dashboard, Plugin, Marketplace, Skill/Agent, MCP, Hooks, Stats, Claude Config, Settings, Account/API key, Terminal, Notifications, Cmd+K
-  - Platform-specific notes: `libsecret-tools`/AppImage/libfuse2 on Linux, ConPTY/DPAPI/SmartScreen on Windows, Gatekeeper/Keychain on macOS
-  - Expected total time: 2-3h one-time, then VMs reusable
-  - Recommended triggers: before every minor release, mandatory before public AGPL launch, after touching cross-platform sensitive code (node-pty, file watcher, IPC, exec shell)
+- [DOCS] New `SMOKE_TEST.md` file with Linux/Windows VM setup via UTM, app verification checklist, platform-specific notes
 
-### What is NOT included (deferred to Pack E)
+## v1.1.9 — 2026-05-27 — Claude quota threshold system notifications
 
-- Apple Developer Program $99/year for macOS signing + notarization
-- Windows code signing certificate ($100-400/year)
-- CI/CD GitHub Actions for auto build + auto-publish releases
-- electron-updater integration
-
-These are Pack E blockers (TASK.md) activable "when we decide to invest" (see TASK.md line 866). Current smoke test runs on unsigned manual builds, sufficient for cross-platform validation.
-
-### Phase 0 completion roadmap — CLOSED ✅
-
-- ✅ Pack N i18n (v1.1.0-v1.1.6) — 708 locale keys per language, audit script
-- ✅ Inline CLAUDE.md editor (v1.1.7)
-- ✅ Empty states with CLACOROO mascot (v1.1.8)
-- ✅ Claude quota threshold notifications (v1.1.9)
-- ✅ Cross-platform smoke test guide (v1.1.10)
-- ❌ Light theme: removed from plan (app will stay dark forever)
-
-### What remains for the public AGPL launch
-
-The 4 Phase 0 completion features are CLOSED. What remains:
-
-1. **Execute** the smoke test following the guide → 2-3h one-time
-2. **Pack E** (Apple Dev + Win cert + CI/CD) → when we decide to invest ($99-500/year)
-3. **Public README/landing** with screenshots + install instructions
-4. **Reprivatize/Publicize** repo on GitHub
-5. **Launch announcement** (Claude Code community, social, etc.)
-
-CLACOROO Free is now **functionally complete and production-ready**. v1.2.x releases onwards will be patch + new minor features.
-
-### Bilingual CHANGELOG
-
-- [DOCS] Entry synced in `CHANGELOG.en.md`
-
-## v1.1.9 — 2026-05-27 — Claude quota threshold notifications (system notifications)
-
-Third of the 4 Phase 0 completion features. System notifications when one of the 3 Claude quotas (Session 5h, Weekly 7d, Weekly Sonnet) exceeds 80%/95%/100%, with smart dedup to avoid spamming.
-
-### Feature
-
-- [FEATURE] **Automatic polling every 10 min** of the current quota via `getUsage()` IPC + threshold check. First check 30s after boot (gives time to usage cache to populate)
-- [FEATURE] **3 threshold levels per band**: 80% (warning ⚠), 95% (critical 🚨), 100% (exhausted 🛑). For each, 3 bands: `fiveHour` / `sevenDay` / `sevenDaySonnet`
-- [FEATURE] **Native system notification** via `claudeAPI.showNotification(title, body)` (Electron Notification API)
-- [FEATURE] **Smart dedup**: same threshold + same band → notification only if >12h since last (`QUOTA_COOLDOWN_MS`). If quota drops (weekly/session reset) → state reset for that band, next threshold crossing re-notifies
-- [FEATURE] **ON/OFF toggle** in Settings → Notifications (default ON, opt-out persisted in `state.notifyQuota`)
-- [FEATURE] **State persisted**: `state.quotaLastNotified[band] = { level, at }` for persistent dedup across app restarts
-
-### Example behavior
-
-- You're at 75% Weekly → no notification
-- You hit 81% Weekly → notification "⚠ Claude Weekly (7d) quota: 80% — You're at 81% of your Weekly (7d) quota. in 3d remaining."
-- You hit 85% Weekly → no notification (same threshold 80, in 12h cooldown)
-- You hit 96% Weekly → notification "🚨 Claude Weekly (7d) quota: 95% — You're at 96% of Weekly (7d) quota, almost exhausted. Resets in 3d."
-- You reach 100% → notification "🛑 Claude Weekly (7d) quota exhausted..."
-- Weekly resets (Monday) → state reset for `sevenDay`, next 80% re-notifies normally
-
-### Locales — 14 new keys (708 total)
-
-- **`settingsExtra.notify*`** (4): notifyTitle, notifyQuotaLabel, notifyQuotaDesc, notifyQuotaOn/Off
-- **`settingsExtra.quotaNotif*`** (6): title80/95/100 + body80/95/100 with interpolation `{band}`, `{pct}`, `{remaining}`, `{when}`
-- **`settingsExtra.band*`** (3): bandSession, bandWeekly, bandWeeklySonnet
-- **`state.notifyQuota`** (default `true`) + **`state.quotaLastNotified`** (object) persisted in state.json
-
-### Privacy & noise
-
-- Only notifications above threshold (never "all ok" notifications)
-- 12h cooldown prevents spam (never more than 1 notification per band+level in half a day)
-- Full toggle off for those who don't want them
-- No external data collection: percentages are already visible in the Dashboard Claude Quotes bars
-
-### Bilingual CHANGELOG
-
-- [DOCS] Entry synced in `CHANGELOG.en.md`
-
-### Phase 0 completion roadmap
-
-- ✅ Pack N i18n (v1.1.0-v1.1.6)
-- ✅ Inline CLAUDE.md editor (v1.1.7)
-- ✅ Empty states with CLACOROO mascot (v1.1.8)
-- ✅ Claude quota threshold notifications (v1.1.9)
-- ⏳ Windows + Linux VM smoke test (v1.1.10) — last feature before public AGPL launch
+- [FEATURE] System notifications when a Claude quota (Session 5h, Weekly 7d, Weekly Sonnet) exceeds 80%, 95% or 100%
+- [FEATURE] On/off toggle in Settings → Notifications, with 12h cooldown to avoid spam
 
 ## v1.1.8 — 2026-05-27 — Empty states with CLACOROO mascot
 
-Second of the 4 Phase 0 completion features. Fully empty sections (Plugin/Skill/Agent/MCP/Hooks/Marketplaces) now show the CLACOROO mascot + title + description + contextual CTA instead of a plain "No X" text that gave a broken-app feeling.
+- [FEATURE] Completely empty sections (Plugin, Skill, Agent, MCP, Hooks, Marketplace) now show the CLACOROO mascot with description and a button to reach the solution, instead of a minimal "No X" text
 
-### Feature
+## v1.1.7 — 2026-05-27 — Inline CLAUDE.md editor
 
-- [FEATURE] **`buildMascotEmpty(opts)`** helper in the renderer: centered card with CLACOROO mascot (clacoroo.svg) animated in idle "breath", H2 title, explanatory description, optional CTA button that takes the user to the solution
-- [STYLE] **CSS `.empty-mascot` + `.empty-mascot-img/title/msg/cta`** in style.css: centered flex layout, 64px padding, 520px max-width, `emptyMascotBreath` 4s infinite animation (translateY -4px + scale 1.03)
-- [FEATURE] **6 empty states migrated** to mascot:
-  - **Empty Plugin section** → "No plugin installed" + CTA "Go to Marketplace"
-  - **Empty Skill section** → "No skill available" + CTA "Go to Plugins"
-  - **Empty Agent section** → "No agent available" + CTA "Go to Plugins"
-  - **Empty MCP section** → "No MCP server configured" + CTA "Add MCP" (opens showAddMcpModal)
-  - **Empty Hooks section** → "No hook configured" + CTA "Go to Plugins"
-  - **Empty Marketplaces section** → "No marketplace added" + CTA "Add marketplace" (opens showAddMarketplaceModal)
-- [REFACTOR] **`renderListSection()`** extended with optional `mascotEmpty` parameter: used by renderSkills + renderAgents to show the mascot when items.length === 0
+- [FEATURE] Inline editor to modify the global CLAUDE.md file (`~/.claude/CLAUDE.md`) directly from Settings
+- [FEATURE] Inline editor for the CLAUDE.md of every tracked project, reachable from the project row
+- [SECURITY] The backend only accepts paths to CLAUDE.md files that are actually whitelisted (global or tracked projects)
 
-### Locales — 16 new keys (694 total)
+## v1.1.6 — 2026-05-27 — Immediate system-language switch + English fallback
 
-- **`empty.big*`** (16): bigNoPluginTitle/Msg/Cta, bigNoSkillTitle/Msg, bigNoAgentTitle/Msg, bigNoMcpTitle/Msg/Cta, bigNoHookTitle/Msg, bigNoMktTitle/Msg/Cta, bigGoToPlugin (shared CTA)
-- Smaller inline empty states ("no results filter") remain textual via `empty.noPluginResults/noMcpResults/etc.`
+- [FIX] The "Use system language" button now applies the system language instantly, no app restart required
+- [FEATURE] Explanatory toast if the operating system is on a not-yet-supported language (automatic fallback to English)
 
-### UX coverage
+## v1.1.5 — 2026-05-27 — Anti-spam "config changed" toast + MCP card layout
 
-- ✅ All main sections (Plugin/Skill/Agent/MCP/Hooks/Marketplace) show the mascot when empty
-- Clear distinction between "totally empty" (mascot + CTA) and "filtered to 0" (plain "no results" text)
-- Reuses existing mascot (`assets/clacoroo.svg`), no new assets
+- [FIX] Fixed the spam of "Configuration changed" toasts that appeared periodically: the notification now shows only if the configuration file content actually changes
+- [STYLE] MCP cards now always have the footer (Tools/Disable/Remove actions) aligned at the bottom even when the card content is minimal
 
-### Bilingual CHANGELOG
+## v1.1.4 — 2026-05-27 — Residual translations + Changelog in the active language
 
-- [DOCS] Entry synced in `CHANGELOG.en.md`
+- [REFACTOR] The Changelog modal now displays release notes in the active app language (was always Italian)
+- [REFACTOR] Translated the MCP card labels (Transport/URL/Command), the plugin tooltips (Open in Finder/in VS Code), the long warning tooltip on agents/skills, and the Hooks page filters
 
-### Phase 0 completion roadmap
+## v1.1.3 — 2026-05-27 — Translations Dashboard + Marketplace + Sidebar + API key + MCP
 
-- ✅ Pack N i18n (v1.1.0-v1.1.6)
-- ✅ Inline CLAUDE.md editor (v1.1.7)
-- ✅ Empty states with CLACOROO mascot (v1.1.8)
-- ⏳ Claude quota threshold system notifications (v1.1.9)
-- ⏳ Windows + Linux VM smoke test (v1.1.10)
+- [REFACTOR] Translated the Dashboard "Plugins by weight" subtitles, the Marketplace card counters and the "See all" chips
+- [REFACTOR] Translated the sidebar "Support" label, the API key panel buttons (Test connection / Save / Reconfigure / Replace / Remove) and the MCP card reconnect texts
 
-## v1.1.7 — 2026-05-27 — Inline CLAUDE.md editor (global + per tracked project)
+## v1.1.2 — 2026-05-27 — Scalable i18n architecture + bilingual Changelog
 
-First of the 4 Phase 0 completion features confirmed by the user to close the Free version before the public AGPL launch.
+- [FEATURE] New `npm run audit:locales` script to automatically verify that all languages have the same keys and the same placeholders
+- [DOCS] Step-by-step guide to add a new language to the app (in `src/renderer/locales/README.md`)
+- [FEATURE] CHANGELOG now also published in English (`CHANGELOG.en.md`), kept aligned with every release
 
-### Feature
+## v1.1.1 — 2026-05-27 — Extended translations across main pages
 
-- [FEATURE] **Inline editor for `~/.claude/CLAUDE.md` global** — new "CLAUDE.md" group in Settings, right below Appearance. Edit button opens modal with Markdown preview + textarea editor + Save
-- [FEATURE] **Inline editor for `<project>/CLAUDE.md`** of every tracked project — in Settings → Tracked projects, "CLAUDE.md" button next to Remove for each project
-- [FEATURE] **`showClaudeMdEditor(filePath, displayName)`** helper in the renderer: same UX as the existing showMarkdownModal (preview/edit/save/cancel + Copy + Esc to close). Confirm on unsaved changes before closing/cancelling
-- [FEATURE] **Empty state** if the file does not exist: hint "(empty file — write your Claude Code instructions here)". The directory is created on save
+- [REFACTOR] Translated many Italian texts still hardcoded across Dashboard, Marketplace, Plugin, Skill/Agent, MCP, Hooks, Stats, Claude Config and Settings pages
+- [REFACTOR] Relative time format ("18h ago", "1d ago") now follows the active app language
 
-### i18n-safe backend
+## v1.1.0 — 2026-05-26 — 🎉 Bilingual release: CLACOROO is now multilingual
 
-- [SECURITY] **IPC `read-claude-md` + `write-claude-md`** in `src/main.js` with path whitelist: the path must be `CLAUDE.md` (case-insensitive) AND live in `~/.claude/` OR in one of the persisted `trackedProjects`. Arbitrary paths rejected with error "Path not allowed"
-- [SECURITY] `writeClaudeMd` uses `fs.mkdirSync(..., recursive: true)` to create the directory if missing (e.g. newly tracked project without a CLAUDE.md yet)
-- [FEATURE] **Activity log entry** for every save (`kind: 'edit', action: 'claude-md', target: filePath`)
-- [REFACTOR] **`preload.js`**: `readClaudeMd(filePath)` + `writeClaudeMd(filePath, content)` bridge
-
-### Locales — 9 new keys (678 total)
-
-- **`settingsExtra.claudeMd*`** (9): claudeMdTitle, claudeMdGlobal, claudeMdGlobalDesc, claudeMdGlobalEdit, claudeMdProjectEdit, claudeMdSaved, claudeMdReadErr{msg}, claudeMdWriteErr{msg}, claudeMdEmptyHint
-
-### Bilingual CHANGELOG
-
-- [DOCS] Entry synced in `CHANGELOG.en.md` (formalized rule)
-
-### Phase 0 completion roadmap
-
-- ✅ Pack N i18n (v1.1.0-v1.1.6)
-- ✅ Inline CLAUDE.md editor (v1.1.7)
-- ⏳ Empty states with CLACOROO mascot (v1.1.8)
-- ⏳ Claude quota threshold system notifications (v1.1.9)
-- ⏳ Windows + Linux VM smoke test (v1.1.10)
-- ❌ Light theme: removed from plan (app will stay dark forever)
-
-## v1.1.6 — 2026-05-27 — Fix "Use system language" button → live switch + EN fallback for unsupported languages
-
-Reported bug: the "Use system language" button in Settings → Appearance reset `state.locale` but did NOT trigger an immediate switch to the OS language (the active language only changed on the next app restart, counter-intuitive behavior). Also, if the OS is on an unsupported language (e.g. French, Spanish, German), the behavior was not transparent.
-
-### Fix
-
-- [FIX] **`applySystemLocale()`** new async helper in the i18n block: persist reset + IPC `getSystemLocale()` call + `resolveLocale()` + `setLocale()` + `applyStaticI18n()` + `render()` immediate. Returns info on applied language + flag if it's a fallback
-- [FIX] **"Use system language" button** now ALWAYS visible (no longer conditional on `state.locale` set). Click → live switch + info toast
-- [FEATURE] **Explicit EN fallback** for OS on unsupported languages (`fr`/`es`/`de`/etc.): info toast "System on Français (not yet supported) — fallback to English". `resolveLocale()` already implemented the fallback logic, but the user wasn't receiving feedback
-- [FEATURE] **`languageDisplayName(langCode)`** helper: uses `Intl.DisplayNames` (Chromium 130+, Electron 36+) to get the localized name of any language (e.g. 'it' → "Italiano" if UI in IT, "Italian" if UI in EN). Fallback to the language code if API unavailable
-
-### Locales — 2 new keys (669 total)
-
-- **`settings.systemLangApplied`**: 'Lingua sistema applicata: {lang}' / 'System language applied: {lang}' (success toast normal case)
-- **`settings.systemLangFallback`**: 'Sistema in {detected} (non ancora supportato) — fallback su {fallback}' (info toast fallback EN case)
-- **Updated `settings.useSystemLangTooltip`**: now explicitly mentions the EN fallback for unsupported languages
-
-### Behavior after fix
-
-- **OS in Italian, UI in English, click "Use system language"** → UI switches live to Italian, toast "System language applied: Italian" ✅
-- **OS in Italian, UI in Italian, click "Use system language"** → visible no-op, toast "System language applied: Italian"
-- **OS in French, UI in English, click "Use system language"** → UI stays in English (correctly, EN is already the fallback), info toast "System on French (not yet supported) — fallback to English"
-- **OS in French, UI in Italian, click "Use system language"** → UI switches live to English (fallback), info toast "System on French (not yet supported) — fallback to English"
-
-### Bilingual CHANGELOG
-
-- [DOCS] Entry synced in `CHANGELOG.en.md` (formalized rule)
-
-## v1.1.5 — 2026-05-27 — Fix "config changed" toast spam + MCP card footer always at the bottom
-
-Two UX fixes requested by the user, bundled in a single release.
-
-### Fix "Configuration changed — reloading…" toast spam (~every minute)
-
-Known issue since v1.0.110 (reported on 2026-05-26 with screenshot, documented in TASK.md as a minor bug with 4 fix options). Cause: `fs.watchFile` polling 1s on `~/.claude/settings.json` that Claude Code rewrites periodically for telemetry/MRU/counters, even without user-visible changes. Every mtime change → toast + full reload.
-
-- [FIX] **`diff content (SHA-1 hash) + 2s debounce` combo** in `src/main.js`. Implements the preferred option among the 4 documented ones:
-  - **Hash content**: before notifying, we compute SHA-1 of the file. If identical to previous → silent no-op (mtime changed but content unchanged). Cost: ~0.1ms for file < 100KB, negligible
-  - **2s debounce**: aggregates write bursts (write + fsync, atomic save in 2 passes, etc.) into a single notification. No more two consecutive toasts
-  - Applies to all 4 monitored files: `installed_plugins.json`, `blocklist.json`, `known_marketplaces.json`, `settings.json`
-- [QUALITY] Kept the polling-1s watcher (native fs.watch doesn't work on macOS with rename+replace atomic save). Added only downstream filter logic. Code in 30 net lines, clear and testable
-
-### Fix MCP card layout: footer always at the bottom
-
-- [STYLE] **`.mcp-card`** → `display: flex; flex-direction: column;` (was default block)
-- [STYLE] **`.mcp-card-body`** → `flex: 1 1 auto` to occupy extra space and push `.mcp-card-footer` always to the bottom, regardless of content
-- Result: cards in the same row (e.g. neon + cloudflare-docs above Google Drive + Calendar) have their footers aligned at the bottom even when they have less content than their neighbor
-
-### Bilingual CHANGELOG
-
-- [DOCS] Entry synced in `CHANGELOG.en.md` (formalized rule)
-
-## v1.1.4 — 2026-05-27 — Pack N round-3 residuals: MCP card label, plugin/agent tooltip, Hook plugin dropdown, language-aware Changelog viewer
-
-Third user audit after v1.1.3 found more residuals. Migrated: MCP card labels "Command"/"Transport"/"URL", plugin card tooltips "Open source in Finder/VS Code" + "See plugin contents", agent/skill health-warning long tooltip, Hooks page filter labels (Event/Scope/Plugin + "All (N)"), and **changelog viewer is now language-aware**: reads `CHANGELOG.md` for IT or `CHANGELOG.<lang>.md` for other languages (fallback to canonical if missing).
-
-### Language-aware Changelog viewer (CRITICAL)
-
-- [REFACTOR] **`src/lib/changelog.js → resolveChangelogPath(lang)`**: looks for `CHANGELOG.<lang>.md` first, falls back to the canonical `CHANGELOG.md` if translation is missing. Scalable approach: adding a language means ONLY creating `CHANGELOG.<lang>.md` with the same shape
-- [REFACTOR] **IPC `get-changelog`** now accepts `{ lang }` param. Renderer passes `activeLang`. No more it/en mix when the user is in EN
-- [REFACTOR] **`preload.js getChangelog(lang)`** + **`renderer openChangelogModal`** pass the active language
-
-### Locales — +12 keys (655 → 667)
-
-- **Extended `mcpReconnect.*`**: transportLabel, urlLabel, commandLabel (MCP card label "TRANSPORT" / "URL" / "COMMAND")
-- **Extended `pluginCard.*`**: openSourceFinder, openSourceEditor, detailsTip, healthLong (long tooltip with interpolation `{issues}` + `{repo}` for agent/skill health warning badge), healthRepoFallback
-- **Extended `hooksPage.*`**: eventLabel, scopeLabel, pluginLabel, allWithCount{n} (Hooks page filters)
-
-### Migration
-
-- [REFACTOR] **MCP card label "Command"** → `t('mcpReconnect.commandLabel')` (dynamic stdio vs URL)
-- [REFACTOR] **MCP card label "Transport"** → `t('mcpReconnect.transportLabel')`
-- [REFACTOR] **Plugin card tooltip "Open source in Finder"** + "Open source in VS Code" + "See plugin contents" → `pluginCard.openSourceFinder/Editor/detailsTip`
-- [REFACTOR] **Health warning long tooltip** (browse-card agent/skill): full text with `{issues}` array interpolated + `{repo}` fallback "upstream marketplace"
-- [REFACTOR] **Hook filter labels**: "Event:" / "Scope:" / "Plugin:" + "All (N)" dropdown → `hooksPage.*`
-
-### Numbers
-
-- **667 locale keys** per language (was 655 in v1.1.3): +12 keys
-- Audit script passes: 667 = 667, 0 interpolation mismatch
-- 4 files modified: `src/renderer/app.js`, `src/renderer/locales/it.js + en.js`, `src/lib/changelog.js`, `src/main.js`, `src/preload.js`
-
-### Bilingual CHANGELOG
-
-- [DOCS] Updated `CHANGELOG.en.md` with v1.1.4 entry in English (formalized rule)
-
-## v1.1.3 — 2026-05-27 — Pack N round-2 residuals: token-budget, marketplace card, sidebar, API key, MCP reconnect (i18n-aware backend)
-
-Second user audit after v1.1.2 revealed more IT residuals. Migrated Dashboard strings (token-budget subtitle), Marketplace card counter, "See all (N)" Dashboard chips, sidebar "Support", Settings → API key buttons (Test/Save/Reconfigure/Replace/Remove), MCP card reconnect (backend `lib/mcp.js` now returns i18n keys instead of localized strings).
-
-### Locales — 6 new namespaces / +53 keys (602 → 655)
-
-- **`tokenBudget.*` (5)**: totalAlways{model}, subtitle{n,tok}, introInvoke{tok}, titleTooltip (id/mkt/always/invoke), summaryAllInvoke{tok,sonnet}
-- **`mcpReconnect.*` (15)**: type/desc for 3 scenarios (claudeAiOauth / httpOauth / stdioWrapper), 3 action labels (reauthClaudeAi / openMcpInClaude / clearAuthCache), 2 tooltips (openTerminal{cmd} / clearCache), reconnectLabel, needsAuthCaption
-- **`sidebar.*` (9)**: support + 8 keys for 3 donation buttons (title + aria-label for GitHub Sponsors / BMAC / PayPal)
-- **`apikeyBtn.*` (18)**: testConnection, saveKey, reconfigure*, replace*, testing, saving, enterKey, keyValid + keyValidWithCount{n}, errPrefix{msg} + errFallback + errSavePrefix, testStoredTip, replaceFormDesc, removeBtn + removeTip
-- **Extended `counter.cardPlugins`**: "{n} plugins" for marketplace card counter
-- **Extended `mkt.installedSlash` + installedTip + repoPrefix**: marketplace card compact row counter
-
-### Backend i18n-aware (CRITICAL for new languages)
-
-- [REFACTOR] **`src/lib/mcp.js` → `detectReconnectType()`**: backend NO LONGER returns Italian strings (`typeLabel`, `description`, `label`). Returns ONLY locale keys (`typeLabelKey`, `descriptionKey`, `labelKey`). The renderer calls `t(key)` with the active language. Pattern reusable for any future backend feature with user-facing strings
-- Benefit: adding a new language only means adding the `locales/<lang>.js` file, no backend change
-
-### UI migration
-
-- [REFACTOR] **Dashboard token-budget**: title "Opus 4.7 total always-on: X tok" + subtitle "· N active plugins · potential on-invoke Y tok" + "+Z on-invoke" + row tooltip + summary modal table
-- [REFACTOR] **"See all (N)" chip** Dashboard summary (Marketplaces + MCP)
-- [REFACTOR] **Marketplace card** chip "N plugins" suffix + compact row "X / Y plugins" + tooltip "Installed / Available"
-- [REFACTOR] **Sidebar** "Support" label + 3 donation tooltips + aria-label wrap — via new `data-i18n-title` and `data-i18n-aria` attributes added to `applyStaticI18n()`
-- [REFACTOR] **`applyStaticI18n()`** extended: in addition to `data-i18n` (textContent), now handles `data-i18n-title` (title attr) and `data-i18n-aria` (aria-label) for static HTML nodes
-- [REFACTOR] **Settings → API key panel**: testBtn (Test connection), saveBtn (Save key), reconfigureBtn (⚙ Reconfigure helper), replaceBtn (↻ Replace), removeBtn (Remove) + all tooltips + toast feedback (apiKeyHelper reconfigured / Reconfiguration error)
-- [REFACTOR] **MCP card reconnect** type badge (typeLabel/description) + 3 actions buttons + terminal/cache tooltips + "Reconnect" label
-
-### Numbers
-
-- **655 locale keys** per language (was 602 in v1.1.2): +53 keys
-- Audit script passes: 655 = 655, 0 interpolation mismatch
-- 3 files modified: `src/renderer/app.js`, `src/renderer/locales/it.js + en.js`, `src/lib/mcp.js`, `src/renderer/index.html`
-
-### Bilingual CHANGELOG
-
-- [DOCS] Updated `CHANGELOG.en.md` with v1.1.3 entry in English, perfectly aligned with the IT canonical
-- From now on: every CLACOROO release **must** update both CHANGELOGs in the same commit (formal rule registered in `CLAUDE.md` + memory `i18n-changelog-bilingual.md`)
-
-## v1.1.2 — 2026-05-27 — Scalable i18n architecture + bilingual CHANGELOG + audit script
-
-Formal setup of i18n infrastructure to make it ready for new languages without having to grep for scattered strings at every release. Direct response to user feedback after v1.1.1: "everything must be mapped for translation, no more grepping for words still in Italian or English every time".
-
-### Architecture
-
-- [FEATURE] **`scripts/audit-locales.js`** — permanent script that verifies the shape of all `src/renderer/locales/*.js`. Automatically compares every language with the reference (`it`), reports missing/extra keys + misaligned `{var}` interpolation variables. Detects new languages with no config change. Exit code != 0 on mismatch (CI-friendly)
-- [FEATURE] **`npm run audit:locales`** — alias for the command, run pre-commit every time you touch locales or add a new feature with UI strings
-- [FEATURE] **`src/renderer/locales/README.md`** — step-by-step guide (8 steps) to add a new language. Documents: how to copy the template, how to register the file in `index.html`, how to add the option in the Settings dropdown, how to use `t()` with interpolation, key naming conventions, what NOT to translate (brand/technical)
-- [DOCS] **CLAUDE.md** complete **i18n** section: golden rule `t('namespace.key')`, bilingual CHANGELOG rule (IT + EN), workflow for new strings, **Strict NO-GO** list (hardcoded strings, `toLocaleDateString('it-IT')`, `+ 'fa'` concat, module-level constants with fixed label). Also updated the Versioning section to reflect the `1.x.yy` format from v1.1.0
-
-### Bilingual CHANGELOG (new rule from 2026-05-27)
-
-- [FEATURE] **`CHANGELOG.en.md`** — integral translation of all 121 versions (v1.0.01 → v1.1.1) into fluent English. Keeps identical shape: same version titles, same sections, same bullets, same `[FEATURE]/[REFACTOR]/[STYLE]/...` prefixes. Brand/technical/code snippets untouched
-- [DOCS] **`CHANGELOG.md`** now carries a header `> Italiano (canonical). English translation: CHANGELOG.en.md` to link the translation
-- [BUILD] `package.json` `build.files` now includes `CHANGELOG.en.md` in distributed packages
-- [RULE] Every future release **must** update both CHANGELOGs (IT canonical + EN translation)
-
-### Persistent memory
-
-- [DOCS] **Memory `i18n-changelog-bilingual.md`** records the rule for future contexts: mandatory bilingual CHANGELOG, `t()` for every UI string, `npm run audit:locales` pre-commit, new-language guide in `locales/README.md`
-
-### Final coverage
-
-- ✅ Scalable architecture for N languages (just `cp en.js fr.js` + translate + register in `index.html` + add dropdown option)
-- ✅ Automatic shape audit — no more missing-key surprises
-- ✅ Bilingual CHANGELOG aligned (121 IT versions + 121 EN)
-- ⏳ Residual IT strings reported by user after v1.1.1 (will be in v1.1.3 once full list received)
-
-## v1.1.1 — 2026-05-27 — Pack N fix: residual IT audit (Dashboard/Marketplace/MCP/Hooks/Stats/Config/Settings)
-
-Smoke test post-v1.1.0 revealed that the estimated 97% coverage was optimistic: the user-driven EN audit found **many strings still hardcoded in Italian** scattered across Dashboard, Marketplace, Plugin, Skill/Agent modal, MCP, Hooks, Stats, Claude Config (entire page!) and Settings (snapshot/onboarding/info/disclaimer sections + usage section). This commit covers them.
-
-### Locales — 11 new namespaces / +150 keys
-
-- **`time.*`**: relativeTime formatting (Ns/Nm/Nh/Nd ago + locale for toLocaleDateString) — fixes "ore fa"/"giorno fa" always in IT
-- **`counter.*`**: "X of Y plugins/servers", "see all (N)", "top N · M active" — full interpolation
-- **`dash.*`**: Dashboard chip tooltip + quota reset countdown
-- **`mkt.*`**: lastUpdate, autoUpdate/manual, updateBtn, mktConfigured{n}, toast updated, install counter — complete Marketplace card
-- **`pluginCard.*`**: openFinder/openEditor + tooltip + 5 contextual tips for badges skills/agents/mcp/hook/always-tokens
-- **`mcpCard.*`**: refreshLive, searchPh, toolsBtn+tip, queryingServer{name}, toolsModalTitle, toolsCount{n,verb}, 6 status help texts (connected/needsAuth/error/unknown/disabled/builtin), connectedHint, readOnlyHint, 3 buttons + tip (disable/enable/remove)
-- **`hooksPage.*`**: openBtn+tip, depsLabel, counter, handler/matcher count
-- **`statsPage.*`**: contextEstimateLong (frontmatter desc), pluginsByWeight subtitle, modelsTabDesc, last30Hover, tokensPerModel, tokensDaily, projectsTitle, projectsFooter+Long, statTokens/Messages/Session/Sessions + tooltip, modelsNote, dailyLegend, modelDetail with interpolation
-- **`config.*`** (15): pageTitle, warning, alwaysThinking+desc, voiceLabel+desc, modelLabel+desc, effortLabel+desc, themeLabel+desc, languageLabel+desc, 3 toast patterns (setTo/enabled/disabled) + saveError — ENTIRE Claude Config page
-- **`settingsExtra.*`**: snapshot title+desc + 6 toast variants, onboardingTitle+welcomeTour+desc+restartTour, infoTitle+appName+licenseLabel+licenseText+disclaimer, usageCurrent+manageUsage, quotaResetsAt+usageLoading+barLabels
-- **`status.loadingConfig`**: Claude Config loading
-
-### Migration
-
-- [REFACTOR] **`relativeTime()`** fully migrated — no more "s fa"/"g fa" hardcoded
-- [REFACTOR] **5 counters "X of Y"** (Plugin/Skill/Agent/MCP/Hook) → `t('counter.*')` with interpolation
-- [REFACTOR] **MCP card** (refresh button + search placeholder + 6 status helps + 4 buttons + 3 tooltips + entire Tools modal)
-- [REFACTOR] **Hooks page** (Open button + CLI Dependencies label + counter + search hooks placeholder via existing key)
-- [REFACTOR] **Plugin card** (Open in Finder/Editor buttons + 5 tooltips skill/agent/mcp/hook/always-tokens)
-- [REFACTOR] **Skill/Agent modal** (Copy/Edit/Save buttons)
-- [REFACTOR] **Marketplace** (count header + Update button + lastUpdate row + auto/manual badge + toast updated)
-- [REFACTOR] **Stats Overview**: context estimate long note migrated
-- [REFACTOR] **Stats Models tab**: tab desc + tokens per model + daily tokens + hover legend + model detail with interpolation
-- [REFACTOR] **Stats Projects tab**: title + 3 stat cells + tooltip + footer long with interpolation
-- [REFACTOR] **Claude Config**: ENTIRE page (title + warning + 5 configRows + voice + 3 toast patterns)
-- [REFACTOR] **Settings extra**: Backup snapshot (title + export/import + 5 toasts), Onboarding (Welcome tour + Restart), Info (CLACOROO + License + License text + Disclaimer)
-- [REFACTOR] **Usage bars**: title "Current usage" + 3 bar labels + reset countdown + manage link
-
-### Numbers
-
-- **602 locale keys** per language (was 451 in v1.1.0): +151 keys
-- **562 `t()` calls** in app.js (was 463 in v1.1.0): +99 new call sites
-- IT↔EN shape audit script passes: 602 = 602, 0 missing keys
-
-### Final estimated coverage
-
-- ✅ **~99%** of user-visible strings migrated (only edge cases remain: HOOK_EVENT_DOCS long descriptions, About dialog Electron menu, 1-2 very contextual error toasts)
-- **Claude Config** page now fully bilingual (was 100% IT before)
-- **Stats** page completed (Models + Projects tabs + context note + KPI)
-- All of the **Settings** page (including Snapshot/Onboarding/Info/Disclaimer) now bilingual
-
-## v1.1.0 — 2026-05-26 — 🎉 Bilingual release: Pack N closure (Italian + English complete)
-
-**CLACOROO bilingual milestone.** Formal closure of Pack N — the first minor bump (1.0.x → 1.1.0) in the series, reserved for the largest semantic change in the app since launch: the entire UI is now multilingual with auto-detect of OS language + persisted manual override.
-
-### Final numbers
-
-- **451 locale keys per language** (`src/renderer/locales/it.js` + `en.js`)
-- **463 `t()` calls** in `src/renderer/app.js`
-- **24 thematic namespaces** structured: nav, topbar, section, kpi, badge, mcp, button, view, sort, search, empty, settings, settingsToast, toast, filter, chip, plugin, hookDep, uiErr, account, apikey, tour, updateBanner, palette, token, status, stats, confirm, modalMkt, modalMcp
-- **Perfectly mirrored shape**: IT↔EN audit passes with 0 missing keys, 0 mismatches on `{var}` interpolation
-- **11 consecutive Pack N commits** (v1.0.110 → v1.0.120) + this closure
-- ~3500 net lines added/modified across `app.js`, locales, infrastructure
-
-### Phase 4 closure tasks
-
-- [VERIFY] **Shape audit**: `audit-locales.js` script flattens + diffs key set IT vs EN → ✅ 451 = 451
-- [VERIFY] **`{var}` interpolation audit**: for each common key, the set of `{name}/{id}/{tok}/etc.` must match IT vs EN → ✅ perfectly aligned
-- [BUMP] **package.json**: `1.0.120` → `1.1.0` (explicit exception to the "only last digits" rule in CLAUDE.md, bilingual milestone release documented in memory `versioning-1.1.0-pack-n.md`)
-
-### Final estimated coverage
-
-- ✅ **~97%** of user-visible strings migrated: entire sidebar, topbar, every section (Dashboard, Plugin, Marketplace, Skill, Agent, MCP, Hooks, Stats, Config, Settings), all modals (Add Marketplace, Add MCP, 10 confirm dialogs, Plugin content, Token budget, Hook detail), all Settings inner panels (Account, API key, Editor, Terminal, Projects, Plugin Validator, Updates), onboarding tour, command palette, update banner, badge/status/filter chips
-- ⏳ **~3%** intentionally not migrated (post-v1.1.0):
-  - `HOOK_EVENT_DOCS` ~30 developer long-form tooltips (rarely seen, technical)
-  - About dialog Electron menu (`src/lib/menu.js`)
-  - ~10 very contextual error toasts (snapshot import edge cases, MCP auth cache)
-  - Backend activity log labels (`src/lib/state.js`)
-
-### Features
-
-- **OS language auto-detect on first launch** via Electron `app.getLocale()` IPC. System language `it-*` → IT, anything else → EN
-- **Persistent manual override** via dropdown in Settings > Appearance. Saved in `state.json` as `state.locale`
-- **Optional "Use system language" button** for reset → on next restart it re-runs auto-detect
-- **Live language switch** without restart: `applyStaticI18n()` updates `[data-i18n]` nodes + `render()` re-paints the current section
-- **Graceful fallback**: missing key in IT → EN fallback → fallback to the key itself (never an undefined string visible)
-- **`{var}` interpolation** for parameterized strings (e.g., `t('toast.pluginDisabled', { id, tok })`)
-
-### Pack N — total commit history
-
-- `75d705e` v1.0.110 — i18n infrastructure (locales + t() helper + IPC + language dropdown + sidebar/topbar)
-- `39bbed4` v1.0.111 — Simplify pass post-Phase 1 (review reuse/quality/efficiency)
-- `a4b5448` v1.0.112 — Section titles JS + KPI Dashboard + summary chips
-- `1cdc7c5` v1.0.113 — Badge + MCP status + sort/view switcher + filter chips
-- `0ca4c1e` v1.0.114 — Empty states + main toasts
-- `e25151c` v1.0.115 — Add Marketplace/MCP modals + 10 confirm dialogs
-- `007fa72` v1.0.116 — Settings labels (6 core groups)
-- `32126bd` v1.0.117 — Stats KPI + range + tabs + context breakdown
-- `1608ae7` v1.0.118 — Filter chips + plugin buttons + notifications + tooltips
-- `4c09e96` v1.0.119 — Claude Account + Claude API key panels
-- `afdcedb` v1.0.120 — Onboarding tour + update banner + command palette + token modal
-- `(this)` v1.1.0 — **Bilingual closure**
-
-### After v1.1.0 (Phase 0 completion towards AGPL public launch)
-
-- v1.1.1+ — Inline CLAUDE.md editor (2-3h)
-- v1.1.x — Empty states with CLACOROO mascot (2h)
-- v1.1.x — Optional base light theme (4h)
-- v1.1.x — Quota threshold notifications (2-3h)
-- v1.1.x — Windows VM testing (1-2h)
-- Then → Apple Developer Program signing → public AGPL release on GitHub
+- [FEATURE] The entire interface is now available in Italian and English
+- [FEATURE] The language is auto-detected from the operating system on first launch (English fallback for not-yet-supported languages)
+- [FEATURE] Instant manual language switch from the new "Appearance" group in Settings
 
 ## v1.0.120 — 2026-05-26 — Pack N (Phase 3g final batch): onboarding tour + update banner + command palette + token modal + setStatus
 
