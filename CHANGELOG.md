@@ -2,6 +2,41 @@
 
 > Italiano (canonico). English translation: [CHANGELOG.en.md](./CHANGELOG.en.md) — allineato a ogni release.
 
+## v1.1.7 — 2026-05-27 — CLAUDE.md editor inline (globale + per progetto tracciato)
+
+Prima delle 4 feature di Fase 0 completion confermate dall'utente per chiudere la versione Free prima del lancio pubblico AGPL.
+
+### Feature
+
+- [FEATURE] **Editor inline per `~/.claude/CLAUDE.md` globale** — nuovo gruppo "CLAUDE.md" in Impostazioni, subito sotto Aspetto. Bottone Modifica apre modal con preview Markdown + textarea editor + Salva
+- [FEATURE] **Editor inline per `<progetto>/CLAUDE.md`** di ogni progetto tracciato — in Settings → Progetti tracciati, bottone "CLAUDE.md" accanto a Rimuovi per ogni progetto
+- [FEATURE] **`showClaudeMdEditor(filePath, displayName)`** helper nel renderer: stessa UX dello showMarkdownModal esistente (preview/edit/save/cancel + Copia + Esc per chiudere). Confirm su modifiche non salvate prima di chiudere/annullare
+- [FEATURE] **Empty state** se il file non esiste: hint "(file vuoto — scrivi qui le tue istruzioni Claude Code)". La directory viene creata al salvataggio
+
+### Backend i18n-safe
+
+- [SECURITY] **IPC `read-claude-md` + `write-claude-md`** in `src/main.js` con whitelist path: il path deve essere `CLAUDE.md` (case-insensitive) AND stare in `~/.claude/` OR in uno dei `trackedProjects` persistiti. Path arbitrari rifiutati con error "Path non consentito"
+- [SECURITY] `writeClaudeMd` usa `fs.mkdirSync(..., recursive: true)` per creare la directory se manca (es. nuovo progetto tracciato senza CLAUDE.md ancora)
+- [FEATURE] **Activity log entry** per ogni salvataggio (`kind: 'edit', action: 'claude-md', target: filePath`)
+- [REFACTOR] **`preload.js`**: `readClaudeMd(filePath)` + `writeClaudeMd(filePath, content)` bridge
+
+### Locales — 9 nuove chiavi (678 totali)
+
+- **`settingsExtra.claudeMd*`** (9): claudeMdTitle, claudeMdGlobal, claudeMdGlobalDesc, claudeMdGlobalEdit, claudeMdProjectEdit, claudeMdSaved, claudeMdReadErr{msg}, claudeMdWriteErr{msg}, claudeMdEmptyHint
+
+### Bilingual CHANGELOG
+
+- [DOCS] Entry sincronizzata in `CHANGELOG.en.md` (regola formalizzata)
+
+### Roadmap Fase 0 completion
+
+- ✅ Pack N i18n (v1.1.0-v1.1.6)
+- ✅ CLAUDE.md editor inline (v1.1.7)
+- ⏳ Empty states con mascotte CLACOROO (v1.1.8)
+- ⏳ Notifiche soglia quota Claude system-level (v1.1.9)
+- ⏳ Smoke test Windows + Linux VM (v1.1.10)
+- ❌ Tema light: rimosso dal piano (app resterà sempre dark)
+
 ## v1.1.6 — 2026-05-27 — Fix bottone "Usa lingua sistema" → switch live + fallback EN per lingue non supportate
 
 Bug segnalato: il bottone "Usa lingua sistema" in Impostazioni → Aspetto resettava `state.locale` ma NON faceva switch immediato alla lingua OS (la lingua attiva cambiava solo al prossimo riavvio app, comportamento contro-intuitivo). Inoltre se l'OS è su una lingua non supportata (es. francese, spagnolo, tedesco) il comportamento non era trasparente.

@@ -3834,6 +3834,130 @@ function showMarkdownModal(name, kind, content, fullId) {
   closeBtn.focus();
 }
 
+// v1.1.7 — CLAUDE.md editor inline. Preview Markdown + edit textarea + save.
+// `filePath` deve essere whitelistato lato backend (isAllowedClaudeMdPath):
+// ~/.claude/CLAUDE.md globale o <projectPath>/CLAUDE.md di un tracked project.
+// `displayName` mostrato in title (es. "CLAUDE.md (globale)" / "CLAUDE.md — projectName").
+async function showClaudeMdEditor(filePath, displayName) {
+  const r = await window.claudeAPI.readClaudeMd(filePath);
+  if (!r.success) {
+    toast(t('settingsExtra.claudeMdReadErr', { msg: r.error || '?' }), 'error');
+    return;
+  }
+  const overlay = el('div', 'md-overlay');
+  const modal   = el('div', 'md-modal');
+  modal.setAttribute('role', 'dialog');
+  modal.setAttribute('aria-modal', 'true');
+
+  let currentContent = r.content || '';
+  let mode = 'preview';
+
+  const header = el('div', 'md-header');
+  const title  = el('div', 'md-title');
+  title.appendChild(el('span', 'md-kind-badge md-kind-agent', t('settingsExtra.claudeMdTitle')));
+  title.appendChild(document.createTextNode(' ' + displayName));
+
+  const copyBtn = btnWithIcon('md-copy', 'copy', t('button.copy'));
+  copyBtn.title = t('button.copyDocument');
+  copyBtn.addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText(currentContent); toast(t('toast.copied'), 'success'); }
+    catch (e) { toast(t('toast.cannotCopy'), 'error'); }
+  });
+
+  const editBtn = btnWithIcon('md-copy', 'pencil', t('button.edit'));
+  const saveBtn = btnWithIcon('md-copy md-save-btn', 'check', t('button.save'));
+  saveBtn.style.display = 'none';
+  const cancelBtn = btnWithIcon('md-copy', 'x', t('button.cancel'));
+  cancelBtn.style.display = 'none';
+
+  const closeBtn = el('button', 'md-close'); closeBtn.appendChild(icon('x'));
+  closeBtn.setAttribute('aria-label', t('button.close'));
+
+  header.appendChild(title);
+  header.appendChild(copyBtn);
+  header.appendChild(editBtn);
+  header.appendChild(saveBtn);
+  header.appendChild(cancelBtn);
+  header.appendChild(closeBtn);
+
+  const contentEl = el('div', 'md-content');
+  let editorTextarea = null;
+
+  function renderPreview() {
+    contentEl.textContent = '';
+    if (!currentContent) {
+      contentEl.appendChild(el('div', 'context-note', t('settingsExtra.claudeMdEmptyHint')));
+      return;
+    }
+    renderMarkdownToContainer(contentEl, currentContent);
+  }
+  function renderEditor() {
+    contentEl.textContent = '';
+    editorTextarea = el('textarea', 'md-editor-textarea');
+    editorTextarea.spellcheck = false;
+    editorTextarea.value = currentContent;
+    contentEl.appendChild(editorTextarea);
+    editorTextarea.focus();
+  }
+  function switchToEdit() {
+    mode = 'edit';
+    editBtn.style.display = 'none';
+    saveBtn.style.display = '';
+    cancelBtn.style.display = '';
+    renderEditor();
+  }
+  function switchToPreview() {
+    mode = 'preview';
+    editBtn.style.display = '';
+    saveBtn.style.display = 'none';
+    cancelBtn.style.display = 'none';
+    editorTextarea = null;
+    renderPreview();
+  }
+
+  editBtn.addEventListener('click', switchToEdit);
+  cancelBtn.addEventListener('click', () => {
+    if (editorTextarea && editorTextarea.value !== currentContent) {
+      if (!window.confirm('Hai modifiche non salvate. Annullare?')) return;
+    }
+    switchToPreview();
+  });
+  saveBtn.addEventListener('click', async () => {
+    if (!editorTextarea) return;
+    const newContent = editorTextarea.value;
+    if (newContent === currentContent) { switchToPreview(); return; }
+    saveBtn.disabled = true; cancelBtn.disabled = true;
+    const wr = await window.claudeAPI.writeClaudeMd(filePath, newContent);
+    saveBtn.disabled = false; cancelBtn.disabled = false;
+    if (wr.success) {
+      currentContent = newContent;
+      toast(t('settingsExtra.claudeMdSaved'), 'success');
+      switchToPreview();
+    } else {
+      toast(t('settingsExtra.claudeMdWriteErr', { msg: wr.error || '?' }), 'error');
+    }
+  });
+
+  function onKey(e) { if (e.key === 'Escape') close(); }
+  function close() {
+    if (mode === 'edit' && editorTextarea && editorTextarea.value !== currentContent) {
+      if (!window.confirm('Hai modifiche non salvate. Chiudere comunque?')) return;
+    }
+    document.removeEventListener('keydown', onKey);
+    overlay.remove();
+  }
+  closeBtn.addEventListener('click', close);
+  overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+  document.addEventListener('keydown', onKey);
+
+  renderPreview();
+  modal.appendChild(header);
+  modal.appendChild(contentEl);
+  overlay.appendChild(modal);
+  overlay._close = close;
+  swapModalOverlay(overlay);
+}
+
 // v1.0.82 — `sortConfig` opzionale: { currentKey, options, onChange } iniettato
 // nell'header per esporre il dropdown sort (usato da renderSkills/renderAgents).
 // v1.0.96 — `sortConfig.viewSwitcher = {section, mode, onChange}` opzionale
@@ -5872,6 +5996,21 @@ function renderSettings() {
   langRow.appendChild(langRight);
   gLang.appendChild(langRow);
 
+  // v1.1.7 — CLAUDE.md globale editor (subito sotto Aspetto, sopra Percorsi)
+  const gCmGlobal = group(t('settingsExtra.claudeMdTitle'));
+  const cmRow = el('div', 'settings-row');
+  const cmLeft = el('div');
+  cmLeft.appendChild(el('div', 'settings-row-label', t('settingsExtra.claudeMdGlobal')));
+  cmLeft.appendChild(el('div', 'settings-row-desc', t('settingsExtra.claudeMdGlobalDesc')));
+  cmRow.appendChild(cmLeft);
+  const cmGlobalBtn = btnWithIcon('btn btn-sm btn-primary btn-with-icon', 'pencil', ' ' + t('button.edit'));
+  cmGlobalBtn.title = t('settingsExtra.claudeMdGlobalEdit');
+  cmGlobalBtn.addEventListener('click', () => {
+    showClaudeMdEditor(d.claudeDir + '/CLAUDE.md', 'CLAUDE.md (' + t('badge.scopeGlobal') + ')');
+  });
+  cmRow.appendChild(cmGlobalBtn);
+  gCmGlobal.appendChild(cmRow);
+
   const g1 = group(t('settings.paths'));
   row(g1, t('settings.claudeFolder'), t('settings.claudeFolderDesc'), d.claudeDir);
   row(g1, t('settings.claudeBin'), d.claudeBin ? t('settings.claudeBinFound') : t('settings.claudeBinNotFound'), d.claudeBin || '—');
@@ -5911,9 +6050,19 @@ function renderSettings() {
   (state.trackedProjects || []).forEach(projectPath => {
     const projRow = el('div', 'settings-row');
     const left = el('div');
-    left.appendChild(el('div', 'settings-row-label', projectPath.split('/').pop() || projectPath));
+    const projName = projectPath.split('/').pop() || projectPath;
+    left.appendChild(el('div', 'settings-row-label', projName));
     left.appendChild(el('div', 'settings-row-desc', projectPath));
     projRow.appendChild(left);
+    const right = el('div');
+    right.style.cssText = 'display:flex;gap:6px;align-items:center;';
+    // v1.1.7 — Bottone CLAUDE.md editor inline per progetto tracciato
+    const cmBtn = btnWithIcon('btn btn-sm btn-ghost btn-with-icon', 'changelog', ' CLAUDE.md');
+    cmBtn.title = t('settingsExtra.claudeMdProjectEdit');
+    cmBtn.addEventListener('click', () => {
+      showClaudeMdEditor(projectPath + '/CLAUDE.md', 'CLAUDE.md — ' + projName);
+    });
+    right.appendChild(cmBtn);
     const removeBtn = el('button', 'btn btn-sm btn-danger', t('button.remove'));
     removeBtn.addEventListener('click', async () => {
       const r = await window.claudeAPI.removeTrackedProject(projectPath);
@@ -5922,7 +6071,8 @@ function renderSettings() {
         await loadData();
       }
     });
-    projRow.appendChild(removeBtn);
+    right.appendChild(removeBtn);
+    projRow.appendChild(right);
     gProj.appendChild(projRow);
   });
 

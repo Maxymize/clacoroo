@@ -1441,6 +1441,49 @@ ipcMain.handle('read-markdown-file', async (_e, { fullId, kind, name }) => {
 //
 // Validazione paranoid: rifiuta path che non sono dentro la directory cache
 // del plugin (no escape, no symlink follow). Validate kind/name regex.
+// CLAUDE.md inline editor (v1.1.7): legge/scrive il CLAUDE.md globale
+// (~/.claude/CLAUDE.md) o quello di un progetto tracciato. Sicurezza:
+// - Path validato per essere "CLAUDE.md" (case-insensitive) E
+// - Stare in CLAUDE_DIR oppure in uno dei trackedProjects persistiti
+function isAllowedClaudeMdPath(p) {
+  if (typeof p !== 'string') return false;
+  const norm = path.resolve(p);
+  if (path.basename(norm).toLowerCase() !== 'claude.md') return false;
+  // Globale: ~/.claude/CLAUDE.md
+  if (norm === path.join(CLAUDE_DIR, 'CLAUDE.md')) return true;
+  // Per-progetto: <projectPath>/CLAUDE.md, projectPath deve essere in trackedProjects
+  const tracked = (readState().trackedProjects || []).map(function (p) { return path.resolve(p); });
+  for (const proj of tracked) {
+    if (norm === path.join(proj, 'CLAUDE.md')) return true;
+  }
+  return false;
+}
+
+ipcMain.handle('read-claude-md', async (_e, { filePath } = {}) => {
+  if (!isAllowedClaudeMdPath(filePath)) return { success: false, error: 'Path non consentito' };
+  try {
+    if (!fs.existsSync(filePath)) return { success: true, content: '', exists: false };
+    const content = fs.readFileSync(filePath, 'utf8');
+    return { success: true, content, exists: true };
+  } catch (e) {
+    return { success: false, error: e.message };
+  }
+});
+
+ipcMain.handle('write-claude-md', async (_e, { filePath, content } = {}) => {
+  if (!isAllowedClaudeMdPath(filePath)) return { success: false, error: 'Path non consentito' };
+  if (typeof content !== 'string') return { success: false, error: 'Contenuto non valido' };
+  try {
+    // Assicura che la directory esista (es. ~/.claude/CLAUDE.md la prima volta)
+    fs.mkdirSync(path.dirname(filePath), { recursive: true });
+    fs.writeFileSync(filePath, content, 'utf8');
+    appendActivity({ kind: 'edit', action: 'claude-md', target: filePath });
+    return { success: true };
+  } catch (e) {
+    return { success: false, error: e.message };
+  }
+});
+
 ipcMain.handle('write-markdown-file', async (_e, { fullId, kind, name, content }) => {
   const root = resolvePluginPath(fullId);
   if (!root) return { success: false, error: 'Path plugin non trovato.' };
