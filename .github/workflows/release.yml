@@ -1,0 +1,102 @@
+name: Release builds
+
+# Build multipiattaforma (macOS / Windows / Linux) a ogni tag vX.Y.Z.
+# create-release gira per primo (crea la pre-release), poi i 3 job di build
+# caricano i propri installer sulla stessa release.
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write   # necessario per creare/aggiornare la release e caricare asset
+
+jobs:
+  # ── Crea la pre-release (gli altri job dipendono da questo) ──
+  create-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create or reuse pre-release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Release $TAG esiste già — riuso."
+          else
+            gh release create "$TAG" \
+              --repo "$GITHUB_REPOSITORY" \
+              --title "$TAG — CLACOROO" \
+              --prerelease \
+              --notes "Pre-release beta. Build multipiattaforma automatica (macOS · Windows · Linux). Vedi CHANGELOG per le novità."
+          fi
+
+  # ── macOS: DMG arm64 + x64 con sfondo (scripts/build-dmg-mac.sh + dmgbuild) ──
+  macos:
+    needs: create-release
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install dependencies
+        run: npm ci
+      - name: Build DMG (arm64 + x64 con sfondo)
+        run: npm run build
+      - name: Upload DMG to release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          gh release upload "$TAG" --repo "$GITHUB_REPOSITORY" \
+            dist/CLACOROO-*-arm64.dmg dist/CLACOROO-*-x64.dmg --clobber
+
+  # ── Windows: NSIS (x64+arm64) + portable x64 ──
+  windows:
+    needs: create-release
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install dependencies
+        run: npm ci
+      - name: Build Windows installers
+        run: npm run build:win
+      - name: Upload Windows installers to release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+        shell: bash
+        run: |
+          VERSION="${TAG#v}"
+          gh release upload "$TAG" --repo "$GITHUB_REPOSITORY" \
+            "dist/CLACOROO Setup ${VERSION}.exe" "dist/CLACOROO ${VERSION}.exe" --clobber
+
+  # ── Linux: AppImage + deb + rpm (runner x64 → fpm funziona) ──
+  linux:
+    needs: create-release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install build deps (node-pty compila da sorgente su Linux)
+        run: sudo apt-get update && sudo apt-get install -y build-essential python3-setuptools rpm
+      - name: Install dependencies
+        run: npm ci
+      - name: Build Linux packages
+        run: npm run build:linux
+      - name: Upload Linux packages to release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          gh release upload "$TAG" --repo "$GITHUB_REPOSITORY" \
+            dist/*.AppImage dist/*.deb dist/*.rpm --clobber
