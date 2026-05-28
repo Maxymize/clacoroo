@@ -14,11 +14,11 @@
     "url": "https://github.com/Maxymize/clacoroo.git"
   },
   "scripts": {
-    "postinstall": "node scripts/fix-node-pty-perms.js",
+    "postinstall": "patch-package && node scripts/fix-node-pty-perms.js",
     "start": "unset ELECTRON_RUN_AS_NODE; electron .",
     "audit:locales": "node scripts/audit-locales.js",
-    "build": "electron-builder --mac",
-    "build:mac": "electron-builder --mac",
+    "build": "bash scripts/build-dmg-mac.sh",
+    "build:mac": "bash scripts/build-dmg-mac.sh",
     "build:win": "electron-builder --win",
     "build:linux": "electron-builder --linux",
     "dist": "electron-builder -mwl"
@@ -150,7 +150,8 @@
   },
   "devDependencies": {
     "electron": "^36.0.0",
-    "electron-builder": "^25.0.0"
+    "electron-builder": "^25.0.0",
+    "patch-package": "^8.0.1"
   },
   "dependencies": {
     "@xterm/addon-fit": "^0.11.0",

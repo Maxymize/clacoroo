@@ -33,6 +33,9 @@ Thumbs.db
 
 # Electron-builder cache
 .electron-vendor-cache/
+
+# dmgbuild venv (build DMG con sfondo — vedi scripts/build-dmg-mac.sh)
+.venv-dmg/
 .npmrc-electron
 .superpowers/
 

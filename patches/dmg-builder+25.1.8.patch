@@ -1,0 +1,69 @@
+diff --git a/node_modules/dmg-builder/out/dmg.js b/node_modules/dmg-builder/out/dmg.js
+index 94af8a1..e2047a2 100644
+--- a/node_modules/dmg-builder/out/dmg.js
++++ b/node_modules/dmg-builder/out/dmg.js
+@@ -173,12 +173,16 @@ async function createStageDmg(tempDmg, appPath, volumeName) {
+     if (builder_util_1.log.isDebugEnabled) {
+         imageArgs.push("-debug");
+     }
++    // CLACOROO patch (patch-package): forziamo SEMPRE HFS+ anche su arm64.
++    // Il blocco originale forzava APFS su arm64 (commento obsoleto del 2020,
++    // issue #4606), ma su APFS il `backgroundImageAlias` nel .DS_Store NON
++    // risolve → sfondo finestra installazione bianco. Su HFS+ funziona. hdiutil
++    // su Apple Silicon moderno SUPPORTA HFS+ (testato). Override con
++    // FORCE_DMG_APFS=true se mai servisse APFS su un Mac che non supporta HFS+.
+     let filesystem = ["HFS+", "-fsargs", "-c c=64,a=16,e=16"];
+-    if (process.arch === "arm64") {
+-        // Apple Silicon `hdiutil` dropped support for HFS+, so we force the latest type
+-        // https://github.com/electron-userland/electron-builder/issues/4606
++    if (process.arch === "arm64" && process.env.FORCE_DMG_APFS === "true") {
+         filesystem = ["APFS"];
+-        builder_util_1.log.warn(null, "Detected arm64 process, HFS+ is unavailable. Creating dmg with APFS - supports Mac OSX 10.12+");
++        builder_util_1.log.warn(null, "FORCE_DMG_APFS=true: creating dmg with APFS (background image may not show)");
+     }
+     imageArgs.push("-fs", ...filesystem);
+     imageArgs.push(tempDmg);
+diff --git a/node_modules/dmg-builder/vendor/biplist/__pycache__/__init__.cpython-314.pyc b/node_modules/dmg-builder/vendor/biplist/__pycache__/__init__.cpython-314.pyc
+new file mode 100644
+index 0000000..c6febc8
+Binary files /dev/null and b/node_modules/dmg-builder/vendor/biplist/__pycache__/__init__.cpython-314.pyc differ
+diff --git a/node_modules/dmg-builder/vendor/dmgbuild/__pycache__/badge.cpython-314.pyc b/node_modules/dmg-builder/vendor/dmgbuild/__pycache__/badge.cpython-314.pyc
+new file mode 100644
+index 0000000..91ba2f2
+Binary files /dev/null and b/node_modules/dmg-builder/vendor/dmgbuild/__pycache__/badge.cpython-314.pyc differ
+diff --git a/node_modules/dmg-builder/vendor/dmgbuild/__pycache__/colors.cpython-314.pyc b/node_modules/dmg-builder/vendor/dmgbuild/__pycache__/colors.cpython-314.pyc
+new file mode 100644
+index 0000000..d745cc4
+Binary files /dev/null and b/node_modules/dmg-builder/vendor/dmgbuild/__pycache__/colors.cpython-314.pyc differ
+diff --git a/node_modules/dmg-builder/vendor/ds_store/__pycache__/__init__.cpython-314.pyc b/node_modules/dmg-builder/vendor/ds_store/__pycache__/__init__.cpython-314.pyc
+new file mode 100644
+index 0000000..90b4e04
+Binary files /dev/null and b/node_modules/dmg-builder/vendor/ds_store/__pycache__/__init__.cpython-314.pyc differ
+diff --git a/node_modules/dmg-builder/vendor/ds_store/__pycache__/buddy.cpython-314.pyc b/node_modules/dmg-builder/vendor/ds_store/__pycache__/buddy.cpython-314.pyc
+new file mode 100644
+index 0000000..be31cd8
+Binary files /dev/null and b/node_modules/dmg-builder/vendor/ds_store/__pycache__/buddy.cpython-314.pyc differ
+diff --git a/node_modules/dmg-builder/vendor/ds_store/__pycache__/store.cpython-314.pyc b/node_modules/dmg-builder/vendor/ds_store/__pycache__/store.cpython-314.pyc
+new file mode 100644
+index 0000000..9b3fb83
+Binary files /dev/null and b/node_modules/dmg-builder/vendor/ds_store/__pycache__/store.cpython-314.pyc differ
+diff --git a/node_modules/dmg-builder/vendor/mac_alias/__pycache__/__init__.cpython-314.pyc b/node_modules/dmg-builder/vendor/mac_alias/__pycache__/__init__.cpython-314.pyc
+new file mode 100644
+index 0000000..b55cbb4
+Binary files /dev/null and b/node_modules/dmg-builder/vendor/mac_alias/__pycache__/__init__.cpython-314.pyc differ
+diff --git a/node_modules/dmg-builder/vendor/mac_alias/__pycache__/alias.cpython-314.pyc b/node_modules/dmg-builder/vendor/mac_alias/__pycache__/alias.cpython-314.pyc
+new file mode 100644
+index 0000000..4377059
+Binary files /dev/null and b/node_modules/dmg-builder/vendor/mac_alias/__pycache__/alias.cpython-314.pyc differ
+diff --git a/node_modules/dmg-builder/vendor/mac_alias/__pycache__/bookmark.cpython-314.pyc b/node_modules/dmg-builder/vendor/mac_alias/__pycache__/bookmark.cpython-314.pyc
+new file mode 100644
+index 0000000..2b64f5d
+Binary files /dev/null and b/node_modules/dmg-builder/vendor/mac_alias/__pycache__/bookmark.cpython-314.pyc differ
+diff --git a/node_modules/dmg-builder/vendor/mac_alias/__pycache__/osx.cpython-314.pyc b/node_modules/dmg-builder/vendor/mac_alias/__pycache__/osx.cpython-314.pyc
+new file mode 100644
+index 0000000..291e85e
+Binary files /dev/null and b/node_modules/dmg-builder/vendor/mac_alias/__pycache__/osx.cpython-314.pyc differ
+diff --git a/node_modules/dmg-builder/vendor/mac_alias/__pycache__/utils.cpython-314.pyc b/node_modules/dmg-builder/vendor/mac_alias/__pycache__/utils.cpython-314.pyc
+new file mode 100644
+index 0000000..b41987c
+Binary files /dev/null and b/node_modules/dmg-builder/vendor/mac_alias/__pycache__/utils.cpython-314.pyc differ
