@@ -19,8 +19,8 @@
     "audit:locales": "node scripts/audit-locales.js",
     "build": "bash scripts/build-dmg-mac.sh",
     "build:mac": "bash scripts/build-dmg-mac.sh",
-    "build:win": "electron-builder --win",
-    "build:linux": "electron-builder --linux",
+    "build:win": "electron-builder --win --publish never",
+    "build:linux": "electron-builder --linux --publish never",
     "dist": "electron-builder -mwl"
   },
   "build": {
