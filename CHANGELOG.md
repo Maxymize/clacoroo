@@ -2,6 +2,11 @@
 
 > Italiano (canonico). English translation: [CHANGELOG.en.md](./CHANGELOG.en.md) — allineato a ogni release.
 
+## v1.1.14 — 2026-05-28 — Tutorial iniziale interattivo
+
+- [IMPROVEMENT] Il tour di benvenuto ora evidenzia gli elementi reali dell'interfaccia uno alla volta (sidebar, dashboard, plugin, MCP, hook, terminale, lingua) invece di una finestra di testo statica, con la mascotte CLACOROO che ti accompagna
+- [IMPROVEMENT] Contenuti del tour aggiornati a tutte le funzionalità attuali; resta rilanciabile da Impostazioni e dalla palette comandi
+
 ## v1.1.13 — 2026-05-28 — DevTools disabilitati nelle build + fix avvio senza Claude Code
 
 - [SECURITY] Gli strumenti per sviluppatori (DevTools) sono ora disabilitati nelle versioni distribuite: non possono più essere aperti né da scorciatoia né da menu

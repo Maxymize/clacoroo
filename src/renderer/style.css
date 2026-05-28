@@ -3779,13 +3779,11 @@ body {
 .health-badge.h-warn { background: rgba(245,158,11,.22); color: var(--yellow); }
 
 /* ── ONBOARDING TOUR (idea #7) ────────────────────────────────────────── */
+/* ── ONBOARDING TOUR — coachmark (spotlight + bollicina) ──────────────── */
 .tour-overlay {
   position: fixed; inset: 0;
-  background: rgba(20,20,19,.78);
-  backdrop-filter: blur(10px);
-  display: flex; align-items: center; justify-content: center;
   z-index: 99999;
-  animation: tourFade .25s ease;
+  animation: tourFade .2s ease;
 }
 @keyframes tourFade { from { opacity: 0; } to { opacity: 1; } }
 
@@ -3797,45 +3795,82 @@ body {
   animation: none;
 }
 
-.tour-modal {
+/* Spotlight: l'ombra gigante oscura tutto tranne l'elemento evidenziato. */
+.tour-spotlight {
+  position: fixed;
+  border-radius: 8px;
+  box-shadow: 0 0 0 9999px rgba(15,15,26,.66), 0 0 0 2px var(--accent), 0 0 22px 3px var(--accent-glow);
+  pointer-events: none;
+  transition: left .18s ease, top .18s ease, width .18s ease, height .18s ease;
+  z-index: 1;
+}
+
+.tour-bubble {
+  position: fixed;
+  width: 300px;
   background: var(--surface);
   border: 1px solid var(--border2);
-  border-radius: 14px;
-  padding: 32px 40px;
-  max-width: 460px;
-  width: 90%;
-  box-shadow: 0 20px 60px rgba(0,0,0,.5);
-  text-align: center;
+  border-radius: 12px;
+  padding: 14px 16px;
+  box-shadow: 0 12px 40px rgba(0,0,0,.5);
+  z-index: 3;
+  transition: left .18s ease, top .18s ease;
 }
-.tour-mascot {
-  width: 72px; height: 72px;
-  display: block; margin: 0 auto 16px;
-  image-rendering: pixelated;
-  image-rendering: crisp-edges;
-  animation: mascotBob 1.4s ease-in-out infinite;
-}
-.tour-title {
-  font-size: 22px; font-weight: 800;
+.tour-bubble-title {
+  display: flex; align-items: center; gap: 8px;
+  margin: 0 0 8px;
+  font-size: 15px; font-weight: 800;
   color: var(--accent);
-  margin-bottom: 12px;
   letter-spacing: -.01em;
   font-family: "Inter", "Styrene A", -apple-system, sans-serif;
 }
-.tour-body {
-  font-size: 15px; color: var(--text);
-  line-height: 1.65;
-  margin-bottom: 18px;
+.tour-bubble-mascot {
+  width: 26px; height: 26px; flex-shrink: 0;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+.tour-bubble-body {
+  font-size: 13.5px; color: var(--text);
+  line-height: 1.55;
+  margin: 0 0 10px;
   font-family: "Source Serif 4", "Tiempos Text", "Source Serif Pro", Georgia, serif;
 }
-.tour-counter {
-  font-size: 11px;
+.tour-bubble-counter {
+  font-size: 10.5px;
   color: var(--text-muted);
   letter-spacing: .12em;
   text-transform: uppercase;
-  margin-bottom: 18px;
+  margin-bottom: 10px;
 }
-.tour-actions {
-  display: flex; gap: 8px; justify-content: center;
+.tour-bubble-actions {
+  display: flex; gap: 7px; justify-content: flex-end;
+}
+
+/* Freccia: triangolo CSS che punta dalla bollicina verso lo spotlight. */
+.tour-arrow {
+  position: fixed;
+  width: 0; height: 0;
+  z-index: 2;
+}
+.tour-arrow-left {  /* bollicina a destra dell'elemento → freccia punta a sinistra */
+  border-top: 7px solid transparent;
+  border-bottom: 7px solid transparent;
+  border-right: 12px solid var(--accent);
+}
+.tour-arrow-right { /* bollicina a sinistra → freccia punta a destra */
+  border-top: 7px solid transparent;
+  border-bottom: 7px solid transparent;
+  border-left: 12px solid var(--accent);
+}
+.tour-arrow-top {   /* bollicina sotto → freccia punta in su */
+  border-left: 7px solid transparent;
+  border-right: 7px solid transparent;
+  border-bottom: 12px solid var(--accent);
+}
+.tour-arrow-bottom {/* bollicina sopra → freccia punta in giù */
+  border-left: 7px solid transparent;
+  border-right: 7px solid transparent;
+  border-top: 12px solid var(--accent);
 }
 
 /* ── DEV VALIDATE (idea #6) ───────────────────────────────────────────── */

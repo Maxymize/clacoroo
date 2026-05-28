@@ -1093,19 +1093,24 @@ function renderDashboard() {
 
   // v1.0.38 — TOP della dashboard: contesto vivo + quote (ciò che cambia
   // più frequentemente). Le KPI numeriche e le sezioni elenco vengono dopo.
+  // v1.1.14 — `dashboard-overview` raggruppa contesto+quote+statistiche+usage
+  // così il tour onboarding può evidenziarle come un unico blocco panoramica.
+  const overview = el('div', 'dashboard-overview');
+  wrap.appendChild(overview);
+
   const ctxBar = el('div', 'dashboard-context-section');
-  wrap.appendChild(ctxBar);
+  overview.appendChild(ctxBar);
   loadDashboardContextBar(ctxBar, renderToken);
 
   const usageSection = el('div', 'dashboard-usage-section');
-  wrap.appendChild(usageSection);
+  overview.appendChild(usageSection);
   usageSection.appendChild(sectionTitle(t('section.quoteClaude'), 'gauge'));
   const usageBars = el('div', 'dashboard-usage-bars');
   usageSection.appendChild(usageBars);
   loadDashboardUsage(usageBars, renderToken);
 
   // KPI plugin (stato installazione)
-  wrap.appendChild(sectionTitle(t('section.statistiche'), 'bar-chart-3'));
+  overview.appendChild(sectionTitle(t('section.statistiche'), 'bar-chart-3'));
   const kpiGrid = el('div', 'kpi-grid');
   const kpis = [
     { num: active.length,      label: t('kpi.pluginActive'),   color: '#788c5d' },  // global only
@@ -1147,7 +1152,7 @@ function renderDashboard() {
     }
     kpiGrid.appendChild(card);
   });
-  wrap.appendChild(kpiGrid);
+  overview.appendChild(kpiGrid);
 
   // Se cache MCP non disponibile, fetcha async e aggiorna la card MCP in-place
   if (!mcpCache) {
@@ -1163,9 +1168,9 @@ function renderDashboard() {
     })();
   }
 
-  // KPI utilizzo Claude Code (range='all')
+  // KPI utilizzo Claude Code (range='all') — ultima sezione della panoramica
   const statsSection = el('div', 'dashboard-stats-section');
-  wrap.appendChild(statsSection);
+  overview.appendChild(statsSection);
   loadDashboardStats(statsSection, renderToken);
 
   // v1.0.107 — Pack C: Top-N plugin per peso (token cost breakdown)
@@ -4746,6 +4751,7 @@ function renderConfigContent(container, data) {
 
   function configRow(key, label, type, opts, extraDesc) {
     const row = el('div', 'settings-row');
+    row.dataset.configKey = key;
     const left = el('div');
     left.appendChild(el('div', 'settings-row-label', label));
     const descTxt = '~/.claude/settings.json → ' + key + (extraDesc ? ' · ' + extraDesc : '');
@@ -6088,16 +6094,19 @@ function renderSettings() {
 
   // v1.0.27 — Pack A: pannello Account (sopra a tutto)
   const gAccount = group(t('settings.accountClaude'));
+  gAccount.dataset.tour = 'account';
   const accountWrap = el('div', 'settings-account-wrap');
   gAccount.appendChild(accountWrap);
   loadAccountPanel(accountWrap);
 
   const gApiKey = group(t('settings.apiKeyClaude'));
+  gApiKey.dataset.tour = 'apikey';
   const apiKeyWrap = el('div', 'apikey-panel-wrap');
   gApiKey.appendChild(apiKeyWrap);
   loadApiKeyPanel(apiKeyWrap);
 
   const gLang = group(t('settings.appearance'));
+  gLang.dataset.tour = 'language';
   const langRow = el('div', 'settings-row');
   const langLeft = el('div');
   langLeft.appendChild(el('div', 'settings-row-label', t('settings.language')));
@@ -6541,74 +6550,10 @@ function renderSettings() {
 }
 
 /* ── ONBOARDING TOUR ──────────────────────────────────────────────────── */
-// `getTourSteps()` chiamata al render per riflettere la lingua attiva.
-const TOUR_STEP_COUNT = 5;
-function getTourStep(idx) {
-  const n = idx + 1;
-  return { title: t('tour.step' + n + 'Title'), body: t('tour.step' + n + 'Body') };
-}
-
+// Tour coachmark interattivo: vedi src/renderer/tour.js (window.startTour).
+// `showOnboardingTour()` resta come thin wrapper per i call site esistenti.
 function showOnboardingTour() {
-  if (document.querySelector('.tour-overlay')) return;  // guard double-modal
-
-  let stepIdx = 0;
-  const overlay = el('div', 'tour-overlay');
-  const modal   = el('div', 'tour-modal');
-  modal.setAttribute('role', 'dialog');
-  modal.setAttribute('aria-modal', 'true');
-  modal.setAttribute('aria-labelledby', 'tour-title-el');
-  const mascot  = el('img', 'tour-mascot');
-  mascot.src = 'clacoroo.svg';
-  mascot.alt = '';
-  mascot.setAttribute('aria-hidden', 'true');
-  const title   = el('h2', 'tour-title');
-  title.id = 'tour-title-el';
-  const body    = el('p', 'tour-body');
-  const counter = el('div', 'tour-counter');
-  const actions = el('div', 'tour-actions');
-  const skipBtn = el('button', 'btn btn-sm btn-ghost', t('tour.skip'));
-  const backBtn = el('button', 'btn btn-sm btn-ghost', t('tour.back'));
-  const nextBtn = el('button', 'btn btn-sm btn-primary', t('tour.next'));
-
-  function onKey(e) {
-    if (e.key === 'Escape') close();
-    else if (e.key === 'ArrowRight') nextBtn.click();
-    else if (e.key === 'ArrowLeft')  backBtn.click();
-  }
-  function close() {
-    window.claudeAPI.setState({ onboardingShown: true });
-    document.removeEventListener('keydown', onKey);
-    overlay.remove();
-  }
-  function renderStep() {
-    const s = getTourStep(stepIdx);
-    title.textContent = s.title;
-    body.textContent  = s.body;
-    counter.textContent = (stepIdx + 1) + ' / ' + TOUR_STEP_COUNT;
-    backBtn.disabled = stepIdx === 0;
-    nextBtn.textContent = stepIdx === TOUR_STEP_COUNT - 1 ? t('tour.start') : t('tour.next');
-    nextBtn.focus();
-  }
-  skipBtn.addEventListener('click', close);
-  backBtn.addEventListener('click', () => { if (stepIdx > 0) { stepIdx--; renderStep(); } });
-  nextBtn.addEventListener('click', () => {
-    if (stepIdx < TOUR_STEP_COUNT - 1) { stepIdx++; renderStep(); }
-    else close();
-  });
-  document.addEventListener('keydown', onKey);
-
-  actions.appendChild(skipBtn);
-  actions.appendChild(backBtn);
-  actions.appendChild(nextBtn);
-  modal.appendChild(mascot);
-  modal.appendChild(title);
-  modal.appendChild(body);
-  modal.appendChild(counter);
-  modal.appendChild(actions);
-  overlay.appendChild(modal);
-  overlay._close = close;
-  swapModalOverlay(overlay);
-  renderStep();
+  if (typeof window.startTour === 'function') window.startTour();
 }
 
 /* ── COMMAND PALETTE Cmd+K (v1.0.10) ──────────────────────────────────── */

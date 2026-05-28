@@ -2,6 +2,11 @@
 
 > English translation of [CHANGELOG.md](./CHANGELOG.md) (Italian, canonical). Updated in sync with each release.
 
+## v1.1.14 — 2026-05-28 — Interactive onboarding tour
+
+- [IMPROVEMENT] The welcome tour now highlights the real UI elements one at a time (sidebar, dashboard, plugins, MCP, hooks, terminal, language) instead of a static text dialog, with the CLACOROO mascot guiding you
+- [IMPROVEMENT] Tour content updated to all current features; still replayable from Settings and the command palette
+
 ## v1.1.13 — 2026-05-28 — DevTools disabled in builds + fix launch without Claude Code
 
 - [SECURITY] Developer tools (DevTools) are now disabled in distributed builds: they can no longer be opened via shortcut or menu
