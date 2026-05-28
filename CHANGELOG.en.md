@@ -2,6 +2,11 @@
 
 > English translation of [CHANGELOG.md](./CHANGELOG.md) (Italian, canonical). Updated in sync with each release.
 
+## v1.1.12 — 2026-05-28 — Fix quota threshold notifications not shown when app is focused
+
+- [FIX] Claude quota threshold notifications did not appear when the CLACOROO window was in the foreground: now they're always shown, even with the app open (the typical case where you're working and about to run out of quota)
+- [FEATURE] New "Test notification" button in Settings → Notifications to quickly verify that system notifications work (useful to check the macOS permission)
+
 ## v1.1.11 — 2026-05-27 — CHANGELOG cleanup + "concise entries" rule
 
 - [DOCS] Rewrote entries from v1.1.0 to v1.1.10 in concise form (max 3-6 badged bullets). Removed internal implementation details, file paths, function names, future roadmap and strategic status from entries — only user-visible changes remain

@@ -55,7 +55,7 @@ contextBridge.exposeInMainWorld('claudeAPI', {
   exportSnapshot:     ()                  => ipcRenderer.invoke('export-snapshot'),
   importSnapshot:     ()                  => ipcRenderer.invoke('import-snapshot'),
   applySnapshot:      (preview)           => ipcRenderer.invoke('apply-snapshot',     preview),
-  showNotification:   (title, body)       => ipcRenderer.invoke('show-notification',  { title, body }),
+  showNotification:   (title, body, force) => ipcRenderer.invoke('show-notification',  { title, body, force: !!force }),
 
   apiKey: {
     status:      ()    => ipcRenderer.invoke('apikey:status'),

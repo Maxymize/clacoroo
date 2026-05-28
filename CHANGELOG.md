@@ -2,6 +2,11 @@
 
 > Italiano (canonico). English translation: [CHANGELOG.en.md](./CHANGELOG.en.md) — allineato a ogni release.
 
+## v1.1.12 — 2026-05-28 — Fix notifiche soglia quota non mostrate ad app aperta
+
+- [FIX] Le notifiche di soglia quota Claude non comparivano quando la finestra CLACOROO era in primo piano: ora vengono mostrate sempre, anche con l'app aperta (caso tipico in cui stai lavorando e stai per esaurire la quota)
+- [FEATURE] Nuovo bottone "Prova notifica" in Impostazioni → Notifiche per verificare al volo che le notifiche di sistema funzionino (utile per controllare il permesso macOS)
+
 ## v1.1.11 — 2026-05-27 — CHANGELOG cleanup + regola "concise entries"
 
 - [DOCS] Riscritte le entry da v1.1.0 a v1.1.10 in forma sintetica (3-6 bullet badged max). Eliminati dettagli implementativi interni, percorsi file, nomi funzione, roadmap future e stati strategici dalle entry — restano solo i cambiamenti visibili all'utente

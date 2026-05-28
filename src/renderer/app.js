@@ -679,7 +679,8 @@ async function runQuotaCheck() {
       title = t('settingsExtra.quotaNotifTitle80',  { band: bandName });
       body  = t('settingsExtra.quotaNotifBody80',   { band: bandName, pct: Math.floor(pct), remaining: when || '?' });
     }
-    try { window.claudeAPI.showNotification(title, body); } catch {}
+    // force:true → mostra anche con app in focus (alert importante)
+    try { window.claudeAPI.showNotification(title, body, true); } catch {}
     last[band.key] = { level, at: Date.now() };
     stateMutated = true;
   }
@@ -6406,7 +6407,20 @@ function renderSettings() {
     await window.claudeAPI.setState({ notifyQuota: state.notifyQuota });
     toast(notifInp.checked ? t('settingsExtra.notifyQuotaOn') : t('settingsExtra.notifyQuotaOff'), 'info');
   });
-  notifRow.appendChild(notifToggle);
+  const notifRight = el('div');
+  notifRight.style.cssText = 'display:flex;gap:8px;align-items:center;';
+  // v1.1.12 — Bottone "Prova notifica" per verificare permesso OS + funzionamento
+  const testNotifBtn = el('button', 'btn btn-sm btn-ghost', t('settingsExtra.notifyTest'));
+  testNotifBtn.addEventListener('click', async () => {
+    const r = await window.claudeAPI.showNotification(
+      t('settingsExtra.notifyTestTitle'), t('settingsExtra.notifyTestBody'), true);
+    if (r && r.success === false) {
+      toast(t('settingsExtra.notifyTestFail'), 'warn');
+    }
+  });
+  notifRight.appendChild(testNotifBtn);
+  notifRight.appendChild(notifToggle);
+  notifRow.appendChild(notifRight);
   gNotify.appendChild(notifRow);
 
   // Backup snapshot (idea #5)

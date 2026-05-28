@@ -1171,10 +1171,13 @@ ipcMain.handle('apikey:activate',    async (_e, k)  => APIKEY.activate(k));
 ipcMain.handle('apikey:deactivate',  async ()       => APIKEY.deactivate());
 ipcMain.handle('apikey:reconfigure', async ()       => APIKEY.reconfigure());
 
-// B4 — Notifiche native (mostrate solo se l'app non è in focus)
-ipcMain.handle('show-notification', async (_e, { title, body }) => {
+// B4 — Notifiche native. Di default soppresse se l'app è in focus (no disturbo
+// quando l'utente sta già guardando l'app). `force: true` bypassa il guard:
+// usato per alert importanti (soglia quota v1.1.12) che vanno mostrati SEMPRE,
+// anche con app aperta — l'utente sta lavorando e sta per esaurire la quota.
+ipcMain.handle('show-notification', async (_e, { title, body, force } = {}) => {
   if (!Notification.isSupported()) return { success: false };
-  if (mainWindow?.isFocused()) return { success: false, reason: 'focused' };
+  if (!force && mainWindow?.isFocused()) return { success: false, reason: 'focused' };
   new Notification({ title: title || 'CLACOROO', body: body || '', silent: false }).show();
   return { success: true };
 });
