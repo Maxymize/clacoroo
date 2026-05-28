@@ -2,6 +2,11 @@
 
 > Italiano (canonico). English translation: [CHANGELOG.en.md](./CHANGELOG.en.md) — allineato a ogni release.
 
+## v1.1.13 — 2026-05-28 — DevTools disabilitati nelle build + fix avvio senza Claude Code
+
+- [SECURITY] Gli strumenti per sviluppatori (DevTools) sono ora disabilitati nelle versioni distribuite: non possono più essere aperti né da scorciatoia né da menu
+- [FIX] Risolto un errore all'avvio su sistemi in cui Claude Code non è ancora installato: la lettura dei server MCP non va più in errore
+
 ## v1.1.12 — 2026-05-28 — Fix notifiche soglia quota non mostrate ad app aperta
 
 - [FIX] Le notifiche di soglia quota Claude non comparivano quando la finestra CLACOROO era in primo piano: ora vengono mostrate sempre, anche con l'app aperta (caso tipico in cui stai lavorando e stai per esaurire la quota)

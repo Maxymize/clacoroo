@@ -471,10 +471,21 @@ function createWindow() {
       contextIsolation: true,    // A1 — già attivo
       nodeIntegration:  false,   // A1 — già attivo
       sandbox:          true,    // A1 — sandbox renderer process
+      devTools:         !app.isPackaged,  // DevTools solo in dev, mai nelle build distribuite
     },
   });
 
   mainWindow.loadFile(path.join(__dirname, 'renderer', 'index.html'));
+
+  // Build distribuite: blocca le scorciatoie che aprono i DevTools
+  // (Cmd/Ctrl+Shift+I/J/C, F12). In dev restano disponibili.
+  if (app.isPackaged) {
+    mainWindow.webContents.on('before-input-event', (e, input) => {
+      const key = (input.key || '').toLowerCase();
+      const devToolsCombo = (input.control || input.meta) && input.shift && ['i', 'j', 'c'].includes(key);
+      if (key === 'f12' || devToolsCombo) e.preventDefault();
+    });
+  }
 
   // A2 — Blocca window.open / new tab: ogni link http esterno apre nel browser
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {

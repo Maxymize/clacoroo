@@ -70,6 +70,10 @@ function parseListLine(line) {
 
 function runMcpList(claudeBin) {
   return new Promise((resolve) => {
+    if (typeof claudeBin !== 'string' || !claudeBin) {
+      resolve({ ok: false, error: 'claude binary not configured', servers: [] });
+      return;
+    }
     execFile(claudeBin, ['mcp', 'list'], { timeout: 30000 }, (err, stdout, stderr) => {
       if (err) {
         resolve({ ok: false, error: (stderr || err.message).trim(), servers: [] });

@@ -2,6 +2,11 @@
 
 > English translation of [CHANGELOG.md](./CHANGELOG.md) (Italian, canonical). Updated in sync with each release.
 
+## v1.1.13 — 2026-05-28 — DevTools disabled in builds + fix launch without Claude Code
+
+- [SECURITY] Developer tools (DevTools) are now disabled in distributed builds: they can no longer be opened via shortcut or menu
+- [FIX] Fixed an error at launch on systems where Claude Code is not yet installed: reading MCP servers no longer throws
+
 ## v1.1.12 — 2026-05-28 — Fix quota threshold notifications not shown when app is focused
 
 - [FIX] Claude quota threshold notifications did not appear when the CLACOROO window was in the foreground: now they're always shown, even with the app open (the typical case where you're working and about to run out of quota)

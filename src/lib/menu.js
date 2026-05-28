@@ -62,8 +62,10 @@ function buildAppMenu(mainWindow) {
         ...sectionsSubmenu,
         { type: 'separator' },
         { role: 'togglefullscreen' },
-        { label: 'DevTools', accelerator: isMac ? 'Alt+Cmd+I' : 'Ctrl+Shift+I',
-          click: () => mainWindow?.webContents.toggleDevTools() },
+        ...(app.isPackaged ? [] : [
+          { label: 'DevTools', accelerator: isMac ? 'Alt+Cmd+I' : 'Ctrl+Shift+I',
+            click: () => mainWindow?.webContents.toggleDevTools() },
+        ]),
       ],
     },
     {
