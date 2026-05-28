@@ -6423,7 +6423,11 @@ function renderSettings() {
   testNotifBtn.addEventListener('click', async () => {
     const r = await window.claudeAPI.showNotification(
       t('settingsExtra.notifyTestTitle'), t('settingsExtra.notifyTestBody'), true);
-    if (r && r.success === false) {
+    if (r && r.success) {
+      // Notifica inviata al sistema. Su macOS può non comparire se il permesso
+      // non è stato concesso: diamo comunque un feedback in-app esplicito.
+      toast(t('settingsExtra.notifyTestSent'), 'info');
+    } else {
       toast(t('settingsExtra.notifyTestFail'), 'warn');
     }
   });

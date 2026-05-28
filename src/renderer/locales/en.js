@@ -656,6 +656,7 @@ window.LOCALES.en = {
     notifyTest:     'Test notification',
     notifyTestTitle:'CLACOROO — test notification',
     notifyTestBody: 'If you see this, system notifications work correctly. ✓',
+    notifyTestSent: 'Notification sent. If you don\'t see it, check permissions in System Settings → Notifications → CLACOROO.',
     notifyTestFail: 'Notification not shown. Check notification permissions in System Settings → Notifications → CLACOROO.',
     quotaNotifTitle80:'⚠ Claude {band} quota: 80%',
     quotaNotifBody80:'You\'re at {pct}% of your {band} quota. {remaining} remaining.',

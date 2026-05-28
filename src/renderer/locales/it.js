@@ -661,6 +661,7 @@ window.LOCALES.it = {
     notifyTest:     'Prova notifica',
     notifyTestTitle:'CLACOROO — notifica di prova',
     notifyTestBody: 'Se vedi questo, le notifiche di sistema funzionano correttamente. ✓',
+    notifyTestSent: 'Notifica inviata. Se non la vedi, controlla i permessi in Impostazioni di sistema → Notifiche → CLACOROO.',
     notifyTestFail: 'Notifica non mostrata. Controlla i permessi notifiche in Impostazioni di sistema → Notifiche → CLACOROO.',
     quotaNotifTitle80:'⚠ Quota Claude {band}: 80%',
     quotaNotifBody80:'Sei all\'{pct}% della tua quota {band}. Resta {remaining}.',
