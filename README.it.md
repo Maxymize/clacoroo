@@ -227,8 +227,6 @@ src/
         └── xterm/       ← xterm.js + 2 addon vendored (no CDN)
 ```
 
-Documento di handoff tecnico completo: [`docs/doc-tecnico_handoff.html`](docs/doc-tecnico_handoff.html).
-
 ## Sicurezza
 
 CLACOROO segue le best practice Electron moderne:
