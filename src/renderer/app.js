@@ -3819,27 +3819,27 @@ function showMarkdownModal(name, kind, content, fullId) {
 
   // Bottone copia (sempre disponibile, copia currentContent attuale)
   const copyAllBtn = btnWithIcon('md-copy', 'copy', t('button.copy'));
-  copyAllBtn.setAttribute('aria-label', 'Copia testo completo negli appunti');
+  copyAllBtn.setAttribute('aria-label', t('mdEdit.copyAria'));
   copyAllBtn.title = t('button.copyDocument');
   copyAllBtn.addEventListener('click', async () => {
     try {
       await navigator.clipboard.writeText(currentContent);
-      toast('Testo copiato negli appunti', 'success');
+      toast(t('mdEdit.copied'), 'success');
     } catch (e) {
-      toast('Impossibile copiare: ' + e.message, 'error');
+      toast(t('mdEdit.copyError', { msg: e.message }), 'error');
     }
   });
 
   // v1.0.99 — Bottone Modifica/Salva/Annulla (solo se fullId presente)
   const editBtn = btnWithIcon('md-copy', 'pencil', t('button.edit'));
-  editBtn.title = 'Modifica il file .md (modifiche locali, sovrascritte al prossimo `claude plugins update`)';
+  editBtn.title = t('mdEdit.editTip');
 
   const saveBtn   = btnWithIcon('md-copy md-save-btn', 'check', t('button.save'));
-  saveBtn.title   = 'Salva le modifiche sul file .md locale';
+  saveBtn.title   = t('mdEdit.saveTip');
   saveBtn.style.display = 'none';
 
-  const cancelBtn = btnWithIcon('md-copy', 'x', 'Annulla');
-  cancelBtn.title = 'Annulla le modifiche e torna alla preview';
+  const cancelBtn = btnWithIcon('md-copy', 'x', t('button.cancel'));
+  cancelBtn.title = t('mdEdit.cancelTip');
   cancelBtn.style.display = 'none';
 
   const closeBtn = el('button', 'md-close'); closeBtn.appendChild(icon('x'));
@@ -3869,9 +3869,9 @@ function showMarkdownModal(name, kind, content, fullId) {
     const warn = el('div', 'md-editor-warn');
     warn.appendChild(icon('triangle-alert'));
     const wText = el('div', 'md-editor-warn-text');
-    wText.appendChild(el('strong', null, 'Attenzione — modifica locale temporanea'));
+    wText.appendChild(el('strong', null, t('mdEdit.warnTitle')));
     wText.appendChild(el('div', null,
-      'Stai modificando il file .md nella cache del plugin. Le tue modifiche verranno sovrascritte al prossimo `claude plugins update ' + (fullId || '<plugin>') + '`. Per fix permanente apri PR/issue sul repo del plugin.'));
+      t('mdEdit.warnBody', { plugin: fullId || '<plugin>' })));
     warn.appendChild(wText);
     contentEl.appendChild(warn);
 
@@ -3904,7 +3904,7 @@ function showMarkdownModal(name, kind, content, fullId) {
   cancelBtn.addEventListener('click', () => {
     // Confirm solo se l'utente ha modificato il contenuto
     if (editorTextarea && editorTextarea.value !== currentContent) {
-      if (!window.confirm('Hai modifiche non salvate. Vuoi davvero annullare?')) return;
+      if (!window.confirm(t('mdEdit.unsavedConfirm'))) return;
     }
     switchToPreview();
   });
@@ -3917,7 +3917,7 @@ function showMarkdownModal(name, kind, content, fullId) {
     saveBtn.disabled = false; cancelBtn.disabled = false;
     if (r.success) {
       currentContent = newContent;
-      toast('File salvato — ricordati che verrà sovrascritto al prossimo `claude plugins update`', 'success');
+      toast(t('mdEdit.saved'), 'success');
       // v1.0.100 — Marca il file come modificato localmente per mostrare badge
       // sulla card skill/agent. Persisted in state.json.
       state.modifiedFiles[modifiedFileKey(kind, fullId, name)] = new Date().toISOString();
@@ -3926,7 +3926,7 @@ function showMarkdownModal(name, kind, content, fullId) {
       // Trigger reload dati per re-check health + re-render card con badge
       try { await loadData(); } catch { /* graceful */ }
     } else {
-      toast('Errore salvataggio: ' + (r.error || 'sconosciuto'), 'error');
+      toast(t('mdEdit.saveError', { msg: r.error || t('toast.errUnknown') }), 'error');
     }
   });
 
@@ -3935,7 +3935,7 @@ function showMarkdownModal(name, kind, content, fullId) {
       if (mode === 'edit') {
         // In edit mode Esc fa Annulla con confirm se modificato
         if (editorTextarea && editorTextarea.value !== currentContent) {
-          if (!window.confirm('Hai modifiche non salvate. Vuoi davvero annullare?')) return;
+          if (!window.confirm(t('mdEdit.unsavedConfirm'))) return;
         }
         switchToPreview();
       } else {
@@ -3949,14 +3949,14 @@ function showMarkdownModal(name, kind, content, fullId) {
   }
   closeBtn.addEventListener('click', () => {
     if (mode === 'edit' && editorTextarea && editorTextarea.value !== currentContent) {
-      if (!window.confirm('Hai modifiche non salvate. Vuoi davvero chiudere?')) return;
+      if (!window.confirm(t('mdEdit.unsavedClose'))) return;
     }
     close();
   });
   overlay.addEventListener('click', e => {
     if (e.target !== overlay) return;
     if (mode === 'edit' && editorTextarea && editorTextarea.value !== currentContent) {
-      if (!window.confirm('Hai modifiche non salvate. Vuoi davvero chiudere?')) return;
+      if (!window.confirm(t('mdEdit.unsavedClose'))) return;
     }
     close();
   });
@@ -6897,9 +6897,9 @@ function refreshFooterStatus(updateInfo) {
   if (updateInfo && updateInfo.available) {
     dot.className = 'status-dot outdated';
     lbl.textContent = v;
-    lbl.title = 'Nuova versione disponibile: v' + updateInfo.latest;
-    const btn = el('button', 'footer-update-btn', 'Update');
-    btn.dataset.tt = 'v' + updateInfo.latest + ' disponibile — apri pagina download';
+    lbl.title = t('status.updateAvailable', { latest: updateInfo.latest });
+    const btn = el('button', 'footer-update-btn', t('status.footerUpdateBtn'));
+    btn.dataset.tt = t('status.footerUpdateTip', { latest: updateInfo.latest });
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
       if (updateInfo.url) window.claudeAPI.openExternal(updateInfo.url);

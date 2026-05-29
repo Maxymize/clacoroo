@@ -312,6 +312,22 @@ window.LOCALES.en = {
     skipVersion:    'Skip this version',
   },
 
+  // Markdown file editor modal (skill/agent) — preview ⟷ edit
+  mdEdit: {
+    copyAria:       'Copy full text to clipboard',
+    copied:         'Text copied to clipboard',
+    copyError:      'Unable to copy: {msg}',
+    editTip:        'Edit the .md file (local changes, overwritten on the next `claude plugins update`)',
+    saveTip:        'Save changes to the local .md file',
+    cancelTip:      'Discard changes and go back to preview',
+    warnTitle:      'Warning — temporary local edit',
+    warnBody:       'You are editing the .md file in the plugin cache. Your changes will be overwritten on the next `claude plugins update {plugin}`. For a permanent fix open a PR/issue on the plugin repo.',
+    unsavedConfirm: 'You have unsaved changes. Discard them?',
+    unsavedClose:   'You have unsaved changes. Close anyway?',
+    saved:          'File saved — remember it will be overwritten on the next `claude plugins update`',
+    saveError:      'Save error: {msg}',
+  },
+
   // Command palette (Cmd+K) — common labels
   palette: {
     placeholder:    'Search plugin, skill, agent, marketplace or action…',
@@ -376,6 +392,11 @@ window.LOCALES.en = {
   status: {
     loading:       'Loading…',
     loadingConfig: 'Loading configuration…',
+    // Sidebar footer (next to the version number)
+    upToDate:        'Up to date',
+    updateAvailable: 'New version available: v{latest}',
+    footerUpdateBtn: 'Update',
+    footerUpdateTip: 'v{latest} available — open download page',
   },
 
   // Time formatting (relative)

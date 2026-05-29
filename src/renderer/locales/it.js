@@ -312,6 +312,22 @@ window.LOCALES.it = {
     skipVersion:    'Salta questa versione',
   },
 
+  // Modal editor file .md (skill/agent) — preview ⟷ edit
+  mdEdit: {
+    copyAria:       'Copia testo completo negli appunti',
+    copied:         'Testo copiato negli appunti',
+    copyError:      'Impossibile copiare: {msg}',
+    editTip:        'Modifica il file .md (modifiche locali, sovrascritte al prossimo `claude plugins update`)',
+    saveTip:        'Salva le modifiche sul file .md locale',
+    cancelTip:      'Annulla le modifiche e torna alla preview',
+    warnTitle:      'Attenzione — modifica locale temporanea',
+    warnBody:       'Stai modificando il file .md nella cache del plugin. Le tue modifiche verranno sovrascritte al prossimo `claude plugins update {plugin}`. Per fix permanente apri PR/issue sul repo del plugin.',
+    unsavedConfirm: 'Hai modifiche non salvate. Vuoi davvero annullare?',
+    unsavedClose:   'Hai modifiche non salvate. Vuoi davvero chiudere?',
+    saved:          'File salvato — ricordati che verrà sovrascritto al prossimo `claude plugins update`',
+    saveError:      'Errore salvataggio: {msg}',
+  },
+
   // Command palette (Cmd+K) — labels comuni
   palette: {
     placeholder:    'Cerca plugin, skill, agent, marketplace o azione…',
@@ -376,6 +392,11 @@ window.LOCALES.it = {
   status: {
     loading:       'Caricamento…',
     loadingConfig: 'Caricamento configurazione…',
+    // Footer sidebar (accanto al numero di versione)
+    upToDate:        'Versione aggiornata',
+    updateAvailable: 'Nuova versione disponibile: v{latest}',
+    footerUpdateBtn: 'Aggiorna',
+    footerUpdateTip: 'v{latest} disponibile — apri pagina download',
   },
 
   // Time formatting (relative)

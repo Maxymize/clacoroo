@@ -674,16 +674,25 @@ body {
   content: attr(data-tt);
   position: absolute;
   bottom: calc(100% + 6px);
-  left: 50%;
-  transform: translateX(-50%) translateY(2px);
+  /* v1.1.17 — il bottone Update è in basso a SINISTRA nella sidebar. Un
+     tooltip centrato (left:50% + translateX(-50%)) sforerebbe il bordo
+     sinistro della finestra → testo tagliato. Lo ancoriamo al bordo sinistro
+     del bottone (left:0) così cresce verso destra restando visibile, e gli
+     diamo una larghezza con a-capo invece di nowrap per non sforare a destra. */
+  left: 0;
+  transform: translateY(2px);
+  width: max-content;
+  max-width: 200px;
+  white-space: normal;
+  overflow-wrap: anywhere;
   background: var(--surface);
   border: 1px solid var(--border);
   color: var(--text);
   font-size: 10px;
   font-weight: 500;
+  line-height: 1.35;
   padding: 4px 8px;
   border-radius: 4px;
-  white-space: nowrap;
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
@@ -693,7 +702,7 @@ body {
 }
 .footer-update-btn[data-tt]:hover::after {
   opacity: 1; visibility: visible;
-  transform: translateX(-50%) translateY(0);
+  transform: translateY(0);
   transition: opacity .1s, transform .1s, visibility 0s;
 }
 
