@@ -2,6 +2,28 @@
 
 > English translation of [CHANGELOG.md](./CHANGELOG.md) (Italian, canonical). Updated in sync with each release.
 
+## v1.1.18 — 2026-05-29 — Missing translations + readable update tooltip
+
+- [FIX] The "temporary local edit" warning in the .md file editor and all messages in that window now follow the interface language (they were always in Italian before)
+- [FIX] The update button tooltip (next to the version number) is now translated and no longer clipped at the edges: it anchors to the button and wraps when needed
+
+## v1.1.17 — 2026-05-29 — Opus 4.8, Ultracode effort, and no lost models
+
+In Claude Config: added the Opus 4.8 model and the Ultracode effort level.
+
+- [FEATURE] The **Opus 4.8** model is now selectable in Claude Config, and effort now includes the new **Ultracode** level
+- [FIX] If `settings.json` has a model or effort not yet in CLACOROO's list (e.g. a future version), it's now shown as selected instead of silently falling back to an older value — no more risk of overwriting your chosen model
+- [FIX] Fixed the "A JavaScript error occurred in the main process" crash (`Object has been destroyed`) that could appear when reopening CLACOROO while another copy was already running: the existing window is now safely brought to the front (or recreated)
+
+## v1.1.16 — 2026-05-29 — Readable toasts + marketplace invalid-path error
+
+- [FIX] Long messages (e.g. CLI errors with absolute paths) now wrap inside the toast box instead of overflowing off the right edge; errors stay visible longer so you have time to read them
+- [IMPROVEMENT] When a marketplace update fails because the saved path points to a different user (typical after copying the `.claude` folder from another computer or a system reset), CLACOROO shows a clear notice with the exact command to fix it and a button to copy it
+
+## v1.1.15 — 2026-05-29 — Fix crash "JavaScript error in the main process"
+
+- [FIX] Fixed the crash with the "A JavaScript error occurred in the main process" dialog (`write EIO` error) that could appear when returning to the app after closing the terminal it was launched from: benign stdout/stderr write errors are now ignored without bringing the app down
+
 ## v1.1.14 — 2026-05-28 — Interactive onboarding tour
 
 - [IMPROVEMENT] The welcome tour now highlights the real UI elements one at a time (sidebar, dashboard, plugins, MCP, hooks, terminal, language) instead of a static text dialog, with the CLACOROO mascot guiding you

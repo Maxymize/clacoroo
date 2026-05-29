@@ -2,6 +2,28 @@
 
 > Italiano (canonico). English translation: [CHANGELOG.en.md](./CHANGELOG.en.md) — allineato a ogni release.
 
+## v1.1.18 — 2026-05-29 — Traduzioni mancanti + tooltip update leggibile
+
+- [FIX] L'avviso "modifica locale temporanea" nell'editor dei file .md e tutti i messaggi di quella finestra ora seguono la lingua dell'interfaccia (prima erano sempre in italiano)
+- [FIX] Il tooltip del pulsante di aggiornamento (accanto al numero di versione) ora è tradotto e non viene più tagliato ai bordi: si ancora al pulsante e va a capo se serve
+
+## v1.1.17 — 2026-05-29 — Opus 4.8, effort Ultracode e modelli non persi
+
+In Claude Config: aggiunti il modello Opus 4.8 e il livello di effort Ultracode.
+
+- [FEATURE] Il modello **Opus 4.8** è ora selezionabile in Claude Config, e l'effort include il nuovo livello **Ultracode**
+- [FIX] Se in `settings.json` è impostato un modello o un effort non ancora presente nella lista di CLACOROO (es. una versione futura), ora viene mostrato come selezionato invece di ripiegare silenziosamente su un valore vecchio — niente più rischio di sovrascrivere il modello scelto
+- [FIX] Risolto il crash "A JavaScript error occurred in the main process" (`Object has been destroyed`) che poteva comparire riaprendo CLACOROO mentre un'altra copia era già in esecuzione: ora la finestra esistente viene riportata in primo piano (o ricreata) in modo sicuro
+
+## v1.1.16 — 2026-05-29 — Toast leggibili + errore marketplace con percorso non valido
+
+- [FIX] I messaggi lunghi (es. errori della CLI con percorsi assoluti) ora vanno a capo dentro il riquadro del toast invece di uscire dal bordo destro; gli errori restano visibili più a lungo per dare tempo di leggerli
+- [IMPROVEMENT] Quando l'aggiornamento di un marketplace fallisce perché il percorso salvato punta a un utente diverso (tipico dopo aver copiato la cartella `.claude` da un altro computer o un reset di sistema), CLACOROO mostra un avviso chiaro con il comando esatto per risolvere e un pulsante per copiarlo
+
+## v1.1.15 — 2026-05-29 — Fix crash "JavaScript error in the main process"
+
+- [FIX] Risolto il crash con dialog "A JavaScript error occurred in the main process" (errore `write EIO`) che poteva comparire tornando sull'app dopo aver chiuso il terminale da cui era stata avviata: gli errori di scrittura benigni su stdout/stderr ora vengono ignorati senza abbattere l'app
+
 ## v1.1.14 — 2026-05-28 — Tutorial iniziale interattivo
 
 - [IMPROVEMENT] Il tour di benvenuto ora evidenzia gli elementi reali dell'interfaccia uno alla volta (sidebar, dashboard, plugin, MCP, hook, terminale, lingua) invece di una finestra di testo statica, con la mascotte CLACOROO che ti accompagna
