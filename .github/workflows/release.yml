@@ -100,3 +100,20 @@ jobs:
         run: |
           gh release upload "$TAG" --repo "$GITHUB_REPOSITORY" \
             dist/*.AppImage dist/*.deb dist/*.rpm --clobber
+
+  # ── Rebuild della landing page (Cloudflare Pages) quando tutte le build sono pronte ──
+  # I link di download del sito sono risolti a build time dall'ultima release:
+  # un rebuild li allinea automaticamente alla nuova versione.
+  rebuild-website:
+    needs: [macos, windows, linux]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Cloudflare Pages deploy hook
+        env:
+          HOOK: ${{ secrets.CLOUDFLARE_DEPLOY_HOOK }}
+        run: |
+          if [ -z "$HOOK" ]; then
+            echo "CLOUDFLARE_DEPLOY_HOOK non configurato — salto il rebuild del sito."
+            exit 0
+          fi
+          curl -fsSL -X POST "$HOOK" && echo "Rebuild della landing page avviato."
