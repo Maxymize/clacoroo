@@ -2,6 +2,11 @@
 
 > English translation of [CHANGELOG.md](./CHANGELOG.md) (Italian, canonical). Updated in sync with each release.
 
+## v1.1.19 — 2026-05-29 — Windows: Claude Code detection and terminal
+
+- [FIX] On Windows CLACOROO now correctly detects the Claude Code binary (`claude.exe`/`claude.cmd` in the typical install paths): account status and CLI-backed actions work again
+- [FIX] The integrated terminal now finds `claude` even when the app starts with a reduced PATH: the detected binary's folder is prepended to the terminal PATH (also helps on macOS for apps launched from Finder)
+
 ## v1.1.18 — 2026-05-29 — Missing translations + readable update tooltip
 
 - [FIX] The "temporary local edit" warning in the .md file editor and all messages in that window now follow the interface language (they were always in Italian before)

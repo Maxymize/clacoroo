@@ -110,23 +110,47 @@ const SETTINGS     = path.join(CLAUDE_DIR, 'settings.json');
 /* ── FIND CLAUDE BINARY ────────────────────────────────────────────────── */
 
 function findClaudeBin() {
+  const home = os.homedir();
+  // v1.1.19 — su Windows il binario è `claude.exe` / `claude.cmd`, NON `claude`
+  // (senza estensione fs.existsSync ritorna false). L'installer nativo recente
+  // lo mette in %USERPROFILE%\.local\bin\claude.exe; npm in %APPDATA%\npm.
+  if (process.platform === 'win32') {
+    const winCandidates = [
+      path.join(home, '.local', 'bin', 'claude.exe'),
+      path.join(home, '.local', 'bin', 'claude.cmd'),
+      path.join(process.env.APPDATA || path.join(home, 'AppData', 'Roaming'), 'npm', 'claude.cmd'),
+      path.join(process.env.APPDATA || path.join(home, 'AppData', 'Roaming'), 'npm', 'claude.exe'),
+      path.join(process.env.LOCALAPPDATA || path.join(home, 'AppData', 'Local'), 'Programs', 'claude', 'claude.exe'),
+      'C:\\Program Files\\Claude\\claude.exe',
+    ];
+    for (const p of winCandidates) {
+      if (fs.existsSync(p)) return p;
+    }
+    // Fallback: `where claude` (cerca nel PATH del processo). Prende la prima
+    // riga che esiste su disco; ignora eventuali alias .ps1.
+    try {
+      const out = execFileSync('where', ['claude'], { encoding: 'utf8', timeout: 4000 });
+      for (const line of out.split(/\r?\n/)) {
+        const p = line.trim();
+        if (p && /\.(exe|cmd|bat)$/i.test(p) && fs.existsSync(p)) return p;
+      }
+    } catch {}
+    return null;
+  }
+
+  // Unix (macOS / Linux)
   const candidates = [
     '/usr/local/bin/claude',
-    path.join(os.homedir(), '.local', 'bin', 'claude'),
+    path.join(home, '.local', 'bin', 'claude'),
     '/opt/homebrew/bin/claude',
-    path.join(os.homedir(), '.npm-global', 'bin', 'claude'),
+    path.join(home, '.npm-global', 'bin', 'claude'),
     '/usr/bin/claude',
-    'C:\\Program Files\\Claude\\claude.exe',
   ];
   for (const p of candidates) {
     if (fs.existsSync(p)) return p;
   }
   try {
-    const shell = process.platform === 'win32' ? 'cmd' : 'bash';
-    const args  = process.platform === 'win32'
-      ? ['/c', 'where claude']
-      : ['-l', '-c', 'which claude 2>/dev/null'];
-    const result = execFileSync(shell, args, { encoding: 'utf8', timeout: 4000 }).trim();
+    const result = execFileSync('bash', ['-l', '-c', 'which claude 2>/dev/null'], { encoding: 'utf8', timeout: 4000 }).trim();
     const first  = result.split('\n')[0];
     if (first && fs.existsSync(first)) return first;
   } catch {}
@@ -1176,7 +1200,10 @@ ipcMain.handle('pty:capabilities', async () => ({
 ipcMain.handle('pty:spawn', async (_e, opts = {}) => {
   if (!PTY.isAvailable()) return { success: false, error: 'Terminale non disponibile su questa piattaforma' };
   try {
-    const info = PTY.spawn(opts);
+    // v1.1.19 — passa al PTY la cartella del binario claude rilevato, così il
+    // terminale integrato lo trova anche se il PATH ereditato non la include.
+    const claudeBinDir = CLAUDE_BIN ? path.dirname(CLAUDE_BIN) : null;
+    const info = PTY.spawn(Object.assign({}, opts, { claudeBinDir }));
     PTY.setHandlers(info.id, {
       onData: (chunk) => { if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('pty:data', { id: info.id, chunk }); },
       onExit: (exit)  => { if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('pty:exit', { id: info.id, ...exit }); },

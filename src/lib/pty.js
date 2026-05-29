@@ -147,6 +147,22 @@ function spawn(opts) {
     // su macOS — gli utenti se vogliono lo abilitano via shell selector.
   });
 
+  // v1.1.19 — Garantisce che il terminale integrato veda lo stesso `claude`
+  // rilevato da CLACOROO. Le app GUI (lanciate da Finder/Explorer) ereditano
+  // spesso un PATH ridotto che NON include la cartella del binario (es. su Win
+  // %USERPROFILE%\.local\bin, su macOS /opt/homebrew/bin), così `claude` non è
+  // raggiungibile nel PTY anche se l'app lo trova. Anteponiamo quella cartella
+  // al PATH dell'ambiente del terminale.
+  if (opts.claudeBinDir && typeof opts.claudeBinDir === 'string') {
+    const sep = process.platform === 'win32' ? ';' : ':';
+    const cur = env.PATH || env.Path || '';
+    const parts = cur.split(sep).filter(Boolean);
+    // Normalizza sempre su PATH (su Win la var può arrivare come `Path`);
+    // antepone la cartella solo se non già presente.
+    env.PATH = parts.includes(opts.claudeBinDir) ? cur : (opts.claudeBinDir + sep + cur);
+    if (process.platform === 'win32' && 'Path' in env) delete env.Path; // evita doppia var su Win
+  }
+
   const id = String(nextId++);
   const p = pty.spawn(shell, [], { name: 'xterm-color', cols, rows, cwd, env });
 
