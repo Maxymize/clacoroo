@@ -2920,7 +2920,8 @@ function renderMarketplaces() {
       updateMktBtn.disabled = true; updateMktBtn.textContent = '…';
       const r = await window.claudeAPI.marketplaceAction('update', m.id);
       if (r.success) toast(t('mkt.toastUpdated', { id: m.id }), 'success');
-      else toast(t('toast.errorPrefix', { msg: r.error }), 'error');
+      else if (!(await maybeShowCorruptedMarketplace(r.error, m.id)))
+        toast(t('toast.errorPrefix', { msg: r.error }), 'error');
       updateMktBtn.disabled = false; updateMktBtn.textContent = '↻ ' + t('mkt.updateBtn');
     });
 
@@ -6885,20 +6886,48 @@ function refreshFooterStatus(updateInfo) {
   } else {
     dot.className = 'status-dot ok';
     lbl.textContent = v;
-    lbl.title = 'Versione aggiornata';
+    lbl.title = t('status.upToDate');
   }
 }
 
 /* ── TOAST ────────────────────────────────────────────────────────────── */
+// v1.1.16 — Riconosce l'errore "corrupted installLocation" della CLI Claude:
+// il path salvato in known_marketplaces.json punta a un utente/cartella
+// diversi (tipico dopo aver copiato .claude da un altro Mac o un reset con
+// username diverso). Invece del raw error grezzo (illeggibile, pieno di path)
+// mostra un dialog guidato con il comando da eseguire e un bottone Copia.
+// Ritorna true se ha gestito l'errore, false altrimenti (→ toast normale).
+async function maybeShowCorruptedMarketplace(rawError, id) {
+  if (!rawError || !/corrupted\s+installLocation/i.test(String(rawError))) return false;
+  const cmd = t('mkt.corruptedCmd', { id });
+  const choice = await window.claudeAPI.confirmDialog({
+    title:   t('mkt.corruptedTitle', { id }),
+    message: t('mkt.corruptedBody', { id }),
+    detail:  cmd,
+    buttons: [t('button.close'), t('mkt.copyCmd')],
+  });
+  if (choice === 1) {
+    try { await navigator.clipboard.writeText(cmd); toast(t('toast.copied'), 'success'); }
+    catch { /* clipboard non disponibile: il comando è comunque nel dialog */ }
+  }
+  return true;
+}
+
 function toast(msg, type) {
   const container = $('toast-container');
   const t = el('div', 'toast t-' + (type || 'info'), msg);
   container.appendChild(t);
+  // v1.1.16 — durata adattiva: gli errori (spesso lunghi, es. output CLI con
+  // path) restano più a lungo, e messaggi lunghi guadagnano tempo extra per
+  // essere letti. Cap a 12s per non incollare il toast a schermo.
+  const base = type === 'error' ? 6000 : 3200;
+  const extra = Math.min(6000, Math.max(0, String(msg).length - 60) * 40);
+  const dwell = Math.min(12000, base + extra);
   setTimeout(() => {
     t.style.opacity = '0';
     t.style.transition = 'opacity .3s';
     setTimeout(() => t.remove(), 320);
-  }, 3200);
+  }, dwell);
 }
 
 /* ── v1.0.67 — TERMINAL DRAWER (Pack B) ──────────────────────────────── */

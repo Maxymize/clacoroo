@@ -493,6 +493,10 @@ window.LOCALES.en = {
     installedSlash: '{installed} / {available} plugins',
     installedTip:   'Installed / Available in the marketplace',
     repoPrefix:     'github.com/{repo}',
+    corruptedTitle: 'Invalid path for marketplace "{id}"',
+    corruptedBody:  'The saved path for "{id}" points to a different user or folder than the current one. This usually happens after copying the .claude folder from another computer, or after a system reset with a different username.\n\nTo fix it, remove and re-add the marketplace. You can use the "Remove" button below and then re-add it, or from the terminal:',
+    corruptedCmd:   'claude plugin marketplace remove "{id}"',
+    copyCmd:        'Copy command',
   },
 
   // Plugin card extra buttons + tooltip

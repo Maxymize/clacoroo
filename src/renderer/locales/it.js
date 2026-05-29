@@ -498,6 +498,15 @@ window.LOCALES.it = {
     installedSlash: '{installed} / {available} plugin',
     installedTip:   'Installati / Disponibili nel marketplace',
     repoPrefix:     'github.com/{repo}',
+    // v1.1.16 — errore "corrupted installLocation": il path salvato in
+    // known_marketplaces.json punta a un utente/percorso diverso da quello
+    // attuale (tipico dopo aver copiato la cartella .claude da un altro Mac o
+    // dopo un reset con username diverso). CLACOROO non modifica i JSON: guida
+    // l'utente a rimuovere e ri-aggiungere il marketplace via CLI.
+    corruptedTitle: 'Percorso del marketplace "{id}" non valido',
+    corruptedBody:  'Il percorso salvato per "{id}" punta a un utente o a una cartella diversa da quella attuale. Di solito succede dopo aver copiato la cartella .claude da un altro computer o dopo un reset del sistema con un nome utente diverso.\n\nPer risolvere, rimuovi e ri-aggiungi il marketplace. Puoi usare il pulsante "Rimuovi" qui sotto e poi ri-aggiungerlo, oppure da terminale:',
+    corruptedCmd:   'claude plugin marketplace remove "{id}"',
+    copyCmd:        'Copia comando',
   },
 
   // Plugin card extra buttons + tooltip

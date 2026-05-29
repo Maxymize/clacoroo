@@ -4013,8 +4013,18 @@ body {
   max-width: 340px;
   animation: slideUp .2s ease;
   pointer-events: auto;
-  display: flex; align-items: center; gap: 8px;
+  display: flex; align-items: flex-start; gap: 8px;
   box-shadow: var(--shadow);
+  /* v1.1.16 — testo lungo (es. path assoluti negli errori CLI) deve andare a
+     capo dentro il box invece di sforare a destra. overflow-wrap spezza le
+     parole normali, word-break: break-word i token lunghissimi senza spazi
+     (path/URL). white-space: pre-line preserva gli a-capo dei messaggi su più
+     righe. max-height + overflow-y evita toast altissimi su errori enormi. */
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  white-space: pre-line;
+  max-height: 40vh;
+  overflow-y: auto;
 }
 .toast.t-success { background: rgba(34,197,94,.95);  color: #fff; }
 .toast.t-error   { background: rgba(239,68,68,.95);  color: #fff; }
