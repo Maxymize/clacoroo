@@ -16,6 +16,29 @@ const os   = require('os');
 const { execFile, execFileSync } = require('child_process');
 const crypto = require('crypto');
 
+// --- Hardening stdio: ignora EIO/EPIPE su stdout/stderr ---
+// Quando il terminale/pipe che ha lanciato l'app (es. `npm start`) viene
+// chiuso mentre l'app GUI resta aperta, qualsiasi scrittura su stdout/stderr
+// (inclusi i log interni di Electron inoltrati dal renderer via `s.send`)
+// fallisce con EIO/EPIPE. Senza gestore questi errori diventano
+// `uncaughtException` fatali → dialog "A JavaScript error occurred in the
+// main process" e crash. Sono errori benigni (nessuno legge l'output di una
+// app GUI): li ignoriamo. Tutto il resto resta non gestito di proposito,
+// per non mascherare bug reali.
+const isBenignStdioError = (err) => err && (err.code === 'EIO' || err.code === 'EPIPE');
+// I listener 'error' su stdout/stderr evitano che l'EIO/EPIPE diventi
+// uncaughtException: con un handler registrato l'errore è "gestito".
+process.stdout.on('error', (err) => { if (!isBenignStdioError(err)) throw err; });
+process.stderr.on('error', (err) => { if (!isBenignStdioError(err)) throw err; });
+// Rete di sicurezza per gli EIO/EPIPE che arrivano fuori dai listener sopra
+// (es. quelli emessi internamente da Electron in `console.error`). Per ogni
+// altro errore rilanciamo fuori dall'handler (setImmediate), così Electron
+// ripristina il suo crash behavior di default invece di restare soppresso.
+process.on('uncaughtException', (err) => {
+  if (isBenignStdioError(err)) return;
+  setImmediate(() => { throw err; });
+});
+
 // Override generic "Electron" name + icon for dev mode (in production the
 // .icns from electron-builder takes precedence in the .app bundle).
 app.setName('CLACOROO');
@@ -32,10 +55,18 @@ if (!app.requestSingleInstanceLock()) {
   return;
 }
 app.on('second-instance', () => {
-  if (mainWindow) {
+  // v1.1.17 — una BrowserWindow distrutta NON è null: è un oggetto JS ancora
+  // presente ma con la risorsa nativa liberata. Chiamare i suoi metodi
+  // (isMinimized/show/…) lancia "TypeError: Object has been destroyed" e fa
+  // crashare il main. Quindi guardiamo isDestroyed(); se la finestra non c'è
+  // più la ricreiamo (stesso pattern di app.on('activate')).
+  if (mainWindow && !mainWindow.isDestroyed()) {
     if (mainWindow.isMinimized()) mainWindow.restore();
     mainWindow.show();
     mainWindow.focus();
+  } else {
+    createWindow();
+    buildAppMenu(mainWindow);
   }
 });
 const { checkMarkdownHealth } = require('./lib/markdown');
