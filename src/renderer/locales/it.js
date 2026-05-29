@@ -609,6 +609,7 @@ window.LOCALES.it = {
     voiceDesc:      '~/.claude/settings.json → voice.enabled · Abilita la dictation hold-to-talk / tap-to-toggle nella TUI Claude Code',
     modelLabel:     'Modello predefinito',
     modelDesc:      'Modello scelto da Claude Code per ogni nuova sessione (override del default).',
+    unknownOption:  '{value} (attuale)',
     effortLabel:    'Effort',
     effortDesc:     'Intensità del ragionamento (più alto = più cura, più token, più lento).',
     themeLabel:     'Tema (Claude Code)',

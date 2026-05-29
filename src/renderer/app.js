@@ -4762,20 +4762,37 @@ function renderConfigContent(container, data) {
     let input;
     if (type === 'select') {
       input = el('select', 'config-select');
-      (opts || []).forEach(o => {
-        const opt = el('option', null, o);
+      const optList = (opts || []).slice();
+      // v1.1.16 — se il valore salvato in settings.json non è tra le opzioni
+      // note (es. un modello nuovo come claude-opus-4-8 non ancora in lista),
+      // aggiungiamo un'option dedicata così resta SELEZIONATO e visibile,
+      // invece di ripiegare silenziosamente sulla prima voce (che porterebbe
+      // a sovrascrivere il modello buono con uno vecchio al primo cambio).
+      const current = settings[key];
+      if (current && !optList.includes(current)) {
+        optList.push(current);
+      }
+      optList.forEach(o => {
+        const opt = el('option', null,
+          (opts && opts.includes(o)) || !o ? o : t('config.unknownOption', { value: o }));
         opt.value = o;
         input.appendChild(opt);
       });
-      input.value = settings[key] || (opts && opts[0]) || '';
+      input.value = current || (opts && opts[0]) || '';
     } else if (type === 'dots') {
       // v1.0.32 — slider a pallini stile VS Code Claude plugin
       // v1.0.38 — tooltip custom istantaneo con nomi leggibili
       const dotsWrap = el('div', 'dots-slider');
-      const values = opts || [];
+      const values = (opts || []).slice();
       const displayNames = {
-        low: 'Low', medium: 'Medium', high: 'High', xhigh: 'Extra-high', max: 'Max',
+        low: 'Low', medium: 'Medium', high: 'High', xhigh: 'Extra-high',
+        max: 'Max', ultracode: 'Ultracode',
       };
+      // v1.1.16 — se l'effort salvato non è tra i livelli noti (es. un livello
+      // nuovo introdotto da Claude Code) lo aggiungiamo in coda, così lo slider
+      // lo mostra al massimo invece di ripiegare su 'low' (indice 0).
+      const savedEffort = settings[key];
+      if (savedEffort && !values.includes(savedEffort)) values.push(savedEffort);
       const labelEl = left.querySelector('.settings-row-label');
       const labelSuffix = el('span', 'dots-current-label');
       labelEl.appendChild(labelSuffix);
@@ -4879,13 +4896,18 @@ function renderConfigContent(container, data) {
   // Voice: schema corretto è voice.enabled (oggetto nested), NON voiceEnabled top-level
   voiceConfigRow(container, settings);
 
+  // v1.1.16 — lista modelli aggiornata: aggiunto claude-opus-4-8 (modello più
+  // capace attuale). I valori sconosciuti in settings.json sono comunque
+  // preservati dal select (vedi configRow type 'select'), quindi un modello
+  // futuro non andrà perso anche se non è ancora qui.
   configRow('model', t('config.modelLabel'), 'select',
-    ['default', 'claude-opus-4-7', 'claude-sonnet-4-6', 'claude-haiku-4-5-20251001'],
+    ['default', 'claude-opus-4-8', 'claude-opus-4-7', 'claude-sonnet-4-6', 'claude-haiku-4-5-20251001'],
     t('config.modelDesc'));
 
-  // v1.0.30/32 — Effort level: slider a pallini stile VS Code (5 livelli).
+  // v1.0.30/32 — Effort level: slider a pallini stile VS Code.
+  // v1.1.16 — aggiunto 'ultracode' (nuovo livello max introdotto da Claude Code).
   configRow('effortLevel', t('config.effortLabel'), 'dots',
-    ['low', 'medium', 'high', 'xhigh', 'max'],
+    ['low', 'medium', 'high', 'xhigh', 'max', 'ultracode'],
     t('config.effortDesc'));
 
   // Theme: tutti i valori dallo schema ufficiale. Si applica alla UI di

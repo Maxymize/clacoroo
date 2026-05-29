@@ -10,6 +10,7 @@
 // Schema per modello: { input, output, cacheWrite, cacheRead }
 const PRICING = {
   // Opus family — top tier
+  'claude-opus-4-8':   { input: 15,    output: 75,    cacheWrite: 18.75,  cacheRead: 1.50 },
   'claude-opus-4-7':   { input: 15,    output: 75,    cacheWrite: 18.75,  cacheRead: 1.50 },
   'claude-opus-4-6':   { input: 15,    output: 75,    cacheWrite: 18.75,  cacheRead: 1.50 },
   'claude-opus-4-5':   { input: 15,    output: 75,    cacheWrite: 18.75,  cacheRead: 1.50 },
