@@ -2,6 +2,10 @@
 
 > English translation of [CHANGELOG.md](./CHANGELOG.md) (Italian, canonical). Updated in sync with each release.
 
+## v1.1.20 — 2026-05-29 — Update check: detects new versions
+
+- [FIX] The update check now correctly detects newly published versions: it previously always said "you're up to date" because it queried an endpoint that ignored the most recent releases
+
 ## v1.1.19 — 2026-05-29 — Windows: Claude Code detection and terminal
 
 - [FIX] On Windows CLACOROO now correctly detects the Claude Code binary (`claude.exe`/`claude.cmd` in the typical install paths): account status and CLI-backed actions work again

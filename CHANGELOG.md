@@ -2,6 +2,10 @@
 
 > Italiano (canonico). English translation: [CHANGELOG.en.md](./CHANGELOG.en.md) — allineato a ogni release.
 
+## v1.1.20 — 2026-05-29 — Controllo aggiornamenti: rileva le nuove versioni
+
+- [FIX] Il controllo aggiornamenti ora rileva correttamente le nuove versioni pubblicate: prima diceva sempre "sei già aggiornato" perché interrogava un endpoint che ignorava i rilasci più recenti
+
 ## v1.1.19 — 2026-05-29 — Windows: rilevamento di Claude Code e terminale
 
 - [FIX] Su Windows CLACOROO ora rileva correttamente il binario di Claude Code (`claude.exe`/`claude.cmd` nei percorsi di installazione tipici): lo stato dell'account e le azioni che richiedono la CLI tornano a funzionare

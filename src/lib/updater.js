@@ -2,7 +2,11 @@
 
 const https = require('node:https');
 
-const RELEASES_API = 'https://api.github.com/repos/Maxymize/clacoroo/releases/latest';
+// v1.1.20 — usiamo /releases (lista) invece di /releases/latest: quest'ultimo
+// IGNORA le pre-release, ma il nostro CI pubblica ogni tag come pre-release →
+// l'app non vedeva mai i nuovi rilasci. Dalla lista scegliamo la versione più
+// alta (per semver) fra le release non-draft, pre-release incluse.
+const RELEASES_API = 'https://api.github.com/repos/Maxymize/clacoroo/releases?per_page=30';
 const HTTP_TIMEOUT = 8000;
 
 function fetchJson(url) {
@@ -42,10 +46,24 @@ function isNewerVersion(remote, local) {
   return false;
 }
 
+// Sceglie, da una lista di release GitHub, quella con la versione più alta
+// (per semver) escludendo le draft. Le pre-release SONO incluse (vedi nota su
+// RELEASES_API). Ritorna null se la lista è vuota o senza tag validi.
+function pickLatestRelease(releases) {
+  if (!Array.isArray(releases)) return null;
+  let best = null;
+  for (const r of releases) {
+    if (!r || r.draft || !r.tag_name) continue;
+    if (!best || isNewerVersion(r.tag_name, best.tag_name)) best = r;
+  }
+  return best;
+}
+
 async function checkLatestRelease(currentVersion) {
   try {
-    const release = await fetchJson(RELEASES_API);
-    if (!release || !release.tag_name) {
+    const releases = await fetchJson(RELEASES_API);
+    const release = pickLatestRelease(releases);
+    if (!release) {
       return { ok: true, available: false, reason: 'no-release' };
     }
     const latest = release.tag_name.replace(/^v/, '');
@@ -64,4 +82,4 @@ async function checkLatestRelease(currentVersion) {
   }
 }
 
-module.exports = { checkLatestRelease, isNewerVersion, parseVersion };
+module.exports = { checkLatestRelease, isNewerVersion, parseVersion, pickLatestRelease };
