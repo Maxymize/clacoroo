@@ -27,11 +27,11 @@ jobs:
             gh release create "$TAG" \
               --repo "$GITHUB_REPOSITORY" \
               --title "$TAG — CLACOROO" \
-              --prerelease \
+              --latest \
               --notes-file - <<'EOF'
-          **IT** — Pre-release beta. Build multipiattaforma automatica (macOS · Windows · Linux). Vedi `CHANGELOG.md` per le novità.
+          **IT** — Build multipiattaforma automatica (macOS · Windows · Linux). Vedi `CHANGELOG.md` per le novità.
 
-          **EN** — Beta pre-release. Automated multi-platform build (macOS · Windows · Linux). See `CHANGELOG.en.md` for what's new.
+          **EN** — Automated multi-platform build (macOS · Windows · Linux). See `CHANGELOG.en.md` for what's new.
           EOF
           fi
 
