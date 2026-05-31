@@ -619,9 +619,15 @@ async function init() {
   await initTerminalDrawer();
 }
 
+// v1.1.22 — Auto-update: check forzato (silenzioso) ad ogni avvio + ogni 3h.
+// `force` bypassa il cooldown di 1h del main → all'avvio rileva sempre una
+// nuova release. `silent` sopprime i toast di esito (il banner appare comunque):
+// così non spunta "Tutto aggiornato" ad ogni lancio. Interroga GitHub, non
+// l'API Anthropic → nessun impatto sul rate-limit dell'account.
+const UPDATE_POLL_MS = 3 * 60 * 60 * 1000;
 function scheduleUpdateCheck() {
-  runUpdateCheck(false);
-  setInterval(() => runUpdateCheck(false), 24 * 60 * 60 * 1000);
+  runUpdateCheck(true, true);
+  setInterval(() => runUpdateCheck(true, true), UPDATE_POLL_MS);
 }
 
 // v1.1.9 — Quota threshold notifications. Polling ogni 10 min, dedup per
@@ -693,7 +699,7 @@ async function runQuotaCheck() {
   }
 }
 
-async function runUpdateCheck(force) {
+async function runUpdateCheck(force, silent) {
   const r = await window.claudeAPI.checkUpdates(force);
   if (!r) return;
   // Skipped per cooldown: usa risultato cached se disponibile
@@ -701,7 +707,7 @@ async function runUpdateCheck(force) {
   if (!info || !info.ok || !info.available) {
     window._latestUpdateInfo = null;
     refreshFooterStatus(null);
-    if (force) {
+    if (force && !silent) {
       if (r.ok === false) {
         toast(t('toast.updateCheckError', { msg: r.error }), 'error');
       } else if ((info && info.reason === 'no-release') || (r.reason === 'no-release')) {

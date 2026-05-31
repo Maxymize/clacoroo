@@ -2,6 +2,11 @@
 
 > Italiano (canonico). English translation: [CHANGELOG.en.md](./CHANGELOG.en.md) — allineato a ogni release.
 
+## v1.1.22 — 2026-05-31 — Aggiornamenti: rilevamento automatico all'avvio
+
+- [IMPROVEMENT] Ad ogni avvio CLACOROO controlla subito se c'è una nuova versione (prima poteva saltare il controllo e mostrare dati vecchi), poi ricontrolla automaticamente ogni 3 ore mentre l'app è aperta — non più ogni 24 ore
+- [IMPROVEMENT] Il controllo all'avvio è silenzioso: appare il banner solo se c'è davvero un aggiornamento, niente messaggi a ogni lancio. Il pulsante "Controlla aggiornamenti" continua a confermare l'esito
+
 ## v1.1.21 — 2026-05-31 — Lettura quote: niente più rate-limit dell'account
 
 - [FIX] Quando l'API di Anthropic limitava le richieste (errore "rate limited"), CLACOROO continuava a interrogarla, contribuendo al limite del tuo account — che poteva ripercuotersi anche su Claude Code. Ora si ferma in automatico e riprova più tardi, senza disturbare

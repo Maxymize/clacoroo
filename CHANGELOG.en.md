@@ -2,6 +2,11 @@
 
 > English translation of [CHANGELOG.md](./CHANGELOG.md) (Italian, canonical). Updated in sync with each release.
 
+## v1.1.22 — 2026-05-31 — Updates: automatic detection on launch
+
+- [IMPROVEMENT] On every launch CLACOROO now checks right away for a new version (before, it could skip the check and show stale data), then re-checks automatically every 3 hours while the app is open — no longer every 24 hours
+- [IMPROVEMENT] The launch check is silent: the banner appears only when there's an actual update, no message on every start. The "Check for updates" button still confirms the result
+
 ## v1.1.21 — 2026-05-31 — Usage readout: no more account rate-limiting
 
 - [FIX] When Anthropic's API was rate-limiting requests, CLACOROO kept polling it, adding to your account's limit — which could spill over to Claude Code too. It now backs off automatically and retries later, without interfering
