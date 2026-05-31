@@ -6,6 +6,7 @@
 
 - [IMPROVEMENT] On every launch CLACOROO now checks right away for a new version (before, it could skip the check and show stale data), then re-checks automatically every 3 hours while the app is open — no longer every 24 hours
 - [IMPROVEMENT] The launch check is silent: the banner appears only when there's an actual update, no message on every start. The "Check for updates" button still confirms the result
+- [IMPROVEMENT] The "Open download page" button (banner and footer) now opens the official clacoroo.app/download page instead of the raw GitHub release page
 
 ## v1.1.21 — 2026-05-31 — Usage readout: no more account rate-limiting
 

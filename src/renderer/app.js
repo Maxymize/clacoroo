@@ -625,6 +625,10 @@ async function init() {
 // così non spunta "Tutto aggiornato" ad ogni lancio. Interroga GitHub, non
 // l'API Anthropic → nessun impatto sul rate-limit dell'account.
 const UPDATE_POLL_MS = 3 * 60 * 60 * 1000;
+// v1.1.22 — il banner/footer di aggiornamento apre la pagina download del sito
+// ufficiale (link sempre allineati all'ultima release) invece della release
+// GitHub grezza. `info.url` resta usato altrove per i dettagli della release.
+const DOWNLOAD_PAGE_URL = 'https://clacoroo.app/download/';
 function scheduleUpdateCheck() {
   runUpdateCheck(true, true);
   setInterval(() => runUpdateCheck(true, true), UPDATE_POLL_MS);
@@ -6853,7 +6857,7 @@ function renderUpdateBanner(info) {
   const actions = el('div', 'update-banner-actions');
   const openBtn = el('button', 'btn btn-sm btn-primary', t('updateBanner.openDownload'));
   openBtn.addEventListener('click', () => {
-    window.claudeAPI.openExternal(info.url);
+    window.claudeAPI.openExternal(DOWNLOAD_PAGE_URL);
   });
   const laterBtn = el('button', 'btn btn-sm btn-ghost', t('updateBanner.later'));
   laterBtn.addEventListener('click', () => banner.remove());
@@ -6922,7 +6926,7 @@ function refreshFooterStatus(updateInfo) {
     btn.dataset.tt = t('status.footerUpdateTip', { latest: updateInfo.latest });
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
-      if (updateInfo.url) window.claudeAPI.openExternal(updateInfo.url);
+      window.claudeAPI.openExternal(DOWNLOAD_PAGE_URL);
     });
     wrap.appendChild(btn);
   } else {
