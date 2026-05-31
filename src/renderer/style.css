@@ -732,6 +732,27 @@ body {
   transition: opacity .1s, transform .1s, visibility 0s;
 }
 
+/* v1.1.23 — Pulsante Feedback nel footer sidebar */
+.sidebar-feedback-btn {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+  padding: 6px 10px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text-dim);
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background .15s, color .15s, border-color .15s;
+}
+.sidebar-feedback-btn:hover {
+  color: var(--text);
+  background: var(--surface3, var(--surface2));
+  border-color: var(--accent, #d97757);
+}
+
 @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
 
 /* ── TOPBAR ───────────────────────────────────────────────────────────── */
