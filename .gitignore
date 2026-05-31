@@ -62,3 +62,6 @@ CLAUDE.md
 /assets/*logo*.png
 /assets/*coffe*.png
 /assets/*Sponsor*.png
+
+# Script di release locale (lancio manuale: bash scripts/release.sh) — non pubblico
+/scripts/release.sh
