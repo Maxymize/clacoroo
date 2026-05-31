@@ -461,6 +461,10 @@ window.LOCALES.en = {
     ariaPaypal:     'Donate via PayPal',
   },
 
+  feedback: {
+    button: 'Feedback',
+  },
+
   // API key buttons & toast
   apikeyBtn: {
     testConnection: 'Test connection',

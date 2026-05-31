@@ -466,6 +466,10 @@ window.LOCALES.it = {
     ariaPaypal:     'Dona via PayPal',
   },
 
+  feedback: {
+    button: 'Feedback',
+  },
+
   // API key buttons & toast
   apikeyBtn: {
     testConnection: 'Test connessione',
