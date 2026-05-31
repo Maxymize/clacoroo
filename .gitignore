@@ -65,3 +65,6 @@ CLAUDE.md
 
 # Script di release locale (lancio manuale: bash scripts/release.sh) — non pubblico
 /scripts/release.sh
+
+# File locali di Claude Code (lock task schedulati, ecc.)
+.claude/
