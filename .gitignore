@@ -57,3 +57,8 @@ CLAUDE.md
 
 # VS Code workspace file (locale)
 *.code-workspace
+
+# Sorgenti loghi support originali (le copie pulite stanno in src/renderer/)
+/assets/*logo*.png
+/assets/*coffe*.png
+/assets/*Sponsor*.png

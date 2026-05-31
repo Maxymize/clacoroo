@@ -21,7 +21,8 @@
     "build:mac": "bash scripts/build-dmg-mac.sh",
     "build:win": "electron-builder --win --publish never",
     "build:linux": "electron-builder --linux --publish never",
-    "dist": "electron-builder -mwl"
+    "dist": "electron-builder -mwl",
+    "release": "bash scripts/release.sh"
   },
   "build": {
     "appId": "com.maxymize.clacoroo",
