@@ -546,6 +546,7 @@ async function init() {
   await initLocale(appState);
   setupNav();
   attachSupportButtons();
+  attachFeedbackButton();
   // v1.0.67 — Carica caps pty PRIMA del primo render, così il bottone
   // "Terminale" appare nel topbar fin dal primo paint (altrimenti il
   // render parte con termState.caps=null e l'utente non vede il bottone).
@@ -629,6 +630,9 @@ const UPDATE_POLL_MS = 3 * 60 * 60 * 1000;
 // ufficiale (link sempre allineati all'ultima release) invece della release
 // GitHub grezza. `info.url` resta usato altrove per i dettagli della release.
 const DOWNLOAD_PAGE_URL = 'https://clacoroo.app/download/';
+// v1.1.23 — Pagina feedback sul sito (lingua-aware: EN su /, IT su /it/).
+const FEEDBACK_URL_EN = 'https://clacoroo.app/feedback';
+const FEEDBACK_URL_IT = 'https://clacoroo.app/it/feedback';
 function scheduleUpdateCheck() {
   runUpdateCheck(true, true);
   setInterval(() => runUpdateCheck(true, true), UPDATE_POLL_MS);
@@ -6890,6 +6894,19 @@ function attachSupportButtons() {
       const url = btn.dataset.url;
       if (url) window.claudeAPI.openExternal(url);
     });
+  });
+}
+
+// v1.1.23 — Pulsante Feedback nel footer: apre la pagina del sito nella
+// lingua attiva dell'app. Apre nel browser di sistema (no modal, no CSP).
+function attachFeedbackButton() {
+  const btn = document.getElementById('feedback-btn');
+  if (!btn) return;
+  btn.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const url = activeLang === 'it' ? FEEDBACK_URL_IT : FEEDBACK_URL_EN;
+    window.claudeAPI.openExternal(url);
   });
 }
 
