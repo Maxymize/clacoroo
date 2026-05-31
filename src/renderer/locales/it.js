@@ -456,6 +456,7 @@ window.LOCALES.it = {
   // Sidebar
   sidebar: {
     support:        'Supporta',
+    supportSub:     'Se questa applicazione ti è utile, considera di supportare il progetto con una donazione.',
     supportAriaWrap:'Supporta CLACOROO',
     tipGithub:      'Sponsor su GitHub (GitHub raddoppia 1:1 le donazioni nei primi 12 mesi)',
     tipBmac:        'Offrimi un caffè (Buy Me a Coffee)',
@@ -707,6 +708,8 @@ window.LOCALES.it = {
     usageLoading:   'Caricamento usage…',
     usageLoadingFull:'Caricamento quote sessione/settimana…',
     usageReadErr:   '⚠ Impossibile leggere usage: {msg}',
+    usagePausedRetry:'Aggiornamento in pausa — l\'API sta limitando le richieste. Riprovo tra ~{min} min.',
+    usagePausedNoData:'Lettura quote in pausa: l\'API sta limitando le richieste. Riprovo a breve.',
     usageBarSession:'Session (5h)',
     usageBarWeekly: 'Weekly (7d)',
     usageBarWeeklySonnet:'Weekly Sonnet',

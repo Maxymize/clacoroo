@@ -2,6 +2,11 @@
 
 > Italiano (canonico). English translation: [CHANGELOG.en.md](./CHANGELOG.en.md) — allineato a ogni release.
 
+## v1.1.21 — 2026-05-31 — Lettura quote: niente più rate-limit dell'account
+
+- [FIX] Quando l'API di Anthropic limitava le richieste (errore "rate limited"), CLACOROO continuava a interrogarla, contribuendo al limite del tuo account — che poteva ripercuotersi anche su Claude Code. Ora si ferma in automatico e riprova più tardi, senza disturbare
+- [IMPROVEMENT] Durante una pausa, le quote mostrano gli ultimi valori noti con una nota discreta ("Aggiornamento in pausa…") invece di un messaggio d'errore tecnico
+
 ## v1.1.20 — 2026-05-29 — Controllo aggiornamenti: rileva le nuove versioni
 
 - [FIX] Il controllo aggiornamenti ora rileva correttamente le nuove versioni pubblicate: prima diceva sempre "sei già aggiornato" perché interrogava un endpoint che ignorava i rilasci più recenti

@@ -54,3 +54,6 @@ SMOKE_TEST.md
 
 # Guida sviluppo interna (non pubblica)
 CLAUDE.md
+
+# VS Code workspace file (locale)
+*.code-workspace

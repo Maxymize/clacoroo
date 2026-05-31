@@ -451,6 +451,7 @@ window.LOCALES.en = {
   // Sidebar
   sidebar: {
     support:        'Support',
+    supportSub:     'If you find this app useful, please consider supporting the project with a donation.',
     supportAriaWrap:'Support CLACOROO',
     tipGithub:      'Sponsor on GitHub (GitHub matches 1:1 in the first 12 months)',
     tipBmac:        'Buy me a coffee',
@@ -697,6 +698,8 @@ window.LOCALES.en = {
     usageLoading:   'Loading usage…',
     usageLoadingFull:'Loading session/weekly quota…',
     usageReadErr:   '⚠ Cannot read usage: {msg}',
+    usagePausedRetry:'Updates paused — the API is rate-limiting requests. Retrying in ~{min} min.',
+    usagePausedNoData:'Quota readout paused: the API is rate-limiting requests. Retrying shortly.',
     usageBarSession:'Session (5h)',
     usageBarWeekly: 'Weekly (7d)',
     usageBarWeeklySonnet:'Weekly Sonnet',

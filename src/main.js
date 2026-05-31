@@ -1096,21 +1096,64 @@ ipcMain.handle('get-account', async (_e, { force } = {}) => {
 });
 
 // v1.0.35 — Pack A v2: usage live (Session/Weekly/Weekly Sonnet) via
-// endpoint privato Anthropic /api/oauth/usage. Stessa rotta usata dal
-// plugin VS Code. Cache 60s: i dati cambiano lentamente (utilization
-// si aggiorna ogni manciata di minuti lato server), evitiamo round-trip
-// keychain + HTTP ad ogni cambio sezione.
+// endpoint privato Anthropic /api/oauth/usage. Stessa rotta + stesso token
+// OAuth usati da Claude Code → CONDIVIDONO il rate-limit dell'account.
+// v1.1.21 — Cache 5min + backoff esponenziale sul 429: quando l'API limita,
+// CLACOROO smette di chiamare per qualche minuto (5→10→20→30) e mostra i dati
+// cachati, per NON contribuire ai rate-limit dell'account (che colpirebbero
+// anche Claude Code). Il backoff è invalicabile anche con force.
 let USAGE_CACHE = null;
 let USAGE_CACHE_AT = 0;
-const USAGE_TTL_MS = 60 * 1000;
+const USAGE_TTL_MS = 5 * 60 * 1000;
+
+let usageBackoffUntil = 0;   // non chiamare l'API prima di questo timestamp
+let usageBackoffLevel = 0;   // 0 = nessun backoff; indice in BACKOFF_STEPS_MS
+const BACKOFF_STEPS_MS = [5, 10, 20, 30].map((m) => m * 60 * 1000);
+
+// Allega il flag rateLimited (+ minuti di attesa) al risultato cachato.
+// Se non c'è cache buona, ritorna un errore "in pausa" senza JSON grezzo.
+function withRateLimited(cached, retryInMin) {
+  if (cached && cached.ok) {
+    return { ...cached, rateLimited: true, retryInMin };
+  }
+  return { ok: false, rateLimited: true, retryInMin, status: 429 };
+}
 
 ipcMain.handle('get-usage', async (_e, { force } = {}) => {
-  if (!force && USAGE_CACHE && Date.now() - USAGE_CACHE_AT < USAGE_TTL_MS) {
+  const now = Date.now();
+
+  // 1. In backoff → ritorna cache + flag, NON chiama l'API (anche se force)
+  if (now < usageBackoffUntil) {
+    return withRateLimited(USAGE_CACHE, Math.ceil((usageBackoffUntil - now) / 60000));
+  }
+
+  // 2. Cache fresca e non forzato → ritorna cache
+  if (!force && USAGE_CACHE && now - USAGE_CACHE_AT < USAGE_TTL_MS) {
     return USAGE_CACHE;
   }
-  USAGE_CACHE = await USAGE.getUsage();
-  USAGE_CACHE_AT = Date.now();
-  return USAGE_CACHE;
+
+  // 3. Chiama l'endpoint usage
+  const res = await USAGE.getUsage();
+
+  // 4a. 429 → attiva/escala backoff, ritorna cache vecchia + flag
+  if (!res.ok && res.status === 429) {
+    usageBackoffLevel = Math.min(usageBackoffLevel + 1, BACKOFF_STEPS_MS.length);
+    const delay = BACKOFF_STEPS_MS[usageBackoffLevel - 1];
+    usageBackoffUntil = now + delay;
+    return withRateLimited(USAGE_CACHE, Math.ceil(delay / 60000));
+  }
+
+  // 4b. Successo → resetta backoff, aggiorna cache
+  if (res.ok) {
+    usageBackoffLevel = 0;
+    usageBackoffUntil = 0;
+    USAGE_CACHE = res;
+    USAGE_CACHE_AT = now;
+    return res;
+  }
+
+  // 4c. Altro errore (401/403/rete) → propaga senza cachare né backoff
+  return res;
 });
 
 ipcMain.handle('account-logout', async () => {

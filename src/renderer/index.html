@@ -85,19 +85,31 @@
 
       <div class="sidebar-recent" id="sidebar-recent" aria-label="Attività recenti"></div>
 
-      <div class="sidebar-account" id="sidebar-account" aria-label="Account Claude"></div>
-
       <div class="sidebar-footer">
+        <!-- v1.0.76 — Supporta CLACOROO: 3 mini-bottoni sempre visibili (GitHub Sponsors, BMAC, PayPal) -->
+        <div class="sidebar-support" id="sidebar-support" data-i18n-aria="sidebar.supportAriaWrap" aria-label="Support CLACOROO">
+          <div class="sidebar-support-head">
+            <span class="sidebar-support-label" data-i18n="sidebar.support">Support</span>
+            <span class="sidebar-support-sub" data-i18n="sidebar.supportSub">Se questa applicazione ti è utile, considera di supportare il progetto con una donazione.</span>
+          </div>
+          <div class="sidebar-support-row">
+            <button type="button" class="sidebar-support-btn ssb-github" data-url="https://github.com/sponsors/Maxymize" data-i18n-title="sidebar.tipGithub" data-i18n-aria="sidebar.ariaGithub" title="Sponsor on GitHub (GitHub matches 1:1 in the first 12 months)" aria-label="Sponsor on GitHub">
+              <img src="support-github.png" alt="" class="ssb-logo" aria-hidden="true">
+            </button>
+            <button type="button" class="sidebar-support-btn ssb-bmac" data-url="https://buymeacoffee.com/maxymize" data-i18n-title="sidebar.tipBmac" data-i18n-aria="sidebar.ariaBmac" title="Buy me a coffee" aria-label="Buy Me a Coffee">
+              <img src="support-bmac.png" alt="" class="ssb-logo" aria-hidden="true">
+            </button>
+            <button type="button" class="sidebar-support-btn ssb-paypal" data-url="https://paypal.me/maxymizebusiness" data-i18n-title="sidebar.tipPaypal" data-i18n-aria="sidebar.ariaPaypal" title="Donate via PayPal" aria-label="Donate via PayPal">
+              <img src="support-paypal.png" alt="" class="ssb-logo" aria-hidden="true">
+            </button>
+          </div>
+        </div>
+        <!-- v1.1.20 — Account Claude (MAX + email) spostato sotto Support, sopra la versione -->
+        <div class="sidebar-account" id="sidebar-account" aria-label="Account Claude"></div>
+        <!-- v1.1.20 — Indicatore versione spostato in fondo, dopo Support e Account -->
         <div class="sidebar-status" id="sidebar-status">
           <span class="status-dot" id="status-dot"></span>
           <span id="status-label">Caricamento…</span>
-        </div>
-        <!-- v1.0.76 — Supporta CLACOROO: 3 mini-bottoni sempre visibili (GitHub Sponsors, BMAC, PayPal) -->
-        <div class="sidebar-support" id="sidebar-support" data-i18n-aria="sidebar.supportAriaWrap" aria-label="Support CLACOROO">
-          <span class="sidebar-support-label" data-i18n="sidebar.support">Support</span>
-          <button type="button" class="sidebar-support-btn ssb-github" data-url="https://github.com/sponsors/Maxymize" data-i18n-title="sidebar.tipGithub" data-i18n-aria="sidebar.ariaGithub" title="Sponsor on GitHub (GitHub matches 1:1 in the first 12 months)" aria-label="Sponsor on GitHub">💖</button>
-          <button type="button" class="sidebar-support-btn ssb-bmac" data-url="https://buymeacoffee.com/maxymize" data-i18n-title="sidebar.tipBmac" data-i18n-aria="sidebar.ariaBmac" title="Buy me a coffee" aria-label="Buy Me a Coffee">☕</button>
-          <button type="button" class="sidebar-support-btn ssb-paypal" data-url="https://paypal.me/maxymizebusiness" data-i18n-title="sidebar.tipPaypal" data-i18n-aria="sidebar.ariaPaypal" title="Donate via PayPal" aria-label="Donate via PayPal">💳</button>
         </div>
       </div>
     </aside>

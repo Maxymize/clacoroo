@@ -590,6 +590,9 @@ body {
   gap: 7px;
   font-size: 11px;
   color: var(--text-muted);
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--border);
 }
 
 .status-dot {
@@ -609,33 +612,56 @@ body {
    shell.openExternal verso GitHub Sponsors / Buy Me a Coffee / PayPal. */
 .sidebar-support {
   display: flex;
-  align-items: center;
-  gap: 6px;
+  flex-direction: column;
+  gap: 8px;
   margin-top: 8px;
   padding-top: 8px;
   border-top: 1px dashed var(--border);
-  font-size: 10px;
+}
+.sidebar-support-head {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
 }
 .sidebar-support-label {
   text-transform: uppercase;
   letter-spacing: 0.08em;
   font-weight: 600;
+  font-size: 10px;
   color: var(--text-muted);
   opacity: 0.7;
-  margin-right: 2px;
-  flex-shrink: 0;
+}
+.sidebar-support-sub {
+  font-size: 10.5px;
+  line-height: 1.4;
+  color: var(--text-dim);
+}
+.sidebar-support-row {
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
 }
 .sidebar-support-btn {
-  background: transparent;
-  border: 1px solid transparent;
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 30px;
+  background: var(--bg);
+  border: 1px solid var(--border);
   border-radius: 6px;
-  padding: 3px 6px;
-  font-size: 14px;
-  line-height: 1;
+  padding: 4px 8px;
   cursor: pointer;
   transition: transform .15s, background .15s, border-color .15s;
-  color: inherit;
   -webkit-app-region: no-drag;
+}
+.ssb-logo {
+  max-width: 100%;
+  max-height: 18px;
+  width: auto;
+  object-fit: contain;
+  display: block;
 }
 .sidebar-support-btn:hover {
   transform: translateY(-1px);
@@ -644,9 +670,9 @@ body {
 .sidebar-support-btn:active {
   transform: translateY(0);
 }
-.sidebar-support-btn.ssb-github:hover { background: rgba(234, 74, 170, 0.18); }
-.sidebar-support-btn.ssb-bmac:hover   { background: rgba(255, 221, 0, 0.22); }
-.sidebar-support-btn.ssb-paypal:hover { background: rgba(0, 119, 200, 0.20); }
+.sidebar-support-btn.ssb-github:hover { background: rgba(234, 74, 170, 0.18); border-color: rgba(234, 74, 170, 0.4); }
+.sidebar-support-btn.ssb-bmac:hover   { background: rgba(255, 221, 0, 0.22); border-color: rgba(255, 221, 0, 0.45); }
+.sidebar-support-btn.ssb-paypal:hover { background: rgba(0, 119, 200, 0.20); border-color: rgba(0, 119, 200, 0.45); }
 
 /* v1.0.62 — Bottone "Update" inline accanto al numero versione quando
    è disponibile una release più recente (lucina arancio). Click apre
@@ -2384,6 +2410,16 @@ body {
   border-left: 3px solid #f59e0b;
   background: rgba(245, 158, 11, .06);
 }
+/* v1.1.21 — Nota discreta durante backoff 429 (non è un errore: è una pausa) */
+.usage-paused {
+  font-size: 10.5px;
+  color: var(--text-dim);
+  padding: 6px 10px;
+  margin-top: 6px;
+  background: var(--surface2);
+  border-radius: 4px;
+  line-height: 1.4;
+}
 .usage-grid {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
@@ -2554,6 +2590,8 @@ body {
 }
 .sidebar-account:empty { display: none; padding: 0; margin: 0; border: 0; }
 .sidebar-account:hover { border-color: var(--accent); background: var(--surface2); }
+/* v1.1.20 — Account spostato dentro il footer: allinea a Support/versione (no margini laterali) */
+.sidebar-footer .sidebar-account { margin: 10px 0; }
 .sidebar-account-plan {
   flex-shrink: 0;
   font-size: 9px;

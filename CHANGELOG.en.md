@@ -2,6 +2,11 @@
 
 > English translation of [CHANGELOG.md](./CHANGELOG.md) (Italian, canonical). Updated in sync with each release.
 
+## v1.1.21 — 2026-05-31 — Usage readout: no more account rate-limiting
+
+- [FIX] When Anthropic's API was rate-limiting requests, CLACOROO kept polling it, adding to your account's limit — which could spill over to Claude Code too. It now backs off automatically and retries later, without interfering
+- [IMPROVEMENT] During a pause, the quota bars show the last known values with a discreet note ("Updates paused…") instead of a raw technical error
+
 ## v1.1.20 — 2026-05-29 — Update check: detects new versions
 
 - [FIX] The update check now correctly detects newly published versions: it previously always said "you're up to date" because it queried an endpoint that ignored the most recent releases

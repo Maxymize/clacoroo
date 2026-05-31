@@ -648,6 +648,9 @@ async function runQuotaCheck() {
   let usageRes;
   try { usageRes = await window.claudeAPI.getUsage({}); } catch { return; }
   if (!usageRes || !usageRes.ok) return;
+  // v1.1.21 — durante un backoff 429 i dati sono cachati (potenzialmente stantii):
+  // non far scattare notifiche soglia su valori non freschi.
+  if (usageRes.rateLimited) return;
   const data = usageRes.data || {};
   const last = state.quotaLastNotified || {};
   let stateMutated = false;
@@ -6029,6 +6032,11 @@ function paintUsageBars(container, usageData, opts = {}) {
     return;
   }
   if (!usageData.ok) {
+    // v1.1.21 — 429 senza dati cachati: nota discreta "in pausa", non JSON grezzo
+    if (usageData.rateLimited) {
+      container.appendChild(el('div', 'usage-paused', t('settingsExtra.usagePausedNoData')));
+      return;
+    }
     const err = el('div', 'usage-error', t('settingsExtra.usageReadErr', { msg: usageData.error || 'error' }));
     container.appendChild(err);
     return;
@@ -6042,6 +6050,12 @@ function paintUsageBars(container, usageData, opts = {}) {
   grid.appendChild(buildUsageBar(t('settingsExtra.usageBarWeekly'),       d.sevenDay,       '#788c5d'));
   grid.appendChild(buildUsageBar(t('settingsExtra.usageBarWeeklySonnet'), d.sevenDaySonnet, '#d97757'));
   container.appendChild(grid);
+
+  // v1.1.21 — 429 ma con dati cachati: barre normali + nota discreta sotto
+  if (usageData.rateLimited) {
+    container.appendChild(el('div', 'usage-paused',
+      t('settingsExtra.usagePausedRetry', { min: usageData.retryInMin || 5 })));
+  }
 
   if (!compact) {
     const link = el('button', 'usage-link', t('settingsExtra.manageUsageLink'));
