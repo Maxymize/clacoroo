@@ -2,6 +2,10 @@
 
 > English translation of [CHANGELOG.md](./CHANGELOG.md) (Italian, canonical). Updated in sync with each release.
 
+## v1.1.23 — 2026-05-31 — Feedback: report bugs and request features
+
+- [FEATURE] New "Feedback" button in the sidebar footer: opens a form on the website where you can report a bug or request a new feature. The form opens in the app's language
+
 ## v1.1.22 — 2026-05-31 — Updates: automatic detection on launch
 
 - [IMPROVEMENT] On every launch CLACOROO now checks right away for a new version (before, it could skip the check and show stale data), then re-checks automatically every 3 hours while the app is open — no longer every 24 hours

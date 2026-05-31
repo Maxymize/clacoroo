@@ -2,6 +2,10 @@
 
 > Italiano (canonico). English translation: [CHANGELOG.en.md](./CHANGELOG.en.md) — allineato a ogni release.
 
+## v1.1.23 — 2026-05-31 — Feedback: segnala bug e proponi feature
+
+- [FEATURE] Nuovo pulsante "Feedback" nel footer della sidebar: apre un form sul sito dove puoi segnalare un bug o proporre una nuova funzione. Il form si apre nella lingua dell'app
+
 ## v1.1.22 — 2026-05-31 — Aggiornamenti: rilevamento automatico all'avvio
 
 - [IMPROVEMENT] Ad ogni avvio CLACOROO controlla subito se c'è una nuova versione (prima poteva saltare il controllo e mostrare dati vecchi), poi ricontrolla automaticamente ogni 3 ore mentre l'app è aperta — non più ogni 24 ore
