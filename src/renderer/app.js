@@ -3303,6 +3303,11 @@ function buildSkillAgentCard(item, kind) {
       openMarkdownPreview(item.fullId, kind, item.name);
     });
     foot.appendChild(openBtn);
+    // v1.1.26 — Nota: skill/agent non si attivano singolarmente (Claude Code non
+    // lo permette). Si gestiscono abilitando/disabilitando il plugin proprietario.
+    const mng = el('span', 'browse-card-managed', t('skillAgent.managedByPlugin', { plugin: item.plugin }));
+    mng.title = t('skillAgent.managedByPluginTip');
+    foot.appendChild(mng);
     card.appendChild(foot);
     card.style.cursor = 'pointer';
     card.addEventListener('click', () => openMarkdownPreview(item.fullId, kind, item.name));
@@ -5335,12 +5340,71 @@ function mcpMatches(srv, f) {
       || (srv.connection || '').toLowerCase().includes(q);
 }
 
+// v1.1.26 — Toggle enable/disable per MCP user-added (scope='user'), stesso
+// componente .toggle dei plugin. Spegnere disabilita il server (chiede conferma,
+// `claude mcp remove` + backup config), riaccendere lo re-add. Permette di
+// tenere attivi solo gli MCP che servono → meno tool nel contesto, meno token.
+// Disponibile solo per user-added: builtin (claude.ai) e plugin-managed seguono
+// rispettivamente claude.ai e il plugin proprietario.
+function buildMcpToggle(srv) {
+  const toggleWrap = el('label', 'toggle');
+  const active = srv.status !== 'disabled';
+  toggleWrap.title = active ? t('mcpCard.toggleDeactivate') : t('mcpCard.toggleActivate');
+  const inp = el('input');
+  inp.type = 'checkbox';
+  inp.checked = active;
+  const track = el('span', 'toggle-track');
+  const thumb = el('span', 'toggle-thumb');
+  toggleWrap.appendChild(inp); toggleWrap.appendChild(track); toggleWrap.appendChild(thumb);
+
+  inp.addEventListener('change', async (e) => {
+    e.stopPropagation();
+    if (active) {
+      // Disattivazione: conferma esplicita (azione che rimuove il server via CLI)
+      const ok = await window.claudeAPI.confirmDialog({
+        title:   t('confirm.disableMcp.title'),
+        message: t('confirm.disableMcp.message', { id: srv.id }),
+        detail:  t('confirm.disableMcp.detail', { id: srv.id }),
+        buttons: [t('button.cancel'), t('confirm.disableMcp.yes')],
+      });
+      if (ok !== 1) { inp.checked = true; return; }  // annullato → ripristina
+      toggleWrap.classList.add('loading');
+      inp.disabled = true;
+      const r = await window.claudeAPI.mcpDisable(srv.id);
+      if (r.success) {
+        toast(t('toast.mcpDisabled', { id: srv.id }), 'warn');
+        mcpCache = null;
+        if (state.section === 'mcp') renderMcp();
+      } else {
+        toast(t('toast.errorPrefix', { msg: r.error || '?' }), 'error');
+        inp.checked = true; toggleWrap.classList.remove('loading'); inp.disabled = false;
+      }
+    } else {
+      // Riattivazione: nessuna conferma, re-add immediato
+      toggleWrap.classList.add('loading');
+      inp.disabled = true;
+      const r = await window.claudeAPI.mcpEnable(srv.id);
+      if (r.success) {
+        toast(t('toast.mcpEnabled', { id: srv.id }), 'success');
+        mcpCache = null;
+        if (state.section === 'mcp') renderMcp();
+      } else {
+        toast(t('toast.errorPrefix', { msg: r.error || '?' }), 'error');
+        inp.checked = false; toggleWrap.classList.remove('loading'); inp.disabled = false;
+      }
+    }
+  });
+  return toggleWrap;
+}
+
 function buildMcpCard(srv) {
   const card = el('div', 'mcp-card');
   card.dataset.mcpId = srv.id;
 
   // Header
   const header = el('div', 'mcp-card-header');
+  // v1.1.26 — toggle a sinistra del nome, solo per MCP user-added
+  if (srv.scope === 'user') header.appendChild(buildMcpToggle(srv));
   const nameWrap = el('div', 'mcp-card-name-wrap');
   const name = el('div', 'mcp-card-name', srv.displayName || srv.id);
   nameWrap.appendChild(name);
@@ -5475,21 +5539,8 @@ function buildMcpCard(srv) {
       toolsBtn.addEventListener('click', e => { e.stopPropagation(); showMcpToolsModal(srv); });
       actionsWrap.appendChild(toolsBtn);
     }
-    // v1.0.104 — Disabilita (solo user-added attivi): salva config in state
-    // + remove via CLI. Re-abilitabile dopo via il bottone "Abilita".
-    if (isUserAdded && srv.status !== 'disabled') {
-      const disableBtn = btnWithIcon('btn btn-sm btn-ghost', 'ban', t('mcpCard.disableBtn'));
-      disableBtn.title = t('mcpCard.disableBtnTip');
-      disableBtn.addEventListener('click', e => { e.stopPropagation(); confirmAndDisableMcp(srv); });
-      actionsWrap.appendChild(disableBtn);
-    }
-    // v1.0.104 — Abilita: server attualmente disabilitato → re-add con config salvata
-    if (srv.status === 'disabled') {
-      const enableBtn = btnWithIcon('btn btn-sm btn-primary', 'check', t('mcpCard.enableBtn'));
-      enableBtn.title = t('mcpCard.enableBtnTip');
-      enableBtn.addEventListener('click', e => { e.stopPropagation(); enableMcp(srv); });
-      actionsWrap.appendChild(enableBtn);
-    }
+    // v1.1.26 — Disabilita/Abilita ora gestiti dal toggle nell'header (più
+    // immediato, stile plugin). Qui resta solo Rimuovi (azione distruttiva).
     if (isUserAdded) {
       const rmBtn = btnWithIcon('btn btn-sm btn-ghost', 'trash-2', t('mcpCard.removeBtn'));
       rmBtn.title = t('mcpCard.removeBtnTip', { id: srv.id });
@@ -5564,6 +5615,12 @@ function buildMcpCompactRow(srv) {
   if (srv.status !== 'connected' && srv.statusText) {
     const sm = el('span', 'compact-row-status-msg', srv.statusText);
     row.appendChild(sm);
+  }
+  // v1.1.26 — toggle enable/disable a destra, solo per MCP user-added
+  if (srv.scope === 'user') {
+    const tg = el('span', 'compact-row-toggle');
+    tg.appendChild(buildMcpToggle(srv));
+    row.appendChild(tg);
   }
   return row;
 }
@@ -5656,38 +5713,9 @@ async function showMcpToolsModal(srv) {
   content.appendChild(list);
 }
 
-// v1.0.104 — Pack G v2 chiusura: disabilita un server MCP user-added.
-// Confirm dialog → IPC mcp:disable (salva config in state.json + claude mcp remove).
-async function confirmAndDisableMcp(srv) {
-  const response = await window.claudeAPI.confirmDialog({
-    title:   t('confirm.disableMcp.title'),
-    message: t('confirm.disableMcp.message', { id: srv.id }),
-    detail:  t('confirm.disableMcp.detail', { id: srv.id }),
-    buttons: [t('button.cancel'), t('confirm.disableMcp.yes')],
-  });
-  if (response !== 1) return;
-  const r = await window.claudeAPI.mcpDisable(srv.id);
-  if (r.success) {
-    toast(t('toast.mcpDisabled', { id: srv.id }), 'success');
-    mcpCache = null;
-    if (state.section === 'mcp') renderMcp();
-  } else {
-    toast('Errore disable: ' + (r.error || 'sconosciuto'), 'error');
-  }
-}
-
-// v1.0.104 — Ri-abilita un server MCP precedentemente disabilitato.
-// Usa la config salvata in state.disabledMcpServers per fare `claude mcp add`.
-async function enableMcp(srv) {
-  const r = await window.claudeAPI.mcpEnable(srv.id);
-  if (r.success) {
-    toast(t('toast.mcpEnabled', { id: srv.id }), 'success');
-    mcpCache = null;
-    if (state.section === 'mcp') renderMcp();
-  } else {
-    toast('Errore enable: ' + (r.error || 'sconosciuto'), 'error');
-  }
-}
+// v1.1.26 — disable/enable MCP ora gestiti dal toggle nell'header della card
+// (buildMcpToggle). Le vecchie funzioni confirmAndDisableMcp/enableMcp sono
+// state rimosse: la logica vive nel toggle, che riusa mcpDisable/mcpEnable.
 
 async function confirmAndRemoveMcp(srv) {
   const response = await window.claudeAPI.confirmDialog({

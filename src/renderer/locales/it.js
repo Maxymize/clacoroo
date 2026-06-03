@@ -580,12 +580,16 @@ window.LOCALES.it = {
     connectedHint:  'Connesso · niente azioni necessarie',
     readOnlyHint:   'Solo lettura · azioni in arrivo',
     toolsBtnTip:    'Mostra i tools esposti da questo server MCP (tools/list via JSON-RPC)',
-    disableBtn:     'Disabilita',
-    disableBtnTip:  'Disabilita questo server: lo rimuove da Claude Code ma salva la config in CLACOROO per ri-attivarlo dopo',
-    enableBtn:      'Abilita',
-    enableBtnTip:   'Re-aggiunge questo server a Claude Code usando la config salvata in CLACOROO',
+    toggleActivate:   'Attiva: re-aggiunge questo server a Claude Code (config salvata in CLACOROO)',
+    toggleDeactivate: 'Disattiva: lo rimuove da Claude Code ma salva la config per riattivarlo. Utile per liberare contesto/token quando non serve',
     removeBtn:      'Rimuovi',
     removeBtnTip:   'Rimuove questo server con `claude mcp remove {id}`',
+  },
+
+  // Skill / Agent (nota gestione)
+  skillAgent: {
+    managedByPlugin:    'Gestito dal plugin {plugin}',
+    managedByPluginTip: 'Skill e agent non si attivano singolarmente: si abilitano o disabilitano insieme al plugin che li fornisce. Usa il toggle del plugin nella sezione Plugin.',
   },
 
   // Hooks page

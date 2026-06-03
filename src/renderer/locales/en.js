@@ -570,12 +570,16 @@ window.LOCALES.en = {
     connectedHint:  'Connected · no action needed',
     readOnlyHint:   'Read-only · actions coming soon',
     toolsBtnTip:    'Show tools exposed by this MCP server (tools/list via JSON-RPC)',
-    disableBtn:     'Disable',
-    disableBtnTip:  'Disable this server: removes it from Claude Code but saves the config in CLACOROO to re-enable it later',
-    enableBtn:      'Enable',
-    enableBtnTip:   'Re-adds this server to Claude Code using the config saved in CLACOROO',
+    toggleActivate:   'Enable: re-adds this server to Claude Code (config saved in CLACOROO)',
+    toggleDeactivate: 'Disable: removes it from Claude Code but saves the config to re-enable it. Handy to free up context/tokens when you don\'t need it',
     removeBtn:      'Remove',
     removeBtnTip:   'Removes this server with `claude mcp remove {id}`',
+  },
+
+  // Skill / Agent (management note)
+  skillAgent: {
+    managedByPlugin:    'Managed by the {plugin} plugin',
+    managedByPluginTip: 'Skills and agents can\'t be toggled individually: they\'re enabled or disabled together with the plugin that provides them. Use the plugin toggle in the Plugins section.',
   },
 
   // Hooks page

@@ -2,6 +2,11 @@
 
 > Italiano (canonico). English translation: [CHANGELOG.en.md](./CHANGELOG.en.md) — allineato a ogni release.
 
+## v1.1.26 — 2026-06-03 — MCP: toggle attiva/disattiva per risparmiare token
+
+- [FEATURE] I server MCP aggiunti da te ora hanno un toggle attiva/disattiva (come i plugin): disattivane uno quando non serve per togliere i suoi tool dal contesto e risparmiare token, riattivalo in un click quando ti serve. Disattivare chiede conferma; la configurazione viene salvata per riattivarlo senza reinserirla
+- [IMPROVEMENT] Le card skill e agent ora indicano "Gestito dal plugin X": skill e agent non si attivano singolarmente, si abilitano o disabilitano insieme al plugin che li fornisce
+
 ## v1.1.25 — 2026-06-03 — Aggiornamenti: link download sempre al sito ufficiale
 
 - [FIX] Il pulsante "Apri pagina download" (banner e footer) ora apre sempre la pagina ufficiale clacoroo.app/download, mai la pagina grezza della release su GitHub

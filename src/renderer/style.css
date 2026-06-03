@@ -388,13 +388,27 @@ body {
 }
 .browse-card-modified .inline-icon { width: 11px; height: 11px; margin: 0; vertical-align: 0; }
 .browse-card-foot {
-  display: flex; justify-content: flex-end;
+  display: flex; justify-content: space-between; align-items: center; gap: 8px;
   margin-top: 2px;
 }
 .browse-card-hint {
   font-size: 10px;
   color: var(--text-dim);
   font-style: italic;
+}
+/* v1.1.26 — nota "Gestito dal plugin X" su card skill/agent (no toggle singolo) */
+.browse-card-managed {
+  font-size: 10px;
+  color: var(--text-dim);
+  font-style: italic;
+  text-align: right;
+  cursor: help;
+}
+/* v1.1.26 — toggle MCP nella compact row, allineato a destra */
+.compact-row-toggle {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
 }
 
 /* v1.0.97 — Pack M: compact-list per le sezioni che oggi hanno solo cards.

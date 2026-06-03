@@ -2,6 +2,11 @@
 
 > English translation of [CHANGELOG.md](./CHANGELOG.md) (Italian, canonical). Updated in sync with each release.
 
+## v1.1.26 — 2026-06-03 — MCP: enable/disable toggle to save tokens
+
+- [FEATURE] MCP servers you added now have an enable/disable toggle (like plugins): turn one off when you don't need it to remove its tools from the context and save tokens, turn it back on in one click when you do. Disabling asks for confirmation; the configuration is saved so you can re-enable it without re-entering it
+- [IMPROVEMENT] Skill and agent cards now show "Managed by the X plugin": skills and agents can't be toggled individually, they're enabled or disabled together with the plugin that provides them
+
 ## v1.1.25 — 2026-06-03 — Updates: download link always to the official site
 
 - [FIX] The "Open download page" button (banner and footer) now always opens the official clacoroo.app/download page, never the raw GitHub release page
