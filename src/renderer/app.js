@@ -688,9 +688,12 @@ function startQuotaPollTimer(kickMs = 0) {
   if (kickMs >= 0) setTimeout(() => runQuotaCheck(), kickMs);
   quotaPollTimer = setInterval(() => runQuotaCheck(), ms);
 }
-// Boot: primo check dopo 30s (lascia popolare la cache usage), poi a intervalli.
+// Boot: primo check SUBITO (così il badge "Ultimo aggiornamento" ha un dato
+// reale dall'apertura, niente "in attesa"), poi a intervalli secondo la
+// frequenza scelta. In Manuale fa comunque il primo check ma non avvia il timer.
 function scheduleQuotaCheck() {
-  startQuotaPollTimer(30 * 1000);
+  runQuotaCheck();              // primo update immediato, sempre
+  startQuotaPollTimer(-1);      // timer a intervalli senza kick (auto); no-op in Manuale
 }
 // Cambio frequenza a runtime: persiste + ricrea il timer (refresh immediato
 // sulla nuova cadenza), senza riavviare l'app.
@@ -700,10 +703,30 @@ function applyQuotaPollSetting(ms) {
   startQuotaPollTimer(0);
 }
 async function runQuotaCheck() {
-  if (state.notifyQuota === false) return;  // opt-out esplicito
+  // v1.1.24 — il poll automatico è proprio la cadenza scelta dall'utente: forza
+  // il fetch reale (bypassa il TTL al limite) così "Ultimo aggiornamento" si
+  // azzera puntuale a ogni tick. Il backoff 429 resta indipendente (force
+  // ignorato in pausa, gestito nel main).
   let usageRes;
-  try { usageRes = await window.claudeAPI.getUsage({}); } catch { return; }
+  try { usageRes = await window.claudeAPI.getUsage({ force: true }); } catch { return; }
   if (!usageRes || !usageRes.ok) return;
+  // Aggiorna i dati live anche se l'utente non è nella sezione attiva: tiene il
+  // contatore allineato alla cadenza (riparte da 0 a ogni poll) e ridipinge le
+  // barre quota + tutte le sezioni da getStats().
+  if (!usageRes.rateLimited && Number.isFinite(usageRes.fetchedAt)) {
+    lastUsageData = usageRes;
+    // Badge "Ultimo aggiornamento" (Dashboard) + riga Account: nuovo timestamp
+    document.querySelectorAll('.usage-updated').forEach((elx) => {
+      elx.dataset.fetchedAt = String(usageRes.fetchedAt);
+    });
+    refreshUsageUpdatedLabels();
+    // Barre quota già in pagina (Dashboard compact + pannello Account)
+    document.querySelectorAll('.dashboard-usage-bars').forEach((c) => paintUsageBars(c, usageRes, { compact: true }));
+    document.querySelectorAll('.account-usage-section').forEach((c) => paintUsageBars(c, usageRes));
+    // Stessa cadenza per contesto, KPI Claude Code e tab Stats
+    refreshStatsLive();
+  }
+  if (state.notifyQuota === false) return;  // opt-out: niente notifiche soglia
   // v1.1.21 — durante un backoff 429 i dati sono cachati (potenzialmente stantii):
   // non far scattare notifiche soglia su valori non freschi.
   if (usageRes.rateLimited) return;
@@ -990,6 +1013,13 @@ function render() {
   };
   $('topbar-title').textContent = t(sectionTitleKey[state.section] || '');
 
+  // v1.1.24 — badge "Ultimo aggiornamento" centrato nell'header, solo in
+  // Dashboard (l'update riguarda tutti i dati live della Dashboard). Si
+  // auto-aggiorna ogni secondo via refreshUsageUpdatedLabels().
+  const updated = $('topbar-updated');
+  updated.textContent = '';
+  if (state.section === 'dashboard') updated.appendChild(buildDashboardUpdatedBadge());
+
   // Topbar actions
   const actions = $('topbar-actions');
   actions.textContent = '';
@@ -1025,7 +1055,9 @@ function render() {
     actions.appendChild(addProjBtn);
   }
 
-  const refreshBtn = btnWithIcon('btn btn-sm btn-ghost btn-refresh', 'rotate-cw', t('topbar.refresh'));
+  // v1.1.24 — Refresh come primo pulsante a sinistra, con stile accent CLACOROO
+  // (outline arancio → pieno al hover). È l'azione più frequente in Dashboard.
+  const refreshBtn = btnWithIcon('btn btn-sm btn-refresh btn-accent-outline', 'rotate-cw', t('topbar.refresh'));
   refreshBtn.title = t('topbar.refreshTooltip');
   refreshBtn.addEventListener('click', async () => {
     refreshBtn.disabled = true;
@@ -1034,6 +1066,7 @@ function render() {
     // così se l'utente ha appena installato/disinstalato un tool (es. Bun)
     // il badge "Manca: bun" appare/sparisce subito senza riavviare l'app.
     try { await window.claudeAPI.refreshHookDeps(); } catch { /* graceful */ }
+    forceUsageNextLoad = true;   // v1.1.24 — refresh manuale → fetch quota reale
     await loadData();
     refreshBtn.disabled = false;
     refreshBtn.textContent = '';
@@ -1041,7 +1074,7 @@ function render() {
     refreshBtn.appendChild(document.createTextNode(t('topbar.refresh')));
     toast(t('toast.dataReloaded'), 'success');
   });
-  actions.appendChild(refreshBtn);
+  actions.insertBefore(refreshBtn, actions.firstChild);
 
   // v1.0.67 — Pack B: toggle terminale integrato
   if (termState && termState.caps && termState.caps.available) {
@@ -1115,18 +1148,62 @@ function relativeTime(ts) {
   return new Date(ts).toLocaleDateString(t('time.locale'));
 }
 
-// v1.1.24 — aggiorna SOLO il testo "Ultimo aggiornamento" dei blocchi quota già
-// in pagina (nessuna chiamata API), così "2 min fa" avanza da solo. Avviato una
-// volta al boot con intervallo 60s.
+// v1.1.24 — formato "tempo trascorso" per il contatore live della quota: mostra
+// sempre i secondi così scorre visibilmente (es. "45s", "1m 23s", "1h 04m").
+// Diverso da relativeTime() (che sopra il minuto perde i secondi).
+function liveAgo(ts) {
+  const s = Math.max(0, Math.floor((Date.now() - ts) / 1000));
+  if (s < 60) return t('time.liveSec', { s });
+  const m = Math.floor(s / 60), rs = s % 60;
+  if (m < 60) return t('time.liveMin', { m, s: String(rs).padStart(2, '0') });
+  const h = Math.floor(m / 60), rm = m % 60;
+  if (h < 24) return t('time.liveHour', { h, m: String(rm).padStart(2, '0') });
+  return new Date(ts).toLocaleDateString(t('time.locale'));
+}
+
+// v1.1.24 — modalità di aggiornamento corrente (per la riga "Ultimo
+// aggiornamento"): "Auto ogni 30 s" / "Auto ogni 5 min" oppure "Manuale".
+function quotaModeLabel() {
+  const ms = Number(state.quotaPollMs);
+  if (!(ms > 0)) return t('settingsExtra.usageModeManual');
+  const preset = QUOTA_POLL_PRESETS.find((p) => p.ms === ms);
+  const every = preset ? quotaPollLabel(preset) : Math.round(ms / 1000) + ' s';
+  return t('settingsExtra.usageModeAuto', { every });
+}
+
+// v1.1.24 — badge "Ultimo aggiornamento" in cima alla Dashboard. Copre TUTTI i
+// dati live (contesto, quota, statistiche, pesi plugin, usage CC). Il testo
+// interno (.usage-updated) è aggiornato dal loop a 1s; il data-fetchedAt viene
+// popolato dall'ultimo fetch usage andato a buon fine.
+function buildDashboardUpdatedBadge() {
+  const badge = el('div', 'dashboard-updated-badge');
+  badge.appendChild(icon('rotate-cw'));
+  const txt = el('span', 'usage-updated');
+  const ts = lastUsageData && Number.isFinite(lastUsageData.fetchedAt) ? lastUsageData.fetchedAt : null;
+  if (ts != null) {
+    txt.dataset.fetchedAt = String(ts);
+    txt.textContent = t('settingsExtra.usageLastUpdate', { ago: liveAgo(ts) }) + ' · ' + quotaModeLabel();
+  } else {
+    txt.textContent = t('settingsExtra.usageLastUpdateWait');
+  }
+  badge.appendChild(txt);
+  return badge;
+}
+
+// v1.1.24 — aggiorna SOLO il testo "Ultimo aggiornamento" dei blocchi già in
+// pagina (badge Dashboard + riga Account; nessuna chiamata API), così il
+// contatore scorre live secondo per secondo. In modalità Auto si azzera da solo
+// quando arriva il refresh (nuovo fetchedAt → "0s"). Intervallo 1s.
 function refreshUsageUpdatedLabels() {
+  const mode = quotaModeLabel();
   document.querySelectorAll('.usage-updated').forEach((el) => {
     const ts = Number(el.dataset.fetchedAt);
     if (Number.isFinite(ts)) {
-      el.textContent = t('settingsExtra.usageLastUpdate', { ago: relativeTime(ts) });
+      el.textContent = t('settingsExtra.usageLastUpdate', { ago: liveAgo(ts) }) + ' · ' + mode;
     }
   });
 }
-setInterval(refreshUsageUpdatedLabels, 60 * 1000);
+setInterval(refreshUsageUpdatedLabels, 1000);
 
 /* ── DASHBOARD ────────────────────────────────────────────────────────── */
 let dashboardRenderToken = 0;
@@ -1479,6 +1556,42 @@ async function loadPluginsContextBar(container, token) {
   if (token !== pluginsRenderToken || !data || !data.contextBreakdown) return;
   if (data !== prevData) paintCtxBar(container, data.contextBreakdown);
   lastStatsData = data;
+}
+
+// v1.1.24 — aggiorna in-place TUTTI i dati live da getStats() già in pagina,
+// sulla stessa cadenza del polling quota (un'unica frequenza per tutta la
+// Dashboard + tab Stats). Invalida la cache stats, ri-fetcha una sola volta e
+// ripinge i contenitori presenti riusando le funzioni di paint esistenti — che
+// aggiornano in-place o ricostruiscono il solo sotto-albero della sezione, senza
+// toccare scroll, dropdown (state-driven) o il resto della pagina.
+async function refreshStatsLive() {
+  // Niente sezioni stats in pagina → niente fetch (es. sei in Skill/Settings)
+  const ctxSections = document.querySelectorAll('.dashboard-context-section, .plugins-context-section');
+  const statsSection = document.querySelector('.dashboard-stats-section');
+  const statsContent = document.querySelector('.stats-content');
+  if (!ctxSections.length && !statsSection && !statsContent) return;
+
+  statsCache = null;  // forza il re-fetch
+  const data = await fetchStatsSafe();
+  if (!data) return;
+  lastStatsData = data;
+
+  // Context bar (Dashboard + pannello Plugin)
+  if (data.contextBreakdown) {
+    ctxSections.forEach((sec) => {
+      if (sec.querySelector('.context-breakdown')) paintCtxBar(sec, data.contextBreakdown);
+    });
+  }
+  // KPI utilizzo Claude Code (sessioni, token, streak, modello preferito…)
+  if (statsSection && data.cache) paintDashboardStats(statsSection, data);
+  // Tab Stats aperto (Overview/Modelli/Progetti: heatmap, tokens per model,
+  // daily tokens, progetti) — ripinto con lo stesso tab/range correnti. Le
+  // funzioni renderStatsX appendono senza pulire (lo fa renderStats), quindi
+  // svuoto il content prima per non duplicare i nodi.
+  if (statsContent) {
+    statsContent.textContent = '';
+    paintStatsTab(statsContent, data);
+  }
 }
 
 // v1.0.107 — Pack C analytics: formatter token "12.5K" / "1.2M" / "950"
@@ -5709,6 +5822,7 @@ function paintAccountPanel(container, result) {
   refreshBtn.addEventListener('click', async () => {
     refreshBtn.disabled = true;
     refreshBtn.textContent = '…';
+    forceUsageNextLoad = true;   // v1.1.24 — refresh manuale → fetch quota reale
     const r = await window.claudeAPI.getAccount({ force: true });
     accountCache = r;
     paintAccountPanel(container, r);
@@ -6126,12 +6240,14 @@ function paintUsageBars(container, usageData, opts = {}) {
       t('settingsExtra.usagePausedRetry', { min: usageData.retryInMin || 5 })));
   }
 
-  // v1.1.24 — "Ultimo aggiornamento: N fa" (timestamp del fetch reale). Il
-  // testo si auto-aggiorna ogni 60s via refreshUsageUpdatedLabels().
-  if (Number.isFinite(usageData.fetchedAt)) {
+  // v1.1.24 — "Ultimo aggiornamento" del fetch reale. In Dashboard (compact) il
+  // badge in cima copre tutti i dati live; qui lo mostriamo solo nel pannello
+  // Account (non-compact), dove non c'è il badge globale. Si auto-aggiorna ogni
+  // secondo via refreshUsageUpdatedLabels().
+  if (!compact && Number.isFinite(usageData.fetchedAt)) {
     const upd = el('div', 'usage-updated');
     upd.dataset.fetchedAt = String(usageData.fetchedAt);
-    upd.textContent = t('settingsExtra.usageLastUpdate', { ago: relativeTime(usageData.fetchedAt) });
+    upd.textContent = t('settingsExtra.usageLastUpdate', { ago: liveAgo(usageData.fetchedAt) }) + ' · ' + quotaModeLabel();
     container.appendChild(upd);
   }
 
@@ -6143,13 +6259,23 @@ function paintUsageBars(container, usageData, opts = {}) {
   }
 }
 
+// v1.1.24 — flag one-shot: un refresh manuale esplicito (pulsante topbar/account)
+// deve bypassare la cache e rifare il fetch reale, così "Ultimo aggiornamento"
+// riparte da zero. I cambi-sezione normali invece NON forzano (riusano la cache).
+let forceUsageNextLoad = false;
+function consumeForceUsage() {
+  const f = forceUsageNextLoad;
+  forceUsageNextLoad = false;
+  return f;
+}
+
 async function loadAccountUsage(container, onResult) {
   // 1. Render ottimistico se abbiamo già dati
   paintUsageBars(container, lastUsageData);
   // 2. Fetch fresco; cache server-side 60s evita roundtrip se cambi sezione
   let data;
   try {
-    data = await window.claudeAPI.getUsage({});
+    data = await window.claudeAPI.getUsage({ force: consumeForceUsage() });
     lastUsageData = data;
     paintUsageBars(container, data);
   } catch (e) {
@@ -6164,7 +6290,7 @@ async function loadAccountUsage(container, onResult) {
 async function loadDashboardUsage(container, token) {
   paintUsageBars(container, lastUsageData, { compact: true });
   try {
-    const data = await window.claudeAPI.getUsage({});
+    const data = await window.claudeAPI.getUsage({ force: consumeForceUsage() });
     if (token !== dashboardRenderToken) return;
     lastUsageData = data;
     paintUsageBars(container, data, { compact: true });

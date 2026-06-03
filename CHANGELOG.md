@@ -4,8 +4,9 @@
 
 ## v1.1.24 — 2026-06-03 — Frequenza aggiornamento quota configurabile
 
-- [FEATURE] Nuova impostazione "Frequenza aggiornamento quota": scegli ogni quanto CLACOROO aggiorna le barre della quota Claude (da 30 secondi fino a 60 minuti, oppure Manuale per aggiornare solo col pulsante Refresh). Frequenze basse aggiornano più spesso ma usano di più l'API
-- [FEATURE] Sotto le barre della quota ora compare "Ultimo aggiornamento: N fa", che ti dice quanto sono recenti i dati mostrati e si aggiorna da solo nel tempo
+- [FEATURE] Nuova impostazione "Frequenza aggiornamento dati": scegli ogni quanto CLACOROO aggiorna i dati live della Dashboard (da 30 secondi fino a 60 minuti, oppure Manuale per aggiornare solo col pulsante Refresh). La stessa cadenza aggiorna tutto: quote, stima contesto, statistiche, Plugin per peso e utilizzo di Claude Code. Frequenze basse aggiornano più spesso ma usano di più l'API
+- [FEATURE] Nuovo badge "Ultimo aggiornamento" al centro dell'header della Dashboard, con contatore live in minuti e secondi (es. "1m 23s") e modalità attiva ("Auto ogni 30 s" oppure "Manuale"). Il primo aggiornamento parte subito all'apertura; in auto si azzera a ogni aggiornamento, premendo Refresh riparte da zero
+- [IMPROVEMENT] Se l'API limita le richieste, la nota "Aggiornamento in pausa" ora suggerisce di aumentare l'intervallo di aggiornamento nelle Impostazioni
 
 ## v1.1.23 — 2026-05-31 — Feedback: segnala bug e proponi feature
 

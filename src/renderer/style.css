@@ -789,6 +789,17 @@ body {
   -webkit-app-region: no-drag;
 }
 
+/* v1.1.24 — slot centrale dell'header per il badge "Ultimo aggiornamento" */
+.topbar-updated {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-width: 0;
+  -webkit-app-region: no-drag;
+}
+.topbar-updated:empty { display: none; }
+
 /* ── COMMAND PALETTE Cmd+K (v1.0.10) ──────────────────────────────────── */
 .palette-overlay {
   position: fixed; inset: 0;
@@ -1093,6 +1104,19 @@ body {
 
 .btn-green     { background: rgba(120,140,93,.18); color: #b8c79a; border-color: rgba(120,140,93,.3); }
 .btn-green:hover:not(:disabled) { background: rgba(120,140,93,.28); }
+
+/* v1.1.24 — Refresh topbar: outline arancio CLACOROO a riposo, pieno al hover */
+.btn-accent-outline {
+  background: transparent;
+  color: var(--accent, #d97757);
+  border-color: var(--accent, #d97757);
+}
+.btn-accent-outline:hover:not(:disabled) {
+  background: var(--accent, #d97757);
+  color: #fff;
+  border-color: var(--accent, #d97757);
+}
+.btn-accent-outline svg { color: currentColor; }
 
 .btn-sm { padding: 4px 10px; font-size: 11px; }
 .btn-icon {
@@ -2512,6 +2536,40 @@ body {
   margin-top: 6px;
   font-variant-numeric: tabular-nums;
 }
+
+/* v1.1.24 — badge "Ultimo aggiornamento" centrato nell'header (solo Dashboard):
+   copre TUTTI i dati live (contesto, quota, statistiche, pesi). Chip discreto
+   con accent CLACOROO; l'icona ruota lentamente per suggerire l'auto-refresh. */
+.dashboard-updated-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  max-width: 100%;
+  padding: 4px 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.dashboard-updated-badge .usage-updated {
+  margin-top: 0;
+  font-size: 11px;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+.dashboard-updated-badge svg {
+  width: 12px;
+  height: 12px;
+  color: var(--accent, #d97757);
+  flex-shrink: 0;
+  animation: clacoroo-spin 6s linear infinite;
+}
+@keyframes clacoroo-spin { to { transform: rotate(360deg); } }
 
 .dashboard-usage-section { margin-top: 28px; margin-bottom: 28px; }
 .dashboard-usage-section:empty { display: none; }
