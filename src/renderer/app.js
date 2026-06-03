@@ -308,6 +308,8 @@ const state = {
   notifyQuota: true,
   // Dedup notifiche quota: { fiveHour: {level, at}, sevenDay: {...}, ... }
   quotaLastNotified: {},
+  // v1.1.24 — frequenza polling quota in ms (0 = Manuale). Default 10 min.
+  quotaPollMs: 600000,
 };
 
 const MKT_SORTERS = {
@@ -603,6 +605,10 @@ async function init() {
   }
   // v1.1.9 — restore notifiche quota (opt-out: false esplicito)
   if (appState.notifyQuota === false) state.notifyQuota = false;
+  // v1.1.24 — restore frequenza polling quota (ms; 0 = Manuale)
+  if (Number.isFinite(appState.quotaPollMs) && appState.quotaPollMs >= 0) {
+    state.quotaPollMs = appState.quotaPollMs;
+  }
   if (appState.quotaLastNotified && typeof appState.quotaLastNotified === 'object') {
     state.quotaLastNotified = appState.quotaLastNotified;
   }
@@ -652,10 +658,43 @@ function thresholdLevel(pct) {
   if (pct >= 80)  return 80;
   return 0;
 }
+// v1.1.24 — preset frequenza polling quota. ms=0 → Manuale (nessun polling
+// automatico). unit guida la label i18n (quotaPollSec / quotaPollMin / manual).
+const QUOTA_POLL_PRESETS = [
+  { ms: 30 * 1000,        n: 30,  unit: 'sec' },
+  { ms: 60 * 1000,        n: 60,  unit: 'sec' },
+  { ms: 120 * 1000,       n: 120, unit: 'sec' },
+  { ms: 5 * 60 * 1000,    n: 5,   unit: 'min' },
+  { ms: 10 * 60 * 1000,   n: 10,  unit: 'min' },
+  { ms: 15 * 60 * 1000,   n: 15,  unit: 'min' },
+  { ms: 30 * 60 * 1000,   n: 30,  unit: 'min' },
+  { ms: 60 * 60 * 1000,   n: 60,  unit: 'min' },
+  { ms: 0,                n: 0,   unit: 'manual' },
+];
+function quotaPollLabel(preset) {
+  if (preset.unit === 'manual') return t('settingsExtra.quotaPollManual');
+  const key = preset.unit === 'sec' ? 'settingsExtra.quotaPollSec' : 'settingsExtra.quotaPollMin';
+  return t(key, { n: preset.n });
+}
+
+let quotaPollTimer = null;
 function scheduleQuotaCheck() {
-  // Primo check al boot dopo 30s (lascia tempo a usage cache di popolarsi)
-  setTimeout(() => runQuotaCheck(), 30 * 1000);
-  setInterval(() => runQuotaCheck(), 10 * 60 * 1000);
+  const ms = Number(state.quotaPollMs);
+  // Primo check al boot dopo 30s (lascia tempo a usage cache di popolarsi),
+  // solo se il polling automatico è attivo (non Manuale).
+  if (ms > 0) setTimeout(() => runQuotaCheck(), 30 * 1000);
+  startQuotaPollTimer();
+}
+function startQuotaPollTimer() {
+  if (quotaPollTimer) { clearInterval(quotaPollTimer); quotaPollTimer = null; }
+  const ms = Number(state.quotaPollMs);
+  if (ms > 0) quotaPollTimer = setInterval(() => runQuotaCheck(), ms);
+}
+// Cambio frequenza a runtime: persiste + ricrea il timer senza riavviare l'app.
+function applyQuotaPollSetting(ms) {
+  state.quotaPollMs = ms;
+  try { window.claudeAPI.setState({ quotaPollMs: ms }); } catch {}
+  startQuotaPollTimer();
 }
 async function runQuotaCheck() {
   if (state.notifyQuota === false) return;  // opt-out esplicito
@@ -6486,6 +6525,28 @@ function renderSettings() {
   notifRight.appendChild(notifToggle);
   notifRow.appendChild(notifRight);
   gNotify.appendChild(notifRow);
+
+  // v1.1.24 — Frequenza polling quota
+  const pollRow = el('div', 'settings-row');
+  const pollLeft = el('div');
+  pollLeft.appendChild(el('div', 'settings-row-label', t('settingsExtra.quotaPollLabel')));
+  pollLeft.appendChild(el('div', 'settings-row-desc', t('settingsExtra.quotaPollHint')));
+  pollRow.appendChild(pollLeft);
+  const pollSel = el('select', 'config-select');
+  QUOTA_POLL_PRESETS.forEach((p) => {
+    const opt = el('option', null, quotaPollLabel(p));
+    opt.value = String(p.ms);
+    if (p.ms === Number(state.quotaPollMs)) opt.selected = true;
+    pollSel.appendChild(opt);
+  });
+  pollSel.addEventListener('change', () => {
+    const ms = Number(pollSel.value);
+    applyQuotaPollSetting(ms);
+    const preset = QUOTA_POLL_PRESETS.find((p) => p.ms === ms);
+    toast(t('settingsExtra.quotaPollSaved', { label: preset ? quotaPollLabel(preset) : ms }), 'info');
+  });
+  pollRow.appendChild(pollSel);
+  gNotify.appendChild(pollRow);
 
   // Backup snapshot (idea #5)
   const g6 = group(t('settingsExtra.backupTitle'));

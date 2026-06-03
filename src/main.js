@@ -1104,7 +1104,16 @@ ipcMain.handle('get-account', async (_e, { force } = {}) => {
 // anche Claude Code). Il backoff è invalicabile anche con force.
 let USAGE_CACHE = null;
 let USAGE_CACHE_AT = 0;
-const USAGE_TTL_MS = 5 * 60 * 1000;
+// v1.1.24 — la cache "segue" la frequenza di polling scelta dall'utente
+// (state.quotaPollMs): TTL = max(MIN, quotaPollMs). Per Manuale (0) o assente
+// ricade su DEFAULT (copre i Refresh manuali ravvicinati). Backoff invariato.
+const USAGE_TTL_DEFAULT_MS = 5 * 60 * 1000;
+const USAGE_TTL_MIN_MS = 20 * 1000;
+function usageTtlMs() {
+  const poll = Number((readState() || {}).quotaPollMs);
+  if (Number.isFinite(poll) && poll > 0) return Math.max(USAGE_TTL_MIN_MS, poll);
+  return USAGE_TTL_DEFAULT_MS;
+}
 
 let usageBackoffUntil = 0;   // non chiamare l'API prima di questo timestamp
 let usageBackoffLevel = 0;   // 0 = nessun backoff; indice in BACKOFF_STEPS_MS
@@ -1127,8 +1136,8 @@ ipcMain.handle('get-usage', async (_e, { force } = {}) => {
     return withRateLimited(USAGE_CACHE, Math.ceil((usageBackoffUntil - now) / 60000));
   }
 
-  // 2. Cache fresca e non forzato → ritorna cache
-  if (!force && USAGE_CACHE && now - USAGE_CACHE_AT < USAGE_TTL_MS) {
+  // 2. Cache fresca e non forzato → ritorna cache (TTL adattivo alla frequenza)
+  if (!force && USAGE_CACHE && now - USAGE_CACHE_AT < usageTtlMs()) {
     return USAGE_CACHE;
   }
 

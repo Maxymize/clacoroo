@@ -2,6 +2,10 @@
 
 > Italiano (canonico). English translation: [CHANGELOG.en.md](./CHANGELOG.en.md) — allineato a ogni release.
 
+## v1.1.24 — 2026-06-03 — Frequenza aggiornamento quota configurabile
+
+- [FEATURE] Nuova impostazione "Frequenza aggiornamento quota": scegli ogni quanto CLACOROO aggiorna le barre della quota Claude (da 30 secondi fino a 60 minuti, oppure Manuale per aggiornare solo col pulsante Refresh). Frequenze basse aggiornano più spesso ma usano di più l'API
+
 ## v1.1.23 — 2026-05-31 — Feedback: segnala bug e proponi feature
 
 - [FEATURE] Nuovo pulsante "Feedback" nel footer della sidebar: apre un form sul sito dove puoi segnalare un bug o proporre una nuova funzione. Il form si apre nella lingua dell'app

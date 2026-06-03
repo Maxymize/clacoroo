@@ -2,6 +2,10 @@
 
 > English translation of [CHANGELOG.md](./CHANGELOG.md) (Italian, canonical). Updated in sync with each release.
 
+## v1.1.24 — 2026-06-03 — Configurable quota refresh frequency
+
+- [FEATURE] New "Quota refresh frequency" setting: choose how often CLACOROO refreshes the Claude quota bars (from 30 seconds up to 60 minutes, or Manual to refresh only with the Refresh button). Lower intervals refresh more often but use the API more
+
 ## v1.1.23 — 2026-05-31 — Feedback: report bugs and request features
 
 - [FEATURE] New "Feedback" button in the sidebar footer: opens a form on the website where you can report a bug or request a new feature. The form opens in the app's language
