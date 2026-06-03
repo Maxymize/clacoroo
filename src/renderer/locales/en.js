@@ -710,6 +710,7 @@ window.LOCALES.en = {
     quotaPollSec:   '{n} s',
     quotaPollMin:   '{n} min',
     quotaPollSaved: 'Quota frequency: {label}',
+    usageLastUpdate:'Last update: {ago}',
     usageBarSession:'Session (5h)',
     usageBarWeekly: 'Weekly (7d)',
     usageBarWeeklySonnet:'Weekly Sonnet',

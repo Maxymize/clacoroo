@@ -5,6 +5,7 @@
 ## v1.1.24 — 2026-06-03 — Frequenza aggiornamento quota configurabile
 
 - [FEATURE] Nuova impostazione "Frequenza aggiornamento quota": scegli ogni quanto CLACOROO aggiorna le barre della quota Claude (da 30 secondi fino a 60 minuti, oppure Manuale per aggiornare solo col pulsante Refresh). Frequenze basse aggiornano più spesso ma usano di più l'API
+- [FEATURE] Sotto le barre della quota ora compare "Ultimo aggiornamento: N fa", che ti dice quanto sono recenti i dati mostrati e si aggiorna da solo nel tempo
 
 ## v1.1.23 — 2026-05-31 — Feedback: segnala bug e proponi feature
 

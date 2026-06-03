@@ -1163,6 +1163,7 @@ ipcMain.handle('get-usage', async (_e, { force } = {}) => {
   if (res.ok) {
     usageBackoffLevel = 0;
     usageBackoffUntil = 0;
+    res.fetchedAt = now;   // v1.1.24 — timestamp del fetch reale (per "Ultimo aggiornamento")
     USAGE_CACHE = res;
     USAGE_CACHE_AT = now;
     return res;

@@ -5,6 +5,7 @@
 ## v1.1.24 — 2026-06-03 — Configurable quota refresh frequency
 
 - [FEATURE] New "Quota refresh frequency" setting: choose how often CLACOROO refreshes the Claude quota bars (from 30 seconds up to 60 minutes, or Manual to refresh only with the Refresh button). Lower intervals refresh more often but use the API more
+- [FEATURE] A "Last update: N ago" line now appears under the quota bars, telling you how recent the displayed data is and updating itself over time
 
 ## v1.1.23 — 2026-05-31 — Feedback: report bugs and request features
 

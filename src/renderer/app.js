@@ -1115,6 +1115,19 @@ function relativeTime(ts) {
   return new Date(ts).toLocaleDateString(t('time.locale'));
 }
 
+// v1.1.24 — aggiorna SOLO il testo "Ultimo aggiornamento" dei blocchi quota già
+// in pagina (nessuna chiamata API), così "2 min fa" avanza da solo. Avviato una
+// volta al boot con intervallo 60s.
+function refreshUsageUpdatedLabels() {
+  document.querySelectorAll('.usage-updated').forEach((el) => {
+    const ts = Number(el.dataset.fetchedAt);
+    if (Number.isFinite(ts)) {
+      el.textContent = t('settingsExtra.usageLastUpdate', { ago: relativeTime(ts) });
+    }
+  });
+}
+setInterval(refreshUsageUpdatedLabels, 60 * 1000);
+
 /* ── DASHBOARD ────────────────────────────────────────────────────────── */
 let dashboardRenderToken = 0;
 
@@ -6111,6 +6124,15 @@ function paintUsageBars(container, usageData, opts = {}) {
   if (usageData.rateLimited) {
     container.appendChild(el('div', 'usage-paused',
       t('settingsExtra.usagePausedRetry', { min: usageData.retryInMin || 5 })));
+  }
+
+  // v1.1.24 — "Ultimo aggiornamento: N fa" (timestamp del fetch reale). Il
+  // testo si auto-aggiorna ogni 60s via refreshUsageUpdatedLabels().
+  if (Number.isFinite(usageData.fetchedAt)) {
+    const upd = el('div', 'usage-updated');
+    upd.dataset.fetchedAt = String(usageData.fetchedAt);
+    upd.textContent = t('settingsExtra.usageLastUpdate', { ago: relativeTime(usageData.fetchedAt) });
+    container.appendChild(upd);
   }
 
   if (!compact) {

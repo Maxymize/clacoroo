@@ -2505,6 +2505,14 @@ body {
 }
 .usage-link:hover { color: var(--accent); text-decoration: underline; }
 
+/* v1.1.24 — "Ultimo aggiornamento: N fa" sotto le barre quota (testo discreto) */
+.usage-updated {
+  font-size: 10px;
+  color: var(--text-dim);
+  margin-top: 6px;
+  font-variant-numeric: tabular-nums;
+}
+
 .dashboard-usage-section { margin-top: 28px; margin-bottom: 28px; }
 .dashboard-usage-section:empty { display: none; }
 .dashboard-usage-bars {

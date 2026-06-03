@@ -720,6 +720,7 @@ window.LOCALES.it = {
     quotaPollSec:   '{n} s',
     quotaPollMin:   '{n} min',
     quotaPollSaved: 'Frequenza quota: {label}',
+    usageLastUpdate:'Ultimo aggiornamento: {ago}',
     usageBarSession:'Session (5h)',
     usageBarWeekly: 'Weekly (7d)',
     usageBarWeeklySonnet:'Weekly Sonnet',
