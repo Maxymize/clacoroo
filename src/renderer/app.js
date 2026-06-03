@@ -632,9 +632,10 @@ async function init() {
 // così non spunta "Tutto aggiornato" ad ogni lancio. Interroga GitHub, non
 // l'API Anthropic → nessun impatto sul rate-limit dell'account.
 const UPDATE_POLL_MS = 3 * 60 * 60 * 1000;
-// v1.1.22 — il banner/footer di aggiornamento apre la pagina download del sito
-// ufficiale (link sempre allineati all'ultima release) invece della release
-// GitHub grezza. `info.url` resta usato altrove per i dettagli della release.
+// v1.1.22 — il banner/footer di aggiornamento apre SEMPRE la pagina download
+// del sito ufficiale (link sempre allineati all'ultima release), mai la release
+// GitHub grezza. v1.1.25 — l'updater non espone più l'URL GitHub per evitare
+// che venga ricollegato per sbaglio: usare sempre questa costante.
 const DOWNLOAD_PAGE_URL = 'https://clacoroo.app/download/';
 // v1.1.23 — Pagina feedback sul sito (lingua-aware: EN su /, IT su /it/).
 const FEEDBACK_URL_EN = 'https://clacoroo.app/feedback';

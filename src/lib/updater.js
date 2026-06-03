@@ -73,7 +73,10 @@ async function checkLatestRelease(currentVersion) {
       available: newer,
       latest,
       current: currentVersion,
-      url:       release.html_url,
+      // v1.1.25 — NON esporre release.html_url (pagina GitHub grezza): la UI
+      // deve sempre puntare alla pagina download ufficiale del sito. Tenere
+      // l'URL GitHub qui era una trappola (rischio di ricollegarlo per sbaglio).
+      downloadPage: 'https://clacoroo.app/download/',
       publishedAt: release.published_at,
       notes:     (release.body || '').slice(0, 2000),
     };

@@ -2,6 +2,10 @@
 
 > English translation of [CHANGELOG.md](./CHANGELOG.md) (Italian, canonical). Updated in sync with each release.
 
+## v1.1.25 — 2026-06-03 — Updates: download link always to the official site
+
+- [FIX] The "Open download page" button (banner and footer) now always opens the official clacoroo.app/download page, never the raw GitHub release page
+
 ## v1.1.24 — 2026-06-03 — Configurable quota refresh frequency
 
 - [FEATURE] New "Data refresh frequency" setting: choose how often CLACOROO refreshes the live Dashboard data (from 30 seconds up to 60 minutes, or Manual to refresh only with the Refresh button). The same cadence refreshes everything: quotas, context estimate, statistics, Plugins by weight and Claude Code usage. Lower intervals refresh more often but use the API more

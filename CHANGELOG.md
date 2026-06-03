@@ -2,6 +2,10 @@
 
 > Italiano (canonico). English translation: [CHANGELOG.en.md](./CHANGELOG.en.md) — allineato a ogni release.
 
+## v1.1.25 — 2026-06-03 — Aggiornamenti: link download sempre al sito ufficiale
+
+- [FIX] Il pulsante "Apri pagina download" (banner e footer) ora apre sempre la pagina ufficiale clacoroo.app/download, mai la pagina grezza della release su GitHub
+
 ## v1.1.24 — 2026-06-03 — Frequenza aggiornamento quota configurabile
 
 - [FEATURE] Nuova impostazione "Frequenza aggiornamento dati": scegli ogni quanto CLACOROO aggiorna i dati live della Dashboard (da 30 secondi fino a 60 minuti, oppure Manuale per aggiornare solo col pulsante Refresh). La stessa cadenza aggiorna tutto: quote, stima contesto, statistiche, Plugin per peso e utilizzo di Claude Code. Frequenze basse aggiornano più spesso ma usano di più l'API
