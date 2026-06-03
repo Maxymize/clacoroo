@@ -678,23 +678,26 @@ function quotaPollLabel(preset) {
 }
 
 let quotaPollTimer = null;
-function scheduleQuotaCheck() {
-  const ms = Number(state.quotaPollMs);
-  // Primo check al boot dopo 30s (lascia tempo a usage cache di popolarsi),
-  // solo se il polling automatico è attivo (non Manuale).
-  if (ms > 0) setTimeout(() => runQuotaCheck(), 30 * 1000);
-  startQuotaPollTimer();
-}
-function startQuotaPollTimer() {
+// Avvia il polling quota: clear del timer precedente + un check "kick" dopo
+// kickMs, poi a intervalli regolari. Manuale (quotaPollMs<=0) → nessuno dei due.
+// Boot e cambio-a-runtime condividono questo unico modello.
+function startQuotaPollTimer(kickMs = 0) {
   if (quotaPollTimer) { clearInterval(quotaPollTimer); quotaPollTimer = null; }
   const ms = Number(state.quotaPollMs);
-  if (ms > 0) quotaPollTimer = setInterval(() => runQuotaCheck(), ms);
+  if (ms <= 0) return;
+  if (kickMs >= 0) setTimeout(() => runQuotaCheck(), kickMs);
+  quotaPollTimer = setInterval(() => runQuotaCheck(), ms);
 }
-// Cambio frequenza a runtime: persiste + ricrea il timer senza riavviare l'app.
+// Boot: primo check dopo 30s (lascia popolare la cache usage), poi a intervalli.
+function scheduleQuotaCheck() {
+  startQuotaPollTimer(30 * 1000);
+}
+// Cambio frequenza a runtime: persiste + ricrea il timer (refresh immediato
+// sulla nuova cadenza), senza riavviare l'app.
 function applyQuotaPollSetting(ms) {
   state.quotaPollMs = ms;
   try { window.claudeAPI.setState({ quotaPollMs: ms }); } catch {}
-  startQuotaPollTimer();
+  startQuotaPollTimer(0);
 }
 async function runQuotaCheck() {
   if (state.notifyQuota === false) return;  // opt-out esplicito
@@ -6533,17 +6536,16 @@ function renderSettings() {
   pollLeft.appendChild(el('div', 'settings-row-desc', t('settingsExtra.quotaPollHint')));
   pollRow.appendChild(pollLeft);
   const pollSel = el('select', 'config-select');
-  QUOTA_POLL_PRESETS.forEach((p) => {
+  QUOTA_POLL_PRESETS.forEach((p, i) => {
     const opt = el('option', null, quotaPollLabel(p));
-    opt.value = String(p.ms);
+    opt.value = String(i);
     if (p.ms === Number(state.quotaPollMs)) opt.selected = true;
     pollSel.appendChild(opt);
   });
   pollSel.addEventListener('change', () => {
-    const ms = Number(pollSel.value);
-    applyQuotaPollSetting(ms);
-    const preset = QUOTA_POLL_PRESETS.find((p) => p.ms === ms);
-    toast(t('settingsExtra.quotaPollSaved', { label: preset ? quotaPollLabel(preset) : ms }), 'info');
+    const preset = QUOTA_POLL_PRESETS[Number(pollSel.value)];
+    applyQuotaPollSetting(preset.ms);
+    toast(t('settingsExtra.quotaPollSaved', { label: quotaPollLabel(preset) }), 'info');
   });
   pollRow.appendChild(pollSel);
   gNotify.appendChild(pollRow);

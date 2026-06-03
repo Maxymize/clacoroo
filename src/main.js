@@ -1107,10 +1107,17 @@ let USAGE_CACHE_AT = 0;
 // v1.1.24 — la cache "segue" la frequenza di polling scelta dall'utente
 // (state.quotaPollMs): TTL = max(MIN, quotaPollMs). Per Manuale (0) o assente
 // ricade su DEFAULT (copre i Refresh manuali ravvicinati). Backoff invariato.
+// quotaPollMs è cachato in memoria (letto una volta lazy, aggiornato dal
+// set-state handler) per evitare un readFileSync ad ogni get-usage.
 const USAGE_TTL_DEFAULT_MS = 5 * 60 * 1000;
 const USAGE_TTL_MIN_MS = 20 * 1000;
+let quotaPollMsCache; // undefined = non ancora letto da state.json
+function getQuotaPollMs() {
+  if (quotaPollMsCache === undefined) quotaPollMsCache = Number((readState() || {}).quotaPollMs);
+  return quotaPollMsCache;
+}
 function usageTtlMs() {
-  const poll = Number((readState() || {}).quotaPollMs);
+  const poll = getQuotaPollMs();
   if (Number.isFinite(poll) && poll > 0) return Math.max(USAGE_TTL_MIN_MS, poll);
   return USAGE_TTL_DEFAULT_MS;
 }
@@ -1195,6 +1202,10 @@ ipcMain.handle('get-state', async () => readState());
 
 ipcMain.handle('set-state', async (_e, patch) => {
   if (typeof patch !== 'object' || patch === null) return { success: false, error: 'Patch non valido.' };
+  // v1.1.24 — tieni allineata la cache in memoria della frequenza polling
+  if (Object.prototype.hasOwnProperty.call(patch, 'quotaPollMs')) {
+    quotaPollMsCache = Number(patch.quotaPollMs);
+  }
   return { success: writeState(patch) };
 });
 
