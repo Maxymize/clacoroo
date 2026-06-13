@@ -127,6 +127,20 @@ The UI updates itself when Claude Code config files change (`fs.watchFile` cross
 
 ## Installation
 
+### Homebrew (recommended, macOS)
+
+```bash
+brew install --cask maxymize/clacoroo/clacoroo
+```
+
+One command taps `maxymize/clacoroo`, installs the latest build for your architecture (Apple Silicon or Intel), and clears the macOS quarantine flag for you — so you skip the "unidentified developer" prompt entirely. Update later with:
+
+```bash
+brew upgrade --cask clacoroo
+```
+
+Prefer a manual download? Use the `.dmg` below.
+
 ### From pre-built release (macOS)
 
 Go to [Releases](https://github.com/Maxymize/clacoroo/releases) and download:
