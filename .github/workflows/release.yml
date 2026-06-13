@@ -105,6 +105,67 @@ jobs:
           gh release upload "$TAG" --repo "$GITHUB_REPOSITORY" \
             dist/*.AppImage dist/*.deb dist/*.rpm --clobber
 
+  # ── Auto-bump del cask Homebrew (repo Maxymize/homebrew-clacoroo) ──
+  # Dopo le build macOS, scarica i 2 DMG, calcola gli SHA256 e riscrive
+  # Casks/clacoroo.rb nel repo tap, poi committa+pusha. Così `brew install
+  # --cask maxymize/clacoroo/clacoroo` punta sempre all'ultima versione.
+  # Richiede il secret TAP_REPO_TOKEN: un PAT (scope `repo`) con accesso in
+  # scrittura a Maxymize/homebrew-clacoroo — il GITHUB_TOKEN standard vale
+  # solo per QUESTO repo, non può pushare sul tap.
+  homebrew-bump:
+    needs: macos
+    runs-on: ubuntu-latest
+    # Solo per release stabili: niente bump del tap da pre-release/build di test.
+    if: ${{ !contains(github.ref_name, '-') }}
+    steps:
+      - name: Bump cask in tap repo
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAP_TOKEN: ${{ secrets.TAP_REPO_TOKEN }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          if [ -z "$TAP_TOKEN" ]; then
+            echo "TAP_REPO_TOKEN non configurato — salto l'aggiornamento del tap Homebrew."
+            exit 0
+          fi
+          VERSION="${TAG#v}"
+
+          # Scarica i 2 DMG dalla release appena pubblicata e calcola gli SHA256.
+          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" \
+            --pattern "CLACOROO-${VERSION}-arm64.dmg" \
+            --pattern "CLACOROO-${VERSION}-x64.dmg" --dir dmg
+          SHA_ARM=$(sha256sum "dmg/CLACOROO-${VERSION}-arm64.dmg" | cut -d' ' -f1)
+          SHA_X64=$(sha256sum "dmg/CLACOROO-${VERSION}-x64.dmg" | cut -d' ' -f1)
+          echo "arm64 → $SHA_ARM"
+          echo "x64   → $SHA_X64"
+
+          # Clona il tap e riscrive il cask con la nuova versione + SHA.
+          git clone "https://x-access-token:${TAP_TOKEN}@github.com/Maxymize/homebrew-clacoroo.git" tap
+          CASK="tap/Casks/clacoroo.rb"
+          sed -i -E "s|^  version \".*\"|  version \"${VERSION}\"|" "$CASK"
+          # Sostituisce gli SHA in base al blocco arch (arm = prima riga sha256, x64 = seconda).
+          awk -v arm="$SHA_ARM" -v x64="$SHA_X64" '
+            /on_arm do/   { inarm=1 }
+            /on_intel do/ { inarm=0 }
+            /sha256 / {
+              if (inarm) sub(/sha256 "[^"]*"/, "sha256 \"" arm "\"")
+              else       sub(/sha256 "[^"]*"/, "sha256 \"" x64 "\"")
+            }
+            { print }
+          ' "$CASK" > "$CASK.tmp" && mv "$CASK.tmp" "$CASK"
+
+          cd tap
+          if git diff --quiet; then
+            echo "Cask già aggiornato a ${VERSION} — niente da committare."
+            exit 0
+          fi
+          git config user.name "Maximilian Giurastante"
+          git config user.email "info@maxymizebusiness.com"
+          git add Casks/clacoroo.rb
+          git commit -m "CLACOROO ${VERSION}: bump cask (arm64 + x64)"
+          git push origin main
+          echo "Tap Homebrew aggiornato a ${VERSION}."
+
   # ── Rebuild della landing page (Cloudflare Pages) quando tutte le build sono pronte ──
   # I link di download del sito sono risolti a build time dall'ultima release:
   # un rebuild li allinea automaticamente alla nuova versione.
