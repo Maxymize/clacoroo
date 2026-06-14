@@ -2,6 +2,11 @@
 
 > English translation of [CHANGELOG.md](./CHANGELOG.md) (Italian, canonical). Updated in sync with each release.
 
+## v1.1.27 — 2026-06-14 — New-version banner only when the download is ready + Homebrew
+
+- [FIX] The "new version available" banner no longer shows while the installers are still being published: it now waits until at least one downloadable file (.dmg/.exe/.AppImage/.deb/.rpm) is actually uploaded to the release. Before, it could appear early and lead to downloading the previous version
+- [DOCS] Install and update via **Homebrew** on macOS: `brew install --cask maxymize/clacoroo/clacoroo`; to update `brew update && brew upgrade --cask clacoroo`. Added to the READMEs (EN+IT) and clacoroo.app
+
 ## v1.1.26 — 2026-06-03 — MCP: enable/disable toggle to save tokens
 
 - [FEATURE] MCP servers you added now have an enable/disable toggle (like plugins): turn one off when you don't need it to remove its tools from the context and save tokens, turn it back on in one click when you do. Disabling asks for confirmation; the configuration is saved so you can re-enable it without re-entering it

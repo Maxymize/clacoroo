@@ -46,14 +46,34 @@ function isNewerVersion(remote, local) {
   return false;
 }
 
+// v1.1.27 — Una release è "pronta" solo se ha già almeno un installer
+// scaricabile caricato. Il CI crea la release PRIMA e carica gli asset DOPO
+// (uno per piattaforma, in 2-4 min): in quella finestra la release esiste ma
+// scaricarla darebbe la versione vecchia. Filtrando sugli asset installabili,
+// il banner "nuova versione" appare solo quando il download è davvero pronto.
+const INSTALLER_EXTS = ['.dmg', '.exe', '.appimage', '.deb', '.rpm'];
+
+function hasInstallerAsset(release) {
+  if (!release || !Array.isArray(release.assets)) return false;
+  return release.assets.some((a) => {
+    const name = (a && a.name ? a.name : '').toLowerCase();
+    // Solo asset effettivamente caricati (state 'uploaded'): un upload in corso
+    // può comparire come 'starter'/'new' senza essere ancora scaricabile.
+    const uploaded = !a.state || a.state === 'uploaded';
+    return uploaded && INSTALLER_EXTS.some((ext) => name.endsWith(ext));
+  });
+}
+
 // Sceglie, da una lista di release GitHub, quella con la versione più alta
-// (per semver) escludendo le draft. Le pre-release SONO incluse (vedi nota su
-// RELEASES_API). Ritorna null se la lista è vuota o senza tag validi.
+// (per semver) escludendo le draft E quelle senza installer ancora pronti.
+// Le pre-release SONO incluse (vedi nota su RELEASES_API). Ritorna null se la
+// lista è vuota o senza release pronte.
 function pickLatestRelease(releases) {
   if (!Array.isArray(releases)) return null;
   let best = null;
   for (const r of releases) {
     if (!r || r.draft || !r.tag_name) continue;
+    if (!hasInstallerAsset(r)) continue;  // build non ancora caricate → ignora
     if (!best || isNewerVersion(r.tag_name, best.tag_name)) best = r;
   }
   return best;

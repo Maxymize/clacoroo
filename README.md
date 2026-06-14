@@ -136,8 +136,10 @@ brew install --cask maxymize/clacoroo/clacoroo
 One command taps `maxymize/clacoroo`, installs the latest build for your architecture (Apple Silicon or Intel), and clears the macOS quarantine flag for you — so you skip the "unidentified developer" prompt entirely. Update later with:
 
 ```bash
-brew upgrade --cask clacoroo
+brew update && brew upgrade --cask clacoroo
 ```
+
+(`brew update` refreshes the cask first so Homebrew sees the new version, then `brew upgrade` installs it.)
 
 Prefer a manual download? Use the `.dmg` below.
 

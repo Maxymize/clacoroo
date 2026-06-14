@@ -2,6 +2,11 @@
 
 > Italiano (canonico). English translation: [CHANGELOG.en.md](./CHANGELOG.en.md) — allineato a ogni release.
 
+## v1.1.27 — 2026-06-14 — Avviso nuova versione solo quando il download è pronto + Homebrew
+
+- [FIX] Il banner "nuova versione disponibile" non compare più mentre gli installer sono ancora in fase di pubblicazione: ora attende che almeno un file scaricabile (.dmg/.exe/.AppImage/.deb/.rpm) sia effettivamente caricato sulla release. Prima poteva apparire in anticipo e portare a scaricare la versione precedente
+- [DOCS] Installazione e aggiornamento via **Homebrew** su macOS: `brew install --cask maxymize/clacoroo/clacoroo`; per aggiornare `brew update && brew upgrade --cask clacoroo`. Aggiunto nei README (IT+EN) e su clacoroo.app
+
 ## v1.1.26 — 2026-06-03 — MCP: toggle attiva/disattiva per risparmiare token
 
 - [FEATURE] I server MCP aggiunti da te ora hanno un toggle attiva/disattiva (come i plugin): disattivane uno quando non serve per togliere i suoi tool dal contesto e risparmiare token, riattivalo in un click quando ti serve. Disattivare chiede conferma; la configurazione viene salvata per riattivarlo senza reinserirla
