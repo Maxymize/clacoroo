@@ -2,6 +2,10 @@
 
 > English translation of [CHANGELOG.md](./CHANGELOG.md) (Italian, canonical). Updated in sync with each release.
 
+## v1.1.29 — 2026-06-15 — Translations: last remaining strings (terminal, hooks, MCP, misc)
+
+- [FIX] Translated the last strings still hardcoded in Italian that showed regardless of the chosen language: terminal and tab tooltips, missing hook-dependency warnings (and their terminal messages), MCP chips and badges on the Dashboard, the heatmap legend, search placeholder and account tooltip. They now all follow the interface language (IT/EN)
+
 ## v1.1.28 — 2026-06-15 — Quotas: honor Retry-After on rate limit
 
 - [FIX] When the usage/quota endpoint responds "too many requests" (429) and tells the client how long to wait (the `Retry-After` header), CLACOROO now honors that delay instead of using only its own fixed backoff. Reduces the app's contribution to the account-wide rate limits it shares with Claude Code itself

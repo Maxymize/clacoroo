@@ -29,6 +29,7 @@ window.LOCALES.it = {
     addProjectTooltip: 'Aggiungi un progetto da tracciare (per vedere plugin/skill/agent locali)',
     addMcpTooltip:  'Aggiungi un MCP server (HTTP, SSE o stdio) via `claude mcp add`',
     addMktTooltip:  'Aggiungi un marketplace da URL git, repo GitHub o path locale',
+    terminalTooltip: 'Apri/chiudi il terminale integrato (Cmd+`)',
   },
 
   // Section titles (Dashboard + main pages)
@@ -54,6 +55,7 @@ window.LOCALES.it = {
 
   // Stats section (KPI + tabs + heatmap + context breakdown)
   stats: {
+    loading:      'Caricamento statistiche…',
     tabOverview:  'Overview',
     tabModels:    'Modelli',
     tabProjects:  'Per-progetto',
@@ -136,6 +138,8 @@ window.LOCALES.it = {
     save:          'Salva',
     confirm:       'Conferma',
     close:         'Chiudi',
+    closeEsc:      'Chiudi (Esc)',
+    closeTab:      'Chiudi tab',
     copy:          'Copia',
     edit:          'Modifica',
     delete:        'Elimina',
@@ -220,6 +224,7 @@ window.LOCALES.it = {
     sectionAgents: 'Agents',
     sectionHook:   'Hook',
     pluginsInMkt:  'Plugin nel marketplace',
+    loadingPlugins:'Caricamento lista plugin…',
     seePlugins:    'Vedi plugin installati',
     seeAndInstall: 'Vedi e installa plugin',
     matcher:       'Matcher',
@@ -232,12 +237,22 @@ window.LOCALES.it = {
     installBtn:    'Installa {dep}',
     docsBtn:       'Docs {dep}',
     docsTip:       'Apre la pagina docs di {dep} nel browser (richiede installer GUI manuale)',
+    missing:       'Manca: {deps}',
+    manualInstall: '{dep}: installazione manuale richiesta',
+    warnTip:       'Tool richiesti dal command degli handler ma non trovati nel PATH:\n\n{hints}\n\nInstalla gli strumenti mancanti per evitare errori `hook startup` al boot di `claude`.',
+    installTip:    'Apre il terminale integrato + pre-digita:\n{cmd}\n\nNON premerà Enter automatico — conferma tu premendo Invio se vuoi procedere.',
+    timeoutToast:  'Timeout: {tool} non rilevato dopo 3 minuti. Clicca "↻ Aggiorna" se hai completato l\'install.',
+    installedToast:'✓ {tool} installato! Ricarico dati…',
+    preTypedToast: 'Pre-digitato: {tool} — premi Invio nel terminale per installare',
+    compactMissing:'manca {deps}',
+    compactMissingTip: 'Tool richiesti dagli handler ma non installati: {deps}',
   },
 
   // Errori UI generici
   uiErr: {
     dataLoad:      'Errore lettura dati',
     cancelled:     'Annullato',
+    termUnavailable: 'Terminale integrato non disponibile su questa piattaforma',
   },
 
   // Account panel (Settings > Account Claude)
@@ -249,6 +264,8 @@ window.LOCALES.it = {
     loginInstr:     'Esegui `claude auth login` da terminale (o avvia Claude Code) per accedere.',
     connected:      '● Connesso',
     disconnected:   '● Disconnesso',
+    tokenExpiredTip:'Token Claude scaduto — apri Impostazioni per rifare login',
+    pillTip:        'Account: {email} · click per aprire Impostazioni',
     rowEmail:       'Email',
     rowOrg:         'Organizzazione',
     rowOrgId:       'ID organizzazione',
@@ -556,11 +573,19 @@ window.LOCALES.it = {
     alwaysTokensTip:'Token "always-on" stimati: peso aggiunto al context window di Claude Code da questo plugin a prescindere dall\'utilizzo attivo. Fonte: plugin-catalog-cache.json di Claude Code.',
     noteHook:       'Plugin definisce hook ma il file `hooks/hooks.json` non è disponibile per la lettura. Apri il sorgente per ispezionarli.',
     noteMcp:        'Questo plugin espone MCP server — vedi i dettagli completi nella sezione MCP.',
+    goToMcpBtn:     '↗ Vai a MCP',
   },
 
   // MCP card stripes / tooltip
   mcpCard: {
+    showAll:        'Mostra tutto',
+    showLess:       'Mostra meno',
+    cacheRemoved:   'Entry "{id}" rimossa dalla cache. Aggiorna stato live per ricontrollare.',
+    cacheAlreadyClean: 'Entry non presente in cache (già pulita)',
     refreshLive:    'Aggiorna stato live',
+    refreshLiveTip: 'Esegue `claude mcp list` con health-check (può richiedere qualche secondo)',
+    loadingLive:    'Controllo stato MCP server… (health-check live, può richiedere qualche secondo)',
+    readError:      'Errore lettura MCP: {msg}',
     searchPh:       'Cerca server MCP, plugin, transport…',
     toolsBtn:       'Tools',
     toolsTip:       'Mostra i tool esposti da questo server MCP',
@@ -610,6 +635,8 @@ window.LOCALES.it = {
   statsPage: {
     contextEstimateDesc:'Per skill/agent conta solo il front matter (description, model, allowed-tools) — Claude legge il body solo quando invoca la skill/agent.',
     contextEstimateLong:'Per skill e agent conta SOLO il frontmatter YAML (indice di discovery), non il body completo — che viene caricato solo quando la skill è effettivamente invocata. MCP servers: stima ~400 token per server connesso (il valore reale dipende dal numero di tool esposti). Non include: messaggi sessione, autocompact buffer, custom agents (richiede sessione live).',
+    heatmapLess:    'meno',
+    heatmapMore:    'più',
     pluginsByWeightTitle:'Plugin per peso (top {n} · {total} attivi)',
     pluginsByWeightModelSubtitle:'{model} · totale: {total} · {n} plugin attivi',
     modelsTabDesc:  'Distribuzione del tuo uso fra i modelli (sessioni, token, costo) da quando hai iniziato. Aggiornato dal cache locale di Claude Code.',
@@ -963,6 +990,7 @@ window.LOCALES.it = {
   toast: {
     dataReloaded:    'Dati ricaricati',
     copied:          'Copiato negli appunti',
+    hookJsonCopied:  'JSON hook copiato negli appunti',
     saved:           'Salvato',
     error:           'Errore',
     configChanged:   'Configurazione aggiornata — ricarico…',

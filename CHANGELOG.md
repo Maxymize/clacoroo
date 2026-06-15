@@ -2,6 +2,10 @@
 
 > Italiano (canonico). English translation: [CHANGELOG.en.md](./CHANGELOG.en.md) — allineato a ogni release.
 
+## v1.1.29 — 2026-06-15 — Traduzioni: ultime stringhe residue (terminale, hook, MCP, vari)
+
+- [FIX] Tradotte le ultime stringhe ancora in italiano fisso che comparivano a prescindere dalla lingua scelta: tooltip del terminale e delle tab, avvisi sulle dipendenze hook mancanti (coi relativi messaggi del terminale), chip e badge MCP della Dashboard, legenda della heatmap, placeholder di ricerca e tooltip dell'account. Ora seguono tutte la lingua dell'interfaccia (IT/EN)
+
 ## v1.1.28 — 2026-06-15 — Quote: rispetto del Retry-After sul rate-limit
 
 - [FIX] Quando l'endpoint delle quote risponde "troppe richieste" (429) e indica per quanto attendere (header `Retry-After`), CLACOROO ora rispetta quel tempo invece di usare solo il proprio ritardo fisso. Riduce il contributo dell'app ai rate-limit dell'account Claude, condivisi con Claude Code stesso

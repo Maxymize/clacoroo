@@ -29,6 +29,7 @@ window.LOCALES.en = {
     addProjectTooltip: 'Add a project to track (to see local plugins/skills/agents)',
     addMcpTooltip:  'Add an MCP server (HTTP, SSE or stdio) via `claude mcp add`',
     addMktTooltip:  'Add a marketplace from git URL, GitHub repo or local path',
+    terminalTooltip: 'Toggle the integrated terminal (Cmd+`)',
   },
 
   // Section titles (Dashboard + main pages)
@@ -54,6 +55,7 @@ window.LOCALES.en = {
 
   // Stats section (KPI + tabs + heatmap + context breakdown)
   stats: {
+    loading:      'Loading statistics…',
     tabOverview:  'Overview',
     tabModels:    'Models',
     tabProjects:  'Per-project',
@@ -136,6 +138,8 @@ window.LOCALES.en = {
     save:          'Save',
     confirm:       'Confirm',
     close:         'Close',
+    closeEsc:      'Close (Esc)',
+    closeTab:      'Close tab',
     copy:          'Copy',
     edit:          'Edit',
     delete:        'Delete',
@@ -220,6 +224,7 @@ window.LOCALES.en = {
     sectionAgents: 'Agents',
     sectionHook:   'Hook',
     pluginsInMkt:  'Plugins in the marketplace',
+    loadingPlugins:'Loading plugin list…',
     seePlugins:    'See installed plugins',
     seeAndInstall: 'See and install plugins',
     matcher:       'Matcher',
@@ -232,12 +237,22 @@ window.LOCALES.en = {
     installBtn:    'Install {dep}',
     docsBtn:       'Docs {dep}',
     docsTip:       'Opens the docs page of {dep} in the browser (manual GUI installer required)',
+    missing:       'Missing: {deps}',
+    manualInstall: '{dep}: manual installation required',
+    warnTip:       'Tools required by the handler commands but not found in PATH:\n\n{hints}\n\nInstall the missing tools to avoid `hook startup` errors when `claude` boots.',
+    installTip:    'Opens the integrated terminal + pre-types:\n{cmd}\n\nIt will NOT press Enter automatically — confirm yourself by pressing Enter if you want to proceed.',
+    timeoutToast:  'Timeout: {tool} not detected after 3 minutes. Click "↻ Refresh" if you completed the install.',
+    installedToast:'✓ {tool} installed! Reloading data…',
+    preTypedToast: 'Pre-typed: {tool} — press Enter in the terminal to install',
+    compactMissing:'missing {deps}',
+    compactMissingTip: 'Tools required by the handlers but not installed: {deps}',
   },
 
   // Errori UI generici
   uiErr: {
     dataLoad:      'Error reading data',
     cancelled:     'Cancelled',
+    termUnavailable: 'Integrated terminal not available on this platform',
   },
 
   // Account panel (Settings > Claude Account)
@@ -249,6 +264,8 @@ window.LOCALES.en = {
     loginInstr:     'Run `claude auth login` from a terminal (or launch Claude Code) to sign in.',
     connected:      '● Connected',
     disconnected:   '● Disconnected',
+    tokenExpiredTip:'Claude token expired — open Settings to log in again',
+    pillTip:        'Account: {email} · click to open Settings',
     rowEmail:       'Email',
     rowOrg:         'Organization',
     rowOrgId:       'Organization ID',
@@ -546,11 +563,19 @@ window.LOCALES.en = {
     alwaysTokensTip:'Estimated "always-on" tokens: weight added to Claude Code\'s context window by this plugin regardless of active use. Source: Claude Code\'s plugin-catalog-cache.json.',
     noteHook:       'Plugin defines hooks but the `hooks/hooks.json` file is not readable. Open the source to inspect them.',
     noteMcp:        'This plugin exposes MCP servers — see full details in the MCP section.',
+    goToMcpBtn:     '↗ Go to MCP',
   },
 
   // MCP card stripes / tooltip
   mcpCard: {
+    showAll:        'Show all',
+    showLess:       'Show less',
+    cacheRemoved:   'Entry "{id}" removed from cache. Refresh live status to recheck.',
+    cacheAlreadyClean: 'Entry not in cache (already clean)',
     refreshLive:    'Refresh live status',
+    refreshLiveTip: 'Runs `claude mcp list` with a health-check (may take a few seconds)',
+    loadingLive:    'Checking MCP server status… (live health-check, may take a few seconds)',
+    readError:      'MCP read error: {msg}',
     searchPh:       'Search MCP server, plugin, transport…',
     toolsBtn:       'Tools',
     toolsTip:       'Show tools exposed by this MCP server',
@@ -600,6 +625,8 @@ window.LOCALES.en = {
   statsPage: {
     contextEstimateDesc:'For skills/agents counts only the front matter (description, model, allowed-tools) — Claude reads the body only when invoking the skill/agent.',
     contextEstimateLong:'For skills and agents counts ONLY the YAML frontmatter (discovery index), not the full body — which is loaded only when the skill is actually invoked. MCP servers: estimate ~400 tokens per connected server (the real value depends on the number of exposed tools). Excludes: session messages, autocompact buffer, custom agents (requires live session).',
+    heatmapLess:    'less',
+    heatmapMore:    'more',
     pluginsByWeightTitle:'Plugins by weight (top {n} · {total} active)',
     pluginsByWeightModelSubtitle:'{model} · total: {total} · {n} active plugins',
     modelsTabDesc:  'Distribution of your usage across models (sessions, tokens, cost) since you started. Updated from Claude Code\'s local cache.',
@@ -953,6 +980,7 @@ window.LOCALES.en = {
   toast: {
     dataReloaded:    'Data reloaded',
     copied:          'Copied to clipboard',
+    hookJsonCopied:  'Hook JSON copied to clipboard',
     saved:           'Saved',
     error:           'Error',
     configChanged:   'Configuration changed — reloading…',

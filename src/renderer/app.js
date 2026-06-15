@@ -1080,7 +1080,7 @@ function render() {
   // v1.0.67 — Pack B: toggle terminale integrato
   if (termState && termState.caps && termState.caps.available) {
     const termBtn = btnWithIcon('btn btn-sm btn-ghost btn-refresh', 'terminal', t('topbar.terminal'));
-    termBtn.title = 'Apri/chiudi il terminale integrato (Cmd+`)';
+    termBtn.title = t('topbar.terminalTooltip');
     termBtn.addEventListener('click', () => termSetOpen(!termState.open));
     actions.appendChild(termBtn);
   }
@@ -1887,7 +1887,7 @@ function paintDashboardMcpChips(container, servers) {
   servers.slice(0, MAX_DISPLAY).forEach(srv => {
     const chip = el('div', 'skill-chip clickable');
     chip.style.borderLeftColor = statusColor[srv.status] || '#b0aea5';
-    chip.title = 'Vai alla sezione MCP per dettagli';
+    chip.title = t('dash.goToMcp');
 
     const dot = el('span');
     dot.style.cssText = 'width:8px;height:8px;border-radius:50%;flex-shrink:0;background:' + (statusColor[srv.status] || '#b0aea5');
@@ -1905,7 +1905,7 @@ function paintDashboardMcpChips(container, servers) {
   });
   // Chip "Vedi tutte" sempre presente come ultimo
   const seeAllChip = el('div', 'skill-chip dashboard-see-all clickable');
-  seeAllChip.title = 'Apri la sezione completa MCP server';
+  seeAllChip.title = t('dash.openFullMcp');
   seeAllChip.appendChild(icon('external-link'));
   seeAllChip.appendChild(el('span', 'dashboard-see-all-lbl', t('counter.seeAllN', { n: servers.length })));
   seeAllChip.addEventListener('click', () => switchToSection('mcp'));
@@ -2164,11 +2164,11 @@ function showPluginContentModal(p) {
   });
 
   if (p.hasMcp) {
-    content.appendChild(el('h3', 'plugin-content-section-title', 'MCP server'));
+    content.appendChild(el('h3', 'plugin-content-section-title', t('section.mcpServerTitle')));
     const note = el('div', 'plugin-content-mcp-link');
-    note.textContent = 'Questo plugin espone MCP server — vedi i dettagli completi nella sezione MCP.';
+    note.textContent = t('pluginCard.noteMcp');
     const goBtn = el('button', 'btn btn-sm btn-primary');
-    goBtn.textContent = '↗ Vai a MCP';
+    goBtn.textContent = t('pluginCard.goToMcpBtn');
     goBtn.addEventListener('click', () => { switchToSection('mcp'); close(); });
     note.appendChild(goBtn);
     content.appendChild(note);
@@ -2193,8 +2193,7 @@ function showPluginContentModal(p) {
       });
       content.appendChild(list);
     } else {
-      content.appendChild(el('div', 'plugin-content-note',
-        'Plugin definisce hook ma il file `hooks/hooks.json` non è disponibile per la lettura. Apri il sorgente per ispezionarli.'));
+      content.appendChild(el('div', 'plugin-content-note', t('pluginCard.noteHook')));
     }
   }
 
@@ -2317,15 +2316,15 @@ function buildPluginCard(p) {
   }
   const openDetails = () => showPluginContentModal(p);
   if (p.skills.length)  addBadge(p.skills.length + ' skill', 'b-skill',
-    'Skill in questo plugin — click per vedere lista e dettagli', openDetails);
+    t('pluginCard.skillsTip'), openDetails);
   if (p.agents.length)  addBadge(p.agents.length + ' agent', 'b-agent',
-    'Agent in questo plugin — click per vedere lista', openDetails);
+    t('pluginCard.agentsTip'), openDetails);
   if (p.hasMcp)         addBadge('MCP', 'b-mcp',
-    'Plugin esporta uno o più MCP server — click per dettagli', openDetails);
+    t('pluginCard.mcpTip'), openDetails);
   if (p.hasHooks)       addBadge('Hook', 'b-hook',
-    'Plugin definisce hook (PreToolUse, PostToolUse, ecc.)', openDetails);
+    t('pluginCard.hookTip'), openDetails);
   if (p.tokensAlways)   addBadge(p.tokensAlways + ' tok', 'b-tokens',
-    'Token "always-on" stimati: peso aggiunto al context window di Claude Code da questo plugin a prescindere dall\'utilizzo attivo. Fonte: plugin-catalog-cache.json di Claude Code.');
+    t('pluginCard.alwaysTokensTip'));
   if (p.blocked)        addBadge('DISATTIVATO', 'b-blocked');
   body.appendChild(badges);
   card.appendChild(body);
@@ -2835,7 +2834,7 @@ async function showMarketplaceContentModal(m) {
   // Mostra placeholder mentre carichiamo i metadata
   const listWrap = el('div');
   content.appendChild(el('h3', 'plugin-content-section-title', t('plugin.pluginsInMkt')));
-  listWrap.appendChild(el('div', 'plugin-content-note', 'Caricamento lista plugin…'));
+  listWrap.appendChild(el('div', 'plugin-content-note', t('plugin.loadingPlugins')));
   content.appendChild(listWrap);
 
   const detail = await window.claudeAPI.getMarketplaceDetail(m.id);
@@ -3559,13 +3558,12 @@ function buildHookCard(item) {
     const warnRow = el('div', 'hook-missing-deps-row');
     const warnBadge = el('span', 'hook-missing-deps-badge');
     warnBadge.appendChild(icon('triangle-alert'));
-    warnBadge.appendChild(document.createTextNode('Manca: ' + missingDeps.join(', ')));
+    warnBadge.appendChild(document.createTextNode(t('hookDep.missing', { deps: missingDeps.join(', ') })));
     const avail = (state.rawData && state.rawData.hookDepsAvailability) || {};
     const hints = missingDeps
-      .map(d => (avail[d] && avail[d].installHint) ? (d + '\n' + avail[d].installHint) : (d + ': installazione manuale richiesta'))
+      .map(d => (avail[d] && avail[d].installHint) ? (d + '\n' + avail[d].installHint) : t('hookDep.manualInstall', { dep: d }))
       .join('\n\n');
-    warnBadge.title = 'Tool richiesti dal command degli handler ma non trovati nel PATH:\n\n' + hints +
-      '\n\nInstalla gli strumenti mancanti per evitare errori `hook startup` al boot di `claude`.';
+    warnBadge.title = t('hookDep.warnTip', { hints });
     warnRow.appendChild(warnBadge);
 
     // Mini-bottone "Installa" per ogni tool mancante con installCommand
@@ -3574,8 +3572,7 @@ function buildHookCard(item) {
       if (!info) return;
       if (info.installCommand) {
         const btn = btnWithIcon('hook-dep-install-btn', 'play', t('hookDep.installBtn', { dep }));
-        btn.title = 'Apre il terminale integrato + pre-digita:\n' + info.installCommand
-          + '\n\nNON premerà Enter automatico — conferma tu premendo Invio se vuoi procedere.';
+        btn.title = t('hookDep.installTip', { cmd: info.installCommand });
         btn.addEventListener('click', e => { e.stopPropagation(); installDepInTerminal(dep, info.installCommand); });
         warnRow.appendChild(btn);
       } else if (info.docsUrl) {
@@ -3679,8 +3676,8 @@ function buildHookCompactRow(item) {
   if (missingDeps.length) {
     const w = el('span', 'compact-row-warn');
     w.appendChild(icon('triangle-alert'));
-    w.appendChild(document.createTextNode('manca ' + missingDeps.join(', ')));
-    w.title = 'Tool richiesti dagli handler ma non installati: ' + missingDeps.join(', ');
+    w.appendChild(document.createTextNode(t('hookDep.compactMissing', { deps: missingDeps.join(', ') })));
+    w.title = t('hookDep.compactMissingTip', { deps: missingDeps.join(', ') });
     row.appendChild(w);
   }
   row.addEventListener('click', () => showHookDetailsModal(item));
@@ -3709,7 +3706,7 @@ function startDepInstallPoller(tool) {
     if (Date.now() - startedAt > MAX_DURATION_MS) {
       clearInterval(id);
       _depInstallPollers.delete(tool);
-      toast('Timeout: ' + tool + ' non rilevato dopo 3 minuti. Clicca "↻ Aggiorna" se hai completato l\'install.', 'info');
+      toast(t('hookDep.timeoutToast', { tool }), 'info');
       return;
     }
     try {
@@ -3717,7 +3714,7 @@ function startDepInstallPoller(tool) {
       if (r && r.ok && r.installed) {
         clearInterval(id);
         _depInstallPollers.delete(tool);
-        toast('✓ ' + tool + ' installato! Ricarico dati…', 'success');
+        toast(t('hookDep.installedToast', { tool }), 'success');
         await window.claudeAPI.refreshHookDeps();
         await loadData();
       }
@@ -3748,7 +3745,7 @@ async function installDepInTerminal(tool, installCommand) {
   // Apre drawer + nuova tab senza eseguire alcun comando (evita prompt vuoto
   // come accadrebbe con openTerminalWithCommand('') che fa pty.write('\r')).
   if (!termState.caps || !termState.caps.available) {
-    toast('Terminale integrato non disponibile su questa piattaforma', 'error');
+    toast(t('uiErr.termUnavailable'), 'error');
     return;
   }
   if (!termState.open) termSetOpen(true);
@@ -3757,7 +3754,7 @@ async function installDepInTerminal(tool, installCommand) {
     shell: null,
   });
   if (!tab) return;
-  toast('Pre-digitato: ' + tool + ' — premi Invio nel terminale per installare', 'info');
+  toast(t('hookDep.preTypedToast', { tool }), 'info');
   // Aspetta che la shell stampi il prompt iniziale, poi pre-digita il comando.
   // 600ms è prudente per shell lente (zsh con powerlevel10k, ecc.)
   setTimeout(() => {
@@ -3792,12 +3789,12 @@ function showHookDetailsModal(item) {
       hooks: item.handlers,
     }, null, 2);
     navigator.clipboard.writeText(json);
-    toast('JSON hook copiato negli appunti', 'success');
+    toast(t('toast.hookJsonCopied'), 'success');
   });
   header.appendChild(copyBtn);
 
   const closeBtn = el('button', 'md-close'); closeBtn.appendChild(icon('x'));
-  closeBtn.title = 'Chiudi (Esc)';
+  closeBtn.title = t('button.closeEsc');
   header.appendChild(closeBtn);
 
   modal.appendChild(header);
@@ -4316,7 +4313,7 @@ function renderListSection(items, key, buildChip, searchFn, gridCls, sortConfig,
   searchIcon.appendChild(iconPath);
   sw.appendChild(searchIcon);
   const inp = el('input', 'search-input');
-  inp.setAttribute('placeholder', 'Cerca…');
+  inp.setAttribute('placeholder', t('search.generic'));
   inp.setAttribute('type', 'text');
   inp.value = f.search;
   sw.appendChild(inp);
@@ -4394,7 +4391,7 @@ async function renderStats() {
     return;
   }
 
-  content.appendChild(el('div', 'stats-loading', 'Caricamento statistiche…'));
+  content.appendChild(el('div', 'stats-loading', t('stats.loading')));
   const data = await window.claudeAPI.getStats();
   if (myToken !== statsRenderToken) return;  // race guard: tab cambiata
   statsCache = data;
@@ -4759,9 +4756,9 @@ function buildHeatmap(dailyActivity, range) {
 
   // Legenda intensità
   const legend = el('div', 'heatmap-legend');
-  legend.appendChild(el('span', 'heatmap-legend-txt', 'meno'));
+  legend.appendChild(el('span', 'heatmap-legend-txt', t('statsPage.heatmapLess')));
   for (let i = 0; i <= 4; i++) legend.appendChild(el('span', 'heatmap-cell i-' + i));
-  legend.appendChild(el('span', 'heatmap-legend-txt', 'più'));
+  legend.appendChild(el('span', 'heatmap-legend-txt', t('statsPage.heatmapMore')));
   wrap.appendChild(legend);
 
   return wrap;
@@ -5231,7 +5228,7 @@ async function renderMcp() {
     renderMcp();
   }));
   const refreshBtn = btnWithIcon('btn btn-sm btn-ghost', 'rotate-cw', t('mcpCard.refreshLive'));
-  refreshBtn.title = 'Esegue `claude mcp list` con health-check (può richiedere qualche secondo)';
+  refreshBtn.title = t('mcpCard.refreshLiveTip');
   refreshBtn.addEventListener('click', async () => {
     refreshBtn.disabled = true;
     refreshBtn.textContent = '…controllo…';
@@ -5256,7 +5253,7 @@ async function renderMcp() {
   setContent(wrap);
 
   if (!mcpCache) {
-    grid.appendChild(el('div', 'mcp-loading', 'Controllo stato MCP server… (health-check live, può richiedere qualche secondo)'));
+    grid.appendChild(el('div', 'mcp-loading', t('mcpCard.loadingLive')));
     const data = await window.claudeAPI.getMcp({});
     if (myToken !== mcpRenderToken) return;
     mcpCache = data;
@@ -5265,7 +5262,7 @@ async function renderMcp() {
 
   if (!mcpCache.ok) {
     grid.appendChild(el('div', 'mcp-empty',
-      'Errore lettura MCP: ' + (mcpCache.error || 'sconosciuto')));
+      t('mcpCard.readError', { msg: mcpCache.error || '?' })));
     return;
   }
 
@@ -5340,8 +5337,13 @@ function mcpMatches(srv, f) {
       || (srv.connection || '').toLowerCase().includes(q);
 }
 
-// v1.1.26 — Toggle enable/disable per MCP user-added (scope='user'), stesso
-// componente .toggle dei plugin. Spegnere disabilita il server (chiede conferma,
+// v1.1.26 — un MCP è "user-added" (aggiunto dall'utente, quindi gestibile via
+// `claude mcp add/remove`) se scope==='user'. builtin (claude.ai) e plugin-managed
+// no. Centralizzato qui per non ripetere il check raw.
+function isUserAddedMcp(srv) { return srv.scope === 'user'; }
+
+// v1.1.26 — Toggle enable/disable per MCP user-added, stesso componente .toggle
+// dei plugin. Spegnere disabilita il server (chiede conferma,
 // `claude mcp remove` + backup config), riaccendere lo re-add. Permette di
 // tenere attivi solo gli MCP che servono → meno tool nel contesto, meno token.
 // Disponibile solo per user-added: builtin (claude.ai) e plugin-managed seguono
@@ -5359,8 +5361,8 @@ function buildMcpToggle(srv) {
 
   inp.addEventListener('change', async (e) => {
     e.stopPropagation();
+    // Disattivazione: conferma esplicita (rimuove il server via CLI). Riattivazione: re-add diretto.
     if (active) {
-      // Disattivazione: conferma esplicita (azione che rimuove il server via CLI)
       const ok = await window.claudeAPI.confirmDialog({
         title:   t('confirm.disableMcp.title'),
         message: t('confirm.disableMcp.message', { id: srv.id }),
@@ -5368,30 +5370,25 @@ function buildMcpToggle(srv) {
         buttons: [t('button.cancel'), t('confirm.disableMcp.yes')],
       });
       if (ok !== 1) { inp.checked = true; return; }  // annullato → ripristina
-      toggleWrap.classList.add('loading');
-      inp.disabled = true;
-      const r = await window.claudeAPI.mcpDisable(srv.id);
-      if (r.success) {
-        toast(t('toast.mcpDisabled', { id: srv.id }), 'warn');
-        mcpCache = null;
-        if (state.section === 'mcp') renderMcp();
+    }
+    toggleWrap.classList.add('loading');
+    inp.disabled = true;
+    const r = active ? await window.claudeAPI.mcpDisable(srv.id)
+                     : await window.claudeAPI.mcpEnable(srv.id);
+    if (r.success) {
+      toast(t(active ? 'toast.mcpDisabled' : 'toast.mcpEnabled', { id: srv.id }), active ? 'warn' : 'success');
+      // Refresh silenzioso: ricarico i dati freschi PRIMA di ridisegnare, così
+      // renderMcp() non mostra il placeholder "Controllo stato…" a tutta sezione
+      // (la card toggolata resta a schermo in stato loading finché arrivano).
+      if (state.section === 'mcp') {
+        try { mcpCache = await window.claudeAPI.getMcp({ force: true }); } catch { mcpCache = null; }
+        renderMcp();
       } else {
-        toast(t('toast.errorPrefix', { msg: r.error || '?' }), 'error');
-        inp.checked = true; toggleWrap.classList.remove('loading'); inp.disabled = false;
+        mcpCache = null;  // non in vista: invalida e basta, si ricarica al prossimo accesso
       }
     } else {
-      // Riattivazione: nessuna conferma, re-add immediato
-      toggleWrap.classList.add('loading');
-      inp.disabled = true;
-      const r = await window.claudeAPI.mcpEnable(srv.id);
-      if (r.success) {
-        toast(t('toast.mcpEnabled', { id: srv.id }), 'success');
-        mcpCache = null;
-        if (state.section === 'mcp') renderMcp();
-      } else {
-        toast(t('toast.errorPrefix', { msg: r.error || '?' }), 'error');
-        inp.checked = false; toggleWrap.classList.remove('loading'); inp.disabled = false;
-      }
+      toast(t('toast.errorPrefix', { msg: r.error || '?' }), 'error');
+      inp.checked = !active; toggleWrap.classList.remove('loading'); inp.disabled = false;
     }
   });
   return toggleWrap;
@@ -5404,7 +5401,7 @@ function buildMcpCard(srv) {
   // Header
   const header = el('div', 'mcp-card-header');
   // v1.1.26 — toggle a sinistra del nome, solo per MCP user-added
-  if (srv.scope === 'user') header.appendChild(buildMcpToggle(srv));
+  if (isUserAddedMcp(srv)) header.appendChild(buildMcpToggle(srv));
   const nameWrap = el('div', 'mcp-card-name-wrap');
   const name = el('div', 'mcp-card-name', srv.displayName || srv.id);
   nameWrap.appendChild(name);
@@ -5479,12 +5476,12 @@ function buildMcpCard(srv) {
   // Verifica DOPO il render (next tick) leggendo scrollHeight vs clientHeight.
   if (srv.connection && srv.connection.length > 80) {
     const toggle = el('button', 'mcp-card-conn-toggle');
-    toggle.textContent = 'Mostra tutto';
+    toggle.textContent = t('mcpCard.showAll');
     toggle.style.display = 'none';  // mostrato solo se serve
     toggle.addEventListener('click', (e) => {
       e.stopPropagation();
       const expanded = conn.classList.toggle('expanded');
-      toggle.textContent = expanded ? 'Mostra meno' : 'Mostra tutto';
+      toggle.textContent = expanded ? t('mcpCard.showLess') : t('mcpCard.showAll');
     });
     connWrap.appendChild(toggle);
     // Check truncation dopo il primo paint
@@ -5523,7 +5520,7 @@ function buildMcpCard(srv) {
   // (scope='user'). I MCP builtin (claude.ai) e plugin-managed non sono
   // rimuovibili via `claude mcp remove` perché non li ha aggiunti l'utente.
   const footer = el('div', 'mcp-card-footer');
-  const isUserAdded = srv.scope === 'user';
+  const isUserAdded = isUserAddedMcp(srv);
   if (srv.status === 'connected' || !srv.reconnect) {
     const hint = el('div', 'mcp-card-hint',
       srv.status === 'connected'
@@ -5617,7 +5614,7 @@ function buildMcpCompactRow(srv) {
     row.appendChild(sm);
   }
   // v1.1.26 — toggle enable/disable a destra, solo per MCP user-added
-  if (srv.scope === 'user') {
+  if (isUserAddedMcp(srv)) {
     const tg = el('span', 'compact-row-toggle');
     tg.appendChild(buildMcpToggle(srv));
     row.appendChild(tg);
@@ -5761,8 +5758,8 @@ async function runMcpReconnectAction(srv, act) {
     const r = await window.claudeAPI.mcpClearAuthCache(srv.id);
     if (!r.ok) { toast(t('toast.errorPrefix', { msg: r.error }), 'error'); return; }
     toast(r.removed
-      ? 'Entry "' + srv.id + '" rimossa dalla cache. Aggiorna stato live per ricontrollare.'
-      : 'Entry non presente in cache (già pulita)', r.removed ? 'success' : 'info');
+      ? t('mcpCard.cacheRemoved', { id: srv.id })
+      : t('mcpCard.cacheAlreadyClean'), r.removed ? 'success' : 'info');
     // Invalida cache renderer + re-render
     mcpCache = null;
     if (state.section === 'mcp') renderMcp();
@@ -6137,7 +6134,7 @@ function makeRemoveBtn(container) {
       await loadApiKeyPanel(container);
     } else {
       btn.disabled = false;
-      btn.textContent = 'Rimuovi';
+      btn.textContent = t('button.remove');
       toast(t('toast.errorPrefix', { msg: r.error || t('mcp.status.unknown') }), 'error');
     }
   });
@@ -6169,9 +6166,9 @@ function refreshSidebarAccountPill() {
     pill.classList.add('sidebar-account-broken');
     const warn = el('span', 'sidebar-account-warn', '⚠');
     pill.appendChild(warn);
-    pill.title = 'Token Claude scaduto — apri Impostazioni per rifare login';
+    pill.title = t('account.tokenExpiredTip');
   } else {
-    pill.title = 'Account: ' + (d.email || '') + ' · click per aprire Impostazioni';
+    pill.title = t('account.pillTip', { email: d.email || '' });
   }
   pill.style.cursor = 'pointer';
   pill.onclick = () => switchToSection('settings');
@@ -7458,7 +7455,7 @@ function termOpenNewTab() {
 // future skill launcher (claude -p "<skill>"), ecc.
 async function openTerminalWithCommand(cmd, opts = {}) {
   if (!termState.caps || !termState.caps.available) {
-    toast('Terminale integrato non disponibile su questa piattaforma', 'error');
+    toast(t('uiErr.termUnavailable'), 'error');
     return null;
   }
   if (!termState.open) termSetOpen(true);
@@ -7534,7 +7531,7 @@ function renderTermTabs() {
     const close = document.createElement('span');
     close.className = 'terminal-tab-close';
     close.textContent = '×';
-    close.title = 'Chiudi tab';
+    close.title = t('button.closeTab');
     close.addEventListener('click', (ev) => { ev.stopPropagation(); termCloseTab(id); });
     btn.appendChild(close);
 
