@@ -2,6 +2,10 @@
 
 > Italiano (canonico). English translation: [CHANGELOG.en.md](./CHANGELOG.en.md) — allineato a ogni release.
 
+## v1.1.28 — 2026-06-15 — Quote: rispetto del Retry-After sul rate-limit
+
+- [FIX] Quando l'endpoint delle quote risponde "troppe richieste" (429) e indica per quanto attendere (header `Retry-After`), CLACOROO ora rispetta quel tempo invece di usare solo il proprio ritardo fisso. Riduce il contributo dell'app ai rate-limit dell'account Claude, condivisi con Claude Code stesso
+
 ## v1.1.27 — 2026-06-14 — Avviso nuova versione solo quando il download è pronto + Homebrew
 
 - [FIX] Il banner "nuova versione disponibile" non compare più mentre gli installer sono ancora in fase di pubblicazione: ora attende che almeno un file scaricabile (.dmg/.exe/.AppImage/.deb/.rpm) sia effettivamente caricato sulla release. Prima poteva apparire in anticipo e portare a scaricare la versione precedente

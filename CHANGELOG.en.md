@@ -2,6 +2,10 @@
 
 > English translation of [CHANGELOG.md](./CHANGELOG.md) (Italian, canonical). Updated in sync with each release.
 
+## v1.1.28 — 2026-06-15 — Quotas: honor Retry-After on rate limit
+
+- [FIX] When the usage/quota endpoint responds "too many requests" (429) and tells the client how long to wait (the `Retry-After` header), CLACOROO now honors that delay instead of using only its own fixed backoff. Reduces the app's contribution to the account-wide rate limits it shares with Claude Code itself
+
 ## v1.1.27 — 2026-06-14 — New-version banner only when the download is ready + Homebrew
 
 - [FIX] The "new version available" banner no longer shows while the installers are still being published: it now waits until at least one downloadable file (.dmg/.exe/.AppImage/.deb/.rpm) is actually uploaded to the release. Before, it could appear early and lead to downloading the previous version

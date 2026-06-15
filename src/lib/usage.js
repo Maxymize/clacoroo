@@ -161,8 +161,11 @@ function httpRequestJson(method, url, headers, bodyObj) {
       res.on('data', (chunk) => { buf += chunk; });
       res.on('end', () => {
         const status = res.statusCode;
+        // v1.1.28 — esponiamo l'header retry-after (in secondi o data HTTP) così
+        // il chiamante può rispettare il backoff richiesto dal server sul 429.
+        const retryAfter = res.headers ? res.headers['retry-after'] : undefined;
         if (status < 200 || status >= 300) {
-          resolve({ ok: false, status, error: 'HTTP ' + status + ': ' + buf.slice(0, 300) });
+          resolve({ ok: false, status, retryAfter, error: 'HTTP ' + status + ': ' + buf.slice(0, 300) });
           return;
         }
         try { resolve({ ok: true, status, data: JSON.parse(buf) }); }
@@ -260,7 +263,10 @@ async function getUsage() {
     if (resp.status === 401 || resp.status === 403) {
       friendly = 'Token non più valido (refresh fallito). Per ricreare le credenziali esegui `claude auth login` da terminale.';
     }
-    return { ok: false, error: friendly, status: resp.status, tokenSource: source };
+    // v1.1.28 — su 429 propaghiamo lo status + l'header retry-after (se presente)
+    // così l'handler get-usage nel main può rispettare il backoff richiesto dal
+    // server invece del solo schema fisso. Vedi issue anthropics/claude-code#64591.
+    return { ok: false, error: friendly, status: resp.status, retryAfter: resp.retryAfter, tokenSource: source };
   }
   return { ok: true, data: normalize(resp.data), tokenSource: source };
 }

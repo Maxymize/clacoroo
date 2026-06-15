@@ -1125,6 +1125,22 @@ function usageTtlMs() {
 let usageBackoffUntil = 0;   // non chiamare l'API prima di questo timestamp
 let usageBackoffLevel = 0;   // 0 = nessun backoff; indice in BACKOFF_STEPS_MS
 const BACKOFF_STEPS_MS = [5, 10, 20, 30].map((m) => m * 60 * 1000);
+const USAGE_RETRY_AFTER_CAP_MS = 30 * 60 * 1000;  // cap di sicurezza a 30 min
+
+// v1.1.28 — Converte l'header Retry-After (secondi numerici O data HTTP) in ms
+// da ora. Ritorna 0 se assente/illeggibile (→ usa il backoff esponenziale).
+function parseRetryAfterMs(retryAfter) {
+  if (retryAfter == null) return 0;
+  const secs = Number(retryAfter);
+  if (Number.isFinite(secs) && secs >= 0) {
+    return Math.min(secs * 1000, USAGE_RETRY_AFTER_CAP_MS);
+  }
+  const when = Date.parse(retryAfter);  // forma "HTTP-date"
+  if (!Number.isNaN(when)) {
+    return Math.min(Math.max(when - Date.now(), 0), USAGE_RETRY_AFTER_CAP_MS);
+  }
+  return 0;
+}
 
 // Allega il flag rateLimited (+ minuti di attesa) al risultato cachato.
 // Se non c'è cache buona, ritorna un errore "in pausa" senza JSON grezzo.
@@ -1151,10 +1167,17 @@ ipcMain.handle('get-usage', async (_e, { force } = {}) => {
   // 3. Chiama l'endpoint usage
   const res = await USAGE.getUsage();
 
-  // 4a. 429 → attiva/escala backoff, ritorna cache vecchia + flag
+  // 4a. 429 → attiva/escala backoff, ritorna cache vecchia + flag.
+  // v1.1.28 — se il server manda l'header Retry-After lo RISPETTIAMO (è il
+  // pattern ufficiale di Claude Code, issue anthropics/claude-code#64591:
+  // ignorarlo causa "rate-limit storm"). Usiamo il MASSIMO fra il retry-after
+  // del server e il nostro backoff esponenziale, così non richiamiamo prima di
+  // quanto il server chiede ma manteniamo l'escalation se insiste.
   if (!res.ok && res.status === 429) {
     usageBackoffLevel = Math.min(usageBackoffLevel + 1, BACKOFF_STEPS_MS.length);
-    const delay = BACKOFF_STEPS_MS[usageBackoffLevel - 1];
+    const stepDelay = BACKOFF_STEPS_MS[usageBackoffLevel - 1];
+    const serverDelay = parseRetryAfterMs(res.retryAfter);  // 0 se header assente
+    const delay = Math.max(stepDelay, serverDelay);
     usageBackoffUntil = now + delay;
     return withRateLimited(USAGE_CACHE, Math.ceil(delay / 60000));
   }
