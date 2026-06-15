@@ -67,5 +67,9 @@ CLAUDE.md
 # Script di release locale (lancio manuale: bash scripts/release.sh) — non pubblico
 /scripts/release.sh
 
+# Script setup usa-e-getta Cloudflare (binding email Pages, riguarda il sito;
+# contiene account ID + legge token da .env.local) — non pubblico
+/scripts/cf-feedback-setup.py
+
 # File locali di Claude Code (lock task schedulati, ecc.)
 .claude/
