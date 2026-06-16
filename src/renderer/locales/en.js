@@ -498,6 +498,7 @@ window.LOCALES.en = {
     keyValidWithCount:'✓ Valid key · {n} models accessible',
     errPrefix:      '✗ {msg}',
     errFallback:    'Error',
+    errCreditLow:   '⚠ Credit balance too low — add funds at platform.anthropic.com/settings/billing',
     errSavePrefix:  '✗ Save error',
     testStoredTip:  'Verify that the saved key is valid (GET /v1/models)',
     replaceBtn:     '↻ Replace',

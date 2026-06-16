@@ -503,6 +503,7 @@ window.LOCALES.it = {
     keyValidWithCount:'✓ Chiave valida · {n} modelli accessibili',
     errPrefix:      '✗ {msg}',
     errFallback:    'Errore',
+    errCreditLow:   '⚠ Saldo crediti esaurito — ricarica su platform.anthropic.com/settings/billing',
     errSavePrefix:  '✗ Errore salvataggio',
     testStoredTip:  'Verifica che la chiave salvata sia valida (GET /v1/models)',
     replaceBtn:     '↻ Sostituisci',

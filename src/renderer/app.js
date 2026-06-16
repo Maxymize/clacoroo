@@ -6033,6 +6033,8 @@ function appendApiKeyForm(card, container) {
       setInline(statusInline,
         r.modelCount ? t('apikeyBtn.keyValidWithCount', { n: r.modelCount }) : t('apikeyBtn.keyValid'),
         'ok');
+    } else if (r.error === 'credit_balance_low') {
+      setInline(statusInline, t('apikeyBtn.errCreditLow'), 'warn');
     } else {
       setInline(statusInline, t('apikeyBtn.errPrefix', { msg: r.error || t('apikeyBtn.errFallback') }), 'error');
     }
@@ -6086,6 +6088,7 @@ function makeTestBtn() {
     btn.disabled = false;
     btn.textContent = t('apikeyBtn.testConnection');
     if (r.ok) toast(t('apikeyBtn.keyValidWithCount', { n: r.modelCount || '?' }), 'success');
+    else if (r.error === 'credit_balance_low') toast(t('apikeyBtn.errCreditLow'), 'warn');
     else toast(t('apikeyBtn.errPrefix', { msg: r.error || t('apikeyBtn.errFallback') }), 'error');
   });
   return btn;

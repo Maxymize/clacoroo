@@ -394,6 +394,8 @@ function testConnection(plainKey) {
           resolve({ ok: false, status: 401, error: 'Chiave non valida o revocata (401)' });
         } else if (res.statusCode === 403) {
           resolve({ ok: false, status: 403, error: 'Chiave senza permessi (403)' });
+        } else if (res.statusCode === 402) {
+          resolve({ ok: false, status: 402, error: 'credit_balance_low' });
         } else {
           resolve({ ok: false, status: res.statusCode, error: 'HTTP ' + res.statusCode });
         }
