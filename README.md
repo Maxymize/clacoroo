@@ -24,6 +24,23 @@ Manage plugins, marketplaces, skills, agents, MCP servers, hooks, stats, quotas 
 
 ---
 
+<div align="center">
+
+| | | |
+|:---:|:---:|:---:|
+| | | |
+|:---:|:---:|:---:|
+| <img src="assets/screenshots/clacoroo-dashboard-1.png" width="260" alt="Dashboard"/> | <img src="assets/screenshots/clacoroo-plugins-1.png" width="260" alt="Plugins"/> | <img src="assets/screenshots/clacoroo-marketplace-1.png" width="260" alt="Marketplaces"/> |
+| **Dashboard** | **Plugins** | **Marketplaces** |
+| <img src="assets/screenshots/clacoroo-skills-1.png" width="260" alt="Skills"/> | <img src="assets/screenshots/clacoroo-mcp-1.png" width="260" alt="MCP"/> | <img src="assets/screenshots/clacoroo-stats-1.png" width="260" alt="Stats"/> |
+| **Skills** | **MCP servers** | **Stats** |
+| <img src="assets/screenshots/clacoroo-terminal-1.png" width="260" alt="Terminal"/> | | |
+| **Terminal** | | |
+
+</div>
+
+---
+
 ## What is CLACOROO
 
 **CLA**ude **CO**de **CO**ntrol **ROO**m is an Electron desktop app that puts a graphical UI on top of every configuration file Claude Code reads from `~/.claude/`. The orange `CO` in the wordmark overlaps between **Co**de and **Co**ntrol — a small visual pun for what it does: a regia booth for Claude Code, mascotted by **CLACOROO**, a pixel-art 4-legged creature with a green LED antenna (Anthropic Green) glowing on top.

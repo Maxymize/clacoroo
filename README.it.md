@@ -24,6 +24,23 @@ Gestisci plugin, marketplace, skill, agent, MCP server, hook, statistiche, quote
 
 ---
 
+<div align="center">
+
+| | | |
+|:---:|:---:|:---:|
+| | | |
+|:---:|:---:|:---:|
+| <img src="assets/screenshots/clacoroo-dashboard-1.png" width="260" alt="Dashboard"/> | <img src="assets/screenshots/clacoroo-plugins-1.png" width="260" alt="Plugin"/> | <img src="assets/screenshots/clacoroo-marketplace-1.png" width="260" alt="Marketplace"/> |
+| **Dashboard** | **Plugin** | **Marketplace** |
+| <img src="assets/screenshots/clacoroo-skills-1.png" width="260" alt="Skill"/> | <img src="assets/screenshots/clacoroo-mcp-1.png" width="260" alt="MCP"/> | <img src="assets/screenshots/clacoroo-stats-1.png" width="260" alt="Statistiche"/> |
+| **Skill** | **MCP server** | **Statistiche** |
+| <img src="assets/screenshots/clacoroo-terminal-1.png" width="260" alt="Terminale"/> | | |
+| **Terminale** | | |
+
+</div>
+
+---
+
 ## Cos'è CLACOROO
 
 **CLA**ude **CO**de **CO**ntrol **ROO**m è una app desktop Electron che mette una UI grafica sopra ogni file di configurazione che Claude Code legge in `~/.claude/`. Il `CO` arancio del wordmark si sovrappone fra **Co**de e **Co**ntrol — un piccolo gioco visivo che racconta l'idea: la cabina di regia per Claude Code, gestita dalla mascotte **CLACOROO**, un esserino pixel-art a 4 zampe con un'antenna LED verde (Anthropic Green) accesa.
