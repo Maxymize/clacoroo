@@ -2,6 +2,10 @@
 
 > Italiano (canonico). English translation: [CHANGELOG.en.md](./CHANGELOG.en.md) — allineato a ogni release.
 
+## v1.1.30 — 2026-06-16 — macOS: firma Developer ID + notarizzazione automatica in CI
+
+- [FEATURE] I DMG macOS prodotti dalla CI sono ora firmati con certificato Developer ID e notarizzati da Apple: niente più avviso "sviluppatore non verificato" all'apertura. Il workflow GitHub Actions importa il certificato in un keychain temporaneo effimero e usa `xcrun notarytool submit --wait` + `xcrun stapler staple` prima di pubblicare gli installer
+
 ## v1.1.29 — 2026-06-15 — Traduzioni: ultime stringhe residue (terminale, hook, MCP, vari)
 
 - [FIX] Tradotte le ultime stringhe ancora in italiano fisso che comparivano a prescindere dalla lingua scelta: tooltip del terminale e delle tab, avvisi sulle dipendenze hook mancanti (coi relativi messaggi del terminale), chip e badge MCP della Dashboard, legenda della heatmap, placeholder di ricerca e tooltip dell'account. Ora seguono tutte la lingua dell'interfaccia (IT/EN)

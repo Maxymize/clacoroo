@@ -35,7 +35,13 @@ jobs:
           EOF
           fi
 
-  # ── macOS: DMG arm64 + x64 con sfondo (scripts/build-dmg-mac.sh + dmgbuild) ──
+  # ── macOS: DMG arm64 + x64 con sfondo, firmati + notarizzati ──
+  # Secrets richiesti (Settings → Secrets → Actions):
+  #   APPLE_CERTIFICATE_BASE64   — Developer ID Application .p12 esportato da Keychain, base64
+  #   APPLE_CERTIFICATE_PASSWORD — password del .p12
+  #   APPLE_API_KEY_BASE64       — contenuto del file .p8 App Store Connect, base64
+  #   APPLE_API_KEY_ID           — Key ID (es. H6VW6GUDH9)
+  #   APPLE_API_ISSUER_ID        — Issuer ID (UUID del team)
   macos:
     needs: create-release
     runs-on: macos-14
@@ -47,10 +53,86 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+
+      - name: Import Developer ID certificate into ephemeral keychain
+        env:
+          CERT_BASE64: ${{ secrets.APPLE_CERTIFICATE_BASE64 }}
+          CERT_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+        run: |
+          KEYCHAIN_PASSWORD=$(openssl rand -hex 16)
+          KEYCHAIN_PATH="$RUNNER_TEMP/clacoroo-build.keychain-db"
+          P12_PATH="$RUNNER_TEMP/certificate.p12"
+
+          echo "$CERT_BASE64" | base64 --decode > "$P12_PATH"
+
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 3600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security import "$P12_PATH" -k "$KEYCHAIN_PATH" \
+            -P "$CERT_PASSWORD" -T /usr/bin/codesign -T /usr/bin/security
+          security set-key-partition-list -S apple-tool:,apple: \
+            -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security list-keychains -d user -s "$KEYCHAIN_PATH" \
+            $(security list-keychains -d user | tr -d '"')
+
+          echo "KEYCHAIN_PATH=$KEYCHAIN_PATH" >> "$GITHUB_ENV"
+          rm -f "$P12_PATH"
+
+      - name: Install App Store Connect API key for notarytool
+        env:
+          API_KEY_BASE64: ${{ secrets.APPLE_API_KEY_BASE64 }}
+          API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+        run: |
+          mkdir -p ~/private_keys
+          echo "$API_KEY_BASE64" | base64 --decode \
+            > ~/private_keys/AuthKey_${API_KEY_ID}.p8
+
       - name: Install dependencies
         run: npm ci
-      - name: Build DMG (arm64 + x64 con sfondo)
+
+      - name: Build DMG (arm64 + x64 con sfondo, firmati)
+        env:
+          CSC_KEYCHAIN: ${{ env.KEYCHAIN_PATH }}
         run: npm run build
+
+      - name: Notarize DMG arm64
+        env:
+          API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          API_ISSUER_ID: ${{ secrets.APPLE_API_ISSUER_ID }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          VERSION="${TAG#v}"
+          DMG="dist/CLACOROO-${VERSION}-arm64.dmg"
+          xcrun notarytool submit "$DMG" \
+            --key ~/private_keys/AuthKey_${API_KEY_ID}.p8 \
+            --key-id "$API_KEY_ID" \
+            --issuer "$API_ISSUER_ID" \
+            --wait --timeout 20m
+          xcrun stapler staple "$DMG"
+
+      - name: Notarize DMG x64
+        env:
+          API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          API_ISSUER_ID: ${{ secrets.APPLE_API_ISSUER_ID }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          VERSION="${TAG#v}"
+          DMG="dist/CLACOROO-${VERSION}-x64.dmg"
+          xcrun notarytool submit "$DMG" \
+            --key ~/private_keys/AuthKey_${API_KEY_ID}.p8 \
+            --key-id "$API_KEY_ID" \
+            --issuer "$API_ISSUER_ID" \
+            --wait --timeout 20m
+          xcrun stapler staple "$DMG"
+
+      - name: Cleanup keychain and API key
+        if: always()
+        env:
+          API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+        run: |
+          security delete-keychain "$KEYCHAIN_PATH" 2>/dev/null || true
+          rm -f ~/private_keys/AuthKey_${API_KEY_ID}.p8
+
       - name: Upload DMG to release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -151,7 +151,7 @@ Vai su [Releases](https://github.com/Maxymize/clacoroo/releases) e scarica:
 
 Apri il `.dmg`, trascina CLACOROO nella cartella Applications.
 
-> **macOS Gatekeeper** — il binario è firmato ad-hoc (senza Apple Developer ID + notarization, vedi Pack E in [TASK.md](TASK.md)). Alla prima apertura macOS chiederà **"Sei sicuro di voler aprire questa app scaricata da Internet?"** → click **Apri**. Nessun comando Terminal richiesto.
+> **macOS Gatekeeper** — il binario è firmato ad-hoc (senza Apple Developer ID + notarization). Alla prima apertura macOS chiederà **"Sei sicuro di voler aprire questa app scaricata da Internet?"** → click **Apri**. Nessun comando Terminal richiesto.
 >
 > Se invece compare **"CLACOROO è danneggiato e non può essere aperto"** (raro, succede se il DMG stesso è stato marcato dal browser), esegui questo comando in Terminale prima di aprire:
 > ```bash
@@ -280,16 +280,6 @@ Font self-hosted (SIL OFL):
 ## Stack tecnico
 
 **Electron 36** · **Vanilla JS** (no framework) · **Node.js 18+** · `contextBridge` + `contextIsolation` · `execFile` (no shell) · `fs.watchFile` per auto-refresh · **node-pty** + **@xterm/xterm** per terminale integrato · **dmgbuild** (Python) per installer DMG · **electron-builder** per packaging
-
-## Roadmap
-
-Vedi [`TASK.md`](TASK.md) per il piano completo.
-
-In sviluppo:
-- **Pack B** estensioni — Skill launcher inline (bottone ▶ su ogni skill esegue `claude -p "<skill>"` nel terminale)
-- **Pack C** — Insight + analytics (token cost per plugin, top-N chart, dependency tree)
-- **Pack D** — Tema light + switch lingua UI
-- **Pack E** — Distribuzione full-auto (Apple Developer ID, notarization, electron-updater, CI/CD multi-OS)
 
 ## Contribuire
 
