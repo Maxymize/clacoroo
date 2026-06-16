@@ -798,6 +798,21 @@ window.LOCALES.it = {
     bigGoToPlugin:   'Vai a Plugin',
   },
 
+  // Changelog modal
+  changelog: {
+    current: 'attuale',
+  },
+
+  // Health issues (chiavi simboliche da markdown.js — main process)
+  health: {
+    missingName:        'Campo "name" mancante nel frontmatter',
+    missingDescription: 'Campo "description" mancante nel frontmatter',
+    descriptionTooShort:'Description troppo corta (< 10 caratteri)',
+    missingFrontmatter: 'Frontmatter YAML mancante o vuoto',
+    fileMissing:        'File mancante: {file}',
+    fileReadError:      'Errore lettura: {error}',
+  },
+
   // Settings (sezione Impostazioni)
   settings: {
     language:         'Lingua',

@@ -2,6 +2,13 @@
 
 > Italiano (canonico). English translation: [CHANGELOG.en.md](./CHANGELOG.en.md) — allineato a ogni release.
 
+## v1.1.32 — 2026-06-16 — Fix i18n: badge changelog, health issues, terminale
+
+- [FIX] Badge "attuale" nel modal Changelog ora segue la lingua dell'interfaccia (IT/EN)
+- [FIX] Messaggi di errore health degli agent/skill ora seguono la lingua dell'interfaccia
+- [FIX] Terminale integrato non si apriva (schermo nero): variabile locale `t` nel loop tab sovrascriveva la funzione globale `t()`
+- [IMPROVEMENT] Context Estimate rimosso dalla pagina Plugin: rimane solo in Dashboard e Stats
+
 ## v1.1.31 — 2026-06-16 — DMG: sfondo finestra installazione in inglese
 
 - [CHORE] La scritta nella finestra di installazione del DMG macOS è ora in inglese ("Drag CLACOROO to the Applications folder")

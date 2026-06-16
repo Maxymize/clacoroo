@@ -29,9 +29,7 @@ jobs:
               --title "$TAG — CLACOROO" \
               --latest \
               --notes-file - <<'EOF'
-          **IT** — Build multipiattaforma automatica (macOS · Windows · Linux). Vedi `CHANGELOG.md` per le novità.
-
-          **EN** — Automated multi-platform build (macOS · Windows · Linux). See `CHANGELOG.en.md` for what's new.
+          Automated multi-platform build (macOS · Windows · Linux). See `CHANGELOG.en.md` for what's new.
           EOF
           fi
 

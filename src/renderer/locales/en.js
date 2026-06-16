@@ -788,6 +788,21 @@ window.LOCALES.en = {
     bigGoToPlugin:   'Go to Plugins',
   },
 
+  // Changelog modal
+  changelog: {
+    current: 'current',
+  },
+
+  // Health issues (symbolic keys from markdown.js — main process)
+  health: {
+    missingName:        'Missing "name" field in frontmatter',
+    missingDescription: 'Missing "description" field in frontmatter',
+    descriptionTooShort:'Description too short (< 10 characters)',
+    missingFrontmatter: 'Missing or empty YAML frontmatter',
+    fileMissing:        'Missing file: {file}',
+    fileReadError:      'Read error: {error}',
+  },
+
   // Settings (sezione Impostazioni)
   settings: {
     language:         'Language',

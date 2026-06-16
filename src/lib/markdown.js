@@ -21,21 +21,21 @@ function parseFrontmatter(content) {
 
 function checkMarkdownHealth(filePath) {
   if (!fs.existsSync(filePath)) {
-    return { status: 'err', issues: ['File mancante: ' + path.basename(filePath)] };
+    return { status: 'err', issues: ['health.fileMissing:' + path.basename(filePath)] };
   }
   let content;
   try { content = fs.readFileSync(filePath, 'utf8'); }
-  catch (e) { return { status: 'err', issues: ['Errore lettura: ' + e.message] }; }
+  catch (e) { return { status: 'err', issues: ['health.fileReadError:' + e.message] }; }
 
   const fm = parseFrontmatter(content);
-  if (!fm) return { status: 'err', issues: ['Frontmatter YAML mancante o vuoto'] };
+  if (!fm) return { status: 'err', issues: ['health.missingFrontmatter'] };
 
   const issues = [];
-  if (!fm.name)        issues.push('Campo "name" mancante nel frontmatter');
-  if (!fm.description) issues.push('Campo "description" mancante nel frontmatter');
-  else if (fm.description.length < 10) issues.push('Description troppo corta (< 10 caratteri)');
+  if (!fm.name)        issues.push('health.missingName');
+  if (!fm.description) issues.push('health.missingDescription');
+  else if (fm.description.length < 10) issues.push('health.descriptionTooShort');
 
-  if (issues.some(i => i.includes('mancante'))) return { status: 'err', issues };
+  if (issues.some(i => i.includes('missingName') || i.includes('missingDescription'))) return { status: 'err', issues };
   if (issues.length) return { status: 'warn', issues };
   return { status: 'ok', issues: [] };
 }

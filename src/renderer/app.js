@@ -1946,11 +1946,6 @@ function renderPlugins() {
     return;
   }
 
-  // Stima contesto in cima — aggiornata in tempo reale a ogni toggle/enable/disable
-  const ctxSection = el('div', 'plugins-context-section');
-  wrap.appendChild(ctxSection);
-  loadPluginsContextBar(ctxSection, renderToken);
-
   // FILTER BAR
   const bar = el('div', 'filter-bar');
 
@@ -3241,6 +3236,13 @@ function isLocallyModified(item, kind) {
   return !!(state.modifiedFiles && state.modifiedFiles[modifiedFileKey(kind, item.fullId, item.name)]);
 }
 
+function translateHealthIssue(issue) {
+  if (issue.startsWith('health.fileMissing:'))    return t('health.fileMissing',    { file: issue.slice('health.fileMissing:'.length) });
+  if (issue.startsWith('health.fileReadError:'))  return t('health.fileReadError',  { error: issue.slice('health.fileReadError:'.length) });
+  if (t(issue) !== issue) return t(issue);
+  return issue;
+}
+
 // v1.0.96 — Pack M: builder card "vista ampia" per skill/agent.
 // Layout simile a .hook-card: header con name grande + plugin/mkt dot,
 // body con scope badge + health badge, footer con bottone "Apri preview".
@@ -3281,7 +3283,7 @@ function buildSkillAgentCard(item, kind) {
     hb.appendChild(document.createTextNode(item.health.status === 'err' ? t('badge.healthError') : t('badge.healthWarn')));
     const issues = item.health.issues || [];
     hb.title = t('pluginCard.healthLong', {
-      issues: issues.map(i => '  • ' + i).join('\n'),
+      issues: issues.map(i => '  • ' + translateHealthIssue(i)).join('\n'),
       repo: item.mkt || t('pluginCard.healthRepoFallback'),
     });
     badgeRow.appendChild(hb);
@@ -7034,7 +7036,7 @@ async function openChangelogModal() {
     const verBadge = el('span', 'changelog-version-badge', 'v' + v.version);
     cardHead.appendChild(verBadge);
     if (idx === 0) {
-      const currentLbl = el('span', 'changelog-current-tag', 'attuale');
+      const currentLbl = el('span', 'changelog-current-tag', t('changelog.current'));
       cardHead.appendChild(currentLbl);
     }
     const dateLbl = el('span', 'changelog-date', v.date);
@@ -7508,25 +7510,25 @@ function renderTermTabs() {
   if (!bar) return;
   bar.textContent = '';
   for (const id of termState.order) {
-    const t = termState.tabs.get(id);
-    if (!t) continue;
+    const tab = termState.tabs.get(id);
+    if (!tab) continue;
     const btn = document.createElement('button');
     btn.className = 'terminal-tab' + (id === termState.activeId ? ' active' : '');
     btn.dataset.tabId = id;
-    btn.title = `${t.shell}  •  ${t.cwd}`;
+    btn.title = `${tab.shell}  •  ${tab.cwd}`;
 
     // Status dot: idle (verde) di default, busy (arancio pulse) se attività
     // recente, dead (rosso) se processo terminato.
     const dot = document.createElement('span');
-    dot.className = 'terminal-tab-dot ' + (t.busy ? 'busy' : 'idle');
+    dot.className = 'terminal-tab-dot ' + (tab.busy ? 'busy' : 'idle');
     btn.appendChild(dot);
-    t.dotEl = dot;
+    tab.dotEl = dot;
 
     const lbl = document.createElement('span');
     lbl.className = 'terminal-tab-label';
-    lbl.textContent = termShortCwd(t.cwd);
+    lbl.textContent = termShortCwd(tab.cwd);
     btn.appendChild(lbl);
-    t.labelEl = lbl;
+    tab.labelEl = lbl;
 
     const close = document.createElement('span');
     close.className = 'terminal-tab-close';
