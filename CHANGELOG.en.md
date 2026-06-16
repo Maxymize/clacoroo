@@ -2,6 +2,10 @@
 
 > English translation of [CHANGELOG.md](./CHANGELOG.md) (Italian, canonical). Updated in sync with each release.
 
+## v1.1.31 — 2026-06-16 — DMG: installer window background in English
+
+- [CHORE] The text in the macOS DMG installer window is now in English ("Drag CLACOROO to the Applications folder")
+
 ## v1.1.30 — 2026-06-16 — macOS: Developer ID signing + automatic notarization in CI
 
 - [FEATURE] macOS DMGs produced by CI are now signed with a Developer ID certificate and notarized by Apple: no more "unverified developer" warning on launch. The GitHub Actions workflow imports the certificate into an ephemeral temporary keychain and runs `xcrun notarytool submit --wait` + `xcrun stapler staple` before publishing the installers
