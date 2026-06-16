@@ -168,13 +168,7 @@ Go to [Releases](https://github.com/Maxymize/clacoroo/releases) and download:
 
 Open the `.dmg`, drag CLACOROO into your Applications folder.
 
-> **macOS Gatekeeper** — the binary is ad-hoc signed (without Apple Developer ID notarization). The first time you open it, macOS will ask **"Are you sure you want to open this app downloaded from the Internet?"** → click **Open**. No Terminal commands required.
->
-> If you instead see **"CLACOROO is damaged and can't be opened"** (rare, happens if the DMG itself was flagged by your browser's quarantine), run this single command in Terminal before opening:
-> ```bash
-> xattr -cr ~/Downloads/CLACOROO-*-arm64.dmg
-> ```
-> Then re-open the DMG and proceed normally.
+> **macOS Gatekeeper** — CLACOROO is signed and notarized with an Apple Developer ID. The first time you open it, macOS may ask **"Are you sure you want to open this app downloaded from the Internet?"** → click **Open**.
 
 ### From source (all platforms)
 
