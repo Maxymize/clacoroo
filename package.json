@@ -76,7 +76,7 @@
         "NSHumanReadableCopyright": "Copyright © 2026 MAXYMIZE",
         "LSUIElement": false
       },
-      "identity": "Developer ID Application: Romano Maximilian Giurastante (32TPUB7AJG)"
+      "identity": "Romano Maximilian Giurastante (32TPUB7AJG)"
     },
     "dmg": {
       "title": "${productName} ${version}",
