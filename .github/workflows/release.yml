@@ -12,8 +12,27 @@ permissions:
   contents: write   # necessario per creare/aggiornare la release e caricare asset
 
 jobs:
+  # ── Verifica che package.json version corrisponda al tag ──
+  verify-version:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check tag matches package.json version
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          PKG_VERSION=$(node -p "require('./package.json').version")
+          TAG_VERSION="${TAG#v}"
+          if [ "$PKG_VERSION" != "$TAG_VERSION" ]; then
+            echo "ERRORE: package.json ha version \"$PKG_VERSION\" ma il tag è \"$TAG\"."
+            echo "Aggiorna package.json alla versione $TAG_VERSION e ri-pusha il tag."
+            exit 1
+          fi
+          echo "OK: package.json version $PKG_VERSION corrisponde al tag $TAG."
+
   # ── Crea la pre-release (gli altri job dipendono da questo) ──
   create-release:
+    needs: verify-version
     runs-on: ubuntu-latest
     steps:
       - name: Create or reuse pre-release
