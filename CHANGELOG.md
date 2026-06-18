@@ -4,7 +4,9 @@
 
 ## v1.1.34 — 2026-06-18 — Claude Config: editor dei permessi
 
-- [FEATURE] Nuova riga **Permessi** in Claude Config: gestisci le regole che decidono cosa Claude Code può fare senza chiedere (allow), cosa chiede sempre (ask) e cosa è vietato (deny), oltre alla modalità di default. Aggiungi e rimuovi regole con validazione del formato e un avviso quando una regola dà accesso troppo ampio. Le liste allow/deny/ask si applicano subito anche alle sessioni di Claude Code già aperte; la modalità di default vale per le nuove sessioni
+- [FEATURE] Nuova riga **Permessi** in Claude Config: gestisci le regole che decidono cosa Claude Code può fare senza chiedere (allow), cosa chiede sempre (ask) e cosa è vietato (deny), oltre alla modalità di default. Liste comprimibili con ricerca, validazione del formato, avviso quando una regola dà accesso troppo ampio o è già presente in un'altra lista, e un pulsante per copiare al volo una regola da spostare tra le liste. Le liste allow/deny/ask si applicano subito anche alle sessioni di Claude Code già aperte; la modalità di default vale per le nuove sessioni
+- [FIX] Il badge "Disattivato" sulla card di un plugin e i dettagli della modale "Plugin per peso" (titolo, footer, percentuale context window) ora seguono la lingua dell'interfaccia (IT/EN) invece di restare in italiano fisso
+- [IMPROVEMENT] Il menu modello in "Plugin per peso" elenca dinamicamente i modelli misurati da Claude Code: si adatta da solo quando ne arrivano di nuovi, senza versioni cablate nel codice
 
 ## v1.1.33 — 2026-06-16 — API key: avviso saldo crediti esaurito
 

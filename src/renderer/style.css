@@ -4740,24 +4740,49 @@ body {
   border: 1px solid var(--color-border, var(--border));
   border-radius: 8px; padding: 12px; background: var(--surface2, rgba(255,255,255,.02));
 }
-.perm-list-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.perm-list-head {
+  display: flex; align-items: center; gap: 8px;
+  cursor: pointer; user-select: none; border-radius: 4px;
+}
+.perm-list-head:hover { background: rgba(255,255,255,.03); }
 .perm-list-title { font-weight: 600; font-size: 13px; }
 .perm-list-count { font-size: 11px; color: var(--text-muted); }
+.perm-list-chevron { margin-left: auto; color: var(--text-muted); font-size: 14px; transition: transform .2s ease; }
+.perm-list.collapsed .perm-list-chevron { transform: rotate(-90deg); }
 .perm-allow .perm-list-title { color: var(--green, #22c55e); }
 .perm-ask   .perm-list-title { color: var(--warning, #f59e0b); }
 .perm-deny  .perm-list-title { color: var(--red, #ef4444); }
 
-.perm-rules { display: flex; flex-direction: column; gap: 6px; }
-.perm-empty { font-size: 12px; color: var(--text-muted); font-style: italic; }
+/* Spiegazione inline: resta visibile anche a lista collassata */
+.perm-list-desc { font-size: 11px; color: var(--text-muted); line-height: 1.5; margin-top: 4px; }
+
+/* Corpo collassabile (regole + ricerca + aggiungi) */
+.perm-list-body { margin-top: 10px; }
+.perm-list.collapsed .perm-list-body { display: none; }
+.perm-list-search { width: 100%; margin-bottom: 8px; font-size: 12px; }
+
+/* Area regole scrollabile: liste lunghe non allungano la pagina */
+.perm-rules { display: flex; flex-direction: column; gap: 4px; max-height: 250px; overflow-y: auto; }
+.perm-empty { font-size: 12px; color: var(--text-muted); font-style: italic; padding: 2px 0; }
 .perm-rule {
   display: flex; align-items: center; justify-content: space-between; gap: 8px;
-  background: var(--bg, rgba(0,0,0,.2)); border-radius: 6px; padding: 5px 8px;
+  background: var(--bg, rgba(0,0,0,.2)); border-radius: 6px; padding: 4px 8px;
 }
-.perm-rule-text { font-family: "SF Mono", Menlo, monospace; font-size: 12px; color: var(--text); word-break: break-all; }
-.perm-rule-remove {
-  flex-shrink: 0; width: 20px; height: 20px; border: none; border-radius: 4px;
-  background: transparent; color: var(--text-muted); cursor: pointer; font-size: 15px; line-height: 1;
+.perm-rule-text { flex: 1; min-width: 0; font-family: "SF Mono", Menlo, monospace; font-size: 12px; color: var(--text); word-break: break-all; }
+.perm-rule-copy, .perm-rule-remove {
+  flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center;
+  width: 26px; height: 26px; border: none; border-radius: 5px; cursor: pointer; line-height: 1;
 }
+/* Copia: sfondo blu tenue così è visibile a riposo (non un glifo evanescente),
+   icona chiara, e margine per staccarla dalla × ed evitare click accidentali. */
+.perm-rule-copy {
+  margin-right: 8px;
+  color: var(--accent2, #6a9bcc);
+  background: color-mix(in srgb, var(--accent2, #6a9bcc) 14%, transparent);
+}
+.perm-rule-copy svg { width: 15px; height: 15px; }
+.perm-rule-copy:hover { background: color-mix(in srgb, var(--accent2, #6a9bcc) 30%, transparent); }
+.perm-rule-remove { font-size: 16px; color: var(--text-muted); background: transparent; }
 .perm-rule-remove:hover { background: rgba(239,68,68,.18); color: var(--red, #ef4444); }
 
 .perm-add { display: flex; gap: 6px; margin-top: 10px; }

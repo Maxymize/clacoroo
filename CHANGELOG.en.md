@@ -4,7 +4,9 @@
 
 ## v1.1.34 — 2026-06-18 — Claude Config: permissions editor
 
-- [FEATURE] New **Permissions** row in Claude Config: manage the rules that decide what Claude Code can do without asking (allow), what it always asks for (ask), and what is forbidden (deny), plus the default mode. Add and remove rules with format validation and a warning when a rule grants overly broad access. The allow/deny/ask lists apply immediately to already-open Claude Code sessions; the default mode applies to new sessions
+- [FEATURE] New **Permissions** row in Claude Config: manage the rules that decide what Claude Code can do without asking (allow), what it always asks for (ask), and what is forbidden (deny), plus the default mode. Collapsible lists with search, format validation, a warning when a rule grants overly broad access or already exists in another list, and a button to copy a rule on the fly to move it between lists. The allow/deny/ask lists apply immediately to already-open Claude Code sessions; the default mode applies to new sessions
+- [FIX] The "Disabled" badge on a plugin card and the details of the "Plugins by weight" modal (title, footer, context-window percentage) now follow the interface language (IT/EN) instead of staying in fixed Italian
+- [IMPROVEMENT] The model menu in "Plugins by weight" now dynamically lists the models measured by Claude Code: it adapts on its own when new ones appear, with no versions hard-coded
 
 ## v1.1.33 — 2026-06-16 — API key: low credit balance warning
 

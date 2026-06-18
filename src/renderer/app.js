@@ -298,8 +298,10 @@ const state = {
   // Chiave: `kind:fullId:name` (es. "skill:claude-mem@thedotmack:mcp-search").
   // Value: timestamp ISO ultima modifica.
   modifiedFiles: {},
-  // v1.0.109 — Modello selezionato per il token budget visualizzato
-  // ('sonnet' | 'opus'). Default Sonnet 4.6. Persisted in state.json.
+  // v1.0.109 — Modello selezionato per il token budget visualizzato.
+  // v1.1.34: ora è un id-modello completo (es. 'claude-sonnet-4-6'); i vecchi
+  // sentinel 'sonnet'/'opus' restano accettati e vengono migrati da
+  // resolveTokenModel(). Persisted in state.json.
   tokenModel: 'sonnet',
   // Scelta utente esplicita. Vuota = auto-detect OS ad ogni avvio.
   locale: '',
@@ -599,8 +601,8 @@ async function init() {
   if (appState.modifiedFiles && typeof appState.modifiedFiles === 'object') {
     state.modifiedFiles = appState.modifiedFiles;
   }
-  // v1.0.109 — restore tokenModel preferito
-  if (appState.tokenModel === 'opus' || appState.tokenModel === 'sonnet') {
+  // v1.0.109 — restore tokenModel preferito (id-modello completo o sentinel legacy)
+  if (typeof appState.tokenModel === 'string' && appState.tokenModel) {
     state.tokenModel = appState.tokenModel;
   }
   // v1.1.9 — restore notifiche quota (opt-out: false esplicito)
@@ -885,11 +887,19 @@ function processData() {
     const cache  = raw.cacheDetails[fullId] || {};
     const cat    = catalog[fullId] || {};
 
-    // v1.0.109 — Salvo tokens per ENTRAMBI i modelli (Opus 4.7 + Sonnet 4.6)
-    // così il renderer può switchare via state.tokenModel senza re-leggere il catalog.
-    const tokensSonnet = cat.tokens ? (cat.tokens['claude-sonnet-4-6'] || null) : null;
-    const tokensOpus   = cat.tokens ? (cat.tokens['claude-opus-4-7']   || null) : null;
-    const tokenInfo = tokensSonnet || tokensOpus || (cat.tokens ? Object.values(cat.tokens)[0] : null);
+    // v1.1.34 — tokensByModel keyed per id-modello reale presente nel
+    // plugin-catalog-cache.json (no hardcode): il menu modello si adatta ai
+    // modelli che Claude Code ha effettivamente misurato.
+    const tokensByModel = {};
+    if (cat.tokens) {
+      for (const [modelId, tv] of Object.entries(cat.tokens)) {
+        tokensByModel[modelId] = { always: tv.always_on || 0, invoke: tv.on_invoke || 0 };
+      }
+    }
+    // Badge "X tok" sulla card: preferisci Sonnet, poi Opus, poi il primo disponibile.
+    const tokenInfo = cat.tokens
+      ? (cat.tokens['claude-sonnet-4-6'] || cat.tokens['claude-opus-4-7'] || Object.values(cat.tokens)[0])
+      : null;
 
     return {
       fullId,
@@ -911,11 +921,7 @@ function processData() {
       scope:       'global',
       tokensAlways: tokenInfo?.always_on  || 0,
       tokensInvoke: tokenInfo?.on_invoke  || 0,
-      // v1.0.109 — Tokens per modello (Sonnet 4.6 e Opus 4.7) per il comparatore
-      tokensByModel: {
-        sonnet: { always: tokensSonnet?.always_on || 0, invoke: tokensSonnet?.on_invoke || 0 },
-        opus:   { always: tokensOpus?.always_on   || 0, invoke: tokensOpus?.on_invoke   || 0 },
-      },
+      tokensByModel,
     };
   });
 
@@ -1617,10 +1623,33 @@ function tokenValuesFor(p, model) {
   return { always: p.tokensAlways || 0, invoke: p.tokensInvoke || 0 };
 }
 
+// v1.1.34 — Modelli disponibili per il comparatore peso: derivati dagli id
+// realmente misurati nel catalog (es. 'claude-sonnet-4-6', 'claude-opus-4-7').
+// Ordine stabile: famiglia Sonnet, poi Opus, poi il resto in ordine alfabetico.
+function availableTokenModels(plugins) {
+  const ids = new Set();
+  (plugins || []).forEach(p => Object.keys(p.tokensByModel || {}).forEach(id => ids.add(id)));
+  const rank = id => id.includes('sonnet') ? 0 : id.includes('opus') ? 1 : 2;
+  return [...ids].sort((a, b) => rank(a) - rank(b) || a.localeCompare(b));
+}
+
+// Risolve state.tokenModel a un id valido fra quelli passati (vedi
+// availableTokenModels): migra i vecchi sentinel corti 'sonnet'/'opus' e fa
+// fallback al primo modello disponibile.
+function resolveTokenModel(models) {
+  if (!models.length) return null;
+  let sel = state.tokenModel;
+  if (sel === 'sonnet')     sel = models.find(m => m.includes('sonnet'));
+  else if (sel === 'opus')  sel = models.find(m => m.includes('opus'));
+  return (sel && models.includes(sel)) ? sel : models[0];
+}
+
 function renderTokenBudgetSection(container, plugins, opts = {}) {
   const mode = opts.mode || 'compact';
-  const model = state.tokenModel || 'sonnet';
-  const modelLabel = model === 'opus' ? 'Opus 4.7' : 'Sonnet 4.6';
+  const models = availableTokenModels(plugins);
+  const model = resolveTokenModel(models);
+  if (!model) return;
+  const modelLabel = formatModelName(model);
   const eligible = (plugins || []).filter(p => {
     if (p.scope !== 'global' || p.blocked) return false;
     const v = tokenValuesFor(p, model);
@@ -1634,13 +1663,10 @@ function renderTokenBudgetSection(container, plugins, opts = {}) {
   const modelSwitch = el('div', 'token-budget-model-switch');
   modelSwitch.appendChild(el('span', 'token-budget-model-label', t('token.modelLabel')));
   const sel = el('select', 'token-budget-model-select');
-  [
-    { v: 'sonnet', l: 'Sonnet 4.6' },
-    { v: 'opus',   l: 'Opus 4.7'   },
-  ].forEach(o => {
+  models.forEach(id => {
     const opt = document.createElement('option');
-    opt.value = o.v; opt.textContent = o.l;
-    if (o.v === model) opt.selected = true;
+    opt.value = id; opt.textContent = formatModelName(id);
+    if (id === model) opt.selected = true;
     sel.appendChild(opt);
   });
   sel.addEventListener('change', async () => {
@@ -1666,7 +1692,7 @@ function renderTokenBudgetSection(container, plugins, opts = {}) {
   summary.appendChild(el('span', 'token-budget-sub', t('tokenBudget.subtitle', { n: sorted.length, tok: formatTokenSize(totalInvoke) })));
   if (mode === 'full') {
     const pctCtx = ((totalAlways / 200000) * 100).toFixed(1);
-    summary.appendChild(el('span', 'token-budget-sub', '· ' + pctCtx + '% del context window (200K)'));
+    summary.appendChild(el('span', 'token-budget-sub', t('tokenBudget.pctContext', { pct: pctCtx })));
   }
   container.appendChild(summary);
 
@@ -1750,15 +1776,19 @@ function showTokenBudgetModal(plugins) {
   const header = el('div', 'md-header');
   const title  = el('div', 'md-title');
   title.appendChild(el('span', 'md-kind-badge md-kind-agent', 'analytics'));
-  title.appendChild(document.createTextNode(' Plugin per peso nel context window'));
+  title.appendChild(document.createTextNode(' ' + t('section.pluginPerPeso')));
   const closeBtn = el('button', 'md-close'); closeBtn.appendChild(icon('x'));
   header.appendChild(title);
   header.appendChild(closeBtn);
 
   const content = el('div', 'md-content');
-  // v1.0.109 — modello attualmente selezionato + comparison entrambi
-  const model = state.tokenModel || 'sonnet';
-  const modelLabel = model === 'opus' ? 'Opus 4.7' : 'Sonnet 4.6';
+  // v1.1.34 — modello attualmente selezionato (id reale) + baseline Sonnet/Opus
+  // per la colonna delta e il footer comparativo.
+  const models = availableTokenModels(plugins);
+  const model = resolveTokenModel(models);
+  const modelLabel = formatModelName(model);
+  const sonnetId = models.find(m => m.includes('sonnet'));
+  const opusId   = models.find(m => m.includes('opus'));
   // Intro
   const intro = el('p', 'token-budget-intro');
   intro.textContent = t('token.introTopN', { model: modelLabel });
@@ -1776,8 +1806,8 @@ function showTokenBudgetModal(plugins) {
   const maxAlways = sortedPlugins.reduce((m, p) => Math.max(m, tokenValuesFor(p, model).always), 1);
   sortedPlugins.forEach((p, i) => {
     const v = tokenValuesFor(p, model);
-    const vSonnet = tokenValuesFor(p, 'sonnet');
-    const vOpus   = tokenValuesFor(p, 'opus');
+    const vSonnet = sonnetId ? tokenValuesFor(p, sonnetId) : { always: 0, invoke: 0 };
+    const vOpus   = opusId   ? tokenValuesFor(p, opusId)   : { always: 0, invoke: 0 };
     const delta = vOpus.always - vSonnet.always;
     const deltaPct = vSonnet.always > 0 ? Math.round((delta / vSonnet.always) * 100) : 0;
     const tr = el('tr');
@@ -1822,12 +1852,17 @@ function showTokenBudgetModal(plugins) {
   // Footer totale
   const totalAlways = sortedPlugins.reduce((s, p) => s + tokenValuesFor(p, model).always, 0);
   const totalInvoke = sortedPlugins.reduce((s, p) => s + tokenValuesFor(p, model).invoke, 0);
-  const totalAlwaysSonnet = sortedPlugins.reduce((s, p) => s + tokenValuesFor(p, 'sonnet').always, 0);
-  const totalAlwaysOpus   = sortedPlugins.reduce((s, p) => s + tokenValuesFor(p, 'opus').always, 0);
+  const totalAlwaysSonnet = sonnetId ? sortedPlugins.reduce((s, p) => s + tokenValuesFor(p, sonnetId).always, 0) : 0;
+  const totalAlwaysOpus   = opusId   ? sortedPlugins.reduce((s, p) => s + tokenValuesFor(p, opusId).always, 0)   : 0;
   const footer = el('div', 'token-budget-modal-footer');
-  footer.textContent = modelLabel + ' totale: ' + formatTokenSize(totalAlways) + ' tok always-on (peso fisso) + ' +
-    t('tokenBudget.summaryAllInvoke', { tok: formatTokenSize(totalInvoke), sonnet: formatTokenSize(totalAlwaysSonnet) }) +
-    ' vs Opus ' + formatTokenSize(totalAlwaysOpus) + ' (delta ' + formatTokenSize(totalAlwaysOpus - totalAlwaysSonnet) + ' tok)';
+  footer.textContent = t('tokenBudget.modalFooter', {
+    model:  modelLabel,
+    always: formatTokenSize(totalAlways),
+    invoke: formatTokenSize(totalInvoke),
+    sonnet: formatTokenSize(totalAlwaysSonnet),
+    opus:   formatTokenSize(totalAlwaysOpus),
+    delta:  formatTokenSize(totalAlwaysOpus - totalAlwaysSonnet),
+  });
   content.appendChild(footer);
 
   function onKey(e) { if (e.key === 'Escape') close(); }
@@ -2320,7 +2355,7 @@ function buildPluginCard(p) {
     t('pluginCard.hookTip'), openDetails);
   if (p.tokensAlways)   addBadge(p.tokensAlways + ' tok', 'b-tokens',
     t('pluginCard.alwaysTokensTip'));
-  if (p.blocked)        addBadge('DISATTIVATO', 'b-blocked');
+  if (p.blocked)        addBadge(t('badge.disabled'), 'b-blocked');
   body.appendChild(badges);
   card.appendChild(body);
 
@@ -5169,10 +5204,12 @@ function renderPermissionsPanel(container, settings) {
     bypassPermissions: 'config.permModeBypass',
   };
   const LISTS = [
-    { key: 'allow', labelKey: 'config.permAllow', cls: 'perm-allow' },
-    { key: 'ask',   labelKey: 'config.permAsk',   cls: 'perm-ask' },
-    { key: 'deny',  labelKey: 'config.permDeny',  cls: 'perm-deny' },
+    { key: 'allow', labelKey: 'config.permAllow', descKey: 'config.permAllowDesc', cls: 'perm-allow' },
+    { key: 'ask',   labelKey: 'config.permAsk',   descKey: 'config.permAskDesc',   cls: 'perm-ask' },
+    { key: 'deny',  labelKey: 'config.permDeny',  descKey: 'config.permDenyDesc',  cls: 'perm-deny' },
   ];
+  // Oltre questa soglia una lista parte collassata e mostra il campo ricerca.
+  const COLLAPSE_THRESHOLD = 8;
 
   // Stato locale del pannello (nome non-`state` per non shadoware il `state`
   // globale del modulo). Copia le 3 liste + defaultMode dal blocco corrente.
@@ -5207,6 +5244,16 @@ function renderPermissionsPanel(container, settings) {
     return false;
   }
 
+  // Se la regola esiste già in un'ALTRA lista, ritorna la label di quella lista
+  // (per avvisare del duplicato cross-lista: la precedenza è deny > ask > allow).
+  function findInOtherLists(rule, currentKey) {
+    for (const l of LISTS) {
+      if (l.key === currentKey) continue;
+      if (permState[l.key].includes(rule)) return t(l.labelKey);
+    }
+    return null;
+  }
+
   // Riga contenitore (riusa lo stile settings-row ma in versione "stacked").
   const row = el('div', 'settings-row settings-row-stacked');
   const head = el('div');
@@ -5236,41 +5283,84 @@ function renderPermissionsPanel(container, settings) {
   modeWrap.appendChild(el('div', 'perm-mode-note', t('config.permDefaultModeNote')));
   panel.appendChild(modeWrap);
 
-  // — 3 liste —
+  // — 3 liste (header collassabile + descrizione + corpo con ricerca/scroll) —
   LISTS.forEach((list) => {
+    let filterQuery = '';
+
     const block = el('div', 'perm-list ' + list.cls);
+    // Liste lunghe partono collassate (la pagina resta corta).
+    if (permState[list.key].length > COLLAPSE_THRESHOLD) block.classList.add('collapsed');
+
+    // Header cliccabile: titolo + conteggio + chevron. Toggla il corpo.
     const header = el('div', 'perm-list-head');
     header.appendChild(el('span', 'perm-list-title', t(list.labelKey)));
     const count = el('span', 'perm-list-count');
     header.appendChild(count);
+    header.appendChild(el('span', 'perm-list-chevron', '⌄'));
+    header.addEventListener('click', () => block.classList.toggle('collapsed'));
     block.appendChild(header);
 
-    const rulesWrap = el('div', 'perm-rules');
-    block.appendChild(rulesWrap);
+    // Spiegazione inline (cosa fa questa lista).
+    block.appendChild(el('div', 'perm-list-desc', t(list.descKey)));
 
-    // Ridisegna le regole della lista + il conteggio (unica fonte: permState).
+    // Corpo collassabile.
+    const body = el('div', 'perm-list-body');
+    block.appendChild(body);
+
+    // Campo ricerca: solo per liste lunghe (sotto soglia si vede già tutto).
+    if (permState[list.key].length > COLLAPSE_THRESHOLD) {
+      const search = el('input', 'config-input perm-list-search');
+      search.type = 'text';
+      search.setAttribute('placeholder', t('config.permSearchRules'));
+      search.addEventListener('input', () => { filterQuery = search.value.trim(); repaintRules(); });
+      body.appendChild(search);
+    }
+
+    const rulesWrap = el('div', 'perm-rules');
+    body.appendChild(rulesWrap);
+
+    // Ridisegna regole + conteggio (unica fonte: permState). Applica il filtro
+    // di ricerca corrente; gli indici di rimozione restano quelli REALI.
     function repaintRules() {
       count.textContent = t('config.permCount', { n: permState[list.key].length });
       rulesWrap.textContent = '';
       if (permState[list.key].length === 0) {
         rulesWrap.appendChild(el('div', 'perm-empty', t('config.permEmpty')));
-      } else {
-        permState[list.key].forEach((rule, idx) => {
-          const item = el('div', 'perm-rule');
-          item.appendChild(el('code', 'perm-rule-text', rule));
-          const rm = el('button', 'perm-rule-remove');
-          rm.type = 'button';
-          rm.textContent = '×';
-          rm.title = t('config.permRemoveTip');
-          rm.addEventListener('click', async () => {
-            const removed = permState[list.key].splice(idx, 1)[0];
-            if (await save()) repaintRules();
-            else permState[list.key].splice(idx, 0, removed);  // rollback
-          });
-          item.appendChild(rm);
-          rulesWrap.appendChild(item);
-        });
+        return;
       }
+      const q = filterQuery.toLowerCase();
+      const matching = permState[list.key]
+        .map((rule, idx) => ({ rule, idx }))
+        .filter(({ rule }) => !q || rule.toLowerCase().includes(q));
+      if (matching.length === 0) {
+        rulesWrap.appendChild(el('div', 'perm-empty', t('config.permNoMatch')));
+        return;
+      }
+      matching.forEach(({ rule, idx }) => {
+        const item = el('div', 'perm-rule');
+        item.appendChild(el('code', 'perm-rule-text', rule));
+        // Copia la regola negli appunti (per incollarla in un'altra lista).
+        const cp = el('button', 'perm-rule-copy');
+        cp.type = 'button';
+        cp.appendChild(icon('copy'));
+        cp.title = t('config.permCopyTip');
+        cp.addEventListener('click', async () => {
+          try { await navigator.clipboard.writeText(rule); toast(t('toast.copied'), 'success'); }
+          catch { /* clipboard non disponibile: l'utente può selezionare a mano */ }
+        });
+        item.appendChild(cp);
+        const rm = el('button', 'perm-rule-remove');
+        rm.type = 'button';
+        rm.textContent = '×';
+        rm.title = t('config.permRemoveTip');
+        rm.addEventListener('click', async () => {
+          const removed = permState[list.key].splice(idx, 1)[0];
+          if (await save()) repaintRules();
+          else permState[list.key].splice(idx, 0, removed);  // rollback
+        });
+        item.appendChild(rm);
+        rulesWrap.appendChild(item);
+      });
     }
     repaintRules();
 
@@ -5285,35 +5375,37 @@ function renderPermissionsPanel(container, settings) {
 
     function clearFeedback() { feedback.textContent = ''; feedback.className = 'perm-add-feedback'; }
 
-    // Mostra il feedback di validazione. Ritorna true se la regola è
-    // salvabile (valida, con o senza warning), false se il formato è invalido.
+    function setWarn(text) { feedback.textContent = text; feedback.className = 'perm-add-feedback perm-feedback-warn'; }
+
+    // Valuta la regola e mostra il feedback. Ritorna true se è salvabile
+    // (valida, con o senza warning), false se il formato è invalido (blocca).
     // Il glifo ⚠ è aggiunto via CSS (.perm-feedback-warn::before), non qui.
-    function showValidation(res) {
+    // Priorità warning: duplicato cross-lista (più inatteso) > rischio.
+    function showFeedback(val) {
+      const res = window.PermissionsValidator.validateRule(val, list.key);
       if (!res.valid) {
         feedback.textContent = t(res.error);
         feedback.className = 'perm-add-feedback perm-feedback-error';
         return false;
       }
-      if (res.warning) {
-        feedback.textContent = t(res.warning);
-        feedback.className = 'perm-add-feedback perm-feedback-warn';
-      } else {
-        clearFeedback();
-      }
+      const dupList = findInOtherLists(val, list.key);
+      if (dupList) setWarn(t('config.permWarnDuplicate', { list: dupList }));
+      else if (res.warning) setWarn(t(res.warning));
+      else clearFeedback();
       return true;
     }
 
     inp.addEventListener('input', () => {
       const val = inp.value.trim();
       if (!val) { clearFeedback(); return; }
-      showValidation(window.PermissionsValidator.validateRule(val, list.key));
+      showFeedback(val);
     });
 
     addBtn.addEventListener('click', async () => {
       const val = inp.value.trim();
       if (!val) return;
       // formato invalido → non salva (il warning invece NON blocca)
-      if (!showValidation(window.PermissionsValidator.validateRule(val, list.key))) return;
+      if (!showFeedback(val)) return;
       permState[list.key].push(val);
       if (await save()) {
         inp.value = '';
@@ -5326,9 +5418,9 @@ function renderPermissionsPanel(container, settings) {
 
     addWrap.appendChild(inp);
     addWrap.appendChild(addBtn);
-    block.appendChild(addWrap);
-    block.appendChild(feedback);
-    block.appendChild(el('div', 'perm-hint', t('config.permHintExamples')));
+    body.appendChild(addWrap);
+    body.appendChild(feedback);
+    body.appendChild(el('div', 'perm-hint', t('config.permHintExamples')));
     panel.appendChild(block);
   });
 
