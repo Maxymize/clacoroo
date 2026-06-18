@@ -4723,3 +4723,50 @@ body {
 }
 .hook-dep-pill.dep-ok   { background: rgba(34,197,94,.18);  color: #4ade80; border: 1px solid rgba(34,197,94,.30); }
 .hook-dep-pill.dep-miss { background: rgba(245,158,11,.18); color: #fbbf24; border: 1px solid rgba(245,158,11,.36); }
+
+/* v1.1.xx — Editor permessi in Claude Config */
+.settings-row-stacked { flex-direction: column; align-items: stretch; gap: 14px; }
+.perm-panel { display: flex; flex-direction: column; gap: 16px; }
+
+.perm-mode { display: flex; flex-direction: column; gap: 6px; }
+.perm-mode-label { font-size: 12px; color: var(--text-muted); }
+.perm-mode-note {
+  font-size: 11px; color: var(--text-muted); line-height: 1.5;
+  border-left: 2px solid var(--accent2, #6a9bcc);
+  padding-left: 10px; margin-top: 4px;
+}
+
+.perm-list {
+  border: 1px solid var(--color-border, var(--border));
+  border-radius: 8px; padding: 12px; background: var(--surface2, rgba(255,255,255,.02));
+}
+.perm-list-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.perm-list-title { font-weight: 600; font-size: 13px; }
+.perm-list-count { font-size: 11px; color: var(--text-muted); }
+.perm-allow .perm-list-title { color: var(--green, #22c55e); }
+.perm-ask   .perm-list-title { color: var(--warning, #f59e0b); }
+.perm-deny  .perm-list-title { color: var(--red, #ef4444); }
+
+.perm-rules { display: flex; flex-direction: column; gap: 6px; }
+.perm-empty { font-size: 12px; color: var(--text-muted); font-style: italic; }
+.perm-rule {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  background: var(--bg, rgba(0,0,0,.2)); border-radius: 6px; padding: 5px 8px;
+}
+.perm-rule-text { font-family: "SF Mono", Menlo, monospace; font-size: 12px; color: var(--text); word-break: break-all; }
+.perm-rule-remove {
+  flex-shrink: 0; width: 20px; height: 20px; border: none; border-radius: 4px;
+  background: transparent; color: var(--text-muted); cursor: pointer; font-size: 15px; line-height: 1;
+}
+.perm-rule-remove:hover { background: rgba(239,68,68,.18); color: var(--red, #ef4444); }
+
+.perm-add { display: flex; gap: 6px; margin-top: 10px; }
+.perm-add-input {
+  flex: 1; font-family: "SF Mono", Menlo, monospace; font-size: 12px;
+  padding: 6px 8px; border-radius: 6px;
+  border: 1px solid var(--color-border, var(--border)); background: var(--bg, rgba(0,0,0,.2)); color: var(--text);
+}
+.perm-add-feedback { font-size: 11px; line-height: 1.4; margin-top: 6px; min-height: 0; }
+.perm-feedback-error { color: var(--red, #ef4444); }
+.perm-feedback-warn  { color: var(--warning, #f59e0b); }
+.perm-hint { font-size: 10px; color: var(--text-muted); margin-top: 6px; line-height: 1.4; }
