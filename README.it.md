@@ -26,16 +26,9 @@ Gestisci plugin, marketplace, skill, agent, MCP server, hook, statistiche, quote
 
 <div align="center">
 
-| | | |
-|:---:|:---:|:---:|
-| | | |
-|:---:|:---:|:---:|
-| <img src="assets/screenshots/clacoroo-dashboard-1.png" width="260" alt="Dashboard"/> | <img src="assets/screenshots/clacoroo-plugins-1.png" width="260" alt="Plugin"/> | <img src="assets/screenshots/clacoroo-marketplace-1.png" width="260" alt="Marketplace"/> |
-| **Dashboard** | **Plugin** | **Marketplace** |
-| <img src="assets/screenshots/clacoroo-skills-1.png" width="260" alt="Skill"/> | <img src="assets/screenshots/clacoroo-mcp-1.png" width="260" alt="MCP"/> | <img src="assets/screenshots/clacoroo-stats-1.png" width="260" alt="Statistiche"/> |
-| **Skill** | **MCP server** | **Statistiche** |
-| <img src="assets/screenshots/clacoroo-terminal-1.png" width="260" alt="Terminale"/> | | |
-| **Terminale** | | |
+### 📸 Screenshot e documentazione → [www.clacoroo.app](https://www.clacoroo.app)
+
+Sul sito trovi la galleria completa e la documentazione.
 
 </div>
 

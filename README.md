@@ -26,16 +26,9 @@ Manage plugins, marketplaces, skills, agents, MCP servers, hooks, stats, quotas 
 
 <div align="center">
 
-| | | |
-|:---:|:---:|:---:|
-| | | |
-|:---:|:---:|:---:|
-| <img src="assets/screenshots/clacoroo-dashboard-1.png" width="260" alt="Dashboard"/> | <img src="assets/screenshots/clacoroo-plugins-1.png" width="260" alt="Plugins"/> | <img src="assets/screenshots/clacoroo-marketplace-1.png" width="260" alt="Marketplaces"/> |
-| **Dashboard** | **Plugins** | **Marketplaces** |
-| <img src="assets/screenshots/clacoroo-skills-1.png" width="260" alt="Skills"/> | <img src="assets/screenshots/clacoroo-mcp-1.png" width="260" alt="MCP"/> | <img src="assets/screenshots/clacoroo-stats-1.png" width="260" alt="Stats"/> |
-| **Skills** | **MCP servers** | **Stats** |
-| <img src="assets/screenshots/clacoroo-terminal-1.png" width="260" alt="Terminal"/> | | |
-| **Terminal** | | |
+### 📸 Screenshots & docs → [www.clacoroo.app](https://www.clacoroo.app)
+
+The website has the full gallery and documentation.
 
 </div>
 
