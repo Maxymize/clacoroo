@@ -107,6 +107,13 @@ const MARKETPLACES = path.join(PLUGINS_DIR, 'known_marketplaces.json');
 const CATALOG      = path.join(PLUGINS_DIR, 'plugin-catalog-cache.json');
 const SETTINGS     = path.join(CLAUDE_DIR, 'settings.json');
 
+// Hash SHA-1 dell'ultimo contenuto noto di ogni file di config osservato.
+// Module-level così sia il file-watcher (popola + confronta) sia gli handler
+// che scrivono i file (es. update-settings) possono aggiornarlo: quando l'app
+// scrive un file, registra qui il nuovo hash → il watcher riconosce la propria
+// scrittura (hash identico) e NON emette 'config-changed' (niente full reload).
+const lastConfigHash = {};
+
 /* ── FIND CLAUDE BINARY ────────────────────────────────────────────────── */
 
 function findClaudeBin() {
@@ -580,7 +587,6 @@ function createWindow() {
   // non influenzano la UI di CLACOROO). Combo:
   //   (a) Diff content via hash SHA-1 → ignora se contenuto identico
   //   (b) Debounce 2s → aggrega burst di scritture (write + fsync, ecc.)
-  const lastConfigHash = {};
   let configChangeTimer = null;
   function notifyConfigChanged() {
     if (configChangeTimer) clearTimeout(configChangeTimer);
@@ -1214,7 +1220,12 @@ ipcMain.handle('update-settings', async (_e, patch) => {
   try {
     const current = safeReadJson(SETTINGS, {});
     const next = { ...current, ...patch };
-    fs.writeFileSync(SETTINGS, JSON.stringify(next, null, 2), 'utf8');
+    const jsonStr = JSON.stringify(next, null, 2);
+    fs.writeFileSync(SETTINGS, jsonStr, 'utf8');
+    // Registra l'hash della nostra scrittura: il file-watcher la riconoscerà
+    // (hash identico) e NON emetterà config-changed → niente full reload della
+    // UI per le modifiche fatte dall'app stessa (es. editor permessi, config).
+    lastConfigHash[SETTINGS] = crypto.createHash('sha1').update(jsonStr).digest('hex');
     STATS_CACHE = null;  // invalida cache server-side (settings cambiati)
     return { success: true };
   } catch (e) {
