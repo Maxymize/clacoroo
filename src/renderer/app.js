@@ -5111,6 +5111,9 @@ function renderConfigContent(container, data) {
   configRow('language', t('config.languageLabel'), 'select',
     ['', 'English', 'Italian', 'Spanish', 'French', 'German', 'Portuguese', 'Japanese', 'Chinese'],
     t('config.languageDesc'));
+
+  // v1.1.xx — Editor permessi (allow/deny/ask + defaultMode) → settings.permissions
+  renderPermissionsPanel(container, settings);
 }
 
 // Riga custom per voice.enabled (campo nested in settings.json — lo schema
@@ -5148,6 +5151,180 @@ function voiceConfigRow(container, settings) {
     }
   });
   row.appendChild(toggleWrap);
+  container.appendChild(row);
+}
+
+// v1.1.xx — Pannello editor permessi. Edita settings.permissions (allow/deny/
+// ask + defaultMode) in ~/.claude/settings.json globale. Le 3 liste si
+// ricaricano live nelle sessioni Claude Code aperte; defaultMode solo nelle
+// nuove (vedi nota i18n permDefaultModeNote). Validazione via
+// window.PermissionsValidator. Scrittura via updateSettings (merge shallow:
+// passiamo l'intero blocco permissions ricostruito).
+function renderPermissionsPanel(container, settings) {
+  const MODES = ['default', 'acceptEdits', 'plan', 'bypassPermissions'];
+  const MODE_KEYS = {
+    default: 'config.permModeDefault',
+    acceptEdits: 'config.permModeAcceptEdits',
+    plan: 'config.permModePlan',
+    bypassPermissions: 'config.permModeBypass',
+  };
+  const LISTS = [
+    { key: 'allow', labelKey: 'config.permAllow', cls: 'perm-allow' },
+    { key: 'ask',   labelKey: 'config.permAsk',   cls: 'perm-ask' },
+    { key: 'deny',  labelKey: 'config.permDeny',  cls: 'perm-deny' },
+  ];
+
+  // Stato locale: copia profonda del blocco permissions corrente.
+  const perm = settings.permissions || {};
+  const state = {
+    allow: Array.isArray(perm.allow) ? [...perm.allow] : [],
+    deny:  Array.isArray(perm.deny)  ? [...perm.deny]  : [],
+    ask:   Array.isArray(perm.ask)   ? [...perm.ask]   : [],
+    defaultMode: perm.defaultMode || 'default',
+  };
+
+  // Scrive l'intero blocco permissions ricostruito (merge shallow di
+  // update-settings sostituisce 'permissions' preservando il resto).
+  async function save() {
+    const next = {
+      allow: state.allow,
+      deny:  state.deny,
+      ask:   state.ask,
+      defaultMode: state.defaultMode,
+    };
+    lastInternalSettingsWrite = Date.now();
+    const r = await window.claudeAPI.updateSettings({ permissions: next });
+    if (r.success) {
+      settings.permissions = next;
+      if (statsCache?.settings) statsCache.settings.permissions = next;
+      return true;
+    }
+    toast(t('config.permSaveError', { msg: r.error || '?' }), 'error');
+    return false;
+  }
+
+  // Riga contenitore (riusa lo stile settings-row ma in versione "stacked").
+  const row = el('div', 'settings-row settings-row-stacked');
+  const head = el('div');
+  head.appendChild(el('div', 'settings-row-label', t('config.permTitle')));
+  head.appendChild(el('div', 'settings-row-desc', t('config.permDesc')));
+  row.appendChild(head);
+
+  const panel = el('div', 'perm-panel');
+  row.appendChild(panel);
+
+  // — defaultMode dropdown + nota live-reload —
+  const modeWrap = el('div', 'perm-mode');
+  modeWrap.appendChild(el('label', 'perm-mode-label', t('config.permDefaultMode')));
+  const sel = el('select', 'config-select');
+  MODES.forEach((m) => {
+    const opt = el('option', null, t(MODE_KEYS[m]));
+    opt.value = m;
+    if (m === state.defaultMode) opt.selected = true;
+    sel.appendChild(opt);
+  });
+  sel.addEventListener('change', async () => {
+    const prev = state.defaultMode;
+    state.defaultMode = sel.value;
+    if (!(await save())) { state.defaultMode = prev; sel.value = prev; }
+  });
+  modeWrap.appendChild(sel);
+  modeWrap.appendChild(el('div', 'perm-mode-note', t('config.permDefaultModeNote')));
+  panel.appendChild(modeWrap);
+
+  // — 3 liste —
+  LISTS.forEach((list) => {
+    const block = el('div', 'perm-list ' + list.cls);
+    const header = el('div', 'perm-list-head');
+    header.appendChild(el('span', 'perm-list-title', t(list.labelKey)));
+    const count = el('span', 'perm-list-count', t('config.permCount', { n: state[list.key].length }));
+    header.appendChild(count);
+    block.appendChild(header);
+
+    const rulesWrap = el('div', 'perm-rules');
+    block.appendChild(rulesWrap);
+
+    function repaintRules() {
+      rulesWrap.textContent = '';
+      if (state[list.key].length === 0) {
+        rulesWrap.appendChild(el('div', 'perm-empty', t('config.permEmpty')));
+      } else {
+        state[list.key].forEach((rule, idx) => {
+          const item = el('div', 'perm-rule');
+          item.appendChild(el('code', 'perm-rule-text', rule));
+          const rm = el('button', 'perm-rule-remove');
+          rm.type = 'button';
+          rm.textContent = '×';
+          rm.title = t('config.permRemoveTip');
+          rm.addEventListener('click', async () => {
+            const removed = state[list.key].splice(idx, 1)[0];
+            if (await save()) {
+              count.textContent = t('config.permCount', { n: state[list.key].length });
+              repaintRules();
+            } else {
+              state[list.key].splice(idx, 0, removed);  // rollback
+            }
+          });
+          item.appendChild(rm);
+          rulesWrap.appendChild(item);
+        });
+      }
+    }
+    repaintRules();
+
+    // — input aggiungi regola —
+    const addWrap = el('div', 'perm-add');
+    const inp = el('input', 'perm-add-input');
+    inp.type = 'text';
+    inp.setAttribute('placeholder', t('config.permAddPlaceholder'));
+    const addBtn = el('button', 'btn btn-sm btn-primary', t('config.permAddBtn'));
+    addBtn.type = 'button';
+    const feedback = el('div', 'perm-add-feedback');  // error rosso / warning giallo
+
+    function clearFeedback() { feedback.textContent = ''; feedback.className = 'perm-add-feedback'; }
+
+    inp.addEventListener('input', () => {
+      clearFeedback();
+      const val = inp.value.trim();
+      if (!val) return;
+      const res = window.PermissionsValidator.validateRule(val, list.key);
+      if (!res.valid) {
+        feedback.textContent = t(res.error);
+        feedback.className = 'perm-add-feedback perm-feedback-error';
+      } else if (res.warning) {
+        feedback.textContent = '⚠ ' + t(res.warning);
+        feedback.className = 'perm-add-feedback perm-feedback-warn';
+      }
+    });
+
+    addBtn.addEventListener('click', async () => {
+      const val = inp.value.trim();
+      if (!val) return;
+      const res = window.PermissionsValidator.validateRule(val, list.key);
+      if (!res.valid) {
+        feedback.textContent = t(res.error);
+        feedback.className = 'perm-add-feedback perm-feedback-error';
+        return;  // formato invalido → non salva (warning invece NON blocca)
+      }
+      state[list.key].push(val);
+      if (await save()) {
+        inp.value = '';
+        clearFeedback();
+        count.textContent = t('config.permCount', { n: state[list.key].length });
+        repaintRules();
+      } else {
+        state[list.key].pop();  // rollback
+      }
+    });
+
+    addWrap.appendChild(inp);
+    addWrap.appendChild(addBtn);
+    block.appendChild(addWrap);
+    block.appendChild(feedback);
+    block.appendChild(el('div', 'perm-hint', t('config.permHintExamples')));
+    panel.appendChild(block);
+  });
+
   container.appendChild(row);
 }
 
