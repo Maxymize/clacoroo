@@ -4761,12 +4761,11 @@ body {
 .perm-rule-remove:hover { background: rgba(239,68,68,.18); color: var(--red, #ef4444); }
 
 .perm-add { display: flex; gap: 6px; margin-top: 10px; }
-.perm-add-input {
-  flex: 1; font-family: "SF Mono", Menlo, monospace; font-size: 12px;
-  padding: 6px 8px; border-radius: 6px;
-  border: 1px solid var(--color-border, var(--border)); background: var(--bg, rgba(0,0,0,.2)); color: var(--text);
-}
+/* Eredita box-style da .config-input; override solo layout + font monospace
+   (le regole sono tool name, non prosa). */
+.perm-add-input { flex: 1; font-family: "SF Mono", "Fira Code", Menlo, monospace; }
 .perm-add-feedback { font-size: 11px; line-height: 1.4; margin-top: 6px; min-height: 0; }
 .perm-feedback-error { color: var(--red, #ef4444); }
 .perm-feedback-warn  { color: var(--warning, #f59e0b); }
+.perm-feedback-warn::before { content: '⚠ '; }
 .perm-hint { font-size: 10px; color: var(--text-muted); margin-top: 6px; line-height: 1.4; }

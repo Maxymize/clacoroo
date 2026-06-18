@@ -37,14 +37,14 @@ function parseRule(raw) {
   if (!s) return null;
   const open = s.indexOf('(');
   if (open === -1) {
-    // tool nudo: solo identificatore (lettere/numeri/_, e mcp__...)
-    return /^[A-Za-z_][A-Za-z0-9_]*$/.test(s) ? { tool: s, specifier: null } : null;
+    // tool nudo: identificatore (lettere/numeri/_/-, es. mcp__my-server__tool)
+    return /^[A-Za-z_][A-Za-z0-9_-]*$/.test(s) ? { tool: s, specifier: null } : null;
   }
   // deve chiudere esattamente all'ultimo char e non avere altre parentesi
   if (s[s.length - 1] !== ')') return null;
   const tool = s.slice(0, open);
   const specifier = s.slice(open + 1, s.length - 1);
-  if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(tool)) return null;   // nome tool valido
+  if (!/^[A-Za-z_][A-Za-z0-9_-]*$/.test(tool)) return null;  // nome tool valido (anche MCP con trattini)
   if (specifier.length === 0) return null;                    // Bash() invalido
   if (specifier.indexOf('(') !== -1 || specifier.indexOf(')') !== -1) return null; // parentesi annidate/extra
   return { tool, specifier };
@@ -58,7 +58,7 @@ function validateRule(raw, listKey) {
 
   let warning;
   const isMcp = parsed.tool.startsWith('mcp__');
-  if (!isMcp && KNOWN_TOOLS.indexOf(parsed.tool) === -1) {
+  if (!isMcp && !KNOWN_TOOLS.includes(parsed.tool)) {
     warning = 'config.permWarnUnknownTool';
   }
   if (listKey === 'allow') {

@@ -5174,9 +5174,10 @@ function renderPermissionsPanel(container, settings) {
     { key: 'deny',  labelKey: 'config.permDeny',  cls: 'perm-deny' },
   ];
 
-  // Stato locale: copia profonda del blocco permissions corrente.
+  // Stato locale del pannello (nome non-`state` per non shadoware il `state`
+  // globale del modulo). Copia le 3 liste + defaultMode dal blocco corrente.
   const perm = settings.permissions || {};
-  const state = {
+  const permState = {
     allow: Array.isArray(perm.allow) ? [...perm.allow] : [],
     deny:  Array.isArray(perm.deny)  ? [...perm.deny]  : [],
     ask:   Array.isArray(perm.ask)   ? [...perm.ask]   : [],
@@ -5184,13 +5185,16 @@ function renderPermissionsPanel(container, settings) {
   };
 
   // Scrive l'intero blocco permissions ricostruito (merge shallow di
-  // update-settings sostituisce 'permissions' preservando il resto).
+  // update-settings sostituisce 'permissions' preservando il resto del file).
+  // Spread di `perm` PRIMA delle 4 chiavi gestite: preserva eventuali campi
+  // non gestiti dal pannello (es. additionalDirectories) o futuri.
   async function save() {
     const next = {
-      allow: state.allow,
-      deny:  state.deny,
-      ask:   state.ask,
-      defaultMode: state.defaultMode,
+      ...perm,
+      allow: permState.allow,
+      deny:  permState.deny,
+      ask:   permState.ask,
+      defaultMode: permState.defaultMode,
     };
     lastInternalSettingsWrite = Date.now();
     const r = await window.claudeAPI.updateSettings({ permissions: next });
@@ -5220,13 +5224,13 @@ function renderPermissionsPanel(container, settings) {
   MODES.forEach((m) => {
     const opt = el('option', null, t(MODE_KEYS[m]));
     opt.value = m;
-    if (m === state.defaultMode) opt.selected = true;
+    if (m === permState.defaultMode) opt.selected = true;
     sel.appendChild(opt);
   });
   sel.addEventListener('change', async () => {
-    const prev = state.defaultMode;
-    state.defaultMode = sel.value;
-    if (!(await save())) { state.defaultMode = prev; sel.value = prev; }
+    const prev = permState.defaultMode;
+    permState.defaultMode = sel.value;
+    if (!(await save())) { permState.defaultMode = prev; sel.value = prev; }
   });
   modeWrap.appendChild(sel);
   modeWrap.appendChild(el('div', 'perm-mode-note', t('config.permDefaultModeNote')));
@@ -5237,19 +5241,21 @@ function renderPermissionsPanel(container, settings) {
     const block = el('div', 'perm-list ' + list.cls);
     const header = el('div', 'perm-list-head');
     header.appendChild(el('span', 'perm-list-title', t(list.labelKey)));
-    const count = el('span', 'perm-list-count', t('config.permCount', { n: state[list.key].length }));
+    const count = el('span', 'perm-list-count');
     header.appendChild(count);
     block.appendChild(header);
 
     const rulesWrap = el('div', 'perm-rules');
     block.appendChild(rulesWrap);
 
+    // Ridisegna le regole della lista + il conteggio (unica fonte: permState).
     function repaintRules() {
+      count.textContent = t('config.permCount', { n: permState[list.key].length });
       rulesWrap.textContent = '';
-      if (state[list.key].length === 0) {
+      if (permState[list.key].length === 0) {
         rulesWrap.appendChild(el('div', 'perm-empty', t('config.permEmpty')));
       } else {
-        state[list.key].forEach((rule, idx) => {
+        permState[list.key].forEach((rule, idx) => {
           const item = el('div', 'perm-rule');
           item.appendChild(el('code', 'perm-rule-text', rule));
           const rm = el('button', 'perm-rule-remove');
@@ -5257,13 +5263,9 @@ function renderPermissionsPanel(container, settings) {
           rm.textContent = '×';
           rm.title = t('config.permRemoveTip');
           rm.addEventListener('click', async () => {
-            const removed = state[list.key].splice(idx, 1)[0];
-            if (await save()) {
-              count.textContent = t('config.permCount', { n: state[list.key].length });
-              repaintRules();
-            } else {
-              state[list.key].splice(idx, 0, removed);  // rollback
-            }
+            const removed = permState[list.key].splice(idx, 1)[0];
+            if (await save()) repaintRules();
+            else permState[list.key].splice(idx, 0, removed);  // rollback
           });
           item.appendChild(rm);
           rulesWrap.appendChild(item);
@@ -5274,7 +5276,7 @@ function renderPermissionsPanel(container, settings) {
 
     // — input aggiungi regola —
     const addWrap = el('div', 'perm-add');
-    const inp = el('input', 'perm-add-input');
+    const inp = el('input', 'config-input perm-add-input');
     inp.type = 'text';
     inp.setAttribute('placeholder', t('config.permAddPlaceholder'));
     const addBtn = el('button', 'btn btn-sm btn-primary', t('config.permAddBtn'));
@@ -5283,37 +5285,42 @@ function renderPermissionsPanel(container, settings) {
 
     function clearFeedback() { feedback.textContent = ''; feedback.className = 'perm-add-feedback'; }
 
-    inp.addEventListener('input', () => {
-      clearFeedback();
-      const val = inp.value.trim();
-      if (!val) return;
-      const res = window.PermissionsValidator.validateRule(val, list.key);
+    // Mostra il feedback di validazione. Ritorna true se la regola è
+    // salvabile (valida, con o senza warning), false se il formato è invalido.
+    // Il glifo ⚠ è aggiunto via CSS (.perm-feedback-warn::before), non qui.
+    function showValidation(res) {
       if (!res.valid) {
         feedback.textContent = t(res.error);
         feedback.className = 'perm-add-feedback perm-feedback-error';
-      } else if (res.warning) {
-        feedback.textContent = '⚠ ' + t(res.warning);
-        feedback.className = 'perm-add-feedback perm-feedback-warn';
+        return false;
       }
+      if (res.warning) {
+        feedback.textContent = t(res.warning);
+        feedback.className = 'perm-add-feedback perm-feedback-warn';
+      } else {
+        clearFeedback();
+      }
+      return true;
+    }
+
+    inp.addEventListener('input', () => {
+      const val = inp.value.trim();
+      if (!val) { clearFeedback(); return; }
+      showValidation(window.PermissionsValidator.validateRule(val, list.key));
     });
 
     addBtn.addEventListener('click', async () => {
       const val = inp.value.trim();
       if (!val) return;
-      const res = window.PermissionsValidator.validateRule(val, list.key);
-      if (!res.valid) {
-        feedback.textContent = t(res.error);
-        feedback.className = 'perm-add-feedback perm-feedback-error';
-        return;  // formato invalido → non salva (warning invece NON blocca)
-      }
-      state[list.key].push(val);
+      // formato invalido → non salva (il warning invece NON blocca)
+      if (!showValidation(window.PermissionsValidator.validateRule(val, list.key))) return;
+      permState[list.key].push(val);
       if (await save()) {
         inp.value = '';
         clearFeedback();
-        count.textContent = t('config.permCount', { n: state[list.key].length });
         repaintRules();
       } else {
-        state[list.key].pop();  // rollback
+        permState[list.key].pop();  // rollback
       }
     });
 
