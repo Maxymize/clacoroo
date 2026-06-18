@@ -2,6 +2,15 @@
 
 > English translation of [CHANGELOG.md](./CHANGELOG.md) (Italian, canonical). Updated in sync with each release.
 
+## v1.1.34 — 2026-06-18 — Claude Config: permissions editor
+
+- [FEATURE] New **Permissions** row in Claude Config: manage the rules that decide what Claude Code can do without asking (allow), what it always asks for (ask), and what is forbidden (deny), plus the default mode. Add and remove rules with format validation and a warning when a rule grants overly broad access. The allow/deny/ask lists apply immediately to already-open Claude Code sessions; the default mode applies to new sessions
+
+## v1.1.33 — 2026-06-16 — API key: low credit balance warning
+
+- [FIX] When testing the Claude API key and the account has insufficient credit (HTTP 402), CLACOROO now shows a clear warning ("⚠ Credit balance too low — add funds at platform.anthropic.com/settings/billing") instead of a generic HTTP error
+- [DOCS] README (EN+IT): app screenshot grid + updated Gatekeeper note
+
 ## v1.1.32 — 2026-06-16 — Fix i18n: changelog badge, health issues, terminal
 
 - [FIX] "Current" badge in the Changelog modal now follows the interface language (IT/EN)
