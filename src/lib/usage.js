@@ -21,21 +21,22 @@ const fs    = require('fs');
 //     { claudeAiOauth: { accessToken, refreshToken, expiresAt, scopes,
 //                        subscriptionType, rateLimitTier } }
 //
-//   ENDPOINTS:
-//     - Refresh: POST https://platform.claude.com/v1/oauth/token
-//     - Usage:   GET  https://api.anthropic.com/api/oauth/usage
-//                Header obbligatorio: anthropic-beta: oauth-2025-04-20
+//   ENDPOINT:
+//     - Usage: GET https://api.anthropic.com/api/oauth/usage
+//              Header obbligatorio: anthropic-beta: oauth-2025-04-20
 //
-// CLACOROO non scrive MAI nel keychain/Credential Manager/file (no rischio
-// corruzione credenziali). Il refresh ottenuto è mantenuto solo in memory
-// del processo main.
+// CLACOROO non scrive MAI nel keychain/Credential Manager/file E, da v1.1.35,
+// non rinnova MAI il token OAuth. Motivo: il refresh token è rotante — chiamare
+// /oauth/token lo farebbe ruotare invalidando quello che Claude Code tiene su
+// disco, con conseguenti errori di auth/rate-limit nelle sessioni `claude`
+// aperte (era la causa degli avvisi "overload/limite" con CLACOROO aperto).
+// Leggiamo solo il token CORRENTE che Claude Code mantiene aggiornato; se è
+// scaduto lo segnaliamo soltanto (Claude Code lo rinnova da sé, noi lo
+// rileggiamo già valido al giro successivo).
 
 const KEYCHAIN_SERVICE = 'Claude Code-credentials';
 const USAGE_URL        = 'https://api.anthropic.com/api/oauth/usage';
-const TOKEN_URL        = 'https://platform.claude.com/v1/oauth/token';
-const CLIENT_ID        = '9d1c250a-e61b-44d9-88ed-5944d1962f5e';
 const BETA_HEADER      = 'oauth-2025-04-20';
-const REFRESH_WINDOW_MS = 5 * 60 * 1000;
 
 function getMacAccount() {
   return process.env.USER || os.userInfo().username || 'claude-code-user';
@@ -179,35 +180,6 @@ function httpRequestJson(method, url, headers, bodyObj) {
   });
 }
 
-let memoryRefreshedTokens = null;
-
-async function refreshTokens(tokens) {
-  if (!tokens.refreshToken) return { ok: false, error: 'Nessun refresh token disponibile' };
-  const r = await httpRequestJson('POST', TOKEN_URL, {}, {
-    grant_type:    'refresh_token',
-    refresh_token: tokens.refreshToken,
-    client_id:     CLIENT_ID,
-    scope:         tokens.scopes.length ? tokens.scopes.join(' ') :
-      'user:profile user:inference user:sessions:claude_code user:mcp_servers user:file_upload',
-  });
-  if (!r.ok) return { ok: false, error: 'Refresh fallito: ' + r.error };
-  const next = {
-    accessToken:      r.data.access_token,
-    refreshToken:     r.data.refresh_token || tokens.refreshToken,
-    expiresAt:        Date.now() + (r.data.expires_in || 3600) * 1000,
-    scopes:           r.data.scope ? r.data.scope.split(' ') : tokens.scopes,
-    subscriptionType: tokens.subscriptionType,
-    rateLimitTier:    tokens.rateLimitTier,
-  };
-  memoryRefreshedTokens = next;
-  return { ok: true, tokens: next };
-}
-
-function isTokenExpiringSoon(expiresAt) {
-  if (!expiresAt) return false;
-  return Date.now() + REFRESH_WINDOW_MS >= expiresAt;
-}
-
 function normalize(raw) {
   function band(b) {
     if (!b || b.utilization == null) return null;
@@ -222,50 +194,34 @@ function normalize(raw) {
 }
 
 async function getUsage() {
-  // 1. Tokens: prima in-memory rinnovati (se ancora freschi), altrimenti lettura sorgente
-  let tokens, source;
-  if (memoryRefreshedTokens && !isTokenExpiringSoon(memoryRefreshedTokens.expiresAt)) {
-    tokens = memoryRefreshedTokens;
-    source = 'memory';
-  } else {
-    const k = await readOAuthPayload();
-    if (!k.ok) return { ok: false, error: k.error };
-    tokens = k.tokens;
-    source = process.platform === 'darwin' ? 'keychain' : 'file';
+  // 1. Legge il token CORRENTE dalla sorgente (keychain/file). Niente cache in
+  //    memoria e niente refresh: usiamo sempre ciò che Claude Code mantiene.
+  const k = await readOAuthPayload();
+  if (!k.ok) return { ok: false, error: k.error };
+  const tokens = k.tokens;
+  const source = process.platform === 'darwin' ? 'keychain' : 'file';
+
+  // 2. Se il token è scaduto NON lo rinnoviamo (eviteremmo di ruotare il refresh
+  //    token condiviso con Claude Code). Lo segnaliamo soltanto: Claude Code lo
+  //    rinnova da sé e al giro successivo lo rileggiamo già valido.
+  if (tokens.expiresAt && Date.now() >= tokens.expiresAt) {
+    return { ok: false, status: 401, tokenSource: source,
+      error: 'Token Claude Code scaduto. Usa Claude Code per rinnovarlo, poi riprova.' };
   }
 
-  // 2. Refresh proattivo se scaduto/in scadenza
-  if (isTokenExpiringSoon(tokens.expiresAt) && tokens.refreshToken) {
-    const r = await refreshTokens(tokens);
-    if (r.ok) tokens = r.tokens;
-  }
-
-  // 3. Call usage endpoint
-  let resp = await httpRequestJson('GET', USAGE_URL, {
+  // 3. Chiama l'endpoint usage con il token corrente.
+  const resp = await httpRequestJson('GET', USAGE_URL, {
     Authorization:    'Bearer ' + tokens.accessToken,
     'anthropic-beta': BETA_HEADER,
   });
 
-  // 4. Retry su 401 con refresh
-  if (!resp.ok && resp.status === 401 && tokens.refreshToken) {
-    const r = await refreshTokens(tokens);
-    if (r.ok) {
-      tokens = r.tokens;
-      resp = await httpRequestJson('GET', USAGE_URL, {
-        Authorization:    'Bearer ' + tokens.accessToken,
-        'anthropic-beta': BETA_HEADER,
-      });
-    }
-  }
-
   if (!resp.ok) {
     let friendly = resp.error || 'Errore sconosciuto';
     if (resp.status === 401 || resp.status === 403) {
-      friendly = 'Token non più valido (refresh fallito). Per ricreare le credenziali esegui `claude auth login` da terminale.';
+      friendly = 'Token Claude Code non valido o scaduto. Usa Claude Code per rinnovarlo.';
     }
-    // v1.1.28 — su 429 propaghiamo lo status + l'header retry-after (se presente)
-    // così l'handler get-usage nel main può rispettare il backoff richiesto dal
-    // server invece del solo schema fisso. Vedi issue anthropics/claude-code#64591.
+    // v1.1.28 — su 429 propaghiamo status + retry-after così l'handler get-usage
+    // nel main rispetta il backoff richiesto dal server.
     return { ok: false, error: friendly, status: resp.status, retryAfter: resp.retryAfter, tokenSource: source };
   }
   return { ok: true, data: normalize(resp.data), tokenSource: source };
@@ -274,10 +230,7 @@ async function getUsage() {
 module.exports = {
   KEYCHAIN_SERVICE,
   USAGE_URL,
-  TOKEN_URL,
-  CLIENT_ID,
   BETA_HEADER,
   readOAuthPayload,
-  refreshTokens,
   getUsage,
 };
