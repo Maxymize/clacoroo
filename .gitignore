@@ -73,3 +73,6 @@ CLAUDE.md
 
 # File locali di Claude Code (lock task schedulati, ecc.)
 .claude/
+
+# Script statistiche download (tool ops personale)
+/scripts/download-stats.sh
