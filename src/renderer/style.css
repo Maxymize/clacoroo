@@ -1133,6 +1133,17 @@ body {
 .btn-accent-outline svg { color: currentColor; }
 
 .btn-sm { padding: 4px 10px; font-size: 11px; }
+
+/* v1.1.35 — Bottone Aiuto tondo nella topbar (→ documentazione) */
+.btn-help {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border-radius: 50%;
+  justify-content: center;
+  flex: 0 0 auto;
+}
+.btn-help svg { width: 15px; height: 15px; }
 .btn-icon {
   display: inline-flex;
   align-items: center;
@@ -2123,6 +2134,46 @@ body {
 .stats-tab:hover { color: var(--text); }
 .stats-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
 .stats-content { display: flex; flex-direction: column; gap: 16px; }
+
+/* v1.1.36 — Tab Claude Quota: barre quota + insight "Cosa incide sui limiti" */
+.quota-bars-wrap { margin-bottom: 4px; }
+.insights-wrap { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; }
+.insights-head {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; flex-wrap: wrap;
+}
+.insights-toggle {
+  display: inline-flex; gap: 2px;
+  background: var(--border); border-radius: 8px; padding: 2px;
+}
+.insights-toggle-btn {
+  background: transparent; border: none; color: var(--text-muted);
+  padding: 5px 14px; font-size: 12px; font-weight: 600; cursor: pointer;
+  border-radius: 6px; font-family: inherit; transition: background .15s, color .15s;
+}
+.insights-toggle-btn:hover { color: var(--text); }
+.insights-toggle-btn.active { background: var(--accent); color: #fff; }
+.insights-disclaimer {
+  font-size: 11.5px; color: var(--text-muted); line-height: 1.45; max-width: 72ch;
+}
+.insights-list { display: flex; flex-direction: column; gap: 8px; }
+.insights-loading, .insights-empty {
+  font-size: 13px; color: var(--text-muted); padding: 10px 0;
+}
+.insight-row {
+  display: flex; gap: 14px; align-items: flex-start;
+  padding: 12px 14px;
+  background: var(--card-bg, rgba(255, 255, 255, 0.02));
+  border: 1px solid var(--border); border-radius: 10px;
+}
+.insight-pct {
+  flex: 0 0 auto; min-width: 46px; text-align: right;
+  font-size: 18px; font-weight: 700; color: var(--accent);
+  font-variant-numeric: tabular-nums; line-height: 1.3;
+}
+.insight-text { display: flex; flex-direction: column; gap: 3px; }
+.insight-head { font-size: 13.5px; font-weight: 600; color: var(--text); line-height: 1.35; }
+.insight-desc { font-size: 12px; color: var(--text-muted); line-height: 1.45; }
 .stats-loading, .stats-empty {
   padding: 40px;
   text-align: center;

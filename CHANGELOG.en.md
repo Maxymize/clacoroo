@@ -2,6 +2,15 @@
 
 > English translation of [CHANGELOG.md](./CHANGELOG.md) (Italian, canonical). Updated in sync with each release.
 
+## v1.1.35 — 2026-06-24 — Claude Quota: dedicated tab + stop consuming rate-limit
+
+A new tab for quota and usage insights, and CLACOROO no longer eats into your account's limits/overload while left open.
+
+- [FEATURE] New **Claude Quota** tab in Stats: your limit bars (Session 5h, Weekly 7d, Weekly Sonnet) and "What's contributing to your limits" with a Day/Week switch (>150k context, subagent-heavy, 8+ hours, 4+ parallel, per-plugin). Computed locally from transcripts, zero API calls
+- [FIX] CLACOROO no longer refreshes the OAuth token: refreshing could invalidate the one Claude Code uses (rotating refresh token), causing limit/overload warnings in open `claude` sessions. It now only reads the current token; if expired it just reports it and lets Claude Code refresh it
+- [IMPROVEMENT] Background quota polling is now **Manual by default**: when idle, CLACOROO no longer queries the quota endpoint (shared with Claude Code's rate-limit). It refreshes when you open the Quota tab/Dashboard or hit refresh; auto can still be re-enabled in Settings
+- [IMPROVEMENT] New round **"?"** button in the top bar (right of Terminal): opens the documentation on clacoroo.app in the interface language
+
 ## v1.1.34 — 2026-06-18 — Claude Config: permissions editor
 
 - [FEATURE] New **Permissions** row in Claude Config: manage the rules that decide what Claude Code can do without asking (allow), what it always asks for (ask), and what is forbidden (deny), plus the default mode. Collapsible lists with search, format validation, a warning when a rule grants overly broad access or already exists in another list, and a button to copy a rule on the fly to move it between lists. The allow/deny/ask lists apply immediately to already-open Claude Code sessions; the default mode applies to new sessions

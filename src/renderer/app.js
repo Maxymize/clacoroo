@@ -310,8 +310,12 @@ const state = {
   notifyQuota: true,
   // Dedup notifiche quota: { fiveHour: {level, at}, sevenDay: {...}, ... }
   quotaLastNotified: {},
-  // v1.1.24 — frequenza polling quota in ms (0 = Manuale). Default 10 min.
-  quotaPollMs: 600000,
+  // v1.1.24 — frequenza polling quota in ms (0 = Manuale).
+  // v1.1.35 — Default MANUALE: in idle CLACOROO non chiama mai l'endpoint quota
+  // (condiviso col rate-limit di Claude Code). La quota si aggiorna solo quando
+  // l'utente apre la Dashboard/Account o preme aggiorna. Riattivabile dalle
+  // Impostazioni.
+  quotaPollMs: 0,
 };
 
 const MKT_SORTERS = {
@@ -695,8 +699,11 @@ function startQuotaPollTimer(kickMs = 0) {
 // reale dall'apertura, niente "in attesa"), poi a intervalli secondo la
 // frequenza scelta. In Manuale fa comunque il primo check ma non avvia il timer.
 function scheduleQuotaCheck() {
-  runQuotaCheck();              // primo update immediato, sempre
-  startQuotaPollTimer(-1);      // timer a intervalli senza kick (auto); no-op in Manuale
+  // v1.1.35 — In Manuale (quotaPollMs<=0) NIENTE check all'avvio: zero chiamate
+  // in background. La quota si carica quando l'utente apre Dashboard/Account
+  // (loadDashboardUsage/loadAccountUsage). In Auto, primo update immediato.
+  if (Number(state.quotaPollMs) > 0) runQuotaCheck();
+  startQuotaPollTimer(-1);      // timer a intervalli (auto); no-op in Manuale
 }
 // Cambio frequenza a runtime: persiste + ricrea il timer (refresh immediato
 // sulla nuova cadenza), senza riavviare l'app.
@@ -1090,6 +1097,20 @@ function render() {
     termBtn.addEventListener('click', () => termSetOpen(!termState.open));
     actions.appendChild(termBtn);
   }
+
+  // v1.1.35 — Bottone Aiuto tondo (sempre ultimo a destra): apre la
+  // documentazione su clacoroo.app nella lingua dell'interfaccia.
+  const helpBtn = el('button', 'btn btn-sm btn-ghost btn-help');
+  helpBtn.type = 'button';
+  helpBtn.appendChild(icon('circle-help'));
+  helpBtn.title = t('topbar.helpTooltip');
+  helpBtn.setAttribute('aria-label', t('topbar.helpTooltip'));
+  helpBtn.addEventListener('click', () => {
+    // EN vive su /docs/, le altre lingue su /<lang>/docs/ (struttura del sito)
+    const url = 'https://clacoroo.app/' + (activeLang === 'en' ? '' : activeLang + '/') + 'docs/';
+    window.claudeAPI.openExternal(url);
+  });
+  actions.appendChild(helpBtn);
 
   switch (state.section) {
     case 'dashboard':    renderDashboard();   break;
@@ -4402,14 +4423,16 @@ function renderListSection(items, key, buildChip, searchFn, gridCls, sortConfig,
 let statsCache = null;
 let statsActiveTab = 'overview';
 let statsRenderToken = 0;
+// v1.1.36 — finestra insight "Cosa incide sui limiti" (tab Claude Quota): '24h' | '7d'
+let insightsWindow = '7d';
 
 async function renderStats() {
   const myToken = ++statsRenderToken;
   const wrap = el('div', 'stats-wrap');
   // Tab strip
   // v1.0.38 — 'config' è ora una sezione sidebar autonoma, rimosso da qui
-  const tabs = ['overview', 'modelli', 'progetti'];
-  const tabLabelKeys = { overview: 'stats.tabOverview', modelli: 'stats.tabModels', progetti: 'stats.tabProjects' };
+  const tabs = ['overview', 'quota', 'modelli', 'progetti'];
+  const tabLabelKeys = { overview: 'stats.tabOverview', quota: 'stats.tabQuota', modelli: 'stats.tabModels', progetti: 'stats.tabProjects' };
   const tabBar = el('div', 'stats-tabs');
   tabs.forEach(tab => {
     const btn = el('button', 'stats-tab' + (tab === statsActiveTab ? ' active' : ''), t(tabLabelKeys[tab]));
@@ -4437,14 +4460,99 @@ async function renderStats() {
 }
 
 function paintStatsTab(content, data) {
+  // v1.1.36 — il tab Claude Quota non dipende da stats-cache.json (barre via API,
+  // insight via scan transcript) → renderizzato prima del guard sulla cache.
+  if (statsActiveTab === 'quota') { renderStatsQuota(content); return; }
   if (!data.cache) {
-    content.appendChild(el('div', 'stats-empty',
-      'stats-cache.json non disponibile. Claude Code lo crea quando inizi a usarlo: usa la CLI o IDE per qualche sessione e tornerai a vedere statistiche qui.'));
+    content.appendChild(el('div', 'stats-empty', t('stats.noCacheFile')));
     return;
   }
   if (statsActiveTab === 'overview') renderStatsOverview(content, data);
   else if (statsActiveTab === 'modelli')  renderStatsModels(content, data);
   else if (statsActiveTab === 'progetti') renderStatsProjects(content, data);
+}
+
+// v1.1.36 — Tab "Claude Quota": barre quota (come pannello /usage di Claude Code)
+// + insight "Cosa incide sui limiti" calcolati in locale dai transcript.
+function renderStatsQuota(container) {
+  // 1. Barre quota live (riuso paintUsageBars via loadAccountUsage). La chiamata
+  //    all'endpoint parte solo qui, on-demand (coerente col default Manuale).
+  container.appendChild(sectionTitle(t('section.claudeQuota'), 'gauge'));
+  const barsWrap = el('div', 'quota-bars-wrap');
+  container.appendChild(barsWrap);
+  loadAccountUsage(barsWrap);
+
+  // 2. Insight locali (zero chiamate API)
+  const insWrap = el('div', 'insights-wrap');
+  container.appendChild(insWrap);
+  renderInsightsBlock(insWrap);
+}
+
+function renderInsightsBlock(wrap) {
+  wrap.textContent = '';
+  const head = el('div', 'insights-head');
+  head.appendChild(sectionTitle(t('insights.title'), 'bar-chart-3'));
+  const toggle = el('div', 'insights-toggle');
+  [['24h', 'insights.day'], ['7d', 'insights.week']].forEach(([win, key]) => {
+    const b = el('button', 'insights-toggle-btn' + (insightsWindow === win ? ' active' : ''), t(key));
+    b.addEventListener('click', () => {
+      if (insightsWindow === win) return;
+      insightsWindow = win;
+      renderInsightsBlock(wrap);
+    });
+    toggle.appendChild(b);
+  });
+  head.appendChild(toggle);
+  wrap.appendChild(head);
+
+  wrap.appendChild(el('div', 'insights-disclaimer', t('insights.disclaimer')));
+
+  const list = el('div', 'insights-list');
+  list.appendChild(el('div', 'insights-loading', t('insights.loading')));
+  wrap.appendChild(list);
+
+  window.claudeAPI.getUsageInsights(insightsWindow)
+    .then(res => paintInsights(list, res))
+    .catch(() => { list.textContent = ''; list.appendChild(el('div', 'insights-empty', t('insights.error'))); });
+}
+
+function paintInsights(list, res) {
+  list.textContent = '';
+  if (!res || res.ok === false) {
+    list.appendChild(el('div', 'insights-empty', t('insights.error')));
+    return;
+  }
+  if (!res.hasData) {
+    list.appendChild(el('div', 'insights-empty', t('insights.noData')));
+    return;
+  }
+  const rows = [
+    ...(res.behaviors || []).map(b => ({
+      pct:  b.pct,
+      head: t('insights.' + b.key + 'Head', { pct: b.pct }),
+      desc: t('insights.' + b.key + 'Desc'),
+    })),
+    ...(res.plugins || []).map(p => ({
+      pct:  p.pct,
+      head: t('insights.pluginHead', { pct: p.pct, name: p.name }),
+      desc: t('insights.pluginDesc'),
+    })),
+  ];
+  if (!rows.length) {
+    list.appendChild(el('div', 'insights-empty', t('insights.nothingOver', { pct: 10 })));
+    return;
+  }
+  // Sort necessario: interlaccia behavior e plugin per percentuale decrescente.
+  rows.sort((a, b) => b.pct - a.pct);
+  rows.forEach(r => {
+    const row = el('div', 'insight-row');
+    row.appendChild(el('div', 'insight-pct', r.pct + '%'));
+    const txt = el('div', 'insight-text');
+    txt.appendChild(el('div', 'insight-head', r.head));
+    txt.appendChild(el('div', 'insight-desc', r.desc));
+    row.appendChild(txt);
+    list.appendChild(row);
+  });
 }
 
 function formatUsd(amount) {

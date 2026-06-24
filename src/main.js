@@ -85,6 +85,7 @@ const HOOK_DEPS = require('./lib/hookDeps');
 const ACCOUNT = require('./lib/account');
 const PRICING = require('./lib/pricing');
 const USAGE   = require('./lib/usage');
+const INSIGHTS = require('./lib/insights');
 const PTY     = require('./lib/pty');
 const APIKEY  = require('./lib/apikey');
 
@@ -966,6 +967,24 @@ ipcMain.handle('get-changelog', async (_e, { lang } = {}) => {
 let STATS_CACHE = null;
 let STATS_CACHE_AT = 0;
 const STATS_TTL_MS = 60 * 1000;
+
+// v1.1.36 — Insight "Cosa incide sui limiti": scan locale dei transcript .jsonl
+// (100% offline, nessuna chiamata API → nessun contributo al rate-limit).
+// Cache per-finestra (24h/7d) 5 min: lo scan dei .jsonl è costoso.
+const INSIGHTS_CACHE = new Map();   // key '24h'|'7d' -> { result, at }
+const INSIGHTS_TTL_MS = 5 * 60 * 1000;
+ipcMain.handle('get-usage-insights', async (_e, { window: win, force } = {}) => {
+  const key = win === '24h' ? '24h' : '7d';
+  const hit = INSIGHTS_CACHE.get(key);
+  if (!force && hit && Date.now() - hit.at < INSIGHTS_TTL_MS) return hit.result;
+  try {
+    const result = await INSIGHTS.getInsights(key === '24h' ? 1 : 7);
+    INSIGHTS_CACHE.set(key, { result, at: Date.now() });
+    return result;
+  } catch (e) {
+    return { ok: false, error: (e && e.message) || 'insights error', behaviors: [], plugins: [] };
+  }
+});
 
 ipcMain.handle('get-stats', async (_e, { force } = {}) => {
   if (!force && STATS_CACHE && Date.now() - STATS_CACHE_AT < STATS_TTL_MS) {

@@ -2,6 +2,15 @@
 
 > Italiano (canonico). English translation: [CHANGELOG.en.md](./CHANGELOG.en.md) — allineato a ogni release.
 
+## v1.1.35 — 2026-06-24 — Quota Claude: scheda dedicata + stop al consumo di rate-limit
+
+Nuova scheda per quote e insight di utilizzo, e CLACOROO non incide più sui limiti/overload del tuo account mentre resta aperto.
+
+- [FEATURE] Nuova scheda **Quota Claude** in Stats: le barre dei limiti (Session 5h, Weekly 7g, Weekly Sonnet) e "Cosa incide sui limiti" con toggle Giorno/Settimana (contesto >150k, sessioni con molti subagent, 8+ ore, 4+ in parallelo, per-plugin). Calcolata in locale dai transcript, zero chiamate API
+- [FIX] CLACOROO non rinnova più il token OAuth: rinnovandolo poteva invalidare quello usato da Claude Code (refresh token rotante), causando avvisi di limite/overload nelle sessioni `claude` aperte. Ora legge solo il token corrente; se è scaduto lo segnala e lascia che sia Claude Code a rinnovarlo
+- [IMPROVEMENT] Il polling quota in background è ora **Manuale di default**: in idle CLACOROO non interroga più l'endpoint quota (condiviso col rate-limit di Claude Code). Si aggiorna aprendo la scheda Quota/Dashboard o premendo aggiorna; l'auto resta riattivabile dalle Impostazioni
+- [IMPROVEMENT] Nuovo pulsante **"?"** tondo nella barra in alto (a destra di Terminale): apre la documentazione su clacoroo.app nella lingua dell'interfaccia
+
 ## v1.1.34 — 2026-06-18 — Claude Config: editor dei permessi
 
 - [FEATURE] Nuova riga **Permessi** in Claude Config: gestisci le regole che decidono cosa Claude Code può fare senza chiedere (allow), cosa chiede sempre (ask) e cosa è vietato (deny), oltre alla modalità di default. Liste comprimibili con ricerca, validazione del formato, avviso quando una regola dà accesso troppo ampio o è già presente in un'altra lista, e un pulsante per copiare al volo una regola da spostare tra le liste. Le liste allow/deny/ask si applicano subito anche alle sessioni di Claude Code già aperte; la modalità di default vale per le nuove sessioni

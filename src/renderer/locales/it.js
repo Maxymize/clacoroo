@@ -30,11 +30,13 @@ window.LOCALES.it = {
     addMcpTooltip:  'Aggiungi un MCP server (HTTP, SSE o stdio) via `claude mcp add`',
     addMktTooltip:  'Aggiungi un marketplace da URL git, repo GitHub o path locale',
     terminalTooltip: 'Apri/chiudi il terminale integrato (Cmd+`)',
+    helpTooltip:    'Aiuto e documentazione (clacoroo.app/docs)',
   },
 
   // Section titles (Dashboard + main pages)
   section: {
     quoteClaude:        'Quote Claude',
+    claudeQuota:        'Quota Claude',
     statistiche:        'Statistiche',
     utilizzoClaude:     'Utilizzo Claude Code',
     pluginPerPeso:      'Plugin per peso (context window)',
@@ -53,10 +55,36 @@ window.LOCALES.it = {
     configClaudeCode:   'Configurazione Claude Code',
   },
 
+  // Insight "Cosa incide sui limiti" (tab Claude Quota). Calcolati in locale.
+  insights: {
+    title:        'Cosa incide sui limiti',
+    day:          'Giorno',
+    week:         'Settimana',
+    disclaimer:   'Stima basata sulle sessioni locali di questo dispositivo. Non include altri dispositivi né claude.ai. Sono caratteristiche indipendenti del tuo utilizzo, non una ripartizione.',
+    loading:      'Analisi delle sessioni locali…',
+    error:        'Impossibile calcolare gli insight.',
+    noData:       'Nessuna sessione nel periodo selezionato.',
+    nothingOver:  'Niente sopra il {pct}% in questo periodo.',
+    longContextHead:   '{pct}% del tuo utilizzo era a contesto >150k',
+    longContextDesc:   'Le sessioni lunghe costano di più anche con la cache. Usa /compact a metà task e /clear quando cambi attività.',
+    subagentHeavyHead: '{pct}% del tuo utilizzo viene da sessioni con molti subagent',
+    subagentHeavyDesc: 'Ogni subagent fa richieste proprie. Spawnali con criterio e valuta un modello più economico per i subagent semplici.',
+    longSessionsHead:  '{pct}% del tuo utilizzo viene da sessioni attive 8+ ore',
+    longSessionsDesc:  'Spesso sono sessioni in background o in loop. L\'uso continuo si accumula in fretta: assicurati che sia intenzionale.',
+    highParallelHead:  '{pct}% del tuo utilizzo è avvenuto con 4+ sessioni in parallelo',
+    highParallelDesc:  'Tutte le sessioni condividono un unico limite. Se non ti servono tutte insieme, accodarle distribuisce meglio il consumo.',
+    cacheMissHead:     '{pct}% del tuo utilizzo era a >100k input non in cache',
+    cacheMissDesc:     'Gli input grandi non in cache sono costosi. Riusa il contesto ed evita di re-incollare file voluminosi.',
+    pluginHead:        '{pct}% del tuo utilizzo viene dal plugin «{name}»',
+    pluginDesc:        'Controlla cosa contribuisce questo plugin: i suoi agent, skill e tool MCP contano tutti sul tuo limite.',
+  },
+
   // Stats section (KPI + tabs + heatmap + context breakdown)
   stats: {
     loading:      'Caricamento statistiche…',
+    noCacheFile:  'stats-cache.json non disponibile. Claude Code lo crea quando inizi a usarlo: usa la CLI o l\'IDE per qualche sessione e le statistiche compariranno qui.',
     tabOverview:  'Overview',
+    tabQuota:     'Quota Claude',
     tabModels:    'Modelli',
     tabProjects:  'Per-progetto',
     rangeAll:     'Tutto',
