@@ -41,7 +41,11 @@ jobs:
           TAG: ${{ github.ref_name }}
         run: |
           if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            echo "Release $TAG esiste già — riuso."
+            # Ripubblica esplicitamente: un re-push del tag (delete+push) riporta
+            # la release a DRAFT, e qui la riusiamo — senza questo edit resterebbe
+            # non pubblicata (app/sito non la vedrebbero). Idempotente se già live.
+            echo "Release $TAG esiste già — riuso e ripubblico (draft=false, latest)."
+            gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --draft=false --latest
           else
             gh release create "$TAG" \
               --repo "$GITHUB_REPOSITORY" \
