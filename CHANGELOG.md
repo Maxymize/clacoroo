@@ -2,6 +2,14 @@
 
 > Italiano (canonico). English translation: [CHANGELOG.en.md](./CHANGELOG.en.md) — allineato a ogni release.
 
+## v1.1.36 — 2026-06-25 — MCP: server connessi/falliti di nuovo visibili + scope progetto
+
+- [FIX] Il pannello MCP mostrava solo i server "needs auth" e segnava "0 connected": il parser di `claude mcp list` non riconosceva i simboli di stato attuali di Claude Code (✔ connesso, ✘ fallito) e scartava silenziosamente tutti i server connessi e falliti. Ora compaiono di nuovo tutti
+- [FIX] Il dettaglio di un plugin mostrava "MCP —" anche per i plugin che forniscono MCP (es. claude-mem, cloudflare, neon, context7, supabase): il rilevamento cercava `mcp.json` invece dello standard `.mcp.json`. Ora rileva i server, ne mostra il numero ed elenca i nomi nel dettaglio plugin
+- [FEATURE] Mostrati anche gli MCP **project-scoped** (definiti in `.claude.json` per una cartella), con badge "progetto: …" e filtro "Da progetto". Il cestino **Rimuovi** ora funziona anche su di loro (oltre agli user-added) e li toglie davvero dalla config
+- [FEATURE] Pulsante **"Disconnetti"** sui server MCP OAuth connessi (HTTP/SSE): azzera l'autenticazione (`claude mcp logout`) per riautorizzarli, anche con un altro account — utile per spostare un MCP da un account all'altro
+- [IMPROVEMENT] MCP forniti da un plugin: la card spiega che si gestiscono dal plugin e un pulsante **"Gestisci plugin"** porta direttamente al plugin proprietario nella sezione Plugin; i connettori claude.ai indicano che si gestiscono su claude.ai. La conferma di rimozione ricorda che le sessioni `claude` già aperte vedono il server finché non vengono riavviate
+
 ## v1.1.35 — 2026-06-24 — Quota Claude: scheda dedicata + stop al consumo di rate-limit
 
 Nuova scheda per quote e insight di utilizzo, e CLACOROO non incide più sui limiti/overload del tuo account mentre resta aperto.

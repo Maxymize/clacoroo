@@ -190,12 +190,16 @@ function validMarketplaceSource(src) {
 
 /* ── SAFE EXEC ─────────────────────────────────────────────────────────── */
 
-function runClaudeArgs(args) {
+function runClaudeArgs(args, opts) {
   return new Promise(resolve => {
     if (!CLAUDE_BIN) {
       return resolve({ success: false, error: 'Binario claude non trovato. Configura il percorso nelle Impostazioni.' });
     }
-    execFile(CLAUDE_BIN, args, { timeout: 30000 }, (err, stdout, stderr) => {
+    const execOpts = { timeout: 30000 };
+    // v1.1.36 — cwd opzionale: serve per operare sugli MCP local/project-scoped,
+    // che `claude` risolve in base alla cartella di lavoro corrente.
+    if (opts && typeof opts.cwd === 'string' && opts.cwd) execOpts.cwd = opts.cwd;
+    execFile(CLAUDE_BIN, args, execOpts, (err, stdout, stderr) => {
       if (err) resolve({ success: false, error: (stderr || err.message).trim() });
       else     resolve({ success: true,  output: stdout.trim() });
     });
@@ -286,7 +290,22 @@ function scanCache() {
       const skillsDir = path.join(root, 'skills');
       const agentsDir = path.join(root, 'agents');
       const hooksDir  = path.join(root, 'hooks');
-      const mcpPaths  = [path.join(root, 'mcp.json'), path.join(root, '.claude-plugin', 'mcp.json')];
+      // v1.1.36 — la convenzione standard di Claude Code è `.mcp.json` (dotfile)
+      // nella root del plugin; prima si controllava solo `mcp.json` (senza punto)
+      // e `.claude-plugin/mcp.json`, quindi quasi tutti i plugin con MCP (che usano
+      // `.mcp.json`) risultavano senza MCP. Ora si conta anche il numero di server.
+      const mcpPaths  = [
+        path.join(root, '.mcp.json'),
+        path.join(root, 'mcp.json'),
+        path.join(root, '.claude-plugin', 'mcp.json'),
+      ];
+      const mcpFile = mcpPaths.find(p => fs.existsSync(p));
+      // .mcp.json ha due formati (wrapper mcpServers o top-level): normalizzati
+      // da MCP.mcpServersFromRaw, condiviso con readPluginMcpDeclarations.
+      const mcpServerNames = mcpFile
+        ? Object.keys(MCP.mcpServersFromRaw(safeReadJson(mcpFile, {})))
+        : [];
+      const mcpCount = mcpServerNames.length;
 
       // Skills: each skill is a subdirectory containing SKILL.md
       const skills = fs.existsSync(skillsDir)
@@ -329,7 +348,9 @@ function scanCache() {
         agents,
         skillHealth,
         agentHealth,
-        hasMcp:   mcpPaths.some(p => fs.existsSync(p)),
+        hasMcp:   mcpCount > 0,
+        mcpCount,
+        mcpServerNames,
         hasHooks: fs.existsSync(hooksDir) && fs.readdirSync(hooksDir).length > 0,
         hookEvents: readHookEvents(hooksDir),
       };
@@ -731,12 +752,40 @@ function validMcpName(s) {
   return typeof s === 'string' && /^[a-zA-Z0-9][a-zA-Z0-9_.-]*$/.test(s);
 }
 
-ipcMain.handle('mcp:remove', async (_e, { name } = {}) => {
+// v1.1.36 — id completo del server: può includere ':' per i plugin
+// (es. plugin:cloudflare:cloudflare-api). Usato per login/logout OAuth.
+function validMcpId(s) {
+  return typeof s === 'string' && /^[a-zA-Z0-9][a-zA-Z0-9_.:-]*$/.test(s);
+}
+
+ipcMain.handle('mcp:remove', async (_e, { name, scope, project } = {}) => {
   if (!validMcpName(name)) return { success: false, error: 'Nome MCP non valido.' };
-  const r = await runClaudeArgs(['mcp', 'remove', name]);
+  // v1.1.36 — gli MCP local/project-scoped si rimuovono con `-s local` ESEGUITO
+  // dalla cartella del progetto (claude risolve il local scope sulla cwd). Gli
+  // user-scoped si rimuovono dalla config globale (cwd qualsiasi).
+  const args = ['mcp', 'remove', name];
+  let opts;
+  if (scope === 'local') {
+    args.push('-s', 'local');
+    if (typeof project === 'string' && project) opts = { cwd: project };
+  } else if (scope === 'user') {
+    args.push('-s', 'user');
+  }
+  const r = await runClaudeArgs(args, opts);
   if (r.success) { MCP_CACHE = null; MCP_CACHE_AT = 0; }
   // v1.0.100 — log azione
   appendActivity({ kind: 'mcp', action: 'remove', target: name, success: !!r.success, error: r.error || undefined });
+  return r;
+});
+
+// v1.1.36 — Disconnetti OAuth: `claude mcp logout <id>` azzera le credenziali
+// OAuth salvate per quel server (HTTP/SSE/claude.ai). Serve per riautorizzarlo
+// con un altro account. Non tocca i token lato server, solo le creds locali.
+ipcMain.handle('mcp:logout', async (_e, { id } = {}) => {
+  if (!validMcpId(id)) return { success: false, error: 'ID MCP non valido.' };
+  const r = await runClaudeArgs(['mcp', 'logout', id]);
+  if (r.success) { MCP_CACHE = null; MCP_CACHE_AT = 0; }
+  appendActivity({ kind: 'mcp', action: 'logout', target: id, success: !!r.success, error: r.error || undefined });
   return r;
 });
 
@@ -1069,13 +1118,32 @@ ipcMain.handle('get-mcp', async (_e, { force } = {}) => {
   }
   const list = await MCP.runMcpList(CLAUDE_BIN);
   const declarations = MCP.readPluginMcpDeclarations();
+  // v1.1.36 — MCP project-scoped da ~/.claude.json (projects[*].mcpServers):
+  // `claude mcp list` dalla cwd non li elenca tutti. Li usiamo per (a) correggere
+  // lo scope dei local che la lista marca come 'user', e (b) rendere visibili
+  // quelli di altre cartelle (read-only, stato non verificato).
+  const projectServers = MCP.readProjectMcpServers();
+  const projByName = new Map();
+  for (const s of projectServers) projByName.set(s.id, s);
+  const seen = new Set();
   // v1.0.85 — Pack G v2: arricchisci ogni server con reconnect info per il
   // tipo di azione di riconnessione consigliata (claude.ai OAuth / HTTP OAuth /
   // stdio wrapper). Renderer la usa per pittare bottoni contestuali sulle card.
-  const serversEnriched = (list.servers || []).map(srv => ({
-    ...srv,
-    reconnect: MCP.detectReconnectType(srv),
-  }));
+  const serversEnriched = (list.servers || []).map(srv => {
+    seen.add(srv.id);
+    let s = srv;
+    if (srv.scope === 'user' && projByName.has(srv.id)) {
+      const p = projByName.get(srv.id);
+      s = { ...srv, scope: 'local', project: p.project, projectName: p.projectName };
+    }
+    return { ...s, reconnect: MCP.detectReconnectType(s) };
+  });
+  // Aggiungi i project-scoped non visibili dalla cwd (reconnect null → read-only)
+  for (const ps of projectServers) {
+    if (seen.has(ps.id)) continue;
+    seen.add(ps.id);
+    serversEnriched.push({ ...ps, reconnect: null });
+  }
   MCP_CACHE = {
     ok: list.ok,
     error: list.error || null,

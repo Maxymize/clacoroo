@@ -60,6 +60,7 @@ const LUCIDE_ICONS = {
   'eye':         '<path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/>',
   'terminal':    '<polyline points="4 17 10 11 4 5"/><line x1="12" x2="20" y1="19" y2="19"/>',
   'plug':        '<path d="M9 2v6"/><path d="M15 2v6"/><path d="M12 17v3"/><path d="M5 8h14"/><path d="M6 11V8h12v3a6 6 0 0 1-12 0Z"/>',
+  'log-out':     '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/>',
   'chevron-down':'<path d="m6 9 6 6 6-6"/>',
   'chevron-up':  '<path d="m18 15-6-6-6 6"/>',
   // v1.0.96 — Pack M: view switcher cards/compatta
@@ -921,6 +922,8 @@ function processData() {
       skillHealth: cache.skillHealth || {},
       agentHealth: cache.agentHealth || {},
       hasMcp:      cache.hasMcp      || false,
+      mcpCount:    cache.mcpCount    || 0,
+      mcpServerNames: cache.mcpServerNames || [],
       hasHooks:    cache.hasHooks    || false,
       hookEvents:  cache.hookEvents  || [],
       installedAt: cache.installedAt || '',
@@ -2196,7 +2199,7 @@ function showPluginContentModal(p) {
   }
   summary.appendChild(summCell(p.skills.length, p.skills.length === 1 ? 'skill' : 'skills'));
   summary.appendChild(summCell(p.agents.length, p.agents.length === 1 ? 'agent' : 'agents'));
-  summary.appendChild(summCell(p.hasMcp ? 'sì' : '—', 'MCP'));
+  summary.appendChild(summCell(p.mcpCount > 0 ? String(p.mcpCount) : '—', 'MCP'));
   summary.appendChild(summCell(p.hasHooks ? 'sì' : '—', 'Hook'));
   if (p.tokensAlways) summary.appendChild(summCell(p.tokensAlways, 'tok always-on'));
   content.appendChild(summary);
@@ -2216,6 +2219,17 @@ function showPluginContentModal(p) {
 
   if (p.hasMcp) {
     content.appendChild(el('h3', 'plugin-content-section-title', t('section.mcpServerTitle')));
+    // v1.1.36 — elenca i nomi dei server MCP forniti dal plugin (dal suo .mcp.json)
+    if (p.mcpServerNames && p.mcpServerNames.length) {
+      const list = el('div', 'plugin-content-list');
+      p.mcpServerNames.forEach(name => {
+        const row = el('div', 'plugin-content-item plugin-content-item-static');
+        row.appendChild(icon('plug'));
+        row.appendChild(el('span', null, name));
+        list.appendChild(row);
+      });
+      content.appendChild(list);
+    }
     const note = el('div', 'plugin-content-mcp-link');
     note.textContent = t('pluginCard.noteMcp');
     const goBtn = el('button', 'btn btn-sm btn-primary');
@@ -5590,6 +5604,7 @@ async function renderMcp() {
     { key: 'all',     label: t('filter.allKinds') },
     { key: 'builtin', label: t('filter.builtinClaudeAi') },
     { key: 'plugin',  label: t('filter.fromPlugin') },
+    { key: 'local',   label: t('filter.fromProject') },
   ];
   const scChips = el('div', 'chips chips-group-divider');
   scopeDefs.forEach(c => {
@@ -5728,6 +5743,53 @@ function mcpMatches(srv, f) {
 // no. Centralizzato qui per non ripetere il check raw.
 function isUserAddedMcp(srv) { return srv.scope === 'user'; }
 
+// v1.1.36 — Rimovibili via `claude mcp remove`: user-scoped E project/local-scoped
+// (questi ultimi con `-s local` dalla loro cartella). I plugin-managed e i
+// builtin claude.ai NON sono rimovibili così (si gestiscono dal plugin / da
+// claude.ai), quindi niente cestino su quelli.
+function isRemovableMcp(srv) { return srv.scope === 'user' || srv.scope === 'local'; }
+
+// v1.1.36 — Scorciatoia per gli MCP forniti da un plugin: salta alla sezione
+// Plugin filtrata sul plugin proprietario (da lì si disattiva il plugin, e con
+// esso i suoi MCP). `claude mcp remove` non funziona sui plugin-managed.
+function mcpManagePluginBtn(srv) {
+  const b = btnWithIcon('btn btn-sm btn-ghost', 'puzzle', t('mcpCard.managePluginBtn'));
+  b.title = t('mcpCard.managePluginBtnTip', { plugin: srv.plugin || '—' });
+  b.addEventListener('click', e => {
+    e.stopPropagation();
+    state.filters.plugins.search = String(srv.plugin || '').toLowerCase();
+    switchToSection('plugins');
+  });
+  return b;
+}
+
+// v1.1.36 — Etichetta scope per sub-card e riga compatta (un'unica fonte).
+function mcpScopeLabel(srv) {
+  if (srv.scope === 'builtin') return 'claude.ai · globale';
+  if (srv.scope === 'plugin')  return 'plugin: ' + (srv.plugin || '—');
+  if (srv.scope === 'local')   return t('mcpCard.projectSub', { name: srv.projectName || srv.project });
+  return 'user-added';
+}
+
+// v1.1.36 — Disconnettibili (logout OAuth): server connessi HTTP/SSE user/plugin.
+function isDisconnectableMcp(srv) {
+  return srv.status === 'connected' &&
+    (srv.transport === 'http' || srv.transport === 'sse') &&
+    (srv.scope === 'plugin' || srv.scope === 'user');
+}
+
+// v1.1.36 — Coda azioni comune ai due rami del footer: Rimuovi (se rimovibile)
+// + Gestisci plugin (se da plugin).
+function appendMcpManageButtons(actionsWrap, srv) {
+  if (isRemovableMcp(srv)) {
+    const rmBtn = btnWithIcon('btn btn-sm btn-ghost', 'trash-2', t('mcpCard.removeBtn'));
+    rmBtn.title = t('mcpCard.removeBtnTip', { id: srv.id });
+    rmBtn.addEventListener('click', e => { e.stopPropagation(); confirmMcpAction(srv, 'remove'); });
+    actionsWrap.appendChild(rmBtn);
+  }
+  if (srv.scope === 'plugin') actionsWrap.appendChild(mcpManagePluginBtn(srv));
+}
+
 // v1.1.26 — Toggle enable/disable per MCP user-added, stesso componente .toggle
 // dei plugin. Spegnere disabilita il server (chiede conferma,
 // `claude mcp remove` + backup config), riaccendere lo re-add. Permette di
@@ -5791,14 +5853,7 @@ function buildMcpCard(srv) {
   const nameWrap = el('div', 'mcp-card-name-wrap');
   const name = el('div', 'mcp-card-name', srv.displayName || srv.id);
   nameWrap.appendChild(name);
-  const sub = el('div', 'mcp-card-sub');
-  if (srv.scope === 'builtin') {
-    sub.textContent = 'claude.ai · globale';
-  } else if (srv.scope === 'plugin') {
-    sub.textContent = 'plugin: ' + (srv.plugin || '—');
-  } else {
-    sub.textContent = 'user-added';
-  }
+  const sub = el('div', 'mcp-card-sub', mcpScopeLabel(srv));
   nameWrap.appendChild(sub);
   header.appendChild(nameWrap);
 
@@ -5906,12 +5961,13 @@ function buildMcpCard(srv) {
   // (scope='user'). I MCP builtin (claude.ai) e plugin-managed non sono
   // rimuovibili via `claude mcp remove` perché non li ha aggiunti l'utente.
   const footer = el('div', 'mcp-card-footer');
-  const isUserAdded = isUserAddedMcp(srv);
   if (srv.status === 'connected' || !srv.reconnect) {
     const hint = el('div', 'mcp-card-hint',
-      srv.status === 'connected'
-        ? t('mcpCard.connectedHint')
-        : t('mcpCard.readOnlyHint'));
+      srv.scope === 'local'   ? t('mcpCard.projectScopedHint', { name: srv.projectName || srv.project })
+      : srv.scope === 'plugin'  ? t('mcpCard.pluginManagedHint', { plugin: srv.plugin || '—' })
+      : srv.scope === 'builtin' ? t('mcpCard.builtinManagedHint')
+      : srv.status === 'connected' ? t('mcpCard.connectedHint')
+      : t('mcpCard.readOnlyHint'));
     footer.appendChild(hint);
     const actionsWrap = el('div', 'mcp-card-actions');
     // v1.0.103 — Bottone "Tools" sempre visibile su connected (backend
@@ -5921,15 +5977,16 @@ function buildMcpCard(srv) {
       toolsBtn.title = t('mcpCard.toolsBtnTip');
       toolsBtn.addEventListener('click', e => { e.stopPropagation(); showMcpToolsModal(srv); });
       actionsWrap.appendChild(toolsBtn);
+      // v1.1.36 — Disconnetti (logout OAuth) per server HTTP/SSE: azzera l'auth
+      // così si può riautorizzare, anche con un altro account.
+      if (isDisconnectableMcp(srv)) {
+        const discBtn = btnWithIcon('btn btn-sm btn-ghost', 'log-out', t('mcpCard.disconnectBtn'));
+        discBtn.title = t('mcpCard.disconnectBtnTip');
+        discBtn.addEventListener('click', e => { e.stopPropagation(); confirmMcpAction(srv, 'disconnect'); });
+        actionsWrap.appendChild(discBtn);
+      }
     }
-    // v1.1.26 — Disabilita/Abilita ora gestiti dal toggle nell'header (più
-    // immediato, stile plugin). Qui resta solo Rimuovi (azione distruttiva).
-    if (isUserAdded) {
-      const rmBtn = btnWithIcon('btn btn-sm btn-ghost', 'trash-2', t('mcpCard.removeBtn'));
-      rmBtn.title = t('mcpCard.removeBtnTip', { id: srv.id });
-      rmBtn.addEventListener('click', e => { e.stopPropagation(); confirmAndRemoveMcp(srv); });
-      actionsWrap.appendChild(rmBtn);
-    }
+    appendMcpManageButtons(actionsWrap, srv);
     if (actionsWrap.childNodes.length) footer.appendChild(actionsWrap);
   } else {
     const actionsWrap = el('div', 'mcp-card-actions');
@@ -5949,13 +6006,7 @@ function buildMcpCard(srv) {
       btn.addEventListener('click', e => { e.stopPropagation(); runMcpReconnectAction(srv, act); });
       actionsWrap.appendChild(btn);
     });
-    // v1.0.94 — bottone Rimuovi anche nel footer "needsAuth" se user-added
-    if (isUserAdded) {
-      const rmBtn = btnWithIcon('btn btn-sm btn-ghost', 'trash-2', t('mcpCard.removeBtn'));
-      rmBtn.title = t('mcpCard.removeBtnTip', { id: srv.id });
-      rmBtn.addEventListener('click', e => { e.stopPropagation(); confirmAndRemoveMcp(srv); });
-      actionsWrap.appendChild(rmBtn);
-    }
+    appendMcpManageButtons(actionsWrap, srv);
     footer.appendChild(actionsWrap);
     const desc = el('div', 'mcp-card-hint', t(srv.reconnect.descriptionKey));
     footer.appendChild(desc);
@@ -5990,10 +6041,7 @@ function buildMcpCompactRow(srv) {
   const tr = el('span', 'compact-row-transport mcp-card-transport-' + srv.transport, srv.transport.toUpperCase());
   row.appendChild(tr);
   // Sub: tipo (claude.ai/plugin/user-added)
-  const subText = srv.scope === 'builtin' ? 'claude.ai · globale'
-    : srv.scope === 'plugin' ? ('plugin: ' + (srv.plugin || '—'))
-    : 'user-added';
-  row.appendChild(el('span', 'compact-row-sub', subText));
+  row.appendChild(el('span', 'compact-row-sub', mcpScopeLabel(srv)));
   // Status text se non connected
   if (srv.status !== 'connected' && srv.statusText) {
     const sm = el('span', 'compact-row-status-msg', srv.statusText);
@@ -6100,21 +6148,28 @@ async function showMcpToolsModal(srv) {
 // (buildMcpToggle). Le vecchie funzioni confirmAndDisableMcp/enableMcp sono
 // state rimosse: la logica vive nel toggle, che riusa mcpDisable/mcpEnable.
 
-async function confirmAndRemoveMcp(srv) {
+// v1.1.36 — Conferma + azione MCP (remove o disconnect): stesso schema
+// dialog → API → toast + invalida cache + re-render. kind: 'remove' | 'disconnect'.
+async function confirmMcpAction(srv, kind) {
+  const cfg = kind === 'disconnect'
+    ? { ns: 'disconnectMcp', label: srv.displayName || srv.id, okToast: 'toast.mcpDisconnected',
+        api: () => window.claudeAPI.mcpLogout(srv.id) }
+    : { ns: 'removeMcp',     label: srv.id,                    okToast: 'toast.mcpRemoved',
+        api: () => window.claudeAPI.mcpRemove(srv.id, srv.scope, srv.project) };
   const response = await window.claudeAPI.confirmDialog({
-    title:   t('confirm.removeMcp.title'),
-    message: t('confirm.removeMcp.message', { id: srv.id }),
-    detail:  t('confirm.removeMcp.detail', { id: srv.id }),
-    buttons: [t('button.cancel'), t('confirm.removeMcp.yes')],
+    title:   t('confirm.' + cfg.ns + '.title'),
+    message: t('confirm.' + cfg.ns + '.message', { id: cfg.label }),
+    detail:  t('confirm.' + cfg.ns + '.detail', { id: srv.id }),
+    buttons: [t('button.cancel'), t('confirm.' + cfg.ns + '.yes')],
   });
   if (response !== 1) return;
-  const r = await window.claudeAPI.mcpRemove(srv.id);
+  const r = await cfg.api();
   if (r.success) {
-    toast(t('toast.mcpRemoved', { id: srv.id }), 'success');
+    toast(t(cfg.okToast, { id: cfg.label }), 'success');
     mcpCache = null;
     if (state.section === 'mcp') renderMcp();
   } else {
-    toast('Errore rimozione: ' + (r.error || 'sconosciuto'), 'error');
+    toast(t('toast.errorPrefix', { msg: r.error || t('mcp.status.unknown') }), 'error');
   }
 }
 

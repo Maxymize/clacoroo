@@ -11,20 +11,23 @@ const PLUGINS_CACHE = path.join(CLAUDE_DIR, 'plugins', 'cache');
 
 // Parse riga di output `claude mcp list`. Esempi reali:
 //   "claude.ai Gmail: https://gmailmcp.googleapis.com/mcp/v1 - ! Needs authentication"
-//   "plugin:neon-plugin:neon: npx -y mcp-remote@latest https://mcp.neon.tech/mcp - ✓ Connected"
-//   "plugin:cloudflare:cloudflare-api: https://mcp.cloudflare.com/mcp (HTTP) - ! Needs authentication"
+//   "plugin:neon-plugin:neon: npx -y mcp-remote@latest https://mcp.neon.tech/mcp - ✔ Connected"
+//   "Coinstats: https://mcp.coinstats.app/mcp (HTTP) - ✘ Failed to connect"
+// v1.1.36 — Claude Code usa i simboli "heavy": ✔ (U+2714) connesso e ✘ (U+2718)
+// fallito; teniamo anche le varianti "light" ✓/✗ per compatibilità. Senza ✔/✘ il
+// parser scartava silenziosamente TUTTI i server connessi e falliti, mostrando
+// solo quelli "! Needs authentication".
 function parseListLine(line) {
-  // Pattern: <id>: <conn> - <status>
-  // Lo status inizia sempre con un simbolo (✓ ! ✗) seguito da testo.
-  const m = line.match(/^(.+?): (.+?) - ([✓!✗])\s*(.+)$/);
+  // Pattern: <id>: <conn> - <symbol> <status>
+  const m = line.match(/^(.+?): (.+?) - ([✓✔!✗✘])\s*(.+)$/);
   if (!m) return null;
   const [, id, conn, symbol, statusText] = m;
 
   let status = 'unknown';
-  if (symbol === '✓') status = 'connected';
+  if (symbol === '✓' || symbol === '✔') status = 'connected';
   else if (symbol === '!') {
     status = /needs auth/i.test(statusText) ? 'needsAuth' : 'warning';
-  } else if (symbol === '✗') status = 'error';
+  } else if (symbol === '✗' || symbol === '✘') status = 'error';
 
   // Estrai transport: ` (HTTP)` esplicito, oppure inferito da URL/comando
   let transport = 'unknown';
@@ -92,6 +95,14 @@ function runMcpList(claudeBin) {
   });
 }
 
+// v1.1.36 — Normalizza i due formati di .mcp.json visti in cache:
+//   { "mcpServers": { <nome>: {...} } }  (claude-mem, cloudflare)
+//   { <nome>: {...} }  (top-level senza wrapper, es. context7)
+function mcpServersFromRaw(raw) {
+  if (!raw || typeof raw !== 'object') return {};
+  return (raw.mcpServers && typeof raw.mcpServers === 'object') ? raw.mcpServers : raw;
+}
+
 // Lettura veloce dei server dichiarati dai plugin (senza health check).
 // Usata come fallback / fonte aggiuntiva di metadata.
 function readPluginMcpDeclarations() {
@@ -110,7 +121,7 @@ function readPluginMcpDeclarations() {
         if (!fs.existsSync(mcpJson)) continue;
         try {
           const raw = JSON.parse(fs.readFileSync(mcpJson, 'utf8'));
-          const servers = raw.mcpServers || {};
+          const servers = mcpServersFromRaw(raw);
           for (const [name, def] of Object.entries(servers)) {
             out.push({
               plugin: plg,
@@ -266,22 +277,64 @@ function clearAuthCacheEntry(serverId) {
 // o null se il server non è user-added.
 const CLAUDE_USER_CONFIG = path.join(os.homedir(), '.claude.json');
 
+// v1.1.36 — Legge e parsa ~/.claude.json una volta (null se assente/invalido).
+// Centralizza il read+parse usato da readUserMcpConfig e readProjectMcpServers.
+function loadClaudeJson() {
+  try { return JSON.parse(fs.readFileSync(CLAUDE_USER_CONFIG, 'utf8')); }
+  catch { return null; }
+}
+
 function readUserMcpConfig(name) {
-  if (!fs.existsSync(CLAUDE_USER_CONFIG)) return null;
-  try {
-    const data = JSON.parse(fs.readFileSync(CLAUDE_USER_CONFIG, 'utf8'));
-    // User scope (globale)
-    if (data.mcpServers && Object.prototype.hasOwnProperty.call(data.mcpServers, name)) {
-      return { scope: 'user', config: data.mcpServers[name] };
+  const data = loadClaudeJson();
+  if (!data) return null;
+  // User scope (globale)
+  if (data.mcpServers && Object.prototype.hasOwnProperty.call(data.mcpServers, name)) {
+    return { scope: 'user', config: data.mcpServers[name] };
+  }
+  // Local/project scope: in projects[<cwd>].mcpServers
+  for (const [proj, projData] of Object.entries(data.projects || {})) {
+    if (projData && projData.mcpServers && Object.prototype.hasOwnProperty.call(projData.mcpServers, name)) {
+      return { scope: 'local', project: proj, config: projData.mcpServers[name] };
     }
-    // Local/project scope: in projects[<cwd>].mcpServers
-    for (const [proj, projData] of Object.entries(data.projects || {})) {
-      if (projData && projData.mcpServers && Object.prototype.hasOwnProperty.call(projData.mcpServers, name)) {
-        return { scope: 'local', project: proj, config: projData.mcpServers[name] };
-      }
-    }
-  } catch { /* invalid JSON, skip */ }
+  }
   return null;
+}
+
+// v1.1.36 — Mappa una config MCP di ~/.claude.json nello shape di parseListLine.
+function mcpConfigToServer(name, cfg, project) {
+  cfg = cfg || {};
+  const transport = String(cfg.type || (cfg.url ? 'http' : 'stdio')).toLowerCase();
+  const connection = cfg.url ||
+    [cfg.command, ...(Array.isArray(cfg.args) ? cfg.args : [])].filter(Boolean).join(' ');
+  return {
+    id: name,
+    displayName: name,
+    scope: 'local',
+    plugin: null,
+    transport,
+    connection,
+    status: 'unknown',   // non health-checkato qui (il check vive in `claude mcp list` per-cwd)
+    statusText: '',
+    project,
+    projectName: path.basename(project) || project,
+  };
+}
+
+// v1.1.36 — Legge TUTTI gli MCP project-scoped da ~/.claude.json
+// (projects[*].mcpServers). `claude mcp list` dalla cwd di CLACOROO NON elenca i
+// server legati ad altre cartelle di progetto: questa lettura li rende comunque
+// visibili nel pannello (read-only, stato non verificato).
+function readProjectMcpServers() {
+  const out = [];
+  const data = loadClaudeJson();
+  if (!data) return out;
+  for (const [proj, projData] of Object.entries(data.projects || {})) {
+    const servers = (projData && projData.mcpServers) || {};
+    for (const [name, cfg] of Object.entries(servers)) {
+      out.push(mcpConfigToServer(name, cfg, proj));
+    }
+  }
+  return out;
 }
 
 module.exports = {
@@ -293,4 +346,6 @@ module.exports = {
   detectReconnectType,
   clearAuthCacheEntry,
   readUserMcpConfig,
+  readProjectMcpServers,
+  mcpServersFromRaw,
 };

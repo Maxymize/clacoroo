@@ -2,6 +2,14 @@
 
 > English translation of [CHANGELOG.md](./CHANGELOG.md) (Italian, canonical). Updated in sync with each release.
 
+## v1.1.36 — 2026-06-25 — MCP: connected/failed servers visible again + project scope
+
+- [FIX] The MCP panel only showed "needs auth" servers and reported "0 connected": the `claude mcp list` parser didn't recognize Claude Code's current status symbols (✔ connected, ✘ failed) and silently dropped every connected and failed server. They all show again now
+- [FIX] A plugin's detail showed "MCP —" even for plugins that provide MCPs (e.g. claude-mem, cloudflare, neon, context7, supabase): detection looked for `mcp.json` instead of the standard `.mcp.json`. It now detects the servers, shows their count and lists their names in the plugin detail
+- [FEATURE] Project-scoped MCPs (defined in `.claude.json` for a folder) are now shown too, with a "project: …" badge and a "From project" filter. The **Remove** trash button now works on them too (not just user-added ones) and actually drops them from the config
+- [FEATURE] **"Disconnect"** button on connected OAuth MCP servers (HTTP/SSE): clears the authentication (`claude mcp logout`) so you can re-authorize them, even with a different account — handy to move an MCP from one account to another
+- [IMPROVEMENT] MCPs provided by a plugin: the card explains they're managed from the plugin and a **"Manage plugin"** button jumps straight to the owning plugin in the Plugins section; claude.ai connectors note they're managed on claude.ai. The remove confirmation reminds you that already-open `claude` sessions keep seeing the server until restarted
+
 ## v1.1.35 — 2026-06-24 — Claude Quota: dedicated tab + stop consuming rate-limit
 
 A new tab for quota and usage insights, and CLACOROO no longer eats into your account's limits/overload while left open.
