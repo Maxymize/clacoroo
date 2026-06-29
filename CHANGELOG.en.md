@@ -2,6 +2,11 @@
 
 > English translation of [CHANGELOG.md](./CHANGELOG.md) (Italian, canonical). Updated in sync with each release.
 
+## v1.1.38 — 2026-06-29 — Sessions: list page with search, sort, and cards/compact view
+
+- [FEATURE] New Sessions page: list of all work sessions in ~/.claude/projects/ with cards (folder, first message, time, turns, cost) or compact row view
+- [FEATURE] Search by folder or first message, sort by last activity or creation date, toggle cards/list view
+
 ## v1.1.37 — 2026-06-29 — Live stats: tokens in plain sight, real cost, attribution
 
 Statistics are now computed live from your session transcripts, no longer from a cache that lagged behind. More accurate and more transparent.

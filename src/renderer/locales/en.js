@@ -80,9 +80,15 @@ window.LOCALES.en = {
     pluginDesc:        'Review what this plugin contributes: its agents, skills, and MCP tools all count toward your limit.',
   },
 
-  // Sessions section (placeholder — Task 6 adds full content)
+  // Sessions section (v1.1.38)
   sessions: {
-    loading:      'Loading sessions…',
+    loading:           'Loading sessions…',
+    empty:             'No sessions found in ~/.claude/projects/. Use Claude Code for a few sessions and they will show up here.',
+    noMatch:           'No session matches your search.',
+    searchPlaceholder: 'Search by folder or first message…',
+    count:             '{n} sessions',
+    turnsBadge:        '{n} turns',
+    noPrompt:          '(no message)',
   },
 
   // Stats section (KPI + tabs + heatmap + context breakdown)

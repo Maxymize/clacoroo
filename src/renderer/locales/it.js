@@ -80,9 +80,15 @@ window.LOCALES.it = {
     pluginDesc:        'Controlla cosa contribuisce questo plugin: i suoi agent, skill e tool MCP contano tutti sul tuo limite.',
   },
 
-  // Sessions section (placeholder — Task 6 aggiunge i contenuti)
+  // Sessions section (v1.1.38)
   sessions: {
-    loading:      'Caricamento sessioni…',
+    loading:           'Caricamento sessioni…',
+    empty:             'Nessuna sessione trovata in ~/.claude/projects/. Usa Claude Code per qualche sessione e compariranno qui.',
+    noMatch:           'Nessuna sessione corrisponde alla ricerca.',
+    searchPlaceholder: 'Cerca per cartella o primo messaggio…',
+    count:             '{n} sessioni',
+    turnsBadge:        '{n} turni',
+    noPrompt:          '(nessun messaggio)',
   },
 
   // Stats section (KPI + tabs + heatmap + context breakdown)

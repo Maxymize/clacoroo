@@ -2,6 +2,11 @@
 
 > Italiano (canonico). English translation: [CHANGELOG.en.md](./CHANGELOG.en.md) — allineato a ogni release.
 
+## v1.1.38 — 2026-06-29 — Sessioni: pagina lista con ricerca, ordinamento e vista cards/compatta
+
+- [FEATURE] Nuova pagina Sessioni: elenco di tutte le sessioni di lavoro in ~/.claude/projects/ con card (cartella, primo messaggio, tempo, turni, costo) o vista compatta a righe
+- [FEATURE] Ricerca per cartella o primo messaggio, ordinamento per ultima attivita o data creazione, toggle cards/lista
+
 ## v1.1.37 — 2026-06-29 — Statistiche dal vivo: token in chiaro, costo reale, attribuzione
 
 Le statistiche ora si calcolano dal vivo dai transcript delle sessioni, non più da una cache che restava indietro. Più accurate e più trasparenti.

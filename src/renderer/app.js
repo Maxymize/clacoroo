@@ -355,13 +355,14 @@ const MCP_SORTERS = {
   'status':     (a, b) => (MCP_STATUS_ORDER[a.status] ?? 9) - (MCP_STATUS_ORDER[b.status] ?? 9)
                           || (a.name || '').localeCompare(b.name || ''),
 };
-// v1.0.83 — Pack K: sorters per la sezione Hooks
+// v1.1.38 — sorters per la sezione Sessions
 const SESSIONS_SORTERS = {
   'modified-desc': (a, b) => (b.lastActivity || 0) - (a.lastActivity || 0),
   'modified-asc':  (a, b) => (a.lastActivity || 0) - (b.lastActivity || 0),
   'created-desc':  (a, b) => (b.createdAt || 0) - (a.createdAt || 0),
   'created-asc':   (a, b) => (a.createdAt || 0) - (b.createdAt || 0),
 };
+// v1.0.83 — Pack K: sorters per la sezione Hooks
 const HOOK_SORTERS = {
   'event-asc':   (a, b) => (a.event   || '').localeCompare(b.event || '')
                           || (a.pluginId || '').localeCompare(b.pluginId || ''),
@@ -4455,15 +4456,103 @@ function renderListSection(items, key, buildChip, searchFn, gridCls, sortConfig,
 /* ── STATS (v1.0.12) ──────────────────────────────────────────────────── */
 let statsCache = null;        // cache legacy condivisa (Dashboard / Config / context breakdown)
 let liveStatsCache = null;    // cache live { live, legacy } per la sezione Stats (v1.1.37)
-function clearStatsCaches() { statsCache = null; liveStatsCache = null; }
+let sessionsCache = null;     // cache lista sessioni per la sezione Sessions (v1.1.38)
+function clearStatsCaches() { statsCache = null; liveStatsCache = null; sessionsCache = null; }
 let statsActiveTab = 'overview';
 let statsRenderToken = 0;
 // v1.1.36 — finestra insight "Cosa incide sui limiti" (tab Claude Quota): '24h' | '7d'
 let insightsWindow = '7d';
 
-// v1.1.38 — Task 5 placeholder: sostituito da renderSessions completo nel Task 6
-function renderSessions() {
-  setContent(el('div', 'stats-loading', t('sessions.loading')));
+/* ── SESSIONS (v1.1.38) ────────────────────────────────────────────────── */
+function openSessionModal(s) { console.log('session', s.id); }  // stub: sostituito in Task 7
+
+function buildSessionCard(s) {
+  const card = el('div', 'browse-card session-card');
+  card.appendChild(el('div', 'browse-card-title', s.projectLabel));
+  if (s.cwd) card.appendChild(el('div', 'session-cwd', s.cwd));
+  card.appendChild(el('div', 'session-prompt', s.firstPrompt || t('sessions.noPrompt')));
+  const meta = el('div', 'session-meta');
+  meta.appendChild(el('span', 'session-badge', relativeTime(s.lastActivity)));
+  meta.appendChild(el('span', 'session-badge', t('sessions.turnsBadge', { n: fmtNum(s.turns) })));
+  meta.appendChild(el('span', 'session-badge session-cost', formatUsd(s.cost)));
+  card.appendChild(meta);
+  card.addEventListener('click', () => openSessionModal(s));
+  return card;
+}
+
+function buildSessionRow(s) {
+  const row = el('div', 'compact-row session-row');
+  row.appendChild(el('span', 'compact-row-name', s.projectLabel));
+  row.appendChild(el('span', 'session-row-prompt', s.firstPrompt || t('sessions.noPrompt')));
+  row.appendChild(el('span', 'session-row-time', relativeTime(s.lastActivity)));
+  row.appendChild(el('span', 'session-row-turns', t('sessions.turnsBadge', { n: fmtNum(s.turns) })));
+  row.appendChild(el('span', 'session-row-cost', formatUsd(s.cost)));
+  row.addEventListener('click', () => openSessionModal(s));
+  return row;
+}
+
+async function renderSessions() {
+  const wrap = el('div');
+
+  // Riga 1: search
+  const bar = el('div', 'filter-bar');
+  const sw = el('div', 'search-wrap');
+  const inp = el('input', 'search-input');
+  inp.type = 'text';
+  inp.placeholder = t('sessions.searchPlaceholder');
+  inp.value = state.filters.sessions.search;
+  sw.appendChild(inp);
+  bar.appendChild(sw);
+  wrap.appendChild(bar);
+
+  // Riga 2: header con count + view switcher + sort
+  const hdr = el('div', 'section-header');
+  const countEl = el('span', 'section-count', '');
+  hdr.appendChild(countEl);
+  const mode = state.viewMode.sessions;
+  hdr.appendChild(renderViewSwitcher('sessions', mode, (m) => setViewMode('sessions', m)));
+  hdr.appendChild(renderSortDropdown(state.sessionsSort, SORT_OPTIONS.sessions, async (key) => {
+    state.sessionsSort = key;
+    await window.claudeAPI.setState({ sessionsSort: key });
+    renderSessions();
+  }));
+  wrap.appendChild(hdr);
+
+  const grid = el('div', mode === 'cards' ? 'browse-card-grid' : 'compact-list');
+  wrap.appendChild(grid);
+  setContent(wrap);
+
+  // Dati (cache renderer + fetch)
+  let data = sessionsCache;
+  if (!data) {
+    grid.appendChild(el('div', 'stats-loading', t('sessions.loading')));
+    data = await window.claudeAPI.getSessions();
+    if (state.section !== 'sessions') return;  // race guard
+    sessionsCache = data;
+    grid.textContent = '';
+  }
+  if (!data || data.ok === false || !data.sessions || !data.sessions.length) {
+    grid.appendChild(el('div', 'stats-empty', t('sessions.empty')));
+    countEl.textContent = '';
+    return;
+  }
+
+  const sorted = data.sessions.slice().sort(SESSIONS_SORTERS[state.sessionsSort] || SESSIONS_SORTERS['modified-desc']);
+
+  function paint() {
+    grid.textContent = '';
+    const q = state.filters.sessions.search.trim().toLowerCase();
+    const list = q
+      ? sorted.filter(s => (s.projectLabel + ' ' + (s.cwd || '') + ' ' + (s.firstPrompt || '')).toLowerCase().includes(q))
+      : sorted;
+    countEl.textContent = t('sessions.count', { n: list.length });
+    list.forEach(s => grid.appendChild(mode === 'cards' ? buildSessionCard(s) : buildSessionRow(s)));
+    if (!list.length) grid.appendChild(el('div', 'stats-empty', t('sessions.noMatch')));
+  }
+  paint();
+
+  inp.addEventListener('input', () => { state.filters.sessions.search = inp.value; paint(); });
+  inp.focus();
 }
 
 async function renderStats() {
