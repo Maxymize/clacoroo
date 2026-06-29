@@ -35,6 +35,7 @@ contextBridge.exposeInMainWorld('claudeAPI', {
   removeTrackedProject: (p)               => ipcRenderer.invoke('remove-tracked-project', p),
   openDirectory:        (p)               => ipcRenderer.invoke('open-directory',         p),
   getStats:             ()                => ipcRenderer.invoke('get-stats'),
+  getLiveStats:         (force)           => ipcRenderer.invoke('get-live-stats', { force: !!force }),
   updateSettings:       (patch)           => ipcRenderer.invoke('update-settings',        patch),
   getMcp:               (opts)            => ipcRenderer.invoke('get-mcp',                opts || {}),
   mcpClearAuthCache:    (serverId)        => ipcRenderer.invoke('mcp:clear-auth-cache',   { serverId }),

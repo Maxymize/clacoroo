@@ -24,13 +24,7 @@
 // una STIMA allineata al pannello /usage, non una replica bit-perfect (i confini
 // esatti delle finestre temporali e lo snapshot differiscono).
 
-const fs       = require('fs');
-const path     = require('path');
-const os       = require('os');
-const readline = require('readline');
-
-const CLAUDE_DIR   = process.env.CLAUDE_CONFIG_DIR || path.join(os.homedir(), '.claude');
-const PROJECTS_DIR = path.join(CLAUDE_DIR, 'projects');
+const { scanTranscripts } = require('./transcript-scan');
 
 // ── Costanti Claude Code (verificate verbatim) ────────────────────────────
 const CTX_THRESHOLD          = 150000;  // NXp — >150k context
@@ -61,49 +55,6 @@ function turnWeight(u, model) {
   const cacheCreate = u.cache_creation_input_tokens || 0;
   const output      = u.output_tokens               || 0;
   return (cached + uncached * 10 + cacheCreate * 12.5 + output * 50) * modelTier(model);
-}
-
-// ── Enumerazione file (con filtro mtime per finestra) ─────────────────────
-function safeReaddir(dir) {
-  try { return fs.readdirSync(dir, { withFileTypes: true }); } catch { return []; }
-}
-function mtimeOk(p, cutoffMs) {
-  if (!cutoffMs) return true;
-  try { return fs.statSync(p).mtimeMs >= cutoffMs; } catch { return false; }
-}
-
-// Raccoglie i file .jsonl rilevanti: i main di sessione (projects/<proj>/*.jsonl)
-// e tutti i transcript subagent (projects/<proj>/<sessionId>/subagents/**/*.jsonl).
-// Usa Dirent (withFileTypes) per classificare dir/file senza statSync extra.
-function collectSessionFiles(cutoffMs) {
-  const out = [];
-  for (const proj of safeReaddir(PROJECTS_DIR)) {
-    if (!proj.isDirectory()) continue;
-    const projPath = path.join(PROJECTS_DIR, proj.name);
-    for (const ent of safeReaddir(projPath)) {
-      const entPath = path.join(projPath, ent.name);
-      if (ent.isFile() && ent.name.endsWith('.jsonl')) {
-        if (mtimeOk(entPath, cutoffMs)) {
-          out.push({ path: entPath, isSub: false, parentSid: ent.name.replace(/\.jsonl$/, '') });
-        }
-      } else if (ent.isDirectory()) {
-        // ent = <sessionId>: cerca ricorsivamente i transcript subagent
-        walkSubagents(entPath, ent.name, cutoffMs, out);
-      }
-    }
-  }
-  return out;
-}
-
-function walkSubagents(dir, parentSid, cutoffMs, out) {
-  for (const ent of safeReaddir(dir)) {
-    const p = path.join(dir, ent.name);
-    if (ent.isFile() && ent.name.endsWith('.jsonl')) {
-      if (mtimeOk(p, cutoffMs)) out.push({ path: p, isSub: true, parentSid });
-    } else if (ent.isDirectory()) {
-      walkSubagents(p, parentSid, cutoffMs, out);
-    }
-  }
 }
 
 // ── Scan + accumulo ───────────────────────────────────────────────────────
@@ -168,25 +119,6 @@ function processRecord(rec, state, cutoffMs, file) {
   if (plugin) state.byPlugin.set(plugin, (state.byPlugin.get(plugin) || 0) + w);
 }
 
-function scanFile(file, state, cutoffMs) {
-  return new Promise((resolve) => {
-    let stream;
-    try { stream = fs.createReadStream(file.path, { encoding: 'utf8' }); }
-    catch { return resolve(); }
-    stream.on('error', () => resolve());
-    const rl = readline.createInterface({ input: stream, crlfDelay: Infinity });
-    rl.on('line', (line) => {
-      // Pre-filtro economico: solo le righe con usage (turni assistant)
-      if (!line || line.indexOf('"usage"') === -1) return;
-      let rec;
-      try { rec = JSON.parse(line); } catch { return; }
-      try { processRecord(rec, state, cutoffMs, file); } catch { /* difensivo */ }
-    });
-    rl.on('close', resolve);
-    rl.on('error', () => resolve());
-  });
-}
-
 // ── Calcolo finale ────────────────────────────────────────────────────────
 function pct(part, total) { return total > 0 ? Math.round((part / total) * 100) : 0; }
 // Tiene solo le voci sopra la soglia di display, ordinate per peso decrescente.
@@ -238,14 +170,14 @@ function computeInsights(state) {
 async function getInsights(days) {
   const win = Number(days) === 1 ? 1 : 7;
   const cutoffMs = Date.now() - win * 24 * 3600 * 1000;
-  if (!fs.existsSync(PROJECTS_DIR)) return { ok: true, hasData: false, behaviors: [], plugins: [], sessionsScanned: 0 };
-  const files = collectSessionFiles(cutoffMs);
   const state = newState();
-  // Concorrenza limitata per non saturare i file descriptor su molti file
-  const BATCH = 8;
-  for (let i = 0; i < files.length; i += BATCH) {
-    await Promise.all(files.slice(i, i + BATCH).map(f => scanFile(f, state, cutoffMs)));
-  }
+  // Scan condiviso (transcript-scan): il dedup per uuid + il filtro per-record
+  // sul cutoff restano in processRecord, semantica invariata.
+  await scanTranscripts({
+    sinceMs: cutoffMs,
+    prefilter: '"usage"',
+    onRecord: (rec, file) => processRecord(rec, state, cutoffMs, file),
+  });
   const out = computeInsights(state);
   out.window = win === 1 ? '24h' : '7d';
   return out;
@@ -256,11 +188,9 @@ module.exports = {
   // esportati per test/validazione
   modelTier,
   turnWeight,
-  collectSessionFiles,
   computeInsights,
   newState,
   processRecord,
-  scanFile,
   CTX_THRESHOLD,
   CACHE_MISS_THRESHOLD,
   MIN_PCT,
