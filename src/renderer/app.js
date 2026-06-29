@@ -266,6 +266,7 @@ const state = {
     skills:       { search: '' },
     agents:       { search: '' },
     hooks:        { search: '', event: 'all', scope: 'all', plugin: 'all' },
+    sessions:     { search: '' },
   },
   // v1.0.55 — ordinamento marketplace. Valori:
   //   'default'        plugin disponibili desc, poi installati desc
@@ -281,6 +282,7 @@ const state = {
   mcpSort:    'name-asc',
   // v1.0.83 — Pack K: ordinamento sezione Hooks
   hookSort:   'event-asc',
+  sessionsSort: 'modified-desc',
   // v1.0.96 — Pack M: vista cards (default) vs compatta (chip) switchabile
   // per ogni sezione, persistita in state.json. Le sezioni che oggi hanno
   // solo una delle 2 viste ottengono l'altra (Skill/Agent cards, MCP/Hooks/
@@ -292,6 +294,7 @@ const state = {
     agents:       'cards',
     mcp:          'cards',
     hooks:        'cards',
+    sessions:     'cards',
   },
   // v1.0.100 — Tracking file .md modificati localmente dall'utente via editor
   // inline (showMarkdownModal Modifica/Salva). Persisted in state.json.
@@ -353,6 +356,12 @@ const MCP_SORTERS = {
                           || (a.name || '').localeCompare(b.name || ''),
 };
 // v1.0.83 — Pack K: sorters per la sezione Hooks
+const SESSIONS_SORTERS = {
+  'modified-desc': (a, b) => (b.lastActivity || 0) - (a.lastActivity || 0),
+  'modified-asc':  (a, b) => (a.lastActivity || 0) - (b.lastActivity || 0),
+  'created-desc':  (a, b) => (b.createdAt || 0) - (a.createdAt || 0),
+  'created-asc':   (a, b) => (a.createdAt || 0) - (b.createdAt || 0),
+};
 const HOOK_SORTERS = {
   'event-asc':   (a, b) => (a.event   || '').localeCompare(b.event || '')
                           || (a.pluginId || '').localeCompare(b.pluginId || ''),
@@ -467,6 +476,12 @@ const SORT_OPTIONS = {
     { key: 'event-desc',  labelKey: 'sort.eventDesc' },
     { key: 'plugin-asc',  labelKey: 'sort.pluginAsc' },
     { key: 'plugin-desc', labelKey: 'sort.pluginDesc' },
+  ],
+  sessions: [
+    { key: 'modified-desc', labelKey: 'sort.modifiedDesc' },
+    { key: 'modified-asc',  labelKey: 'sort.modifiedAsc' },
+    { key: 'created-desc',  labelKey: 'sort.createdDesc' },
+    { key: 'created-asc',   labelKey: 'sort.createdAsc' },
   ],
 };
 
@@ -594,6 +609,7 @@ async function init() {
   if (appState.agentSort  && NAME_SORTERS[appState.agentSort])   state.agentSort  = appState.agentSort;
   if (appState.mcpSort    && MCP_SORTERS[appState.mcpSort])      state.mcpSort    = appState.mcpSort;
   if (appState.hookSort   && HOOK_SORTERS[appState.hookSort])    state.hookSort   = appState.hookSort;
+  if (appState.sessionsSort && SESSIONS_SORTERS[appState.sessionsSort]) state.sessionsSort = appState.sessionsSort;
   // v1.0.96 — Pack M: restore viewMode persistito per sezione (default cards)
   if (appState.viewMode && typeof appState.viewMode === 'object') {
     for (const sec of Object.keys(state.viewMode)) {
@@ -1024,6 +1040,7 @@ function render() {
     agents:      'nav.agent',
     mcp:         'nav.mcp',
     hooks:       'nav.hooks',
+    sessions:    'nav.sessions',
     stats:       'nav.stats',
     config:      'nav.config',
     settings:    'nav.settings',
@@ -1123,6 +1140,7 @@ function render() {
     case 'agents':       renderAgents();      break;
     case 'mcp':          renderMcp();         break;
     case 'hooks':        renderHooks();       break;
+    case 'sessions':     renderSessions();    break;
     case 'stats':        renderStats();       break;
     case 'config':       renderConfig();      break;
     case 'settings':     renderSettings();    break;
@@ -4442,6 +4460,11 @@ let statsActiveTab = 'overview';
 let statsRenderToken = 0;
 // v1.1.36 — finestra insight "Cosa incide sui limiti" (tab Claude Quota): '24h' | '7d'
 let insightsWindow = '7d';
+
+// v1.1.38 — Task 5 placeholder: sostituito da renderSessions completo nel Task 6
+function renderSessions() {
+  setContent(el('div', 'stats-loading', t('sessions.loading')));
+}
 
 async function renderStats() {
   const myToken = ++statsRenderToken;

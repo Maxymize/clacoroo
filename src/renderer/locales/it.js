@@ -13,6 +13,7 @@ window.LOCALES.it = {
     agent:        'Agent',
     mcp:          'MCP',
     hooks:        'Hooks',
+    sessions:     'Sessioni',
     stats:        'Stats',
     config:       'Claude Config',
     settings:     'Impostazioni',
@@ -77,6 +78,11 @@ window.LOCALES.it = {
     cacheMissDesc:     'Gli input grandi non in cache sono costosi. Riusa il contesto ed evita di re-incollare file voluminosi.',
     pluginHead:        '{pct}% del tuo utilizzo viene dal plugin «{name}»',
     pluginDesc:        'Controlla cosa contribuisce questo plugin: i suoi agent, skill e tool MCP contano tutti sul tuo limite.',
+  },
+
+  // Sessions section (placeholder — Task 6 aggiunge i contenuti)
+  sessions: {
+    loading:      'Caricamento sessioni…',
   },
 
   // Stats section (KPI + tabs + heatmap + context breakdown)
@@ -252,6 +258,10 @@ window.LOCALES.it = {
     mktAddedAsc:  'Aggiunti meno di recente',
     mktUpdatedDesc:'Aggiornati di recente',
     mktUpdatedAsc:'Aggiornati meno di recente',
+    modifiedDesc: 'Ultima modifica ↓',
+    modifiedAsc:  'Ultima modifica ↑',
+    createdDesc:  'Creazione ↓',
+    createdAsc:   'Creazione ↑',
   },
 
   // Filter chips

@@ -13,6 +13,7 @@ window.LOCALES.en = {
     agent:        'Agents',
     mcp:          'MCP',
     hooks:        'Hooks',
+    sessions:     'Sessions',
     stats:        'Stats',
     config:       'Claude Config',
     settings:     'Settings',
@@ -77,6 +78,11 @@ window.LOCALES.en = {
     cacheMissDesc:     'Large uncached inputs are expensive. Reuse context and avoid re-pasting large files.',
     pluginHead:        '{pct}% of your usage came from plugin "{name}"',
     pluginDesc:        'Review what this plugin contributes: its agents, skills, and MCP tools all count toward your limit.',
+  },
+
+  // Sessions section (placeholder — Task 6 adds full content)
+  sessions: {
+    loading:      'Loading sessions…',
   },
 
   // Stats section (KPI + tabs + heatmap + context breakdown)
@@ -252,6 +258,10 @@ window.LOCALES.en = {
     mktAddedAsc:  'Added earliest',
     mktUpdatedDesc:'Recently updated',
     mktUpdatedAsc:'Updated earliest',
+    modifiedDesc: 'Last modified ↓',
+    modifiedAsc:  'Last modified ↑',
+    createdDesc:  'Created ↓',
+    createdAsc:   'Created ↑',
   },
 
   // Filter chips
