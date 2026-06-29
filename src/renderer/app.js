@@ -4519,6 +4519,7 @@ async function openSessionModal(s) {
   swapModalOverlay(overlay);
 
   const tr = await window.claudeAPI.readSessionTranscript(s.id);
+  if (!document.contains(overlay)) return;  // modal chiuso prima che il transcript risolva
   body.textContent = '';
   if (!tr || tr.ok === false || !tr.entries || !tr.entries.length) {
     body.appendChild(el('div', 'stats-empty', t('sessions.transcriptEmpty')));
