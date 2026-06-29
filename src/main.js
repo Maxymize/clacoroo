@@ -87,6 +87,7 @@ const PRICING = require('./lib/pricing');
 const USAGE   = require('./lib/usage');
 const INSIGHTS = require('./lib/insights');
 const STATS_LIVE = require('./lib/stats-live');
+const SESSIONS   = require('./lib/sessions');
 const PTY     = require('./lib/pty');
 const APIKEY  = require('./lib/apikey');
 
@@ -1052,6 +1053,26 @@ ipcMain.handle('get-live-stats', async (_e, { force } = {}) => {
   } catch (e) {
     return { ok: false, error: (e && e.message) || 'live stats error', days: {}, sessions: [] };
   }
+});
+
+// v1.1.38 — Sessions: lista metadati (head-read + costo da stats-live), cache 5 min.
+let SESSIONS_CACHE = null;
+let SESSIONS_AT = 0;
+const SESSIONS_TTL_MS = 5 * 60 * 1000;
+ipcMain.handle('get-sessions', async (_e, { force } = {}) => {
+  if (!force && SESSIONS_CACHE && Date.now() - SESSIONS_AT < SESSIONS_TTL_MS) return SESSIONS_CACHE;
+  try {
+    SESSIONS_CACHE = await SESSIONS.listSessions();
+    SESSIONS_AT = Date.now();
+    return SESSIONS_CACHE;
+  } catch (e) {
+    return { ok: false, error: (e && e.message) || 'sessions error', sessions: [] };
+  }
+});
+
+ipcMain.handle('read-session-transcript', async (_e, { sessionId } = {}) => {
+  try { return await SESSIONS.readSessionTranscript(sessionId); }
+  catch (e) { return { ok: false, error: (e && e.message) || 'transcript error', entries: [] }; }
 });
 
 ipcMain.handle('get-stats', async (_e, { force } = {}) => {
