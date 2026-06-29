@@ -34,6 +34,7 @@ contextBridge.exposeInMainWorld('claudeAPI', {
   addTrackedProject:    ()                => ipcRenderer.invoke('add-tracked-project'),
   removeTrackedProject: (p)               => ipcRenderer.invoke('remove-tracked-project', p),
   openDirectory:        (p)               => ipcRenderer.invoke('open-directory',         p),
+  openExternalTerminal: (p)               => ipcRenderer.invoke('open-external-terminal',  p),
   getStats:             ()                => ipcRenderer.invoke('get-stats'),
   getLiveStats:         (force)           => ipcRenderer.invoke('get-live-stats', { force: !!force }),
   getSessions:           (force) => ipcRenderer.invoke('get-sessions', { force: !!force }),

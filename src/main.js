@@ -1669,6 +1669,43 @@ ipcMain.handle('open-directory', async (_e, dirPath) => {
   return err ? { success: false, error: err } : { success: true };
 });
 
+// v1.1.38 — Apre il terminale di SISTEMA nella cartella indicata (no auto-run:
+// il comando claude --resume viene copiato negli appunti dal renderer).
+ipcMain.handle('open-external-terminal', async (_e, dirPath) => {
+  if (typeof dirPath !== 'string' || !fs.existsSync(dirPath)) {
+    return { success: false, error: 'Path non valido' };
+  }
+  const plat = process.platform;
+  const tryRun = (bin, args) => new Promise((res) => {
+    execFile(bin, args, { timeout: 8000 }, (err) => res(!err));
+  });
+  try {
+    if (plat === 'darwin') {
+      const ok = await tryRun('open', ['-a', 'Terminal', dirPath]);
+      return ok ? { success: true } : { success: false, error: 'Terminal non avviabile' };
+    }
+    if (plat === 'win32') {
+      // Windows Terminal se presente, altrimenti cmd
+      const ok = await tryRun('cmd', ['/c', 'start', 'wt', '-d', dirPath]) ||
+                 await tryRun('cmd', ['/c', 'start', 'cmd', '/k', 'cd /d "' + dirPath + '"']);
+      return ok ? { success: true } : { success: false, error: 'Terminale Windows non avviabile' };
+    }
+    // linux: prova gli emulatori comuni in ordine
+    const candidates = [
+      ['x-terminal-emulator', ['--working-directory=' + dirPath]],
+      ['gnome-terminal',      ['--working-directory=' + dirPath]],
+      ['konsole',             ['--workdir', dirPath]],
+      ['xterm',               []],
+    ];
+    for (const [bin, args] of candidates) {
+      if (await tryRun(bin, args)) return { success: true };
+    }
+    return { success: false, error: 'Nessun terminale trovato' };
+  } catch (e) {
+    return { success: false, error: (e && e.message) || 'errore terminale' };
+  }
+});
+
 // v1.0.59 — Normalizza un path assoluto in formato URI per gli URL handler
 // degli editor cross-platform. Su Windows: 'C:\\Users\\foo' → '/C:/Users/foo'.
 // Su macOS/Linux: invariato (già POSIX-style con leading /).
