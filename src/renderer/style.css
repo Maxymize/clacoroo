@@ -5009,3 +5009,17 @@ body {
 .session-row-prompt { color: var(--text-muted); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .session-row-time, .session-row-turns, .session-row-cost { font-size: 11px; color: var(--text-muted); text-align: right; }
 .session-row-cost { color: #22c55e; }
+
+/* Session modal — transcript (v1.1.38) */
+.session-modal { max-width: 860px; width: 90vw; }
+.session-actions { display: flex; gap: 8px; flex-wrap: wrap; padding: 8px 0 12px; }
+.session-transcript { max-height: 65vh; overflow-y: auto; }
+.tr-msg { padding: 10px 12px; border-radius: 8px; margin-bottom: 8px; }
+.tr-user { background: var(--surface2); }
+.tr-assistant { background: var(--surface); border: 1px solid var(--border); }
+.tr-role { font-size: 10px; text-transform: uppercase; letter-spacing: .06em; color: var(--text-muted); margin-bottom: 4px; }
+.tr-tool { margin: 4px 0; font-size: 12px; }
+.tr-tool-sum { cursor: pointer; display: flex; gap: 8px; align-items: baseline; }
+.tr-tool-name { font-weight: 600; color: var(--accent2, #6a9bcc); }
+.tr-tool-summary { color: var(--text-muted); font-family: "SF Mono", Menlo, monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tr-tool-detail { background: var(--surface2); padding: 8px; border-radius: 6px; overflow-x: auto; font-size: 11px; white-space: pre-wrap; }

@@ -89,6 +89,17 @@ window.LOCALES.en = {
     count:             '{n} sessions',
     turnsBadge:        '{n} turns',
     noPrompt:          '(no message)',
+    resumeInternal:    '▶ Resume (internal terminal)',
+    resumeExternal:    'External terminal',
+    copyCmd:           'Copy command',
+    openFolder:        'Open folder',
+    copied:            'Command copied',
+    extOpened:         'External terminal opened — paste the command (copied)',
+    extCopied:         'Command copied — open it in your terminal',
+    loadingTranscript: 'Loading conversation…',
+    transcriptEmpty:   'Conversation empty or unreadable.',
+    roleUser:          'You',
+    roleAssistant:     'Claude',
   },
 
   // Stats section (KPI + tabs + heatmap + context breakdown)

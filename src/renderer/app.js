@@ -4464,7 +4464,104 @@ let statsRenderToken = 0;
 let insightsWindow = '7d';
 
 /* ── SESSIONS (v1.1.38) ────────────────────────────────────────────────── */
-function openSessionModal(s) { console.log('session', s.id); }  // stub: sostituito in Task 7
+async function openSessionModal(s) {
+  const overlay = el('div', 'md-overlay');
+  const box = el('div', 'md-modal session-modal');
+  box.setAttribute('role', 'dialog');
+  box.setAttribute('aria-modal', 'true');
+  function close() {
+    document.removeEventListener('keydown', onKey);
+    overlay.remove();
+  }
+  function onKey(e) { if (e.key === 'Escape') close(); }
+  overlay._close = close;
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+  document.addEventListener('keydown', onKey);
+
+  // Header
+  const head = el('div', 'md-header');
+  head.appendChild(el('div', 'md-title', s.projectLabel));
+  const closeBtn = el('button', 'md-close');
+  closeBtn.setAttribute('aria-label', t('button.close'));
+  closeBtn.appendChild(icon('x'));
+  closeBtn.addEventListener('click', () => close());
+  head.appendChild(closeBtn);
+  box.appendChild(head);
+
+  // Azioni
+  const cmd = 'claude --resume ' + s.id;
+  const actions = el('div', 'session-actions');
+  const resumeBtn = el('button', 'btn btn-sm', t('sessions.resumeInternal'));
+  resumeBtn.addEventListener('click', () => {
+    openTerminalWithCommand(cmd, { cwd: s.cwd || undefined, title: s.projectLabel });
+    overlay._close();
+  });
+  const extBtn = el('button', 'btn btn-sm btn-ghost', t('sessions.resumeExternal'));
+  extBtn.addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText(cmd); } catch {}
+    const r = s.cwd ? await window.claudeAPI.openExternalTerminal(s.cwd) : { success: false };
+    toast(r && r.success ? t('sessions.extOpened') : t('sessions.extCopied'), r && r.success ? 'success' : 'info');
+  });
+  const copyBtn = el('button', 'btn btn-sm btn-ghost', t('sessions.copyCmd'));
+  copyBtn.addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText(cmd); toast(t('sessions.copied'), 'success'); } catch {}
+  });
+  const folderBtn = el('button', 'btn btn-sm btn-ghost', t('sessions.openFolder'));
+  folderBtn.addEventListener('click', () => { if (s.cwd) window.claudeAPI.openDirectory(s.cwd); });
+  [resumeBtn, extBtn, copyBtn, folderBtn].forEach(b => actions.appendChild(b));
+  box.appendChild(actions);
+
+  // Corpo transcript
+  const body = el('div', 'session-transcript');
+  body.appendChild(el('div', 'stats-loading', t('sessions.loadingTranscript')));
+  box.appendChild(body);
+  overlay.appendChild(box);
+  swapModalOverlay(overlay);
+
+  const tr = await window.claudeAPI.readSessionTranscript(s.id);
+  body.textContent = '';
+  if (!tr || tr.ok === false || !tr.entries || !tr.entries.length) {
+    body.appendChild(el('div', 'stats-empty', t('sessions.transcriptEmpty')));
+    return;
+  }
+  renderTranscriptWindowed(body, tr.entries);
+}
+
+// Render incrementale: mostra a blocchi di STEP entry, "carica altro" on-scroll.
+function renderTranscriptWindowed(container, entries) {
+  const STEP = 40;
+  let shown = 0;
+  const list = el('div', 'transcript-list');
+  container.appendChild(list);
+  function renderMore() {
+    const next = entries.slice(shown, shown + STEP);
+    next.forEach(e => list.appendChild(buildTranscriptEntry(e)));
+    shown += next.length;
+  }
+  renderMore();
+  container.addEventListener('scroll', () => {
+    if (shown < entries.length && container.scrollTop + container.clientHeight >= container.scrollHeight - 80) renderMore();
+  });
+}
+
+function buildTranscriptEntry(e) {
+  if (e.kind === 'msg') {
+    const row = el('div', 'tr-msg tr-' + (e.role || 'assistant'));
+    row.appendChild(el('div', 'tr-role', e.role === 'user' ? t('sessions.roleUser') : t('sessions.roleAssistant')));
+    const md = el('div', 'tr-text');
+    renderMarkdownToContainer(md, e.text || '');
+    row.appendChild(md);
+    return row;
+  }
+  // tool: riga compatta collassabile
+  const det = el('details', 'tr-tool');
+  const sum = el('summary', 'tr-tool-sum');
+  sum.appendChild(el('span', 'tr-tool-name', e.toolName || 'tool'));
+  sum.appendChild(el('span', 'tr-tool-summary', e.toolSummary || ''));
+  det.appendChild(sum);
+  det.appendChild(el('pre', 'tr-tool-detail', e.toolDetail || ''));
+  return det;
+}
 
 function buildSessionCard(s) {
   const card = el('div', 'browse-card session-card');

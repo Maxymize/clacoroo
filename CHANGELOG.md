@@ -2,10 +2,12 @@
 
 > Italiano (canonico). English translation: [CHANGELOG.en.md](./CHANGELOG.en.md) — allineato a ogni release.
 
-## v1.1.38 — 2026-06-29 — Sessioni: pagina lista con ricerca, ordinamento e vista cards/compatta
+## v1.1.38 — 2026-06-29 — Sessioni: pagina lista + modal transcript leggibile
 
 - [FEATURE] Nuova pagina Sessioni: elenco di tutte le sessioni di lavoro in ~/.claude/projects/ con card (cartella, primo messaggio, tempo, turni, costo) o vista compatta a righe
 - [FEATURE] Ricerca per cartella o primo messaggio, ordinamento per ultima attivita o data creazione, toggle cards/lista
+- [FEATURE] Modal transcript: clicca una sessione per leggere la conversazione con windowing (40 entry per volta, carica altro al scroll), tool collassabili
+- [FEATURE] Azioni rapide nel modal: riprendi nel terminale interno, apri terminale esterno, copia comando `claude --resume`, apri cartella
 
 ## v1.1.37 — 2026-06-29 — Statistiche dal vivo: token in chiaro, costo reale, attribuzione
 

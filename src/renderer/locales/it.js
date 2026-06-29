@@ -89,6 +89,17 @@ window.LOCALES.it = {
     count:             '{n} sessioni',
     turnsBadge:        '{n} turni',
     noPrompt:          '(nessun messaggio)',
+    resumeInternal:    '▶ Riprendi (terminale interno)',
+    resumeExternal:    'Terminale esterno',
+    copyCmd:           'Copia comando',
+    openFolder:        'Apri cartella',
+    copied:            'Comando copiato',
+    extOpened:         'Terminale esterno aperto — incolla il comando (copiato)',
+    extCopied:         'Comando copiato — aprilo nel tuo terminale',
+    loadingTranscript: 'Caricamento conversazione…',
+    transcriptEmpty:   'Conversazione vuota o non leggibile.',
+    roleUser:          'Tu',
+    roleAssistant:     'Claude',
   },
 
   // Stats section (KPI + tabs + heatmap + context breakdown)
