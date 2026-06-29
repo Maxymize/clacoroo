@@ -574,11 +574,11 @@ async function init() {
     // ottimisticamente e ricaricare tutto fa flicker di 1-2s
     const isOurEdit = Date.now() - lastInternalSettingsWrite < 2000;
     if (isOurEdit && state.section === 'config') {
-      statsCache = null;  // invalida solo per il prossimo accesso, niente reload
+      clearStatsCaches();  // invalida solo per il prossimo accesso, niente reload
       return;
     }
     toast(t('toast.configChanged'), 'info');
-    statsCache = null;
+    clearStatsCaches();
     loadData();
   });
   window.claudeAPI.onSwitchSection(name => switchToSection(name));
@@ -1615,13 +1615,14 @@ async function refreshStatsLive() {
   }
   // KPI utilizzo Claude Code (sessioni, token, streak, modello preferito…)
   if (statsSection && data.cache) paintDashboardStats(statsSection, data);
-  // Tab Stats aperto (Overview/Modelli/Progetti: heatmap, tokens per model,
-  // daily tokens, progetti) — ripinto con lo stesso tab/range correnti. Le
-  // funzioni renderStatsX appendono senza pulire (lo fa renderStats), quindi
-  // svuoto il content prima per non duplicare i nodi.
+  // Tab Stats aperto → ricarico i dati live (la getLiveStats lato main è cache-ata
+  // 5 min, quindi è cheap) e ripingo con lo stesso tab/range. Le funzioni
+  // renderStatsX appendono senza pulire, quindi svuoto prima per non duplicare.
   if (statsContent) {
+    const live = await window.claudeAPI.getLiveStats();
+    liveStatsCache = { live, legacy: data };
     statsContent.textContent = '';
-    paintStatsTab(statsContent, data);
+    paintStatsTab(statsContent, liveStatsCache);
   }
 }
 
@@ -2435,7 +2436,7 @@ function buildPluginCard(p) {
       toast(t(action === 'enable' ? 'plugin.toastEnabled' : 'plugin.toastDisabled', { id: p.id }),
             action === 'enable' ? 'success' : 'warn');
       window.claudeAPI.showNotification(action === 'enable' ? t('plugin.notifActivated') : t('plugin.notifDeactivated'), p.id);
-      statsCache = null;  // forza re-fetch contextBreakdown → barra si aggiorna
+      clearStatsCaches();  // forza re-fetch contextBreakdown → barra si aggiorna
       await loadData();
     } else {
       toast(t('toast.errorPrefix', { msg: result.error }), 'error');
@@ -2486,7 +2487,7 @@ function buildPluginCard(p) {
     } else toast(t('toast.errorUpdate', { msg: r.error }), 'error');
     updateBtn.disabled = false;
     updateBtn.textContent = t('button.update');
-    statsCache = null;
+    clearStatsCaches();
     await loadData();
   });
 
@@ -2504,7 +2505,7 @@ function buildPluginCard(p) {
     if (r.success) {
       toast(t('toast.pluginRemoved', { id: p.id }), 'success');
       window.claudeAPI.showNotification(t('toast.pluginRemovedNotif'), p.id);
-      statsCache = null;
+      clearStatsCaches();
       await loadData();
     } else {
       toast(t('toast.errorPrefix', { msg: r.error }), 'error');
@@ -4434,7 +4435,9 @@ function renderListSection(items, key, buildChip, searchFn, gridCls, sortConfig,
 }
 
 /* ── STATS (v1.0.12) ──────────────────────────────────────────────────── */
-let statsCache = null;
+let statsCache = null;        // cache legacy condivisa (Dashboard / Config / context breakdown)
+let liveStatsCache = null;    // cache live { live, legacy } per la sezione Stats (v1.1.37)
+function clearStatsCaches() { statsCache = null; liveStatsCache = null; }
 let statsActiveTab = 'overview';
 let statsRenderToken = 0;
 // v1.1.36 — finestra insight "Cosa incide sui limiti" (tab Claude Quota): '24h' | '7d'
@@ -4445,8 +4448,11 @@ async function renderStats() {
   const wrap = el('div', 'stats-wrap');
   // Tab strip
   // v1.0.38 — 'config' è ora una sezione sidebar autonoma, rimosso da qui
-  const tabs = ['overview', 'quota', 'modelli', 'progetti'];
-  const tabLabelKeys = { overview: 'stats.tabOverview', quota: 'stats.tabQuota', modelli: 'stats.tabModels', progetti: 'stats.tabProjects' };
+  const tabs = ['overview', 'quota', 'modelli', 'progetti', 'attribuzione', 'efficienza'];
+  const tabLabelKeys = {
+    overview: 'stats.tabOverview', quota: 'stats.tabQuota', modelli: 'stats.tabModels',
+    progetti: 'stats.tabProjects', attribuzione: 'stats.tabAttribution', efficienza: 'stats.tabEfficiency',
+  };
   const tabBar = el('div', 'stats-tabs');
   tabs.forEach(tab => {
     const btn = el('button', 'stats-tab' + (tab === statsActiveTab ? ' active' : ''), t(tabLabelKeys[tab]));
@@ -4460,30 +4466,39 @@ async function renderStats() {
   setContent(wrap);
 
   // Riusa cache se disponibile (evita IO ripetuto su cambio tab)
-  if (statsCache) {
-    paintStatsTab(content, statsCache);
+  if (liveStatsCache) {
+    paintStatsTab(content, liveStatsCache);
     return;
   }
 
   content.appendChild(el('div', 'stats-loading', t('stats.loading')));
-  const data = await window.claudeAPI.getStats();
+  // v1.1.37 — Stats live dai transcript (no stale cache). getStats resta SOLO
+  // per il context-breakdown (basato sui frontmatter dei plugin, non sui token).
+  const [live, legacy] = await Promise.all([
+    window.claudeAPI.getLiveStats(),
+    window.claudeAPI.getStats(),
+  ]);
   if (myToken !== statsRenderToken) return;  // race guard: tab cambiata
-  statsCache = data;
+  liveStatsCache = { live, legacy };
+  // La cache legacy condivisa (statsCache) resta di proprietà del suo path
+  // (Dashboard/Config via fetchStatsSafe, main-cached): non la scriviamo da qui.
   content.textContent = '';
-  paintStatsTab(content, data);
+  paintStatsTab(content, liveStatsCache);
 }
 
-function paintStatsTab(content, data) {
-  // v1.1.36 — il tab Claude Quota non dipende da stats-cache.json (barre via API,
-  // insight via scan transcript) → renderizzato prima del guard sulla cache.
+function paintStatsTab(content, cache) {
+  // Il tab Claude Quota non dipende dai dati Stats (barre via API, insight via scan).
   if (statsActiveTab === 'quota') { renderStatsQuota(content); return; }
-  if (!data.cache) {
-    content.appendChild(el('div', 'stats-empty', t('stats.noCacheFile')));
+  const live = cache.live;
+  if (!live || live.ok === false || !live.days || !Object.keys(live.days).length) {
+    content.appendChild(el('div', 'stats-empty', t('stats.noLiveData')));
     return;
   }
-  if (statsActiveTab === 'overview') renderStatsOverview(content, data);
-  else if (statsActiveTab === 'modelli')  renderStatsModels(content, data);
-  else if (statsActiveTab === 'progetti') renderStatsProjects(content, data);
+  if (statsActiveTab === 'overview')          renderStatsOverview(content, live, cache.legacy);
+  else if (statsActiveTab === 'modelli')      renderStatsModels(content, live);
+  else if (statsActiveTab === 'progetti')     renderStatsProjects(content, live);
+  else if (statsActiveTab === 'attribuzione') renderStatsAttribution(content, live);
+  else if (statsActiveTab === 'efficienza')   renderStatsEfficiency(content, live);
 }
 
 // v1.1.36 — Tab "Claude Quota": barre quota (come pannello /usage di Claude Code)
@@ -4583,6 +4598,210 @@ function fmtNum(n) {
   if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M';
   if (n >= 1e3) return (n / 1e3).toFixed(1) + 'K';
   return String(n);
+}
+
+// ── Aggregazione client-side dei dati live per range (v1.1.37) ─────────────
+// 'YYYY-MM-DD' locale (coerente con dayKey lato stats-live.js).
+function isoLocalDate(d) {
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return d.getFullYear() + '-' + m + '-' + day;
+}
+function rangeCutoffKey(range) {
+  if (range === 'all') return null;
+  const c = new Date(); c.setHours(0, 0, 0, 0);
+  c.setDate(c.getDate() - parseInt(range, 10) + 1);
+  return isoLocalDate(c);
+}
+// Streak di giorni attivi consecutivi fino a oggi (da un set di date 'YYYY-MM-DD').
+function streakFromDates(dateSet) {
+  let cur = 0, best = 0, run = 0;
+  const sorted = [...dateSet].sort();
+  let prev = null;
+  for (const dk of sorted) {
+    if (prev) {
+      const diff = Math.round((new Date(dk + 'T00:00:00') - new Date(prev + 'T00:00:00')) / 86400000);
+      run = diff === 1 ? run + 1 : 1;
+    } else run = 1;
+    if (run > best) best = run;
+    prev = dk;
+  }
+  // current streak: parte dall'ultimo giorno se è oggi o ieri
+  if (sorted.length) {
+    const today = isoLocalDate(new Date());
+    const last = sorted[sorted.length - 1];
+    const dToday = Math.round((new Date(today + 'T00:00:00') - new Date(last + 'T00:00:00')) / 86400000);
+    if (dToday <= 1) {
+      cur = 1;
+      for (let i = sorted.length - 2; i >= 0; i--) {
+        const diff = Math.round((new Date(sorted[i + 1] + 'T00:00:00') - new Date(sorted[i] + 'T00:00:00')) / 86400000);
+        if (diff === 1) cur++; else break;
+      }
+    }
+  }
+  return { current: cur, longest: best };
+}
+function mergeNumMap(into, from, fields) {
+  for (const k in from) {
+    let e = into[k];
+    if (!e) { e = {}; for (const f of fields) e[f] = 0; into[k] = e; }
+    for (const f of fields) e[f] += from[k][f] || 0;
+  }
+}
+function mergeAttr(into, from) {
+  for (const k in from) {
+    let e = into[k];
+    if (!e) { e = { cost: 0, turns: 0 }; into[k] = e; }
+    e.cost += from[k].cost || 0; e.turns += from[k].turns || 0;
+  }
+}
+// Somma una mappa nome->conteggio (es. tools per-giorno).
+function mergeCountMap(into, from) {
+  for (const k in from) into[k] = (into[k] || 0) + (from[k] || 0);
+}
+function topKeyByVal(obj, valFn) {
+  let best = null, max = -Infinity;
+  for (const k in obj) { const v = valFn(k); if (v > max) { max = v; best = k; } }
+  return best;
+}
+
+function aggregateLive(live, range) {
+  const days = live.days || {};
+  const sessions = live.sessions || [];
+  const cutoffKey = rangeCutoffKey(range);
+  const inRange = (dk) => !cutoffKey || dk >= cutoffKey;
+
+  const a = {
+    cost: 0, work: 0, turns: 0,
+    tokens: { input: 0, output: 0, cacheRead: 0, cacheCreate: 0 },
+    byModel: {}, byProject: {},
+    attribution: { plugin: {}, skill: {}, agent: {}, mcp: {} },
+    mainCost: 0, subCost: 0, subTurns: 0,
+    ctxOver150kTurns: 0, ctxSum: 0,
+    hourCounts: {}, dailyTurns: {}, activeDates: new Set(),
+    tools: {}, toolResults: 0, toolErrors: 0, byAgentType: {},
+    dailyByModel: [],  // [{ date, tokensByModel }] ordinato — usato dall'istogramma Modelli
+  };
+  const sumTypes = (m) => (m.input || 0) + (m.output || 0) + (m.cacheRead || 0) + (m.cacheCreate || 0);
+  // Una sola scansione in ordine di data: il filtro range (inRange) vive qui e basta.
+  for (const dk of Object.keys(days).sort()) {
+    if (!inRange(dk)) continue;
+    const d = days[dk];
+    a.activeDates.add(dk);
+    a.dailyTurns[dk] = d.turns;
+    a.cost += d.cost; a.turns += d.turns;
+    a.work += d.tokens.input + d.tokens.output;
+    a.tokens.input += d.tokens.input; a.tokens.output += d.tokens.output;
+    a.tokens.cacheRead += d.tokens.cacheRead; a.tokens.cacheCreate += d.tokens.cacheCreate;
+    mergeNumMap(a.byModel, d.byModel, ['input', 'output', 'cacheRead', 'cacheCreate', 'cost', 'turns']);
+    mergeNumMap(a.byProject, d.byProject, ['cost', 'work', 'turns']);
+    for (const kind of ['plugin', 'skill', 'agent', 'mcp']) mergeAttr(a.attribution[kind], d.attribution[kind]);
+    a.mainCost += d.mainCost; a.subCost += d.subCost; a.subTurns += d.subTurns;
+    a.ctxOver150kTurns += d.ctxOver150kTurns; a.ctxSum += d.ctxSum;
+    for (const h in d.hourCounts) a.hourCounts[h] = (a.hourCounts[h] || 0) + d.hourCounts[h];
+    mergeCountMap(a.tools, d.tools);
+    a.toolResults += d.toolResults; a.toolErrors += d.toolErrors;
+    mergeNumMap(a.byAgentType, d.byAgentType, ['count', 'tokens']);
+    const tokensByModel = {};
+    for (const m in d.byModel) tokensByModel[m] = sumTypes(d.byModel[m]);
+    a.dailyByModel.push({ date: dk, tokensByModel });
+  }
+
+  const sessInRange = sessions.filter(s => Number.isFinite(s.start) && inRange(isoLocalDate(new Date(s.start))));
+  const streak = streakFromDates(a.activeDates);
+  const favoriteModel = topKeyByVal(a.byModel, m => a.byModel[m].input + a.byModel[m].output);
+  const peakHourKey = topKeyByVal(a.hourCounts, h => a.hourCounts[h]);
+  const mostActiveDay = topKeyByVal(a.dailyTurns, dk => a.dailyTurns[dk]);
+  const inputSide = a.tokens.input + a.tokens.cacheRead + a.tokens.cacheCreate;
+
+  return {
+    sessions: sessInRange.length,
+    sessionList: sessInRange,
+    workTokens: a.work,
+    cost: a.cost,
+    tokens: a.tokens,
+    turns: a.turns,
+    activeDays: a.activeDates.size,
+    streak: streak.current,
+    longestStreak: streak.longest,
+    peakHour: peakHourKey != null ? Number(peakHourKey) : null,
+    mostActiveDay,
+    favoriteModel,
+    byModel: a.byModel,
+    byProject: a.byProject,
+    attribution: a.attribution,
+    subagent: { mainCost: a.mainCost, subCost: a.subCost, subTurns: a.subTurns, byType: a.byAgentType },
+    cache: {
+      ctxAvg: a.turns ? a.ctxSum / a.turns : 0,
+      over150kPct: a.turns ? (a.ctxOver150kTurns / a.turns) * 100 : 0,
+      hitRatio: inputSide ? (a.tokens.cacheRead / inputSide) * 100 : 0,
+    },
+    tools: a.tools,
+    toolResults: a.toolResults,
+    toolErrors: a.toolErrors,
+    dailyTurns: a.dailyTurns,
+    dailyByModel: a.dailyByModel,
+  };
+}
+
+// KPI grid per la sezione Stats (dati live). Distinta da buildStatsKpiGrid
+// (Dashboard, ancora su stats-cache).
+function buildLiveKpiGrid(agg) {
+  const favShort = formatModelName(agg.favoriteModel);
+  const mad = agg.mostActiveDay
+    ? new Date(agg.mostActiveDay + 'T00:00:00').toLocaleDateString(t('time.locale'), { day: 'numeric', month: 'short' })
+    : '—';
+  const grid = el('div', 'kpi-grid stats-kpi-grid');
+  [
+    { num: fmtNum(agg.sessions),    label: t('stats.kpiSessions'),     color: '#d97757' },
+    { num: fmtNum(agg.turns),       label: t('stats.kpiTurns'),        color: '#e89478' },
+    { num: fmtNum(agg.workTokens),  label: t('stats.kpiWorkTokens'),   color: '#6a9bcc' },
+    { num: formatUsd(agg.cost),     label: t('stats.kpiApiValue'),     color: '#22c55e' },
+    { num: String(agg.activeDays),  label: t('stats.kpiActiveDays'),   color: '#788c5d' },
+    { num: mad,                     label: t('stats.kpiMostActive'),   color: '#b8c79a' },
+    { num: agg.streak + 'g',        label: t('stats.kpiStreak'),       color: '#b8c79a' },
+    { num: agg.longestStreak + 'g', label: t('stats.kpiLongestStreak'),color: '#9cc1ea' },
+    { num: agg.peakHour != null ? agg.peakHour + ':00' : '—', label: t('stats.kpiPeakHour'), color: '#f97316' },
+    { num: favShort,                label: t('stats.kpiFavModel'),     color: '#d97757' },
+  ].forEach(k => {
+    const card = el('div', 'kpi-card');
+    card.style.setProperty('--kpi-color', k.color);
+    card.appendChild(el('div', 'kpi-num', String(k.num)));
+    card.appendChild(el('div', 'kpi-label', k.label));
+    grid.appendChild(card);
+  });
+  return grid;
+}
+
+// Card "breakdown token trasparente": token di lavoro in evidenza + cache spiegata.
+function buildTokenBreakdownCard(agg) {
+  const tk = agg.tokens;
+  const inputSide = tk.input + tk.cacheRead + tk.cacheCreate;
+  const wrap = el('div', 'token-breakdown-card');
+  wrap.appendChild(el('div', 'token-breakdown-title', t('stats.tokenBreakdownTitle')));
+  const work = el('div', 'token-breakdown-work');
+  work.appendChild(el('span', 'token-breakdown-work-num', fmtNum(agg.workTokens)));
+  work.appendChild(el('span', 'token-breakdown-work-lbl', t('stats.tokenWorkLabel')));
+  wrap.appendChild(work);
+  const rows = [
+    { key: 'input',  val: tk.input,       color: '#6a9bcc' },
+    { key: 'output', val: tk.output,      color: '#22c55e' },
+    { key: 'cacheRead',  val: tk.cacheRead,   color: '#9b8cce' },
+    { key: 'cacheWrite', val: tk.cacheCreate, color: '#cc8c6a' },
+  ];
+  const grid = el('div', 'token-breakdown-rows');
+  rows.forEach(r => {
+    const row = el('div', 'token-breakdown-row');
+    const dot = el('span', 'token-breakdown-dot'); dot.style.background = r.color;
+    row.appendChild(dot);
+    row.appendChild(el('span', 'token-breakdown-lbl', t('stats.token_' + r.key)));
+    row.appendChild(el('span', 'token-breakdown-val', fmtNum(r.val)));
+    grid.appendChild(row);
+  });
+  wrap.appendChild(grid);
+  wrap.appendChild(el('div', 'token-breakdown-note',
+    t('stats.tokenBreakdownNote', { pct: inputSide ? Math.round((tk.cacheRead / inputSide) * 100) : 0 })));
+  return wrap;
 }
 
 let statsRange = 'all';  // all | 30 | 7
@@ -4714,10 +4933,7 @@ function buildStatsKpiGrid(data, range) {
   return grid;
 }
 
-function renderStatsOverview(container, data) {
-  const c = data.cache;
-
-  // Filtri range
+function renderStatsRangeBar(container) {
   const rangeBar = el('div', 'stats-range');
   [['all', t('stats.rangeAll')], ['30', t('stats.range30')], ['7', t('stats.range7')]].forEach(([k, l]) => {
     const btn = el('button', 'stats-range-btn' + (statsRange === k ? ' active' : ''), l);
@@ -4725,17 +4941,24 @@ function renderStatsOverview(container, data) {
     rangeBar.appendChild(btn);
   });
   container.appendChild(rangeBar);
+}
 
-  container.appendChild(buildStatsKpiGrid(data, statsRange));
+function renderStatsOverview(container, live, legacy) {
+  renderStatsRangeBar(container);
+  const agg = aggregateLive(live, statsRange);
 
-  // Heatmap (range dinamico)
+  container.appendChild(buildLiveKpiGrid(agg));
+  container.appendChild(el('div', 'stats-cost-note', t('stats.costNote')));
+  container.appendChild(buildTokenBreakdownCard(agg));
+
+  // Heatmap (range dinamico) — dai turni live per-giorno
   const HEATMAP_TITLE_KEY = { '7': 'section.attivita7g', '30': 'section.attivita30g' };
   const title = t(HEATMAP_TITLE_KEY[statsRange] || 'section.attivita52sett');
   container.appendChild(sectionTitle(title, 'bar-chart-3'));
-  container.appendChild(buildHeatmap(c.dailyActivity || [], statsRange));
+  container.appendChild(buildHeatmap(agg.dailyTurns, statsRange));
 
-  // Context breakdown realistico
-  const cb = data.contextBreakdown;
+  // Context breakdown (da getStats: frontmatter dei plugin, non i token d'uso)
+  const cb = legacy && legacy.contextBreakdown;
   if (cb) {
     container.appendChild(sectionTitle(t('section.stimaContestoStile'), 'eye'));
     container.appendChild(buildContextBreakdown(cb));
@@ -4840,13 +5063,11 @@ function updateCtxBarInPlace(barNode, cb) {
   });
 }
 
-function buildHeatmap(dailyActivity, range) {
-  const byDate = {};
+// byDate: mappa 'YYYY-MM-DD' -> conteggio turni (v1.1.37, dati live)
+function buildHeatmap(byDate, range) {
+  byDate = byDate || {};
   let maxCount = 0;
-  for (const e of dailyActivity) {
-    byDate[e.date] = e.messageCount || 0;
-    if (e.messageCount > maxCount) maxCount = e.messageCount;
-  }
+  for (const k in byDate) { if (byDate[k] > maxCount) maxCount = byDate[k]; }
   const today = new Date(); today.setHours(0, 0, 0, 0);
 
   // Determina numero settimane in base al range
@@ -4873,7 +5094,7 @@ function buildHeatmap(dailyActivity, range) {
     for (let d = 0; d < 7; d++) {
       const date = new Date(startDate);
       date.setDate(startDate.getDate() + w * 7 + d);
-      const key = date.toISOString().slice(0, 10);
+      const key = isoLocalDate(date);  // locale, coerente con dayKey (stats-live)
       const isFuture = date > today;
       const count = byDate[key] || 0;
       const intensity = isFuture ? -1 : (count === 0 ? 0 : Math.min(4, Math.ceil((count / Math.max(maxCount, 1)) * 4)));
@@ -4881,10 +5102,10 @@ function buildHeatmap(dailyActivity, range) {
       cell.dataset.date = key;
       cell.dataset.count = String(count);
       cell.addEventListener('mouseenter', e => {
-        const dateLabel = new Date(key + 'T00:00:00').toLocaleDateString('it-IT', {
+        const dateLabel = new Date(key + 'T00:00:00').toLocaleDateString(t('time.locale'), {
           weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
         });
-        tip.textContent = dateLabel + '\n' + count + (count === 1 ? ' messaggio' : ' messaggi');
+        tip.textContent = dateLabel + '\n' + t(count === 1 ? 'stats.heatmapTurn' : 'stats.heatmapTurns', { n: count });
         tip.style.display = 'block';
       });
       cell.addEventListener('mousemove', e => {
@@ -4907,7 +5128,7 @@ function buildHeatmap(dailyActivity, range) {
     const d = new Date(startDate);
     d.setDate(startDate.getDate() + w * 7);
     const m = d.getMonth();
-    const txt = (m !== lastMonth) ? d.toLocaleDateString('it-IT', { month: 'short' }) : '';
+    const txt = (m !== lastMonth) ? d.toLocaleDateString(t('time.locale'), { month: 'short' }) : '';
     monthLabels.appendChild(el('span', 'heatmap-month-lbl', txt));
     if (m !== lastMonth) lastMonth = m;
   }
@@ -4923,50 +5144,55 @@ function buildHeatmap(dailyActivity, range) {
   return wrap;
 }
 
-function renderStatsModels(container, data) {
-  const models = data.cache.modelUsage || {};
+function renderStatsModels(container, live) {
+  renderStatsRangeBar(container);
+  const agg = aggregateLive(live, statsRange);
+  const models = agg.byModel;  // model -> { input, output, cacheRead, cacheCreate, cost, turns }
 
-  // v1.0.42 — Bug fix: il denominatore deve essere coerente con il numeratore.
-  // data.totalTokens dal v1.0.15 conta solo input+output (per allineamento
-  // con `claude /stats`), mentre qui sommiamo TUTTI i tipi (input + output +
-  // cache_read + cache_create). Calcoliamo localmente il totale completo.
+  // Il denominatore somma TUTTI i tipi (input+output+cacheRead+cacheCreate),
+  // coerente col numeratore; le % sono la distribuzione del tuo uso fra modelli.
   function sumAllTypes(u) {
-    return (u.inputTokens||0) + (u.outputTokens||0)
-         + (u.cacheReadInputTokens||0) + (u.cacheCreationInputTokens||0);
+    return (u.input||0) + (u.output||0) + (u.cacheRead||0) + (u.cacheCreate||0);
   }
-  const total = Object.values(models).reduce((s, u) => s + sumAllTypes(u), 0) || 1;
+  const entries = Object.entries(models);
+  if (!entries.length) {
+    container.appendChild(el('div', 'stats-empty', t('stats.noLiveData')));
+    return;
+  }
+  const total = entries.reduce((s, [, u]) => s + sumAllTypes(u), 0) || 1;
 
   container.appendChild(el('div', 'list-section-title', t('statsPage.tokensPerModel')));
-  // v1.0.43 — Nota esplicativa per chiarire che le % rappresentano la
-  // distribuzione del tuo uso fra modelli (somma = 100%), non una quota o
-  // un limite. Le quote vere sono nelle barre Quote Claude della Dashboard.
+  // Nota: le % rappresentano la distribuzione del tuo uso fra modelli (somma =
+  // 100%), non una quota o un limite. Le quote vere sono nel tab Claude Quota.
   container.appendChild(el('div', 'models-section-note', t('statsPage.modelsNote')));
-  Object.entries(models)
+  entries
     .sort((a, b) => sumAllTypes(b[1]) - sumAllTypes(a[1]))
     .forEach(([model, u]) => {
       const sum = sumAllTypes(u);
       const pct = ((sum / total) * 100).toFixed(1);
       const row = el('div', 'model-row');
-      row.appendChild(el('div', 'model-name', model));
+      row.appendChild(el('div', 'model-name', model.replace(/^claude-/, '')));
       const bar = el('div', 'model-bar');
       const fill = el('div', 'model-bar-fill');
       fill.style.width = pct + '%';
       bar.appendChild(fill);
       row.appendChild(bar);
-      row.appendChild(el('div', 'model-val', fmtNum(sum) + ' (' + pct + '%)'));
+      // Differenziatore vs Opcode: costo $ reale accanto ai token, per modello.
+      row.appendChild(el('div', 'model-val', fmtNum(sum) + ' · ' + formatUsd(u.cost || 0)));
       const detail = el('div', 'model-detail',
         t('statsPage.modelDetail', {
-          input: fmtNum(u.inputTokens||0),
-          output: fmtNum(u.outputTokens||0),
-          cacheRead: fmtNum(u.cacheReadInputTokens||0),
-          cacheCreate: fmtNum(u.cacheCreationInputTokens||0),
+          input: fmtNum(u.input||0),
+          output: fmtNum(u.output||0),
+          cacheRead: fmtNum(u.cacheRead||0),
+          cacheCreate: fmtNum(u.cacheCreate||0),
         }));
       container.appendChild(row);
       container.appendChild(detail);
     });
 
-  // Daily histogram con tooltip flottante
-  const dmt = data.cache.dailyModelTokens || [];
+  // Daily histogram (token/giorno) — serie per-giorno già calcolata e filtrata
+  // per range da aggregateLive (unica fonte del filtro), niente seconda scansione.
+  const dmt = agg.dailyByModel;
   if (dmt.length) {
     container.appendChild(el('div', 'list-section-title', t('statsPage.tokensDaily')));
     const last30 = dmt.slice(-30);
@@ -5019,56 +5245,179 @@ function renderStatsModels(container, data) {
   }
 }
 
-function renderStatsProjects(container, data) {
-  container.appendChild(el('div', 'list-section-title', t('statsPage.projectsTitle')));
+function renderStatsProjects(container, live) {
+  renderStatsRangeBar(container);
+  const agg = aggregateLive(live, statsRange);
+  const byProject = agg.byProject;  // path -> { cost, work, turns }
 
-  // v1.0.45 — Filtra i progetti "fantasma" (0 sessioni, 0 token): tipicamente
-  // directory dove Claude Code è stato aperto una volta ma senza interazioni
-  // significative (es. via cowork plugin o sessioni terminate prematuramente).
-  const filtered = (data.projects || []).filter(p =>
-    (p.sessions || 0) > 0 || (p.messages || 0) > 0 || (p.totalTokens || 0) > 0
-  );
+  // Sessioni distinte per progetto (dalla sessionList già filtrata per range).
+  const sessByProj = {};
+  for (const s of agg.sessionList) {
+    if (s.project) sessByProj[s.project] = (sessByProj[s.project] || 0) + 1;
+  }
 
-  if (!filtered.length) {
+  const rows = Object.entries(byProject).filter(([, p]) => (p.turns || 0) > 0 || (p.work || 0) > 0);
+  if (!rows.length) {
     container.appendChild(el('div', 'stats-empty', t('empty.noStatsProjects')));
     return;
   }
 
-  const sorted = filtered.sort((a, b) => (b.totalTokens || 0) - (a.totalTokens || 0));
-  sorted.forEach(p => {
-    const row = el('div', 'project-row');
+  container.appendChild(el('div', 'list-section-title', t('statsPage.projectsTitle')));
 
+  function statCell(value, label, tooltip) {
+    const cell = el('div', 'project-stat');
+    cell.appendChild(el('div', 'project-stat-value', value));
+    cell.appendChild(el('div', 'project-stat-label', label));
+    if (tooltip) cell.title = tooltip;
+    return cell;
+  }
+
+  rows.sort((a, b) => (b[1].cost || 0) - (a[1].cost || 0)).forEach(([path, p]) => {
+    const row = el('div', 'project-row');
     const left = el('div', 'project-left');
-    left.appendChild(el('div', 'project-name', p.path.split('/').pop() || p.key));
-    left.appendChild(el('div', 'project-path', p.path));
+    left.appendChild(el('div', 'project-name', path.split('/').pop() || path));
+    left.appendChild(el('div', 'project-path', path));
     row.appendChild(left);
 
     const meta = el('div', 'project-stats');
-    function statCell(value, label, tooltip) {
-      const cell = el('div', 'project-stat');
-      const v = el('div', 'project-stat-value', value);
-      const l = el('div', 'project-stat-label', label);
-      cell.appendChild(v);
-      cell.appendChild(l);
-      if (tooltip) cell.title = tooltip;
-      return cell;
-    }
-    meta.appendChild(statCell(
-      fmtNum(p.totalTokens || 0), t('statsPage.statTokens'),
-      t('statsPage.statTokensTip')));
-    meta.appendChild(statCell(
-      fmtNum(p.messages || 0), t('statsPage.statMessages'),
-      t('statsPage.statMessagesTip')));
-    meta.appendChild(statCell(
-      String(p.sessions || 0), p.sessions === 1 ? t('statsPage.statSession') : t('statsPage.statSessions'),
-      t('statsPage.statSessionsTip')));
+    const sess = sessByProj[path] || 0;
+    meta.appendChild(statCell(fmtNum(p.work || 0), t('statsPage.statWorkTokens'), t('statsPage.statWorkTokensTip')));
+    meta.appendChild(statCell(formatUsd(p.cost || 0), t('statsPage.statCost'), t('statsPage.statCostTip')));
+    meta.appendChild(statCell(fmtNum(p.turns || 0), t('statsPage.statTurns'), t('statsPage.statTurnsTip')));
+    meta.appendChild(statCell(String(sess), sess === 1 ? t('statsPage.statSession') : t('statsPage.statSessions'), t('statsPage.statSessionsTip')));
     row.appendChild(meta);
 
     container.appendChild(row);
   });
 
   container.appendChild(el('div', 'daily-chart-legend',
-    t('statsPage.projectsLong', { shown: sorted.length })));
+    t('statsPage.projectsLong', { shown: rows.length })));
+}
+
+// Riga "nome · barra · valore" condivisa dai tab Attribuzione/Efficienza.
+function barRow(name, fillPct, valText) {
+  const row = el('div', 'attr-row');
+  row.appendChild(el('div', 'attr-name', name));
+  const bar = el('div', 'attr-bar');
+  const fill = el('div', 'attr-bar-fill');
+  fill.style.width = fillPct + '%';
+  bar.appendChild(fill);
+  row.appendChild(bar);
+  row.appendChild(el('div', 'attr-val', valText));
+  return row;
+}
+
+// ── Tab Attribuzione (v1.1.37) — differenziatore vs Opcode ─────────────────
+// Quanto costo $ è attribuibile a plugin / skill / agent / MCP, + ripartizione
+// main vs subagent. Opcode non lo mostra: i transcript di Claude Code marcano
+// ogni turno con il campo di attribuzione, noi lo aggreghiamo.
+function renderStatsAttribution(container, live) {
+  renderStatsRangeBar(container);
+  const agg = aggregateLive(live, statsRange);
+
+  // Ripartizione main vs subagent (costo reale)
+  const sub = agg.subagent;
+  const totSub = sub.mainCost + sub.subCost;
+  container.appendChild(el('div', 'list-section-title', t('stats.attrMainSubTitle')));
+  if (totSub > 0) {
+    const split = el('div', 'attr-split');
+    [
+      { key: 'attrMain', val: sub.mainCost, color: '#6a9bcc' },
+      { key: 'attrSub',  val: sub.subCost,  color: '#d97757' },
+    ].forEach(s => {
+      const pct = (s.val / totSub) * 100;
+      const row = el('div', 'attr-split-row');
+      const head = el('div', 'attr-split-head');
+      head.appendChild(el('span', 'attr-split-lbl', t('stats.' + s.key)));
+      head.appendChild(el('span', 'attr-split-val', formatUsd(s.val) + ' · ' + pct.toFixed(0) + '%'));
+      row.appendChild(head);
+      const bar = el('div', 'attr-bar');
+      const fill = el('div', 'attr-bar-fill');
+      fill.style.width = pct + '%';
+      fill.style.background = s.color;
+      bar.appendChild(fill);
+      row.appendChild(bar);
+      split.appendChild(row);
+    });
+    container.appendChild(split);
+    container.appendChild(el('div', 'models-section-note',
+      t('stats.attrSubNote', { turns: fmtNum(sub.subTurns) })));
+  } else {
+    container.appendChild(el('div', 'stats-empty', t('stats.attrNoData')));
+  }
+
+  // Per tipo subagent (agentType) — quante chiamate e quanti token
+  const byType = Object.entries(sub.byType || {});
+  if (byType.length) {
+    container.appendChild(el('div', 'list-section-title', t('stats.attrByTypeTitle')));
+    const maxC = Math.max(...byType.map(([, v]) => v.count || 0), 1);
+    byType.sort((a, b) => (b[1].count || 0) - (a[1].count || 0)).forEach(([type, v]) => {
+      container.appendChild(barRow(type, (v.count / maxC) * 100,
+        t('stats.attrCalls', { n: v.count }) + ' · ' + fmtNum(v.tokens || 0)));
+    });
+  }
+
+  // Attribuzione per plugin / skill / agent / MCP (costo $)
+  const kinds = [
+    { kind: 'plugin', titleKey: 'stats.attrPlugins' },
+    { kind: 'skill',  titleKey: 'stats.attrSkills' },
+    { kind: 'agent',  titleKey: 'stats.attrAgents' },
+    { kind: 'mcp',    titleKey: 'stats.attrMcps' },
+  ];
+  let anyAttr = false;
+  kinds.forEach(({ kind, titleKey }) => {
+    const map = agg.attribution[kind] || {};
+    const list = Object.entries(map).filter(([, v]) => (v.cost || 0) > 0);
+    if (!list.length) return;
+    anyAttr = true;
+    container.appendChild(el('div', 'list-section-title', t(titleKey)));
+    const maxCost = Math.max(...list.map(([, v]) => v.cost), 0.000001);
+    list.sort((a, b) => b[1].cost - a[1].cost).slice(0, 15).forEach(([name, v]) => {
+      container.appendChild(barRow(name, (v.cost / maxCost) * 100,
+        formatUsd(v.cost) + ' · ' + t('stats.attrTurns', { n: fmtNum(v.turns) })));
+    });
+  });
+  if (!anyAttr) {
+    container.appendChild(el('div', 'models-section-note', t('stats.attrEmptyHint')));
+  }
+}
+
+// ── Tab Efficienza (v1.1.37) — cache, contesto, tool ───────────────────────
+function renderStatsEfficiency(container, live) {
+  renderStatsRangeBar(container);
+  const agg = aggregateLive(live, statsRange);
+  const c = agg.cache;
+
+  // Card sintetiche: hit ratio cache, contesto medio, % turni oltre 150k
+  container.appendChild(el('div', 'list-section-title', t('stats.effCacheTitle')));
+  const grid = el('div', 'eff-grid');
+  [
+    { num: Math.round(c.hitRatio) + '%', label: t('stats.effHitRatio'),  color: '#9b8cce' },
+    { num: fmtNum(Math.round(c.ctxAvg)), label: t('stats.effCtxAvg'),    color: '#6a9bcc' },
+    { num: Math.round(c.over150kPct) + '%', label: t('stats.effOver150k'), color: '#f97316' },
+    { num: agg.toolResults ? (100 - (agg.toolErrors / agg.toolResults) * 100).toFixed(1) + '%' : '—',
+      label: t('stats.effToolSuccess'), color: '#22c55e' },
+  ].forEach(k => {
+    const card = el('div', 'eff-card');
+    card.style.setProperty('--kpi-color', k.color);
+    card.appendChild(el('div', 'eff-card-num', k.num));
+    card.appendChild(el('div', 'eff-card-lbl', k.label));
+    grid.appendChild(card);
+  });
+  container.appendChild(grid);
+  container.appendChild(el('div', 'models-section-note', t('stats.effCacheNote')));
+
+  // Tool più usati (top 15)
+  const tools = Object.entries(agg.tools || {});
+  if (tools.length) {
+    container.appendChild(el('div', 'list-section-title', t('stats.effToolsTitle')));
+    const maxC = Math.max(...tools.map(([, n]) => n), 1);
+    tools.sort((a, b) => b[1] - a[1]).slice(0, 15).forEach(([name, n]) => {
+      container.appendChild(barRow(name, (n / maxC) * 100, fmtNum(n)));
+    });
+    container.appendChild(el('div', 'daily-chart-legend',
+      t('stats.effToolErrorsNote', { errors: fmtNum(agg.toolErrors), total: fmtNum(agg.toolResults) })));
+  }
 }
 
 // v1.0.38 — Config promossa a sezione sidebar standalone.

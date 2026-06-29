@@ -86,6 +86,7 @@ const ACCOUNT = require('./lib/account');
 const PRICING = require('./lib/pricing');
 const USAGE   = require('./lib/usage');
 const INSIGHTS = require('./lib/insights');
+const STATS_LIVE = require('./lib/stats-live');
 const PTY     = require('./lib/pty');
 const APIKEY  = require('./lib/apikey');
 
@@ -1032,6 +1033,24 @@ ipcMain.handle('get-usage-insights', async (_e, { window: win, force } = {}) => 
     return result;
   } catch (e) {
     return { ok: false, error: (e && e.message) || 'insights error', behaviors: [], plugins: [] };
+  }
+});
+
+// v1.1.37 — Stats live dai transcript (no stale stats-cache.json). Lo scan
+// all-time costa ~2-3s, quindi cache in-memory 5 min; il Refresh manuale forza.
+let LIVE_STATS_CACHE = null;
+let LIVE_STATS_AT = 0;
+const LIVE_STATS_TTL_MS = 5 * 60 * 1000;
+ipcMain.handle('get-live-stats', async (_e, { force } = {}) => {
+  if (!force && LIVE_STATS_CACHE && Date.now() - LIVE_STATS_AT < LIVE_STATS_TTL_MS) {
+    return LIVE_STATS_CACHE;
+  }
+  try {
+    LIVE_STATS_CACHE = await STATS_LIVE.getLiveStats();
+    LIVE_STATS_AT = Date.now();
+    return LIVE_STATS_CACHE;
+  } catch (e) {
+    return { ok: false, error: (e && e.message) || 'live stats error', days: {}, sessions: [] };
   }
 });
 

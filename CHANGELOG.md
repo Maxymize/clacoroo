@@ -2,6 +2,16 @@
 
 > Italiano (canonico). English translation: [CHANGELOG.en.md](./CHANGELOG.en.md) — allineato a ogni release.
 
+## v1.1.37 — 2026-06-29 — Statistiche dal vivo: token in chiaro, costo reale, attribuzione
+
+Le statistiche ora si calcolano dal vivo dai transcript delle sessioni, non più da una cache che restava indietro. Più accurate e più trasparenti.
+
+- [FEATURE] Stats calcolata dal vivo: i "token di lavoro" (input + output) in evidenza, con la cache (read/write) separata e spiegata invece di un unico numero da miliardi gonfiato dal contesto riletto
+- [FEATURE] Costo API reale per ogni tipo di token (input/output/cache), per modello e per progetto — il valore equivalente di ciò che hai davvero consumato
+- [FEATURE] Nuovo tab **Attribuzione**: quanto costo è attribuibile a ogni plugin/skill/agent/server MCP, più la ripartizione sessione principale vs subagent
+- [FEATURE] Nuovo tab **Efficienza**: cache hit ratio, contesto medio per turno, turni oltre 150k token e i tool più usati con tasso di errore
+- [IMPROVEMENT] Heatmap, modelli, progetti e tutte le metriche rispettano il filtro periodo (7g / 30g / Tutto)
+
 ## v1.1.36 — 2026-06-25 — MCP: server connessi/falliti di nuovo visibili + scope progetto
 
 - [FIX] Il pannello MCP mostrava solo i server "needs auth" e segnava "0 connected": il parser di `claude mcp list` non riconosceva i simboli di stato attuali di Claude Code (✔ connesso, ✘ fallito) e scartava silenziosamente tutti i server connessi e falliti. Ora compaiono di nuovo tutti

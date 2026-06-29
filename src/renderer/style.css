@@ -3851,6 +3851,159 @@ body {
   margin-top: 4px;
 }
 
+/* ── Stats live (v1.1.37) ─────────────────────────────────────────────── */
+/* Nota costo (sotto la KPI grid): chiarisce che il $ è valore-equivalente */
+.stats-cost-note {
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.5;
+  padding: 8px 12px;
+  background: var(--surface2);
+  border-left: 3px solid #22c55e;
+  border-radius: 4px;
+  margin: -8px 0 18px;
+  font-style: italic;
+}
+
+/* Card "breakdown token trasparente" — il differenziatore di fondazione */
+.token-breakdown-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+  margin-bottom: 24px;
+}
+.token-breakdown-title {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+}
+.token-breakdown-work {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.token-breakdown-work-num {
+  font-size: 34px;
+  font-weight: 800;
+  letter-spacing: -.02em;
+  color: var(--accent);
+  font-family: "Inter", "Styrene A", -apple-system, sans-serif;
+}
+.token-breakdown-work-lbl {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+.token-breakdown-rows {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 8px 18px;
+  margin-bottom: 12px;
+}
+.token-breakdown-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+.token-breakdown-dot {
+  width: 9px; height: 9px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+}
+.token-breakdown-lbl { color: var(--text); flex: 1; }
+.token-breakdown-val {
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+.token-breakdown-note {
+  font-size: 11px;
+  color: var(--text-dim);
+  line-height: 1.5;
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+}
+
+/* Righe attribuzione / tool (riusano il look delle model-row, layout flessibile) */
+.attr-row {
+  display: grid;
+  grid-template-columns: 200px 1fr 150px;
+  gap: 12px;
+  align-items: center;
+  margin-top: 7px;
+}
+.attr-name {
+  font-size: 12px;
+  color: var(--text);
+  font-weight: 600;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.attr-bar {
+  height: 16px;
+  background: var(--surface2);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.attr-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--accent2));
+  border-radius: 8px;
+  transition: width .4s;
+}
+.attr-val {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Split main vs subagent */
+.attr-split { margin: 6px 0 4px; }
+.attr-split-row { margin-bottom: 12px; }
+.attr-split-head {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  margin-bottom: 5px;
+}
+.attr-split-lbl { color: var(--text); font-weight: 600; }
+.attr-split-val { color: var(--text-muted); font-variant-numeric: tabular-nums; }
+
+/* Card efficienza (cache/contesto/tool) */
+.eff-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+  margin: 6px 0 12px;
+}
+.eff-card {
+  background: var(--surface);
+  border: 1px solid color-mix(in srgb, var(--kpi-color, var(--border)) 28%, var(--border));
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  text-align: center;
+}
+.eff-card-num {
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--kpi-color, var(--accent));
+  letter-spacing: -.02em;
+  margin-bottom: 4px;
+}
+.eff-card-lbl {
+  font-size: 10px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  font-weight: 600;
+  white-space: pre-line;
+}
+
 /* Per-project (v1.0.45 — design pulito senza pillole ovali) */
 .project-row {
   display: grid;
