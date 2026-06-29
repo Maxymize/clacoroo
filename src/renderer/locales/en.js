@@ -13,6 +13,7 @@ window.LOCALES.en = {
     agent:        'Agents',
     mcp:          'MCP',
     hooks:        'Hooks',
+    sessions:     'Sessions',
     stats:        'Stats',
     config:       'Claude Config',
     settings:     'Settings',
@@ -77,6 +78,28 @@ window.LOCALES.en = {
     cacheMissDesc:     'Large uncached inputs are expensive. Reuse context and avoid re-pasting large files.',
     pluginHead:        '{pct}% of your usage came from plugin "{name}"',
     pluginDesc:        'Review what this plugin contributes: its agents, skills, and MCP tools all count toward your limit.',
+  },
+
+  // Sessions section (v1.1.38)
+  sessions: {
+    loading:           'Loading sessions…',
+    empty:             'No sessions found in ~/.claude/projects/. Use Claude Code for a few sessions and they will show up here.',
+    noMatch:           'No session matches your search.',
+    searchPlaceholder: 'Search by folder or first message…',
+    count:             '{n} sessions',
+    turnsBadge:        '{n} turns',
+    noPrompt:          '(no message)',
+    resumeInternal:    '▶ Resume (internal terminal)',
+    resumeExternal:    'External terminal',
+    copyCmd:           'Copy command',
+    openFolder:        'Open folder',
+    copied:            'Command copied',
+    extOpened:         'External terminal opened: paste the command (copied)',
+    extCopied:         'Command copied: open it in your terminal',
+    loadingTranscript: 'Loading conversation…',
+    transcriptEmpty:   'Conversation empty or unreadable.',
+    roleUser:          'You',
+    roleAssistant:     'Claude',
   },
 
   // Stats section (KPI + tabs + heatmap + context breakdown)
@@ -252,6 +275,10 @@ window.LOCALES.en = {
     mktAddedAsc:  'Added earliest',
     mktUpdatedDesc:'Recently updated',
     mktUpdatedAsc:'Updated earliest',
+    modifiedDesc: 'Last modified ↓',
+    modifiedAsc:  'Last modified ↑',
+    createdDesc:  'Created ↓',
+    createdAsc:   'Created ↑',
   },
 
   // Filter chips

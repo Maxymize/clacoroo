@@ -13,6 +13,7 @@ window.LOCALES.it = {
     agent:        'Agent',
     mcp:          'MCP',
     hooks:        'Hooks',
+    sessions:     'Sessioni',
     stats:        'Stats',
     config:       'Claude Config',
     settings:     'Impostazioni',
@@ -77,6 +78,28 @@ window.LOCALES.it = {
     cacheMissDesc:     'Gli input grandi non in cache sono costosi. Riusa il contesto ed evita di re-incollare file voluminosi.',
     pluginHead:        '{pct}% del tuo utilizzo viene dal plugin «{name}»',
     pluginDesc:        'Controlla cosa contribuisce questo plugin: i suoi agent, skill e tool MCP contano tutti sul tuo limite.',
+  },
+
+  // Sessions section (v1.1.38)
+  sessions: {
+    loading:           'Caricamento sessioni…',
+    empty:             'Nessuna sessione trovata in ~/.claude/projects/. Usa Claude Code per qualche sessione e compariranno qui.',
+    noMatch:           'Nessuna sessione corrisponde alla ricerca.',
+    searchPlaceholder: 'Cerca per cartella o primo messaggio…',
+    count:             '{n} sessioni',
+    turnsBadge:        '{n} turni',
+    noPrompt:          '(nessun messaggio)',
+    resumeInternal:    '▶ Riprendi (terminale interno)',
+    resumeExternal:    'Terminale esterno',
+    copyCmd:           'Copia comando',
+    openFolder:        'Apri cartella',
+    copied:            'Comando copiato',
+    extOpened:         'Terminale esterno aperto: incolla il comando (copiato)',
+    extCopied:         'Comando copiato: aprilo nel tuo terminale',
+    loadingTranscript: 'Caricamento conversazione…',
+    transcriptEmpty:   'Conversazione vuota o non leggibile.',
+    roleUser:          'Tu',
+    roleAssistant:     'Claude',
   },
 
   // Stats section (KPI + tabs + heatmap + context breakdown)
@@ -252,6 +275,10 @@ window.LOCALES.it = {
     mktAddedAsc:  'Aggiunti meno di recente',
     mktUpdatedDesc:'Aggiornati di recente',
     mktUpdatedAsc:'Aggiornati meno di recente',
+    modifiedDesc: 'Ultima modifica ↓',
+    modifiedAsc:  'Ultima modifica ↑',
+    createdDesc:  'Creazione ↓',
+    createdAsc:   'Creazione ↑',
   },
 
   // Filter chips

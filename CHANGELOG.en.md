@@ -2,6 +2,13 @@
 
 > English translation of [CHANGELOG.md](./CHANGELOG.md) (Italian, canonical). Updated in sync with each release.
 
+## v1.1.38 — 2026-06-29 — Sessions: list page + readable transcript modal
+
+- [FEATURE] New Sessions page: list of all work sessions in ~/.claude/projects/ with cards (folder, first message, time, turns, cost) or compact row view
+- [FEATURE] Search by folder or first message, sort by last activity or creation date, toggle cards/list view
+- [FEATURE] Transcript modal: click a session to read the conversation with windowing (40 entries at a time, loads more on scroll), collapsible tool calls
+- [FEATURE] Quick actions in the modal: resume in internal terminal, open external terminal, copy `claude --resume` command, open folder
+
 ## v1.1.37 — 2026-06-29 — Live stats: tokens in plain sight, real cost, attribution
 
 Statistics are now computed live from your session transcripts, no longer from a cache that lagged behind. More accurate and more transparent.

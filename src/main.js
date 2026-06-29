@@ -87,6 +87,7 @@ const PRICING = require('./lib/pricing');
 const USAGE   = require('./lib/usage');
 const INSIGHTS = require('./lib/insights');
 const STATS_LIVE = require('./lib/stats-live');
+const SESSIONS   = require('./lib/sessions');
 const PTY     = require('./lib/pty');
 const APIKEY  = require('./lib/apikey');
 
@@ -1054,6 +1055,26 @@ ipcMain.handle('get-live-stats', async (_e, { force } = {}) => {
   }
 });
 
+// v1.1.38 — Sessions: lista metadati (head-read + costo da stats-live), cache 5 min.
+let SESSIONS_CACHE = null;
+let SESSIONS_AT = 0;
+const SESSIONS_TTL_MS = 5 * 60 * 1000;
+ipcMain.handle('get-sessions', async (_e, { force } = {}) => {
+  if (!force && SESSIONS_CACHE && Date.now() - SESSIONS_AT < SESSIONS_TTL_MS) return SESSIONS_CACHE;
+  try {
+    SESSIONS_CACHE = await SESSIONS.listSessions();
+    SESSIONS_AT = Date.now();
+    return SESSIONS_CACHE;
+  } catch (e) {
+    return { ok: false, error: (e && e.message) || 'sessions error', sessions: [] };
+  }
+});
+
+ipcMain.handle('read-session-transcript', async (_e, { sessionId } = {}) => {
+  try { return await SESSIONS.readSessionTranscript(sessionId); }
+  catch (e) { return { ok: false, error: (e && e.message) || 'transcript error', entries: [] }; }
+});
+
 ipcMain.handle('get-stats', async (_e, { force } = {}) => {
   if (!force && STATS_CACHE && Date.now() - STATS_CACHE_AT < STATS_TTL_MS) {
     return STATS_CACHE;
@@ -1646,6 +1667,47 @@ ipcMain.handle('open-directory', async (_e, dirPath) => {
   }
   const err = await shell.openPath(dirPath);
   return err ? { success: false, error: err } : { success: true };
+});
+
+// v1.1.38 — Apre il terminale di SISTEMA nella cartella indicata (no auto-run:
+// il comando claude --resume viene copiato negli appunti dal renderer).
+ipcMain.handle('open-external-terminal', async (_e, dirPath) => {
+  if (typeof dirPath !== 'string' || !fs.existsSync(dirPath)) {
+    return { success: false, error: 'Path non valido' };
+  }
+  // Difesa: rifiuta path con metacaratteri che cmd/shell potrebbero reinterpretare.
+  if (/["&|^%<>`]/.test(dirPath)) {
+    return { success: false, error: 'Path con caratteri non ammessi' };
+  }
+  const plat = process.platform;
+  const tryRun = (bin, args) => new Promise((res) => {
+    execFile(bin, args, { timeout: 8000 }, (err) => res(!err));
+  });
+  try {
+    if (plat === 'darwin') {
+      const ok = await tryRun('open', ['-a', 'Terminal', dirPath]);
+      return ok ? { success: true } : { success: false, error: 'Terminal non avviabile' };
+    }
+    if (plat === 'win32') {
+      // Windows Terminal se presente, altrimenti cmd
+      const ok = await tryRun('cmd', ['/c', 'start', 'wt', '-d', dirPath]) ||
+                 await tryRun('cmd', ['/c', 'start', '', '/D', dirPath, 'cmd']);
+      return ok ? { success: true } : { success: false, error: 'Terminale Windows non avviabile' };
+    }
+    // linux: prova gli emulatori comuni in ordine
+    const candidates = [
+      ['x-terminal-emulator', ['--working-directory=' + dirPath]],
+      ['gnome-terminal',      ['--working-directory=' + dirPath]],
+      ['konsole',             ['--workdir', dirPath]],
+      ['xterm',               []],
+    ];
+    for (const [bin, args] of candidates) {
+      if (await tryRun(bin, args)) return { success: true };
+    }
+    return { success: false, error: 'Nessun terminale trovato' };
+  } catch (e) {
+    return { success: false, error: (e && e.message) || 'errore terminale' };
+  }
 });
 
 // v1.0.59 — Normalizza un path assoluto in formato URI per gli URL handler

@@ -77,11 +77,10 @@ async function getLiveStats() {
     const ts = Date.parse(rec.timestamp);
     return Number.isFinite(ts) ? ensureDay(dayKey(ts)) : null;
   }
-  // Per sessione il renderer usa solo project (conteggio sessioni/progetto) e
-  // start (filtro per range). Niente altro → struttura minima, payload IPC snello.
+  // Per sessione: project (cwd), start (range), + id/cost/turns per il browser Sessions (v1.1.38).
   function ensureSession(sid) {
     let s = sessions.get(sid);
-    if (!s) { s = { project: null, start: Infinity }; sessions.set(sid, s); }
+    if (!s) { s = { id: sid, project: null, start: Infinity, cost: 0, turns: 0 }; sessions.set(sid, s); }
     return s;
   }
 
@@ -142,6 +141,7 @@ async function getLiveStats() {
         const s = ensureSession(sid);
         if (proj && !s.project) s.project = proj;
         if (ts < s.start) s.start = ts;
+        s.cost += cost; s.turns += 1;
 
         // tool_use → conteggio uso tool (nel bucket del giorno)
         const content = rec.message && rec.message.content;
@@ -177,7 +177,9 @@ async function getLiveStats() {
     },
   });
 
-  const sessionList = [...sessions.values()].map(s => ({ project: s.project, start: s.start }));
+  const sessionList = [...sessions.values()].map(s => ({
+    id: s.id, project: s.project, start: s.start, cost: s.cost, turns: s.turns,
+  }));
 
   return {
     ok: true,
