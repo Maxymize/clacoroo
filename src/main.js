@@ -1675,6 +1675,10 @@ ipcMain.handle('open-external-terminal', async (_e, dirPath) => {
   if (typeof dirPath !== 'string' || !fs.existsSync(dirPath)) {
     return { success: false, error: 'Path non valido' };
   }
+  // Difesa: rifiuta path con metacaratteri che cmd/shell potrebbero reinterpretare.
+  if (/["&|^%<>`]/.test(dirPath)) {
+    return { success: false, error: 'Path con caratteri non ammessi' };
+  }
   const plat = process.platform;
   const tryRun = (bin, args) => new Promise((res) => {
     execFile(bin, args, { timeout: 8000 }, (err) => res(!err));
@@ -1687,7 +1691,7 @@ ipcMain.handle('open-external-terminal', async (_e, dirPath) => {
     if (plat === 'win32') {
       // Windows Terminal se presente, altrimenti cmd
       const ok = await tryRun('cmd', ['/c', 'start', 'wt', '-d', dirPath]) ||
-                 await tryRun('cmd', ['/c', 'start', 'cmd', '/k', 'cd /d "' + dirPath + '"']);
+                 await tryRun('cmd', ['/c', 'start', '', '/D', dirPath, 'cmd']);
       return ok ? { success: true } : { success: false, error: 'Terminale Windows non avviabile' };
     }
     // linux: prova gli emulatori comuni in ordine
