@@ -5010,6 +5010,15 @@ body {
 .session-row-time, .session-row-turns, .session-row-cost { font-size: 11px; color: var(--text-muted); text-align: right; }
 .session-row-cost { color: #22c55e; }
 
+/* v1.1.39 — Sessions project grouping */
+.project-card { cursor: pointer; }
+.project-card .session-cwd { margin-bottom: 8px; }
+.compact-row.project-row { display: flex; }
+.sessions-breadcrumb { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-muted); margin-bottom: 12px; }
+.sessions-breadcrumb .crumb-back { cursor: pointer; color: var(--accent2, #6a9bcc); }
+.sessions-breadcrumb .crumb-back:hover { text-decoration: underline; }
+.sessions-breadcrumb .crumb-current { color: var(--text); font-weight: 600; }
+
 /* Session modal — transcript (v1.1.38) */
 .session-modal { max-width: 860px; width: 90vw; }
 .session-actions { display: flex; gap: 8px; flex-wrap: wrap; padding: 8px 0 12px; }

@@ -4622,6 +4622,33 @@ function buildSessionRow(s) {
   return row;
 }
 
+function openProject(p) { state.sessionsProject = p.cwd; renderSessions(); }
+
+function buildProjectCard(p) {
+  const card = el('div', 'browse-card project-card');
+  card.appendChild(el('div', 'browse-card-title', p.projectLabel));
+  card.appendChild(el('div', 'session-cwd', p.cwd));
+  const meta = el('div', 'session-meta');
+  meta.appendChild(el('span', 'session-badge', t('sessions.count', { n: p.sessionCount })));
+  meta.appendChild(el('span', 'session-badge', relativeTime(p.lastActivity)));
+  meta.appendChild(el('span', 'session-badge', t('sessions.turnsBadge', { n: fmtNum(p.totalTurns) })));
+  meta.appendChild(el('span', 'session-badge session-cost', formatUsd(p.totalCost)));
+  card.appendChild(meta);
+  card.addEventListener('click', () => openProject(p));
+  return card;
+}
+
+function buildProjectRow(p) {
+  const row = el('div', 'compact-row project-row');
+  row.appendChild(el('span', 'compact-row-name', p.projectLabel));
+  row.appendChild(el('span', 'session-row-prompt', p.cwd));
+  row.appendChild(el('span', 'session-row-time', t('sessions.count', { n: p.sessionCount })));
+  row.appendChild(el('span', 'session-row-turns', relativeTime(p.lastActivity)));
+  row.appendChild(el('span', 'session-row-cost', formatUsd(p.totalCost)));
+  row.addEventListener('click', () => openProject(p));
+  return row;
+}
+
 async function renderSessions() {
   const wrap = el('div');
 
