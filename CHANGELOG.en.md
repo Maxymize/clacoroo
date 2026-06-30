@@ -2,6 +2,12 @@
 
 > English translation of [CHANGELOG.md](./CHANGELOG.md) (Italian, canonical). Updated in sync with each release.
 
+## v1.1.39 — 2026-06-30 — Sessions: project drill-down + global search + breadcrumb
+
+- [FEATURE] Sessions view is now two-level: project grid → sessions for the selected project, with breadcrumb to go back
+- [FEATURE] Global search with absolute priority: typing filters sessions across all projects at once
+- [IMPROVEMENT] Sort options for "session count" hidden when inside a project (they only make sense at the project grid level)
+
 ## v1.1.38 — 2026-06-29 — Sessions: list page + readable transcript modal
 
 - [FEATURE] New Sessions page: list of all work sessions in ~/.claude/projects/ with cards (folder, first message, time, turns, cost) or compact row view

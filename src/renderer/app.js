@@ -4652,7 +4652,7 @@ function buildProjectRow(p) {
 async function renderSessions() {
   const wrap = el('div');
 
-  // Riga 1: search
+  // Riga 1: search (globale sulle sessioni)
   const bar = el('div', 'filter-bar');
   const sw = el('div', 'search-wrap');
   const inp = el('input', 'search-input');
@@ -4669,12 +4669,21 @@ async function renderSessions() {
   hdr.appendChild(countEl);
   const mode = state.viewMode.sessions;
   hdr.appendChild(renderViewSwitcher('sessions', mode, (m) => setViewMode('sessions', m)));
-  hdr.appendChild(renderSortDropdown(state.sessionsSort, SORT_OPTIONS.sessions, async (key) => {
+  // 'count' (n. sessioni) ha senso solo fra progetti: nel livello sessioni di un
+  // progetto lo nascondiamo dal dropdown.
+  const inProject = !!state.sessionsProject;
+  const sortOpts = inProject ? SORT_OPTIONS.sessions.filter(o => !o.key.startsWith('count')) : SORT_OPTIONS.sessions;
+  hdr.appendChild(renderSortDropdown(state.sessionsSort, sortOpts, async (key) => {
     state.sessionsSort = key;
     await window.claudeAPI.setState({ sessionsSort: key });
     renderSessions();
   }));
   wrap.appendChild(hdr);
+
+  // Breadcrumb sopra la griglia (contenitore dedicato: NON dentro il grid, che è
+  // display:grid e metterebbe la breadcrumb in una cella).
+  const crumbWrap = el('div');
+  wrap.appendChild(crumbWrap);
 
   const grid = el('div', mode === 'cards' ? 'browse-card-grid' : 'compact-list');
   wrap.appendChild(grid);
@@ -4695,17 +4704,51 @@ async function renderSessions() {
     return;
   }
 
-  const sorted = data.sessions.slice().sort(SESSIONS_SORTERS[state.sessionsSort] || SESSIONS_SORTERS['modified-desc']);
+  const groups = groupSessionsByProject(data.sessions);
+  const sorter = SESSIONS_SORTERS[state.sessionsSort] || SESSIONS_SORTERS['modified-desc'];
+
+  function makeBreadcrumb(label) {
+    const bc = el('div', 'sessions-breadcrumb');
+    const back = el('span', 'crumb-back', t('sessions.backToProjects'));
+    back.addEventListener('click', () => { state.sessionsProject = null; renderSessions(); });
+    bc.appendChild(back);
+    bc.appendChild(el('span', 'crumb-sep', '/'));
+    bc.appendChild(el('span', 'crumb-current', label));
+    return bc;
+  }
 
   function paint() {
     grid.textContent = '';
+    crumbWrap.textContent = '';
     const q = state.filters.sessions.search.trim().toLowerCase();
-    const list = q
-      ? sorted.filter(s => (s.projectLabel + ' ' + (s.cwd || '') + ' ' + (s.firstPrompt || '')).toLowerCase().includes(q))
-      : sorted;
-    countEl.textContent = t('sessions.count', { n: list.length });
-    list.forEach(s => grid.appendChild(mode === 'cards' ? buildSessionCard(s) : buildSessionRow(s)));
-    if (!list.length) grid.appendChild(el('div', 'stats-empty', t('sessions.noMatch')));
+
+    // 1) Ricerca globale → sessioni piatte da tutti i progetti
+    if (q) {
+      const list = data.sessions.slice().sort(sorter).filter(s =>
+        (s.projectLabel + ' ' + (s.cwd || '') + ' ' + (s.firstPrompt || '')).toLowerCase().includes(q));
+      countEl.textContent = t('sessions.count', { n: list.length });
+      list.forEach(s => grid.appendChild(mode === 'cards' ? buildSessionCard(s) : buildSessionRow(s)));
+      if (!list.length) grid.appendChild(el('div', 'stats-empty', t('sessions.noMatch')));
+      return;
+    }
+
+    // 2) Progetto selezionato → sue sessioni
+    if (state.sessionsProject) {
+      const proj = groups.find(p => p.cwd === state.sessionsProject);
+      if (proj) {
+        crumbWrap.appendChild(makeBreadcrumb(proj.projectLabel));
+        const list = proj.sessions.slice().sort(sorter);
+        countEl.textContent = t('sessions.count', { n: list.length });
+        list.forEach(s => grid.appendChild(mode === 'cards' ? buildSessionCard(s) : buildSessionRow(s)));
+        return;
+      }
+      state.sessionsProject = null;  // progetto sparito (cache cambiata) → torna ai progetti
+    }
+
+    // 3) Default → griglia progetti
+    const list = groups.slice().sort(sorter);
+    countEl.textContent = t('sessions.projectsCount', { n: list.length });
+    list.forEach(p => grid.appendChild(mode === 'cards' ? buildProjectCard(p) : buildProjectRow(p)));
   }
   paint();
 
