@@ -102,6 +102,7 @@ window.LOCALES.it = {
     roleAssistant:     'Claude',
     projectsCount:     '{n} progetti',
     backToProjects:    '‹ Progetti',
+    cardDates:         'Creata {created} · Modificata {modified}',
   },
 
   // Stats section (KPI + tabs + heatmap + context breakdown)

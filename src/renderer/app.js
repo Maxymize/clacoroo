@@ -1210,6 +1210,14 @@ function relativeTime(ts) {
   return new Date(ts).toLocaleDateString(t('time.locale'));
 }
 
+// v1.1.39 — data+ora esatte localizzate, es. "26 giu 2026, 16:22". Per mostrare
+// il giorno preciso accanto al relativo "Xg fa" nelle card sessione.
+function exactDateTime(ms) {
+  if (!ms || !Number.isFinite(ms)) return '—';
+  return new Date(ms).toLocaleString(t('time.locale'),
+    { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+
 // v1.1.24 — formato "tempo trascorso" per il contatore live della quota: mostra
 // sempre i secondi così scorre visibilmente (es. "45s", "1m 23s", "1h 04m").
 // Diverso da relativeTime() (che sopra il minuto perde i secondi).
@@ -4607,12 +4615,16 @@ function buildSessionCard(s) {
   meta.appendChild(el('span', 'session-badge', t('sessions.turnsBadge', { n: fmtNum(s.turns) })));
   meta.appendChild(el('span', 'session-badge session-cost', formatUsd(s.cost)));
   card.appendChild(meta);
+  // Data+ora esatte (creazione + ultima modifica) accanto al relativo
+  card.appendChild(el('div', 'session-dates',
+    t('sessions.cardDates', { created: exactDateTime(s.createdAt), modified: exactDateTime(s.lastActivity) })));
   card.addEventListener('click', () => openSessionModal(s));
   return card;
 }
 
 function buildSessionRow(s) {
   const row = el('div', 'compact-row session-row');
+  row.title = t('sessions.cardDates', { created: exactDateTime(s.createdAt), modified: exactDateTime(s.lastActivity) });
   row.appendChild(el('span', 'compact-row-name', s.projectLabel));
   row.appendChild(el('span', 'session-row-prompt', s.firstPrompt || t('sessions.noPrompt')));
   row.appendChild(el('span', 'session-row-time', relativeTime(s.lastActivity)));

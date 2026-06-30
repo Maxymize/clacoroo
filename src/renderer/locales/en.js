@@ -102,6 +102,7 @@ window.LOCALES.en = {
     roleAssistant:     'Claude',
     projectsCount:     '{n} projects',
     backToProjects:    '‹ Projects',
+    cardDates:         'Created {created} · Modified {modified}',
   },
 
   // Stats section (KPI + tabs + heatmap + context breakdown)

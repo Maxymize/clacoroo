@@ -5027,6 +5027,7 @@ body {
 .tr-msg { padding: 10px 14px; border-radius: 8px; margin-bottom: 8px; }
 .tr-user { background: var(--surface2); }
 .tr-assistant { background: var(--surface); border: 1px solid var(--border); }
+.session-dates { font-size: 11px; color: var(--text-muted); margin-top: 8px; opacity: .9; }
 .tr-role { font-size: 10px; text-transform: uppercase; letter-spacing: .06em; color: var(--text-muted); margin-bottom: 4px; }
 /* Markdown dentro un messaggio (.tr-text NON è .md-content): liste con spazio per i bullet */
 .tr-text ul, .tr-text ol { padding-left: 22px; margin: 6px 0 8px; }
