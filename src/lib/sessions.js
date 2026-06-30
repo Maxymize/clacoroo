@@ -33,13 +33,16 @@ function textOf(content) {
   return '';
 }
 
-// Un prompt è "umano" se non è un Caveat di sistema né un tag comando.
+// Un prompt è "umano" se non è un Caveat di sistema, un tag comando, un tag di
+// contesto IDE, o l'output iniettato dalla skill /watch (rumore di sistema).
 function isHumanPrompt(text) {
   if (!text) return false;
   const t = text.trimStart();
   if (t.startsWith('Caveat:')) return false;
   if (t.startsWith('<command-name>') || t.startsWith('<local-command')) return false;
+  if (t.startsWith('<ide_selection>') || t.startsWith('<ide_opened_file>')) return false;
   if (t.startsWith('[Request interrupted')) return false;
+  if (t.startsWith('Righe (') || t.startsWith('Durata:') || t.startsWith('Frame in ordine temporale')) return false;
   return t.length > 0;
 }
 
