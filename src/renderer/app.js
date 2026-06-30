@@ -283,6 +283,7 @@ const state = {
   // v1.0.83 — Pack K: ordinamento sezione Hooks
   hookSort:   'event-asc',
   sessionsSort: 'modified-desc',
+  sessionsProject: null,   // cwd del progetto aperto in Sessions (null = livello progetti); effimero
   // v1.0.96 — Pack M: vista cards (default) vs compatta (chip) switchabile
   // per ogni sezione, persistita in state.json. Le sezioni che oggi hanno
   // solo una delle 2 viste ottengono l'altra (Skill/Agent cards, MCP/Hooks/
@@ -356,11 +357,17 @@ const MCP_SORTERS = {
                           || (a.name || '').localeCompare(b.name || ''),
 };
 // v1.1.38 — sorters per la sezione Sessions
+// costo per ordinamento: i Project usano totalCost, le SessionMeta usano cost.
+function costOf(o) { return o.totalCost != null ? o.totalCost : (o.cost || 0); }
 const SESSIONS_SORTERS = {
   'modified-desc': (a, b) => (b.lastActivity || 0) - (a.lastActivity || 0),
   'modified-asc':  (a, b) => (a.lastActivity || 0) - (b.lastActivity || 0),
   'created-desc':  (a, b) => (b.createdAt || 0) - (a.createdAt || 0),
   'created-asc':   (a, b) => (a.createdAt || 0) - (b.createdAt || 0),
+  'cost-desc':     (a, b) => costOf(b) - costOf(a),
+  'cost-asc':      (a, b) => costOf(a) - costOf(b),
+  'count-desc':    (a, b) => (b.sessionCount || 0) - (a.sessionCount || 0),
+  'count-asc':     (a, b) => (a.sessionCount || 0) - (b.sessionCount || 0),
 };
 // v1.0.83 — Pack K: sorters per la sezione Hooks
 const HOOK_SORTERS = {
@@ -483,6 +490,10 @@ const SORT_OPTIONS = {
     { key: 'modified-asc',  labelKey: 'sort.modifiedAsc' },
     { key: 'created-desc',  labelKey: 'sort.createdDesc' },
     { key: 'created-asc',   labelKey: 'sort.createdAsc' },
+    { key: 'cost-desc',     labelKey: 'sort.costDesc' },
+    { key: 'cost-asc',      labelKey: 'sort.costAsc' },
+    { key: 'count-desc',    labelKey: 'sort.countDesc' },
+    { key: 'count-asc',     labelKey: 'sort.countAsc' },
   ],
 };
 
@@ -831,6 +842,7 @@ async function runUpdateCheck(force, silent) {
 function switchToSection(name) {
   if (state.section === name) return;
   state.section = name;
+  if (name === 'sessions') state.sessionsProject = null;  // riparti dai progetti
   document.querySelectorAll('.nav-item').forEach(b => {
     b.classList.toggle('active', b.dataset.section === name);
   });
@@ -4562,6 +4574,27 @@ function buildTranscriptEntry(e) {
   det.appendChild(sum);
   det.appendChild(el('pre', 'tr-tool-detail', e.toolDetail || ''));
   return det;
+}
+
+// Raggruppa la lista piatta di SessionMeta per cwd in progetti con aggregati.
+function groupSessionsByProject(sessions) {
+  const map = new Map();
+  for (const s of sessions) {
+    const cwd = s.cwd || '(sconosciuto)';
+    let p = map.get(cwd);
+    if (!p) {
+      p = { cwd, projectLabel: s.projectLabel || (s.cwd ? s.cwd.split('/').filter(Boolean).pop() : cwd),
+            sessionCount: 0, totalCost: 0, totalTurns: 0, lastActivity: 0, createdAt: Infinity, sessions: [] };
+      map.set(cwd, p);
+    }
+    p.sessions.push(s);
+    p.sessionCount += 1;
+    p.totalCost += s.cost || 0;
+    p.totalTurns += s.turns || 0;
+    if ((s.lastActivity || 0) > p.lastActivity) p.lastActivity = s.lastActivity || 0;
+    if ((s.createdAt || Infinity) < p.createdAt) p.createdAt = s.createdAt || p.createdAt;
+  }
+  return [...map.values()];
 }
 
 function buildSessionCard(s) {
