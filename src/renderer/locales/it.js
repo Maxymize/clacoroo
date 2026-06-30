@@ -100,6 +100,9 @@ window.LOCALES.it = {
     transcriptEmpty:   'Conversazione vuota o non leggibile.',
     roleUser:          'Tu',
     roleAssistant:     'Claude',
+    projectsCount:     '{n} progetti',
+    backToProjects:    '‹ Progetti',
+    cardDates:         'Creata {created} · Modificata {modified}',
   },
 
   // Stats section (KPI + tabs + heatmap + context breakdown)
@@ -279,6 +282,10 @@ window.LOCALES.it = {
     modifiedAsc:  'Ultima modifica ↑',
     createdDesc:  'Creazione ↓',
     createdAsc:   'Creazione ↑',
+    costDesc:     'Costo ↓',
+    costAsc:      'Costo ↑',
+    countDesc:    'N. sessioni ↓',
+    countAsc:     'N. sessioni ↑',
   },
 
   // Filter chips

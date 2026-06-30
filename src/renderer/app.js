@@ -283,6 +283,7 @@ const state = {
   // v1.0.83 — Pack K: ordinamento sezione Hooks
   hookSort:   'event-asc',
   sessionsSort: 'modified-desc',
+  sessionsProject: null,   // cwd del progetto aperto in Sessions (null = livello progetti); effimero
   // v1.0.96 — Pack M: vista cards (default) vs compatta (chip) switchabile
   // per ogni sezione, persistita in state.json. Le sezioni che oggi hanno
   // solo una delle 2 viste ottengono l'altra (Skill/Agent cards, MCP/Hooks/
@@ -356,11 +357,17 @@ const MCP_SORTERS = {
                           || (a.name || '').localeCompare(b.name || ''),
 };
 // v1.1.38 — sorters per la sezione Sessions
+// costo per ordinamento: i Project usano totalCost, le SessionMeta usano cost.
+function costOf(o) { return o.totalCost != null ? o.totalCost : (o.cost || 0); }
 const SESSIONS_SORTERS = {
   'modified-desc': (a, b) => (b.lastActivity || 0) - (a.lastActivity || 0),
   'modified-asc':  (a, b) => (a.lastActivity || 0) - (b.lastActivity || 0),
   'created-desc':  (a, b) => (b.createdAt || 0) - (a.createdAt || 0),
   'created-asc':   (a, b) => (a.createdAt || 0) - (b.createdAt || 0),
+  'cost-desc':     (a, b) => costOf(b) - costOf(a),
+  'cost-asc':      (a, b) => costOf(a) - costOf(b),
+  'count-desc':    (a, b) => (b.sessionCount || 0) - (a.sessionCount || 0),
+  'count-asc':     (a, b) => (a.sessionCount || 0) - (b.sessionCount || 0),
 };
 // v1.0.83 — Pack K: sorters per la sezione Hooks
 const HOOK_SORTERS = {
@@ -483,6 +490,10 @@ const SORT_OPTIONS = {
     { key: 'modified-asc',  labelKey: 'sort.modifiedAsc' },
     { key: 'created-desc',  labelKey: 'sort.createdDesc' },
     { key: 'created-asc',   labelKey: 'sort.createdAsc' },
+    { key: 'cost-desc',     labelKey: 'sort.costDesc' },
+    { key: 'cost-asc',      labelKey: 'sort.costAsc' },
+    { key: 'count-desc',    labelKey: 'sort.countDesc' },
+    { key: 'count-asc',     labelKey: 'sort.countAsc' },
   ],
 };
 
@@ -831,6 +842,7 @@ async function runUpdateCheck(force, silent) {
 function switchToSection(name) {
   if (state.section === name) return;
   state.section = name;
+  if (name === 'sessions') state.sessionsProject = null;  // riparti dai progetti
   document.querySelectorAll('.nav-item').forEach(b => {
     b.classList.toggle('active', b.dataset.section === name);
   });
@@ -1196,6 +1208,14 @@ function relativeTime(ts) {
   const d = Math.floor(h / 24);
   if (d < 30)     return t('time.daysAgo', { n: d });
   return new Date(ts).toLocaleDateString(t('time.locale'));
+}
+
+// v1.1.39 — data+ora esatte localizzate, es. "26 giu 2026, 16:22". Per mostrare
+// il giorno preciso accanto al relativo "Xg fa" nelle card sessione.
+function exactDateTime(ms) {
+  if (!ms || !Number.isFinite(ms)) return '—';
+  return new Date(ms).toLocaleString(t('time.locale'),
+    { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
 // v1.1.24 — formato "tempo trascorso" per il contatore live della quota: mostra
@@ -4564,6 +4584,27 @@ function buildTranscriptEntry(e) {
   return det;
 }
 
+// Raggruppa la lista piatta di SessionMeta per cwd in progetti con aggregati.
+function groupSessionsByProject(sessions) {
+  const map = new Map();
+  for (const s of sessions) {
+    const cwd = s.cwd || '(sconosciuto)';
+    let p = map.get(cwd);
+    if (!p) {
+      p = { cwd, projectLabel: s.projectLabel || (s.cwd ? s.cwd.split('/').filter(Boolean).pop() : cwd),
+            sessionCount: 0, totalCost: 0, totalTurns: 0, lastActivity: 0, createdAt: Infinity, sessions: [] };
+      map.set(cwd, p);
+    }
+    p.sessions.push(s);
+    p.sessionCount += 1;
+    p.totalCost += s.cost || 0;
+    p.totalTurns += s.turns || 0;
+    if ((s.lastActivity || 0) > p.lastActivity) p.lastActivity = s.lastActivity || 0;
+    if ((s.createdAt || Infinity) < p.createdAt) p.createdAt = s.createdAt || p.createdAt;
+  }
+  return [...map.values()];
+}
+
 function buildSessionCard(s) {
   const card = el('div', 'browse-card session-card');
   card.appendChild(el('div', 'browse-card-title', s.projectLabel));
@@ -4574,12 +4615,16 @@ function buildSessionCard(s) {
   meta.appendChild(el('span', 'session-badge', t('sessions.turnsBadge', { n: fmtNum(s.turns) })));
   meta.appendChild(el('span', 'session-badge session-cost', formatUsd(s.cost)));
   card.appendChild(meta);
+  // Data+ora esatte (creazione + ultima modifica) accanto al relativo
+  card.appendChild(el('div', 'session-dates',
+    t('sessions.cardDates', { created: exactDateTime(s.createdAt), modified: exactDateTime(s.lastActivity) })));
   card.addEventListener('click', () => openSessionModal(s));
   return card;
 }
 
 function buildSessionRow(s) {
   const row = el('div', 'compact-row session-row');
+  row.title = t('sessions.cardDates', { created: exactDateTime(s.createdAt), modified: exactDateTime(s.lastActivity) });
   row.appendChild(el('span', 'compact-row-name', s.projectLabel));
   row.appendChild(el('span', 'session-row-prompt', s.firstPrompt || t('sessions.noPrompt')));
   row.appendChild(el('span', 'session-row-time', relativeTime(s.lastActivity)));
@@ -4589,10 +4634,37 @@ function buildSessionRow(s) {
   return row;
 }
 
+function openProject(p) { state.sessionsProject = p.cwd; renderSessions(); }
+
+function buildProjectCard(p) {
+  const card = el('div', 'browse-card project-card');
+  card.appendChild(el('div', 'browse-card-title', p.projectLabel));
+  card.appendChild(el('div', 'session-cwd', p.cwd));
+  const meta = el('div', 'session-meta');
+  meta.appendChild(el('span', 'session-badge', t('sessions.count', { n: p.sessionCount })));
+  meta.appendChild(el('span', 'session-badge', relativeTime(p.lastActivity)));
+  meta.appendChild(el('span', 'session-badge', t('sessions.turnsBadge', { n: fmtNum(p.totalTurns) })));
+  meta.appendChild(el('span', 'session-badge session-cost', formatUsd(p.totalCost)));
+  card.appendChild(meta);
+  card.addEventListener('click', () => openProject(p));
+  return card;
+}
+
+function buildProjectRow(p) {
+  const row = el('div', 'compact-row project-row');
+  row.appendChild(el('span', 'compact-row-name', p.projectLabel));
+  row.appendChild(el('span', 'session-row-prompt', p.cwd));
+  row.appendChild(el('span', 'session-row-time', t('sessions.count', { n: p.sessionCount })));
+  row.appendChild(el('span', 'session-row-turns', relativeTime(p.lastActivity)));
+  row.appendChild(el('span', 'session-row-cost', formatUsd(p.totalCost)));
+  row.addEventListener('click', () => openProject(p));
+  return row;
+}
+
 async function renderSessions() {
   const wrap = el('div');
 
-  // Riga 1: search
+  // Riga 1: search (globale sulle sessioni)
   const bar = el('div', 'filter-bar');
   const sw = el('div', 'search-wrap');
   const inp = el('input', 'search-input');
@@ -4609,12 +4681,21 @@ async function renderSessions() {
   hdr.appendChild(countEl);
   const mode = state.viewMode.sessions;
   hdr.appendChild(renderViewSwitcher('sessions', mode, (m) => setViewMode('sessions', m)));
-  hdr.appendChild(renderSortDropdown(state.sessionsSort, SORT_OPTIONS.sessions, async (key) => {
+  // 'count' (n. sessioni) ha senso solo fra progetti: nel livello sessioni di un
+  // progetto lo nascondiamo dal dropdown.
+  const inProject = !!state.sessionsProject;
+  const sortOpts = inProject ? SORT_OPTIONS.sessions.filter(o => !o.key.startsWith('count')) : SORT_OPTIONS.sessions;
+  hdr.appendChild(renderSortDropdown(state.sessionsSort, sortOpts, async (key) => {
     state.sessionsSort = key;
     await window.claudeAPI.setState({ sessionsSort: key });
     renderSessions();
   }));
   wrap.appendChild(hdr);
+
+  // Breadcrumb sopra la griglia (contenitore dedicato: NON dentro il grid, che è
+  // display:grid e metterebbe la breadcrumb in una cella).
+  const crumbWrap = el('div');
+  wrap.appendChild(crumbWrap);
 
   const grid = el('div', mode === 'cards' ? 'browse-card-grid' : 'compact-list');
   wrap.appendChild(grid);
@@ -4635,17 +4716,51 @@ async function renderSessions() {
     return;
   }
 
-  const sorted = data.sessions.slice().sort(SESSIONS_SORTERS[state.sessionsSort] || SESSIONS_SORTERS['modified-desc']);
+  const groups = groupSessionsByProject(data.sessions);
+  const sorter = SESSIONS_SORTERS[state.sessionsSort] || SESSIONS_SORTERS['modified-desc'];
+
+  function makeBreadcrumb(label) {
+    const bc = el('div', 'sessions-breadcrumb');
+    const back = el('span', 'crumb-back', t('sessions.backToProjects'));
+    back.addEventListener('click', () => { state.sessionsProject = null; renderSessions(); });
+    bc.appendChild(back);
+    bc.appendChild(el('span', 'crumb-sep', '/'));
+    bc.appendChild(el('span', 'crumb-current', label));
+    return bc;
+  }
 
   function paint() {
     grid.textContent = '';
+    crumbWrap.textContent = '';
     const q = state.filters.sessions.search.trim().toLowerCase();
-    const list = q
-      ? sorted.filter(s => (s.projectLabel + ' ' + (s.cwd || '') + ' ' + (s.firstPrompt || '')).toLowerCase().includes(q))
-      : sorted;
-    countEl.textContent = t('sessions.count', { n: list.length });
-    list.forEach(s => grid.appendChild(mode === 'cards' ? buildSessionCard(s) : buildSessionRow(s)));
-    if (!list.length) grid.appendChild(el('div', 'stats-empty', t('sessions.noMatch')));
+
+    // 1) Ricerca globale → sessioni piatte da tutti i progetti
+    if (q) {
+      const list = data.sessions.slice().sort(sorter).filter(s =>
+        (s.projectLabel + ' ' + (s.cwd || '') + ' ' + (s.firstPrompt || '')).toLowerCase().includes(q));
+      countEl.textContent = t('sessions.count', { n: list.length });
+      list.forEach(s => grid.appendChild(mode === 'cards' ? buildSessionCard(s) : buildSessionRow(s)));
+      if (!list.length) grid.appendChild(el('div', 'stats-empty', t('sessions.noMatch')));
+      return;
+    }
+
+    // 2) Progetto selezionato → sue sessioni
+    if (state.sessionsProject) {
+      const proj = groups.find(p => p.cwd === state.sessionsProject);
+      if (proj) {
+        crumbWrap.appendChild(makeBreadcrumb(proj.projectLabel));
+        const list = proj.sessions.slice().sort(sorter);
+        countEl.textContent = t('sessions.count', { n: list.length });
+        list.forEach(s => grid.appendChild(mode === 'cards' ? buildSessionCard(s) : buildSessionRow(s)));
+        return;
+      }
+      state.sessionsProject = null;  // progetto sparito (cache cambiata) → torna ai progetti
+    }
+
+    // 3) Default → griglia progetti
+    const list = groups.slice().sort(sorter);
+    countEl.textContent = t('sessions.projectsCount', { n: list.length });
+    list.forEach(p => grid.appendChild(mode === 'cards' ? buildProjectCard(p) : buildProjectRow(p)));
   }
   paint();
 

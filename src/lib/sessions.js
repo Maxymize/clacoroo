@@ -33,13 +33,25 @@ function textOf(content) {
   return '';
 }
 
-// Un prompt è "umano" se non è un Caveat di sistema né un tag comando.
+// Rimuove i blocchi di contesto IDE iniziali (<ide_selection>…</ide_selection> /
+// <ide_opened_file>…</ide_opened_file>): sono un prefisso del messaggio umano reale.
+function stripContextTags(text) {
+  let t = text || '';
+  let prev;
+  do { prev = t; t = t.replace(/^\s*<ide_(?:selection|opened_file)>[\s\S]*?<\/ide_(?:selection|opened_file)>\s*/, ''); } while (t !== prev);
+  return t;
+}
+
+// Un prompt è "umano" se non è un Caveat di sistema, un tag comando, o
+// l'output iniettato dalla skill /watch (rumore di sistema).
+// I tag IDE sono già strippati a monte da stripContextTags prima di chiamare questa.
 function isHumanPrompt(text) {
   if (!text) return false;
   const t = text.trimStart();
   if (t.startsWith('Caveat:')) return false;
   if (t.startsWith('<command-name>') || t.startsWith('<local-command')) return false;
   if (t.startsWith('[Request interrupted')) return false;
+  if (t.startsWith('Righe (') || t.startsWith('Durata:') || t.startsWith('Frame in ordine temporale')) return false;
   return t.length > 0;
 }
 
@@ -63,7 +75,7 @@ function readMeta(filePath) {
       if (!meta.cwd && rec.cwd) meta.cwd = rec.cwd;
       if (!meta.model && rec.type === 'assistant' && rec.message && rec.message.model) meta.model = rec.message.model;
       if (!meta.firstPrompt && rec.type === 'user' && rec.message) {
-        const txt = textOf(rec.message.content);
+        const txt = stripContextTags(textOf(rec.message.content));
         if (isHumanPrompt(txt)) meta.firstPrompt = txt.trim().slice(0, 300);
       }
     });
