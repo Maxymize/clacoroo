@@ -5209,14 +5209,16 @@ function aggregateRangeClient(data, range) {
   };
 }
 
-// Estrae "Opus 4.7" / "Sonnet 4.6" da id tipo "claude-opus-4-7" o "claude-sonnet-4-6-20251022"
+// Estrae "Opus 4.7" / "Sonnet 4.6" da id tipo "claude-opus-4-7" o "claude-sonnet-4-6-20251022".
+// La minor è opzionale: gli id dateless a un solo numero (es. "claude-sonnet-5",
+// "claude-fable-5") danno "Sonnet 5" / "Fable 5".
 function formatModelName(id) {
   if (!id) return '—';
   const stripped = id.replace(/^claude-/, '');
-  const m = stripped.match(/^([a-zA-Z]+)-(\d+)-(\d+)/);
+  const m = stripped.match(/^([a-zA-Z]+)-(\d+)(?:-(\d+))?/);
   if (m) {
     const family = m[1].charAt(0).toUpperCase() + m[1].slice(1).toLowerCase();
-    return family + ' ' + m[2] + '.' + m[3];
+    return family + ' ' + m[2] + (m[3] ? '.' + m[3] : '');
   }
   const first = stripped.split('-')[0] || '—';
   return first.charAt(0).toUpperCase() + first.slice(1).toLowerCase();
@@ -5919,11 +5921,11 @@ function renderConfigContent(container, data) {
   voiceConfigRow(container, settings);
 
   // v1.1.16 — lista modelli aggiornata: aggiunto claude-opus-4-8 (modello più
-  // capace attuale). I valori sconosciuti in settings.json sono comunque
-  // preservati dal select (vedi configRow type 'select'), quindi un modello
-  // futuro non andrà perso anche se non è ancora qui.
+  // capace attuale). v1.2.0 — aggiunto claude-sonnet-5. I valori sconosciuti in
+  // settings.json sono comunque preservati dal select (vedi configRow type
+  // 'select'), quindi un modello futuro non andrà perso anche se non è ancora qui.
   configRow('model', t('config.modelLabel'), 'select',
-    ['default', 'claude-opus-4-8', 'claude-opus-4-7', 'claude-sonnet-4-6', 'claude-haiku-4-5-20251001'],
+    ['default', 'claude-opus-4-8', 'claude-opus-4-7', 'claude-sonnet-5', 'claude-sonnet-4-6', 'claude-haiku-4-5-20251001'],
     t('config.modelDesc'));
 
   // v1.0.30/32 — Effort level: slider a pallini stile VS Code.
