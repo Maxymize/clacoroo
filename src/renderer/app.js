@@ -5920,12 +5920,14 @@ function renderConfigContent(container, data) {
   // Voice: schema corretto è voice.enabled (oggetto nested), NON voiceEnabled top-level
   voiceConfigRow(container, settings);
 
-  // v1.1.16 — lista modelli aggiornata: aggiunto claude-opus-4-8 (modello più
-  // capace attuale). v1.2.0 — aggiunto claude-sonnet-5. I valori sconosciuti in
-  // settings.json sono comunque preservati dal select (vedi configRow type
-  // 'select'), quindi un modello futuro non andrà perso anche se non è ancora qui.
+  // v1.2.1 — il dropdown rispecchia il selettore /model DI DEFAULT di Claude Code:
+  // solo i tier, scritti come alias (es. "sonnet"), NON gli ID specifici
+  // "altri/previous". Gli alias risolvono al modello corrente del tier
+  // (sonnet→Sonnet 5 oggi), quindi la lista non va aggiornata a ogni nuovo modello.
+  // "fable" è valido: se Fable 5 non è disponibile Claude Code fa fallback al
+  // default senza rompere. Valori già salvati in settings.json preservati (v1.1.16).
   configRow('model', t('config.modelLabel'), 'select',
-    ['default', 'claude-opus-4-8', 'claude-opus-4-7', 'claude-sonnet-5', 'claude-sonnet-4-6', 'claude-haiku-4-5-20251001'],
+    ['default', 'opus', 'sonnet', 'haiku', 'fable'],
     t('config.modelDesc'));
 
   // v1.0.30/32 — Effort level: slider a pallini stile VS Code.

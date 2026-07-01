@@ -2,6 +2,11 @@
 
 > English translation of [CHANGELOG.md](./CHANGELOG.md) (Italian, canonical). Updated in sync with each release.
 
+## v1.2.1 — 2026-07-01 — Models: mirror Claude Code's selector
+
+- [FIX] The model dropdown in Claude Config now shows only the tiers selectable by default in Claude Code (Default, Opus, Sonnet, Haiku, Fable), written as aliases. `sonnet` always points to the current Sonnet model (Sonnet 5 today), so it stays valid with future models too
+- [IMPROVEMENT] The specific "other/previous" IDs (e.g. Opus 4.7, Sonnet 4.6) are out of the dropdown; in Claude Code they live behind "Other models" or need `--model`. Values already saved in settings.json are preserved
+
 ## v1.2.0 — 2026-07-01 — Sonnet 5 in the model list + Sessions consolidated
 
 - [FEATURE] Sonnet 5 (`claude-sonnet-5`) is now selectable among the models in Claude Config; pricing and the "Sonnet 5" name are recognized in the cost statistics and session cards too
