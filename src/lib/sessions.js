@@ -42,6 +42,11 @@ function stripContextTags(text) {
   return t;
 }
 
+// Prefissi con cui inizia l'output iniettato dalla skill /watch (transcript/metadati
+// video): non contengono un prompt umano. Fragili per natura — se /watch cambia il
+// formato dell'output vanno aggiornati qui.
+const WATCH_NOISE_PREFIXES = ['Righe (', 'Durata:', 'Frame in ordine temporale'];
+
 // Un prompt è "umano" se non è un Caveat di sistema, un tag comando, o
 // l'output iniettato dalla skill /watch (rumore di sistema).
 // I tag IDE sono già strippati a monte da stripContextTags prima di chiamare questa.
@@ -51,7 +56,7 @@ function isHumanPrompt(text) {
   if (t.startsWith('Caveat:')) return false;
   if (t.startsWith('<command-name>') || t.startsWith('<local-command')) return false;
   if (t.startsWith('[Request interrupted')) return false;
-  if (t.startsWith('Righe (') || t.startsWith('Durata:') || t.startsWith('Frame in ordine temporale')) return false;
+  if (WATCH_NOISE_PREFIXES.some(pfx => t.startsWith(pfx))) return false;
   return t.length > 0;
 }
 

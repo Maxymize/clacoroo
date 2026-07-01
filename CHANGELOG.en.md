@@ -2,6 +2,11 @@
 
 > English translation of [CHANGELOG.md](./CHANGELOG.md) (Italian, canonical). Updated in sync with each release.
 
+## v1.2.0 — 2026-07-01 — Sonnet 5 in the model list + Sessions consolidated
+
+- [FEATURE] Sonnet 5 (`claude-sonnet-5`) is now selectable among the models in Claude Config; pricing and the "Sonnet 5" name are recognized in the cost statistics and session cards too
+- [REFACTOR] Internal cleanup of the Sessions section (behavior unchanged)
+
 ## v1.1.39 — 2026-06-30 — Sessions: project drill-down + global search + breadcrumb
 
 - [FEATURE] Sessions view is now two-level: a grid of projects (one card per folder, with session count, cost, turns) → sessions for the selected project, with breadcrumb to go back

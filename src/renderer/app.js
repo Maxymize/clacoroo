@@ -4600,7 +4600,7 @@ function groupSessionsByProject(sessions) {
     p.totalCost += s.cost || 0;
     p.totalTurns += s.turns || 0;
     if ((s.lastActivity || 0) > p.lastActivity) p.lastActivity = s.lastActivity || 0;
-    if ((s.createdAt || Infinity) < p.createdAt) p.createdAt = s.createdAt || p.createdAt;
+    if (s.createdAt && s.createdAt < p.createdAt) p.createdAt = s.createdAt;
   }
   return [...map.values()];
 }
@@ -4651,7 +4651,7 @@ function buildProjectCard(p) {
 }
 
 function buildProjectRow(p) {
-  const row = el('div', 'compact-row project-row');
+  const row = el('div', 'compact-row session-project-row');
   row.appendChild(el('span', 'compact-row-name', p.projectLabel));
   row.appendChild(el('span', 'session-row-prompt', p.cwd));
   row.appendChild(el('span', 'session-row-time', t('sessions.count', { n: p.sessionCount })));
@@ -4718,6 +4718,7 @@ async function renderSessions() {
 
   const groups = groupSessionsByProject(data.sessions);
   const sorter = SESSIONS_SORTERS[state.sessionsSort] || SESSIONS_SORTERS['modified-desc'];
+  const sortedFlat = data.sessions.slice().sort(sorter);  // precalcolato: la ricerca non ri-ordina a ogni tasto
 
   function makeBreadcrumb(label) {
     const bc = el('div', 'sessions-breadcrumb');
@@ -4736,7 +4737,7 @@ async function renderSessions() {
 
     // 1) Ricerca globale → sessioni piatte da tutti i progetti
     if (q) {
-      const list = data.sessions.slice().sort(sorter).filter(s =>
+      const list = sortedFlat.filter(s =>
         (s.projectLabel + ' ' + (s.cwd || '') + ' ' + (s.firstPrompt || '')).toLowerCase().includes(q));
       countEl.textContent = t('sessions.count', { n: list.length });
       list.forEach(s => grid.appendChild(mode === 'cards' ? buildSessionCard(s) : buildSessionRow(s)));
@@ -5208,14 +5209,16 @@ function aggregateRangeClient(data, range) {
   };
 }
 
-// Estrae "Opus 4.7" / "Sonnet 4.6" da id tipo "claude-opus-4-7" o "claude-sonnet-4-6-20251022"
+// Estrae "Opus 4.7" / "Sonnet 4.6" da id tipo "claude-opus-4-7" o "claude-sonnet-4-6-20251022".
+// La minor è opzionale: gli id dateless a un solo numero (es. "claude-sonnet-5",
+// "claude-fable-5") danno "Sonnet 5" / "Fable 5".
 function formatModelName(id) {
   if (!id) return '—';
   const stripped = id.replace(/^claude-/, '');
-  const m = stripped.match(/^([a-zA-Z]+)-(\d+)-(\d+)/);
+  const m = stripped.match(/^([a-zA-Z]+)-(\d+)(?:-(\d+))?/);
   if (m) {
     const family = m[1].charAt(0).toUpperCase() + m[1].slice(1).toLowerCase();
-    return family + ' ' + m[2] + '.' + m[3];
+    return family + ' ' + m[2] + (m[3] ? '.' + m[3] : '');
   }
   const first = stripped.split('-')[0] || '—';
   return first.charAt(0).toUpperCase() + first.slice(1).toLowerCase();
@@ -5918,11 +5921,11 @@ function renderConfigContent(container, data) {
   voiceConfigRow(container, settings);
 
   // v1.1.16 — lista modelli aggiornata: aggiunto claude-opus-4-8 (modello più
-  // capace attuale). I valori sconosciuti in settings.json sono comunque
-  // preservati dal select (vedi configRow type 'select'), quindi un modello
-  // futuro non andrà perso anche se non è ancora qui.
+  // capace attuale). v1.2.0 — aggiunto claude-sonnet-5. I valori sconosciuti in
+  // settings.json sono comunque preservati dal select (vedi configRow type
+  // 'select'), quindi un modello futuro non andrà perso anche se non è ancora qui.
   configRow('model', t('config.modelLabel'), 'select',
-    ['default', 'claude-opus-4-8', 'claude-opus-4-7', 'claude-sonnet-4-6', 'claude-haiku-4-5-20251001'],
+    ['default', 'claude-opus-4-8', 'claude-opus-4-7', 'claude-sonnet-5', 'claude-sonnet-4-6', 'claude-haiku-4-5-20251001'],
     t('config.modelDesc'));
 
   // v1.0.30/32 — Effort level: slider a pallini stile VS Code.

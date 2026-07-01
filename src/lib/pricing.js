@@ -15,6 +15,9 @@ const PRICING = {
   'claude-opus-4-6':   { input: 15,    output: 75,    cacheWrite: 18.75,  cacheRead: 1.50 },
   'claude-opus-4-5':   { input: 15,    output: 75,    cacheWrite: 18.75,  cacheRead: 1.50 },
   // Sonnet family — balanced
+  // claude-sonnet-5: prezzo standard $3/$15 (intro $2/$10 fino al 31 ago 2026,
+  // temporaneo → non cablato qui: la mappa è statica e non conosce la data).
+  'claude-sonnet-5':   { input: 3,     output: 15,    cacheWrite: 3.75,   cacheRead: 0.30 },
   'claude-sonnet-4-6': { input: 3,     output: 15,    cacheWrite: 3.75,   cacheRead: 0.30 },
   'claude-sonnet-4-5': { input: 3,     output: 15,    cacheWrite: 3.75,   cacheRead: 0.30 },
   // Haiku family — fast/cheap

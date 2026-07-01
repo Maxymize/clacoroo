@@ -5013,7 +5013,7 @@ body {
 /* v1.1.39 — Sessions project grouping */
 .project-card { cursor: pointer; }
 .project-card .session-cwd { margin-bottom: 8px; }
-.compact-row.project-row { display: flex; }
+.compact-row.session-project-row { display: flex; }
 .sessions-breadcrumb { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-muted); margin-bottom: 12px; }
 .sessions-breadcrumb .crumb-back { cursor: pointer; color: var(--accent2, #6a9bcc); }
 .sessions-breadcrumb .crumb-back:hover { text-decoration: underline; }
