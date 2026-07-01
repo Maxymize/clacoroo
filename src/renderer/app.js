@@ -4600,7 +4600,7 @@ function groupSessionsByProject(sessions) {
     p.totalCost += s.cost || 0;
     p.totalTurns += s.turns || 0;
     if ((s.lastActivity || 0) > p.lastActivity) p.lastActivity = s.lastActivity || 0;
-    if ((s.createdAt || Infinity) < p.createdAt) p.createdAt = s.createdAt || p.createdAt;
+    if (s.createdAt && s.createdAt < p.createdAt) p.createdAt = s.createdAt;
   }
   return [...map.values()];
 }
@@ -4651,7 +4651,7 @@ function buildProjectCard(p) {
 }
 
 function buildProjectRow(p) {
-  const row = el('div', 'compact-row project-row');
+  const row = el('div', 'compact-row session-project-row');
   row.appendChild(el('span', 'compact-row-name', p.projectLabel));
   row.appendChild(el('span', 'session-row-prompt', p.cwd));
   row.appendChild(el('span', 'session-row-time', t('sessions.count', { n: p.sessionCount })));
@@ -4718,6 +4718,7 @@ async function renderSessions() {
 
   const groups = groupSessionsByProject(data.sessions);
   const sorter = SESSIONS_SORTERS[state.sessionsSort] || SESSIONS_SORTERS['modified-desc'];
+  const sortedFlat = data.sessions.slice().sort(sorter);  // precalcolato: la ricerca non ri-ordina a ogni tasto
 
   function makeBreadcrumb(label) {
     const bc = el('div', 'sessions-breadcrumb');
@@ -4736,7 +4737,7 @@ async function renderSessions() {
 
     // 1) Ricerca globale → sessioni piatte da tutti i progetti
     if (q) {
-      const list = data.sessions.slice().sort(sorter).filter(s =>
+      const list = sortedFlat.filter(s =>
         (s.projectLabel + ' ' + (s.cwd || '') + ' ' + (s.firstPrompt || '')).toLowerCase().includes(q));
       countEl.textContent = t('sessions.count', { n: list.length });
       list.forEach(s => grid.appendChild(mode === 'cards' ? buildSessionCard(s) : buildSessionRow(s)));
