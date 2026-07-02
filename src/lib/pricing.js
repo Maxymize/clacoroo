@@ -1,8 +1,9 @@
 'use strict';
 
 // Anthropic API pricing — USD per million tokens.
-// Fonte: anthropic.com/api (gennaio 2026). I prezzi possono cambiare,
-// aggiornare qui se Anthropic li modifica. Per gli utenti Max plan il
+// Fonte: docs ufficiali Anthropic (models overview), riverificati 2026-07-02.
+// I prezzi possono cambiare, aggiornare qui se Anthropic li modifica.
+// Convenzione cache: cacheWrite = input × 1.25 (TTL 5m), cacheRead = input × 0.1. Per gli utenti Max plan il
 // costo reale è 0 (incluso nella subscription) — qui calcoliamo il
 // **valore equivalente pay-per-use API**, ovvero quanto si starebbe
 // pagando senza subscription. Util per percepire il ROI del Max plan.
@@ -11,19 +12,21 @@
 const PRICING = {
   // Fable family — modello più capace disponibile, sopra Opus
   'claude-fable-5':    { input: 10,    output: 50,    cacheWrite: 12.50,  cacheRead: 1.00 },
-  // Opus family — top tier
-  'claude-opus-4-8':   { input: 15,    output: 75,    cacheWrite: 18.75,  cacheRead: 1.50 },
-  'claude-opus-4-7':   { input: 15,    output: 75,    cacheWrite: 18.75,  cacheRead: 1.50 },
-  'claude-opus-4-6':   { input: 15,    output: 75,    cacheWrite: 18.75,  cacheRead: 1.50 },
-  'claude-opus-4-5':   { input: 15,    output: 75,    cacheWrite: 18.75,  cacheRead: 1.50 },
+  // Opus family — top tier. Dalla generazione Opus 4.5 il prezzo è $5/$25
+  // ($15/$75 era Opus 4.1 e precedenti — fix v1.2.4, prima sovrastimava 3x).
+  'claude-opus-4-8':   { input: 5,     output: 25,    cacheWrite: 6.25,   cacheRead: 0.50 },
+  'claude-opus-4-7':   { input: 5,     output: 25,    cacheWrite: 6.25,   cacheRead: 0.50 },
+  'claude-opus-4-6':   { input: 5,     output: 25,    cacheWrite: 6.25,   cacheRead: 0.50 },
+  'claude-opus-4-5':   { input: 5,     output: 25,    cacheWrite: 6.25,   cacheRead: 0.50 },
+  'claude-opus-4-1':   { input: 15,    output: 75,    cacheWrite: 18.75,  cacheRead: 1.50 },
   // Sonnet family — balanced
   // claude-sonnet-5: prezzo standard $3/$15 (intro $2/$10 fino al 31 ago 2026,
   // temporaneo → non cablato qui: la mappa è statica e non conosce la data).
   'claude-sonnet-5':   { input: 3,     output: 15,    cacheWrite: 3.75,   cacheRead: 0.30 },
   'claude-sonnet-4-6': { input: 3,     output: 15,    cacheWrite: 3.75,   cacheRead: 0.30 },
   'claude-sonnet-4-5': { input: 3,     output: 15,    cacheWrite: 3.75,   cacheRead: 0.30 },
-  // Haiku family — fast/cheap
-  'claude-haiku-4-5':  { input: 0.80,  output: 4,     cacheWrite: 1,      cacheRead: 0.08 },
+  // Haiku family — fast/cheap. Haiku 4.5 = $1/$5 ($0.80/$4 era Haiku 3.5 — fix v1.2.4).
+  'claude-haiku-4-5':  { input: 1,     output: 5,     cacheWrite: 1.25,   cacheRead: 0.10 },
 };
 
 // Risolve un model ID arbitrario al record pricing più vicino.

@@ -5813,7 +5813,10 @@ function renderConfigContent(container, data) {
         optList.push(current);
       }
       optList.forEach(o => {
-        const label = key === 'model' && MODEL_TIER_LABELS[o] ? MODEL_TIER_LABELS[o]
+        // hasOwnProperty: un valore arbitrario in settings.json (es. "constructor")
+        // non deve pescare dalla prototype chain della mappa etichette.
+        const label = key === 'model' && Object.prototype.hasOwnProperty.call(MODEL_TIER_LABELS, o)
+          ? MODEL_TIER_LABELS[o]
           : (opts && opts.includes(o)) || !o ? o : t('config.unknownOption', { value: o });
         const opt = el('option', null, label);
         opt.value = o;

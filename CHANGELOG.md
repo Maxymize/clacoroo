@@ -2,6 +2,12 @@
 
 > Italiano (canonico). English translation: [CHANGELOG.en.md](./CHANGELOG.en.md) — allineato a ogni release.
 
+## v1.2.4 — 2026-07-02 — Fix: costi Opus e Haiku ora accurati nelle statistiche
+
+- [FIX] Il valore equivalente API per l'uso Opus era sovrastimato di 3 volte: i prezzi in tabella erano quelli di Opus 4.1 ($15/$75) invece di quelli della generazione attuale 4.5-4.8 ($5/$25). I totali in Stats ora riflettono i prezzi ufficiali correnti
+- [FIX] Haiku 4.5 era conteggiato al prezzo del vecchio Haiku 3.5 ($0.80/$4 invece di $1/$5)
+- [IMPROVEMENT] Opus 4.1 mantiene il suo prezzo storico corretto per le sessioni passate
+
 ## v1.2.3 — 2026-07-01 — Modelli: nomi leggibili nel dropdown
 
 - [IMPROVEMENT] Il dropdown Modello in Claude Config mostra ora il nome leggibile accanto al tier (es. "Sonnet · Sonnet 5", "Opus · Opus 4.8", "Fable · Fable 5") invece del solo alias in minuscolo. Il valore salvato in settings.json resta l'alias, invariato
