@@ -2,6 +2,10 @@
 
 > Italiano (canonico). English translation: [CHANGELOG.en.md](./CHANGELOG.en.md) — allineato a ogni release.
 
+## v1.2.3 — 2026-07-01 — Modelli: nomi leggibili nel dropdown
+
+- [IMPROVEMENT] Il dropdown Modello in Claude Config mostra ora il nome leggibile accanto al tier (es. "Sonnet · Sonnet 5", "Opus · Opus 4.8", "Fable · Fable 5") invece del solo alias in minuscolo. Il valore salvato in settings.json resta l'alias, invariato
+
 ## v1.2.2 — 2026-07-01 — Fix: costo Fable 5 non calcolato
 
 - [FIX] Le sessioni con Fable 5 risultavano a costo $0 nelle statistiche: mancava il prezzo di riferimento per questo modello. Ora calcolato correttamente come per gli altri modelli

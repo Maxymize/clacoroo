@@ -5224,6 +5224,22 @@ function formatModelName(id) {
   return first.charAt(0).toUpperCase() + first.slice(1).toLowerCase();
 }
 
+// v1.2.3 — etichetta leggibile per gli alias di tier del selettore /model di
+// Claude Code (configRow('model', …)). Il VALORE salvato in settings.json resta
+// l'alias (es. 'sonnet') — forward-compatible, non va aggiornato a ogni nuovo
+// modello. Solo questa etichetta va aggiornata quando Anthropic aggiorna il
+// modello dietro un tier (stesso principio del picker /model di Claude Code
+// stesso, che mostra "Sonnet · Sonnet 5" accanto al nome del tier). 'default'
+// non ha un modello fisso: dipende dal piano dell'account (Opus 4.8 su
+// Max/Team Premium/Enterprise/API, Sonnet 5 su Pro/Team Standard).
+const MODEL_TIER_LABELS = {
+  default: 'Default',
+  opus: 'Opus · Opus 4.8',
+  sonnet: 'Sonnet · Sonnet 5',
+  haiku: 'Haiku · Haiku 4.5',
+  fable: 'Fable · Fable 5',
+};
+
 function buildStatsKpiGrid(data, range) {
   const kpi = aggregateRangeClient(data, range);
   const favShort = formatModelName(kpi.favoriteModel);
@@ -5797,8 +5813,9 @@ function renderConfigContent(container, data) {
         optList.push(current);
       }
       optList.forEach(o => {
-        const opt = el('option', null,
-          (opts && opts.includes(o)) || !o ? o : t('config.unknownOption', { value: o }));
+        const label = key === 'model' && MODEL_TIER_LABELS[o] ? MODEL_TIER_LABELS[o]
+          : (opts && opts.includes(o)) || !o ? o : t('config.unknownOption', { value: o });
+        const opt = el('option', null, label);
         opt.value = o;
         input.appendChild(opt);
       });
