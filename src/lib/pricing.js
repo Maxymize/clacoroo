@@ -9,6 +9,8 @@
 //
 // Schema per modello: { input, output, cacheWrite, cacheRead }
 const PRICING = {
+  // Fable family — modello più capace disponibile, sopra Opus
+  'claude-fable-5':    { input: 10,    output: 50,    cacheWrite: 12.50,  cacheRead: 1.00 },
   // Opus family — top tier
   'claude-opus-4-8':   { input: 15,    output: 75,    cacheWrite: 18.75,  cacheRead: 1.50 },
   'claude-opus-4-7':   { input: 15,    output: 75,    cacheWrite: 18.75,  cacheRead: 1.50 },
@@ -32,7 +34,8 @@ function resolveModel(id) {
   // Strip date suffix (-YYYYMMDD o -<8digits>)
   const stripped = id.replace(/-\d{8}.*$/, '');
   if (PRICING[stripped]) return PRICING[stripped];
-  // Fallback per famiglia: opus / sonnet / haiku
+  // Fallback per famiglia: fable / opus / sonnet / haiku
+  if (/fable/i.test(id))  return PRICING['claude-fable-5'];
   if (/opus/i.test(id))   return PRICING['claude-opus-4-7'];
   if (/sonnet/i.test(id)) return PRICING['claude-sonnet-4-6'];
   if (/haiku/i.test(id))  return PRICING['claude-haiku-4-5'];

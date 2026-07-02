@@ -2,6 +2,10 @@
 
 > Italiano (canonico). English translation: [CHANGELOG.en.md](./CHANGELOG.en.md) — allineato a ogni release.
 
+## v1.2.2 — 2026-07-01 — Fix: costo Fable 5 non calcolato
+
+- [FIX] Le sessioni con Fable 5 risultavano a costo $0 nelle statistiche: mancava il prezzo di riferimento per questo modello. Ora calcolato correttamente come per gli altri modelli
+
 ## v1.2.1 — 2026-07-01 — Modelli: rispecchia il selettore di Claude Code
 
 - [FIX] Il dropdown modelli in Claude Config ora mostra solo i tier selezionabili di default in Claude Code (Default, Opus, Sonnet, Haiku, Fable), scritti come alias. `sonnet` punta sempre al modello Sonnet corrente (oggi Sonnet 5), così resta valido anche con i modelli futuri
