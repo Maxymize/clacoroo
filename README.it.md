@@ -26,6 +26,20 @@ Gestisci plugin, marketplace, skill, agent, MCP server, hook, statistiche, quote
 
 <div align="center">
 
+### ▶️ Guardalo in azione
+
+<video src="https://github.com/Maxymize/clacoroo/releases/download/media-assets/clacoroo-launch-v1.mp4" controls poster="assets/launch-video-poster.png" width="880">
+</video>
+
+Panoramica di 52s — dashboard, plugin, marketplace, server MCP, terminale integrato.
+[Scarica l'MP4](https://github.com/Maxymize/clacoroo/releases/download/media-assets/clacoroo-launch-v1.mp4) se il player qui sopra non si carica.
+
+</div>
+
+---
+
+<div align="center">
+
 ### 📸 Screenshot e documentazione → [www.clacoroo.app](https://www.clacoroo.app)
 
 Sul sito trovi la galleria completa e la documentazione.
