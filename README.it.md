@@ -30,7 +30,6 @@ Gestisci plugin, marketplace, skill, agent, MCP server, hook, statistiche, quote
 </video>
 
 Panoramica di 52s — dashboard, plugin, marketplace, server MCP, terminale integrato.
-Questa anteprima non ha audio. [Guarda la versione completa con la colonna sonora](https://github.com/Maxymize/clacoroo/releases/download/media-assets/clacoroo-launch-v1.mp4).
 
 </div>
 

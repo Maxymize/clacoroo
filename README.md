@@ -30,7 +30,6 @@ Manage plugins, marketplaces, skills, agents, MCP servers, hooks, stats, quotas 
 </video>
 
 52s overview — dashboard, plugins, marketplace, MCP servers, built-in terminal.
-This preview has no audio. [Watch the full cut with the original soundtrack](https://github.com/Maxymize/clacoroo/releases/download/media-assets/clacoroo-launch-v1.mp4).
 
 </div>
 
