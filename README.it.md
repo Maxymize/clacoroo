@@ -26,7 +26,7 @@ Gestisci plugin, marketplace, skill, agent, MCP server, hook, statistiche, quote
 
 <div align="center">
 
-<video src="https://github.com/user-attachments/assets/98a7bef1-8d6f-4ac0-a871-a1a93430a9d3" controls poster="assets/launch-video-poster.png" width="880">
+<video src="https://github.com/user-attachments/assets/56393b33-e467-484e-9afa-70fbf6a9c82a" controls poster="assets/launch-video-poster.png" width="880">
 </video>
 
 Panoramica di 52s — dashboard, plugin, marketplace, server MCP, terminale integrato.
