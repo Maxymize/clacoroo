@@ -2,6 +2,13 @@
 
 > Italiano (canonico). English translation: [CHANGELOG.en.md](./CHANGELOG.en.md) — allineato a ogni release.
 
+## v1.2.5 — 2026-07-25 — Sessioni aggiornabili + modelli nuovi riconosciuti da soli
+
+- [FIX] La sezione Sessioni non mostrava le sessioni avviate fuori da CLACOROO (terminale, VS Code, altro IDE): comparivano solo riavviando l'app. Ora il pulsante Aggiorna in alto le rilegge dal disco, e rientrare nella sezione ricarica l'elenco
+- [FIX] Il selettore "Modello predefinito" mostrava una versione vecchia accanto al tier (es. "Opus 4.8" quando dietro l'alias c'era già Opus 5). Ora la versione viene ricavata dai tuoi dati di utilizzo e si aggiorna da sola quando esce un modello nuovo, senza aspettare un aggiornamento dell'app
+- [FIX] Stime di costo: aggiunti i listini di Opus 5 e della famiglia Mythos. Un modello non ancora in tabella ora usa il prezzo corrente della sua famiglia, invece di risultare senza costo
+- [FIX] I modelli con data di rilascio nell'ID venivano mostrati come "Opus 5.20260601" invece di "Opus 5"
+
 ## v1.2.4 — 2026-07-02 — Fix: costi Opus e Haiku ora accurati nelle statistiche
 
 - [FIX] Il valore equivalente API per l'uso Opus era sovrastimato di 3 volte: i prezzi in tabella erano quelli di Opus 4.1 ($15/$75) invece di quelli della generazione attuale 4.5-4.8 ($5/$25). I totali in Stats ora riflettono i prezzi ufficiali correnti

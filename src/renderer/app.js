@@ -842,7 +842,13 @@ async function runUpdateCheck(force, silent) {
 function switchToSection(name) {
   if (state.section === name) return;
   state.section = name;
-  if (name === 'sessions') state.sessionsProject = null;  // riparti dai progetti
+  if (name === 'sessions') {
+    state.sessionsProject = null;  // riparti dai progetti
+    // v1.2.5 — entrando nella sezione scarta la cache renderer: prima restava
+    // valida per tutta la vita dell'app, quindi le sessioni nuove non comparivano
+    // mai. Il TTL del main (5 min) fa da freno alle riletture da disco.
+    sessionsCache = null;
+  }
   document.querySelectorAll('.nav-item').forEach(b => {
     b.classList.toggle('active', b.dataset.section === name);
   });
@@ -1113,7 +1119,9 @@ function render() {
     // così se l'utente ha appena installato/disinstalato un tool (es. Bun)
     // il badge "Manca: bun" appare/sparisce subito senza riavviare l'app.
     try { await window.claudeAPI.refreshHookDeps(); } catch { /* graceful */ }
-    forceUsageNextLoad = true;   // v1.1.24 — refresh manuale → fetch quota reale
+    forceUsageNextLoad = true;      // v1.1.24 — refresh manuale → fetch quota reale
+    forceSessionsNextLoad = true;   // v1.2.5 — …e rilettura sessioni dal disco
+    clearStatsCaches();             // stats/sessioni ricaricate al prossimo render
     await loadData();
     refreshBtn.disabled = false;
     refreshBtn.textContent = '';
@@ -4477,6 +4485,11 @@ function renderListSection(items, key, buildChip, searchFn, gridCls, sortConfig,
 let statsCache = null;        // cache legacy condivisa (Dashboard / Config / context breakdown)
 let liveStatsCache = null;    // cache live { live, legacy } per la sezione Stats (v1.1.37)
 let sessionsCache = null;     // cache lista sessioni per la sezione Sessions (v1.1.38)
+// v1.2.5 — one-shot: il Refresh manuale rilegge le sessioni dal disco bypassando
+// anche il TTL di 5 min del main. Necessario perché le sessioni avviate FUORI da
+// CLACOROO (terminale, VS Code) non sono osservate da nessun watcher: senza
+// questo comparivano solo riavviando l'app.
+let forceSessionsNextLoad = false;
 function clearStatsCaches() { statsCache = null; liveStatsCache = null; sessionsCache = null; }
 let statsActiveTab = 'overview';
 let statsRenderToken = 0;
@@ -4701,11 +4714,14 @@ async function renderSessions() {
   wrap.appendChild(grid);
   setContent(wrap);
 
-  // Dati (cache renderer + fetch)
-  let data = sessionsCache;
+  // Dati (cache renderer + fetch). `force` (dal Refresh manuale) salta anche la
+  // cache del main, così si rileggono davvero i file di sessione dal disco.
+  const force = forceSessionsNextLoad;
+  forceSessionsNextLoad = false;
+  let data = force ? null : sessionsCache;
   if (!data) {
     grid.appendChild(el('div', 'stats-loading', t('sessions.loading')));
-    data = await window.claudeAPI.getSessions();
+    data = await window.claudeAPI.getSessions(force);
     if (state.section !== 'sessions') return;  // race guard
     sessionsCache = data;
     grid.textContent = '';
@@ -5209,36 +5225,69 @@ function aggregateRangeClient(data, range) {
   };
 }
 
-// Estrae "Opus 4.7" / "Sonnet 4.6" da id tipo "claude-opus-4-7" o "claude-sonnet-4-6-20251022".
-// La minor è opzionale: gli id dateless a un solo numero (es. "claude-sonnet-5",
-// "claude-fable-5") danno "Sonnet 5" / "Fable 5".
+// Scompone un id modello in { family, major, minor }.
+// "claude-opus-4-7" → opus 4.7 · "claude-sonnet-4-6-20251022" → sonnet 4.6
+// "claude-opus-5" → opus 5 · "claude-opus-5-20260601" → opus 5 (il suffisso a
+// 8 cifre è una data di release, non una minor: va ignorato).
+function parseModelVersion(id) {
+  const m = String(id || '').replace(/^claude-/, '').match(/^([a-zA-Z]+)-(\d+)(?:-(\d+))?/);
+  if (!m) return null;
+  const minorRaw = m[3];
+  const minor = minorRaw && minorRaw.length <= 2 ? Number(minorRaw) : 0;
+  return { family: m[1].toLowerCase(), major: Number(m[2]), minor };
+}
+
+// Estrae "Opus 4.7" / "Sonnet 4.6" / "Opus 5" da un id modello.
 function formatModelName(id) {
   if (!id) return '—';
-  const stripped = id.replace(/^claude-/, '');
-  const m = stripped.match(/^([a-zA-Z]+)-(\d+)(?:-(\d+))?/);
-  if (m) {
-    const family = m[1].charAt(0).toUpperCase() + m[1].slice(1).toLowerCase();
-    return family + ' ' + m[2] + (m[3] ? '.' + m[3] : '');
+  const v = parseModelVersion(id);
+  if (v) {
+    const family = v.family.charAt(0).toUpperCase() + v.family.slice(1);
+    return family + ' ' + v.major + (v.minor ? '.' + v.minor : '');
   }
-  const first = stripped.split('-')[0] || '—';
+  const first = id.replace(/^claude-/, '').split('-')[0] || '—';
   return first.charAt(0).toUpperCase() + first.slice(1).toLowerCase();
 }
 
-// v1.2.3 — etichetta leggibile per gli alias di tier del selettore /model di
-// Claude Code (configRow('model', …)). Il VALORE salvato in settings.json resta
-// l'alias (es. 'sonnet') — forward-compatible, non va aggiornato a ogni nuovo
-// modello. Solo questa etichetta va aggiornata quando Anthropic aggiorna il
-// modello dietro un tier (stesso principio del picker /model di Claude Code
-// stesso, che mostra "Sonnet · Sonnet 5" accanto al nome del tier). 'default'
-// non ha un modello fisso: dipende dal piano dell'account (Opus 4.8 su
-// Max/Team Premium/Enterprise/API, Sonnet 5 su Pro/Team Standard).
-const MODEL_TIER_LABELS = {
+// Alias di tier del selettore /model di Claude Code (configRow('model', …)).
+// Il VALORE salvato in settings.json resta l'alias (es. 'sonnet'): per la CLI
+// un alias punta SEMPRE al modello più recente di quella famiglia, quindi la
+// scelta è forward-compatible e non va aggiornata a ogni nuovo modello.
+const MODEL_TIER_BASE = {
   default: 'Default',
-  opus: 'Opus · Opus 4.8',
-  sonnet: 'Sonnet · Sonnet 5',
-  haiku: 'Haiku · Haiku 4.5',
-  fable: 'Fable · Fable 5',
+  opus:    'Opus',
+  sonnet:  'Sonnet',
+  haiku:   'Haiku',
+  fable:   'Fable',
 };
+
+// v1.2.5 — versione più recente REALMENTE vista in uso per una famiglia, letta
+// dagli id modello nei dati di utilizzo locali di Claude Code (stats-cache).
+// Serve a mostrare "Opus · Opus 5" senza hardcodare la versione: quando esce un
+// modello nuovo l'etichetta si aggiorna da sola appena lo usi.
+function latestSeenModelForTier(tier) {
+  const usage = (statsCache && statsCache.cache && statsCache.cache.modelUsage)
+    || (lastStatsData && lastStatsData.cache && lastStatsData.cache.modelUsage)
+    || {};
+  let best = null, bestMajor = -1, bestMinor = -1;
+  Object.keys(usage).forEach((id) => {
+    const v = parseModelVersion(id);
+    if (!v || v.family !== tier) return;
+    if (v.major > bestMajor || (v.major === bestMajor && v.minor > bestMinor)) {
+      bestMajor = v.major; bestMinor = v.minor; best = id;
+    }
+  });
+  return best;
+}
+
+// Etichetta del tier: nome famiglia + versione vista in uso, se disponibile.
+// 'default' non ha un modello fisso (dipende dal piano dell'account) → solo nome.
+function modelTierLabel(tier) {
+  const base = MODEL_TIER_BASE[tier] || tier;
+  if (tier === 'default') return base;
+  const seen = latestSeenModelForTier(tier);
+  return seen ? base + ' · ' + formatModelName(seen) : base;
+}
 
 function buildStatsKpiGrid(data, range) {
   const kpi = aggregateRangeClient(data, range);
@@ -5815,8 +5864,8 @@ function renderConfigContent(container, data) {
       optList.forEach(o => {
         // hasOwnProperty: un valore arbitrario in settings.json (es. "constructor")
         // non deve pescare dalla prototype chain della mappa etichette.
-        const label = key === 'model' && Object.prototype.hasOwnProperty.call(MODEL_TIER_LABELS, o)
-          ? MODEL_TIER_LABELS[o]
+        const label = key === 'model' && Object.prototype.hasOwnProperty.call(MODEL_TIER_BASE, o)
+          ? modelTierLabel(o)
           : (opts && opts.includes(o)) || !o ? o : t('config.unknownOption', { value: o });
         const opt = el('option', null, label);
         opt.value = o;

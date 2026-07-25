@@ -12,8 +12,13 @@
 const PRICING = {
   // Fable family — modello più capace disponibile, sopra Opus
   'claude-fable-5':    { input: 10,    output: 50,    cacheWrite: 12.50,  cacheRead: 1.00 },
+  // Mythos family — stesso listino di Fable 5 (disponibilità limitata)
+  'claude-mythos-5':   { input: 10,    output: 50,    cacheWrite: 12.50,  cacheRead: 1.00 },
   // Opus family — top tier. Dalla generazione Opus 4.5 il prezzo è $5/$25
   // ($15/$75 era Opus 4.1 e precedenti — fix v1.2.4, prima sovrastimava 3x).
+  // Nota: Opus 5/4.8 hanno un "fast mode" a $10/$50 — non rilevabile dai dati
+  // di usage locali, quindi qui resta il listino standard.
+  'claude-opus-5':     { input: 5,     output: 25,    cacheWrite: 6.25,   cacheRead: 0.50 },
   'claude-opus-4-8':   { input: 5,     output: 25,    cacheWrite: 6.25,   cacheRead: 0.50 },
   'claude-opus-4-7':   { input: 5,     output: 25,    cacheWrite: 6.25,   cacheRead: 0.50 },
   'claude-opus-4-6':   { input: 5,     output: 25,    cacheWrite: 6.25,   cacheRead: 0.50 },
@@ -37,10 +42,13 @@ function resolveModel(id) {
   // Strip date suffix (-YYYYMMDD o -<8digits>)
   const stripped = id.replace(/-\d{8}.*$/, '');
   if (PRICING[stripped]) return PRICING[stripped];
-  // Fallback per famiglia: fable / opus / sonnet / haiku
+  // Fallback per famiglia → listino della generazione più recente nota, così un
+  // modello nuovo non ancora in tabella (es. il prossimo Opus) viene stimato
+  // col prezzo corrente della sua famiglia invece di restare senza costo.
   if (/fable/i.test(id))  return PRICING['claude-fable-5'];
-  if (/opus/i.test(id))   return PRICING['claude-opus-4-7'];
-  if (/sonnet/i.test(id)) return PRICING['claude-sonnet-4-6'];
+  if (/mythos/i.test(id)) return PRICING['claude-mythos-5'];
+  if (/opus/i.test(id))   return PRICING['claude-opus-5'];
+  if (/sonnet/i.test(id)) return PRICING['claude-sonnet-5'];
   if (/haiku/i.test(id))  return PRICING['claude-haiku-4-5'];
   return null;
 }
