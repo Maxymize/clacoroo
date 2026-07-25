@@ -2,6 +2,11 @@
 
 > Italiano (canonico). English translation: [CHANGELOG.en.md](./CHANGELOG.en.md) — allineato a ogni release.
 
+## v1.2.6 — 2026-07-25 — Opus 5 selezionabile nel menu modelli
+
+- [FEATURE] Il selettore "Modello predefinito" ora elenca anche i modelli concreti oltre agli alias: puoi fissare **Opus 5** (o Sonnet 5, Opus 4.8, Fable 5…) invece di affidarti al generico "Opus". Gli alias restano la scelta consigliata perché seguono da soli il modello più recente
+- [FIX] Le etichette degli alias mostravano la versione sbagliata (es. "Sonnet · Sonnet 4.6" invece di Sonnet 5): venivano ricavate dalla cronologia d'uso, che dice quali modelli hai usato e non quale modello sta dietro l'alias. Ora derivano da un elenco unico e corretto
+
 ## v1.2.5 — 2026-07-25 — Sessioni aggiornabili + modelli nuovi riconosciuti da soli
 
 - [FIX] La sezione Sessioni non mostrava le sessioni avviate fuori da CLACOROO (terminale, VS Code, altro IDE): comparivano solo riavviando l'app. Ora il pulsante Aggiorna in alto le rilegge dal disco, e rientrare nella sezione ricarica l'elenco

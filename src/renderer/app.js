@@ -5261,16 +5261,28 @@ const MODEL_TIER_BASE = {
   fable:   'Fable',
 };
 
-// v1.2.5 — versione più recente REALMENTE vista in uso per una famiglia, letta
-// dagli id modello nei dati di utilizzo locali di Claude Code (stats-cache).
-// Serve a mostrare "Opus · Opus 5" senza hardcodare la versione: quando esce un
-// modello nuovo l'etichetta si aggiorna da sola appena lo usi.
-function latestSeenModelForTier(tier) {
-  const usage = (statsCache && statsCache.cache && statsCache.cache.modelUsage)
-    || (lastStatsData && lastStatsData.cache && lastStatsData.cache.modelUsage)
-    || {};
+// v1.2.6 — Modelli concreti selezionabili ("versione fissa"), dal più recente.
+// UNICA lista da aggiornare quando Anthropic rilascia un modello: da qui derivano
+// sia le opzioni del dropdown sia la versione mostrata accanto agli alias.
+// Chi non vuole pensarci usa un alias, che resta valido per sempre.
+//
+// NOTA: la v1.2.5 ricavava la versione dai dati d'uso locali (stats-cache). Era
+// sbagliato: quei dati dicono cosa hai USATO, non cosa risolve l'alias — chi non
+// aveva ancora usato Sonnet 5 vedeva "Sonnet · Sonnet 4.6". Fonte unica qui.
+const CLAUDE_MODELS = [
+  'claude-fable-5',
+  'claude-opus-5',
+  'claude-opus-4-8',
+  'claude-opus-4-7',
+  'claude-sonnet-5',
+  'claude-sonnet-4-6',
+  'claude-haiku-4-5',
+];
+
+// Modello più recente di una famiglia secondo CLAUDE_MODELS.
+function latestModelForTier(tier) {
   let best = null, bestMajor = -1, bestMinor = -1;
-  Object.keys(usage).forEach((id) => {
+  CLAUDE_MODELS.forEach((id) => {
     const v = parseModelVersion(id);
     if (!v || v.family !== tier) return;
     if (v.major > bestMajor || (v.major === bestMajor && v.minor > bestMinor)) {
@@ -5280,13 +5292,18 @@ function latestSeenModelForTier(tier) {
   return best;
 }
 
-// Etichetta del tier: nome famiglia + versione vista in uso, se disponibile.
-// 'default' non ha un modello fisso (dipende dal piano dell'account) → solo nome.
-function modelTierLabel(tier) {
-  const base = MODEL_TIER_BASE[tier] || tier;
-  if (tier === 'default') return base;
-  const seen = latestSeenModelForTier(tier);
-  return seen ? base + ' · ' + formatModelName(seen) : base;
+// Etichetta di un'opzione del selettore modello:
+//   alias   → "Opus · Opus 5"          (segue sempre l'ultimo della famiglia)
+//   modello → "Opus 5 (versione fissa)" (resta quello finché non lo cambi)
+// 'default' non ha un modello fisso: dipende dal piano dell'account.
+function modelOptionLabel(value) {
+  if (Object.prototype.hasOwnProperty.call(MODEL_TIER_BASE, value)) {
+    const base = MODEL_TIER_BASE[value];
+    if (value === 'default') return base;
+    const latest = latestModelForTier(value);
+    return latest ? base + ' · ' + formatModelName(latest) : base;
+  }
+  return t('config.modelPinned', { name: formatModelName(value) });
 }
 
 function buildStatsKpiGrid(data, range) {
@@ -5864,8 +5881,10 @@ function renderConfigContent(container, data) {
       optList.forEach(o => {
         // hasOwnProperty: un valore arbitrario in settings.json (es. "constructor")
         // non deve pescare dalla prototype chain della mappa etichette.
-        const label = key === 'model' && Object.prototype.hasOwnProperty.call(MODEL_TIER_BASE, o)
-          ? modelTierLabel(o)
+        const isKnownModelOpt = key === 'model'
+          && (Object.prototype.hasOwnProperty.call(MODEL_TIER_BASE, o) || CLAUDE_MODELS.includes(o));
+        const label = isKnownModelOpt
+          ? modelOptionLabel(o)
           : (opts && opts.includes(o)) || !o ? o : t('config.unknownOption', { value: o });
         const opt = el('option', null, label);
         opt.value = o;
@@ -5995,8 +6014,10 @@ function renderConfigContent(container, data) {
   // (sonnet→Sonnet 5 oggi), quindi la lista non va aggiornata a ogni nuovo modello.
   // "fable" è valido: se Fable 5 non è disponibile Claude Code fa fallback al
   // default senza rompere. Valori già salvati in settings.json preservati (v1.1.16).
+  // v1.2.6 — alias (seguono sempre l'ultimo modello della famiglia) + modelli
+  // concreti da CLAUDE_MODELS, per chi vuole fissare una versione precisa.
   configRow('model', t('config.modelLabel'), 'select',
-    ['default', 'opus', 'sonnet', 'haiku', 'fable'],
+    ['default', 'opus', 'sonnet', 'haiku', 'fable', ...CLAUDE_MODELS],
     t('config.modelDesc'));
 
   // v1.0.30/32 — Effort level: slider a pallini stile VS Code.

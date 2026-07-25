@@ -2,6 +2,11 @@
 
 > English translation of [CHANGELOG.md](./CHANGELOG.md) (Italian, canonical). Updated in sync with each release.
 
+## v1.2.6 — 2026-07-25 — Opus 5 selectable in the model menu
+
+- [FEATURE] The "Default model" selector now lists concrete models alongside the aliases: you can pin **Opus 5** (or Sonnet 5, Opus 4.8, Fable 5…) instead of relying on the generic "Opus". Aliases remain the recommended choice since they follow the newest model on their own
+- [FIX] Alias labels showed the wrong version (e.g. "Sonnet · Sonnet 4.6" instead of Sonnet 5): they were derived from your usage history, which tells which models you have used rather than which model sits behind the alias. They now come from a single, correct list
+
 ## v1.2.5 — 2026-07-25 — Refreshable sessions + new models recognized automatically
 
 - [FIX] The Sessions section didn't show sessions started outside CLACOROO (terminal, VS Code, another IDE): they only appeared after restarting the app. The Refresh button at the top now re-reads them from disk, and re-entering the section reloads the list
