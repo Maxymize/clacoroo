@@ -2,6 +2,11 @@
 
 > English translation of [CHANGELOG.md](./CHANGELOG.md) (Italian, canonical). Updated in sync with each release.
 
+## v1.2.7 — 2026-07-25 — Clearer model menu + Opus with 1M context
+
+- [IMPROVEMENT] The "Default model" menu is now split into sections — *Always the latest model*, *Specific version*, *Current setting* — instead of repeating a label on every row. It's immediately clear which entries follow new models automatically and which stay put
+- [FEATURE] Added the **Opus (1M context)** option, the variant with a 1 million token context window
+
 ## v1.2.6 — 2026-07-25 — Opus 5 selectable in the model menu
 
 - [FEATURE] The "Default model" selector now lists concrete models alongside the aliases: you can pin **Opus 5** (or Sonnet 5, Opus 4.8, Fable 5…) instead of relying on the generic "Opus". Aliases remain the recommended choice since they follow the newest model on their own

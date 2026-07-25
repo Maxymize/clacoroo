@@ -5261,6 +5261,12 @@ const MODEL_TIER_BASE = {
   fable:   'Fable',
 };
 
+// v1.2.7 — Alias offerti dal selettore, nell'ordine del picker di Claude Code.
+// `opus[1m]` è la variante a contesto esteso (1M token): il picker nativo la
+// espone SOLO per Opus, quindi non inventiamo sonnet[1m]/fable[1m] — sceglierli
+// se non esistono farebbe fallire le sessioni.
+const MODEL_ALIASES = ['default', 'opus', 'opus[1m]', 'sonnet', 'haiku', 'fable'];
+
 // v1.2.6 — Modelli concreti selezionabili ("versione fissa"), dal più recente.
 // UNICA lista da aggiornare quando Anthropic rilascia un modello: da qui derivano
 // sia le opzioni del dropdown sia la versione mostrata accanto agli alias.
@@ -5293,17 +5299,20 @@ function latestModelForTier(tier) {
 }
 
 // Etichetta di un'opzione del selettore modello:
-//   alias   → "Opus · Opus 5"          (segue sempre l'ultimo della famiglia)
-//   modello → "Opus 5 (versione fissa)" (resta quello finché non lo cambi)
+//   alias   → "Opus · Opus 5" / "Opus (contesto 1M) · Opus 5"
+//   modello → "Opus 5"  (che sia una versione fissa lo dice il gruppo, non serve
+//             ripetere un suffisso su ogni riga)
 // 'default' non ha un modello fisso: dipende dal piano dell'account.
 function modelOptionLabel(value) {
-  if (Object.prototype.hasOwnProperty.call(MODEL_TIER_BASE, value)) {
-    const base = MODEL_TIER_BASE[value];
-    if (value === 'default') return base;
-    const latest = latestModelForTier(value);
+  const ext = String(value).endsWith('[1m]');           // variante contesto 1M
+  const tier = ext ? String(value).slice(0, -4) : value;
+  if (Object.prototype.hasOwnProperty.call(MODEL_TIER_BASE, tier)) {
+    const base = MODEL_TIER_BASE[tier] + (ext ? ' ' + t('config.model1m') : '');
+    if (tier === 'default') return base;
+    const latest = latestModelForTier(tier);
     return latest ? base + ' · ' + formatModelName(latest) : base;
   }
-  return t('config.modelPinned', { name: formatModelName(value) });
+  return formatModelName(value);
 }
 
 function buildStatsKpiGrid(data, range) {
@@ -5878,17 +5887,31 @@ function renderConfigContent(container, data) {
       if (current && !optList.includes(current)) {
         optList.push(current);
       }
+      // v1.2.7 — il selettore modello raggruppa le voci (alias / versione fissa /
+      // impostazione attuale): la distinzione è spiegata una volta nell'intestazione
+      // del gruppo invece di essere ripetuta come suffisso su ogni riga.
+      const modelGroupKey = (o) => {
+        if (key !== 'model') return null;
+        if (MODEL_ALIASES.includes(o))  return 'config.modelGroupAlias';
+        if (CLAUDE_MODELS.includes(o))  return 'config.modelGroupPinned';
+        return 'config.modelGroupCurrent';
+      };
+      const groups = new Map();
       optList.forEach(o => {
-        // hasOwnProperty: un valore arbitrario in settings.json (es. "constructor")
-        // non deve pescare dalla prototype chain della mappa etichette.
-        const isKnownModelOpt = key === 'model'
-          && (Object.prototype.hasOwnProperty.call(MODEL_TIER_BASE, o) || CLAUDE_MODELS.includes(o));
-        const label = isKnownModelOpt
+        const label = key === 'model'
           ? modelOptionLabel(o)
           : (opts && opts.includes(o)) || !o ? o : t('config.unknownOption', { value: o });
         const opt = el('option', null, label);
         opt.value = o;
-        input.appendChild(opt);
+        const gk = modelGroupKey(o);
+        if (!gk) { input.appendChild(opt); return; }
+        if (!groups.has(gk)) {
+          const og = el('optgroup');
+          og.label = t(gk);
+          groups.set(gk, og);
+          input.appendChild(og);
+        }
+        groups.get(gk).appendChild(opt);
       });
       input.value = current || (opts && opts[0]) || '';
     } else if (type === 'dots') {
@@ -6017,7 +6040,7 @@ function renderConfigContent(container, data) {
   // v1.2.6 — alias (seguono sempre l'ultimo modello della famiglia) + modelli
   // concreti da CLAUDE_MODELS, per chi vuole fissare una versione precisa.
   configRow('model', t('config.modelLabel'), 'select',
-    ['default', 'opus', 'sonnet', 'haiku', 'fable', ...CLAUDE_MODELS],
+    [...MODEL_ALIASES, ...CLAUDE_MODELS],
     t('config.modelDesc'));
 
   // v1.0.30/32 — Effort level: slider a pallini stile VS Code.

@@ -2,6 +2,11 @@
 
 > Italiano (canonico). English translation: [CHANGELOG.en.md](./CHANGELOG.en.md) — allineato a ogni release.
 
+## v1.2.7 — 2026-07-25 — Menu modelli più leggibile + Opus a contesto 1M
+
+- [IMPROVEMENT] Il menu "Modello predefinito" ora è diviso in sezioni — *Sempre l'ultimo modello*, *Versione fissa*, *Impostazione attuale* — invece di ripetere un'etichetta su ogni riga. Si capisce a colpo d'occhio quali voci seguono automaticamente i modelli nuovi e quali restano ferme
+- [FEATURE] Aggiunta l'opzione **Opus (contesto 1M)**, la variante con finestra di contesto da 1 milione di token
+
 ## v1.2.6 — 2026-07-25 — Opus 5 selezionabile nel menu modelli
 
 - [FEATURE] Il selettore "Modello predefinito" ora elenca anche i modelli concreti oltre agli alias: puoi fissare **Opus 5** (o Sonnet 5, Opus 4.8, Fable 5…) invece di affidarti al generico "Opus". Gli alias restano la scelta consigliata perché seguono da soli il modello più recente
