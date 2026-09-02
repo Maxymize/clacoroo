@@ -122,6 +122,8 @@ window.LOCALES.en = {
     tabEfficiency:'Efficiency',
     noLiveData:   'No usage data found in the ~/.claude/projects/ transcripts. Use Claude Code for a few sessions and statistics will appear here (computed live, not from a cache).',
     rangeAll:     'All',
+    rangeAllSince:'all time · since {from}',
+    rangeAllLabel:'all time',
     range30:      '30d',
     range7:       '7d',
     kpiSessions:  'Sessions',
@@ -136,6 +138,7 @@ window.LOCALES.en = {
     kpiLongestStreak:'Longest streak',
     kpiPeakHour:  'Peak hour',
     kpiFavModel:  'Favorite\nModel',
+    kpiFavModelTip:'The model with the most tokens (input + output) in the period',
     costNote:     'Real $ cost computed from API prices for each token type (input, output, cache write/read). These are the tokens you actually consumed: on Claude Pro/Max you don\'t pay per use — it\'s the equivalent value had you paid via API.',
     tokenBreakdownTitle:'Tokens, in plain sight',
     tokenWorkLabel:'work tokens (input + output)',
@@ -498,6 +501,8 @@ window.LOCALES.en = {
   // Token budget modal
   token: {
     modelLabel:    'Model:',
+    tokenizerNote: 'Weights measured by Claude Code with the {base} tokenizer, which {model} shares',
+    tokenizerNoteShort: '· {base} measurement (same tokenizer)',
     disableBtn:    'Disable −{tok}',
     introTopN:     'Active global plugins sorted by "always-on" weight (tokens loaded on every `claude` session boot). Data extracted from Claude Code\'s `plugin-catalog-cache.json`. Current values for model {model}. The "Δ Opus" column shows the delta between Opus 4.7 and Sonnet 4.6 (Opus typically weighs +30-40%).',
     colNumber:     '#',
@@ -586,7 +591,7 @@ window.LOCALES.en = {
     subtitle:       '· {n} active plugins · potential on-invoke {tok} tok',
     introInvoke:    '+{tok} on-invoke',
     titleTooltip:   '{id} ({mkt})\\nalways-on: {always} tok\\non-invoke: {invoke} tok',
-    pctContext:     '· {pct}% of the context window (200K)',
+    pctContext:     '· {pct}% of the context window ({win})',
     modalFooter:    '{model} total: {always} tok always-on (fixed weight) + {invoke} tok on-invoke — Sonnet {sonnet} vs Opus {opus} (delta {delta} tok)',
   },
 

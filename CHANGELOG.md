@@ -2,6 +2,13 @@
 
 > Italiano (canonico). English translation: [CHANGELOG.en.md](./CHANGELOG.en.md) — allineato a ogni release.
 
+## v1.2.13 — 2026-09-02 — Modelli recenti nei pesi e nel contesto, range dei KPI
+
+- [FEATURE] "Plugin per peso" e la stima del contesto ora offrono anche Opus 5, Opus 4.8, Sonnet 5, Fable 5 e 5.1. Claude Code misura i pesi solo per Opus 4.7 e Sonnet 4.6, ma i modelli nuovi condividono il tokenizer di uno dei due: CLACOROO legge quella misura e lo dice sotto al totale
+- [IMPROVEMENT] La finestra di contesto segue il modello scelto (1M per Opus 5, Sonnet 5 e Fable; 200K per Opus 4.x, Sonnet 4.6 e Haiku) e il nome del modello compare accanto a "usati / totali"
+- [IMPROVEMENT] Il titolo "Utilizzo Claude Code" indica il periodo (tutto lo storico, dal primo giorno registrato), così "500 sessioni" non resta senza riferimento; il modello preferito spiega nel tooltip come è scelto
+- [IMPROVEMENT] La quota compatta nell'header usa i colori delle barre della Dashboard (blu Session, verde Weekly, arancione Weekly Sonnet)
+
 ## v1.2.12 — 2026-09-02 — Quote Claude sempre in vista nell'header
 
 - [FEATURE] Accanto al titolo di ogni sezione compare la quota Claude in versione compatta (Session · Weekly (7d) · Weekly Sonnet), con i colori delle soglie 80% e 95%. Il tooltip mostra quando si azzera ogni banda e l'ultimo aggiornamento; un click porta alla Dashboard

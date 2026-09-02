@@ -1286,8 +1286,11 @@ function paintTopbarQuota() {
     const pctTxt = pct != null ? Math.floor(pct) + '%' : '—';
     if (i) box.appendChild(el('span', 'topbar-quota-sep', '·'));
     const item = el('span', 'topbar-quota-item');
+    // v1.2.13 — pallino e percentuale nel colore della barra corrispondente
+    // in Dashboard (blu Session, verde Weekly, arancione Weekly Sonnet)
+    item.appendChild(el('span', 'topbar-quota-dot band-' + b.key));
     item.appendChild(el('span', 'topbar-quota-label', t(shortKeys[b.key])));
-    const val = el('span', 'topbar-quota-pct', pctTxt);
+    const val = el('span', 'topbar-quota-pct band-' + b.key, pctTxt);
     if (pct != null && pct >= 95) val.classList.add('is-critical');
     else if (pct != null && pct >= 80) val.classList.add('is-warning');
     item.appendChild(val);
@@ -1611,6 +1614,7 @@ async function fetchStatsSafe() {
 }
 
 function paintCtxBar(container, cb) {
+  cb = withContextWindow(cb, currentTokenModel());   // v1.2.13
   const existing = container.querySelector('.context-breakdown');
   if (existing) {
     // Update in-place: CSS transition anima la width dei segmenti senza flash
@@ -1636,8 +1640,22 @@ function paintDashboardStats(container, data) {
     return;
   }
   container.textContent = '';
-  container.appendChild(sectionTitle(t('section.utilizzoClaude'), 'bar-chart-3'));
+  container.appendChild(usageRangeTitle(data));
   container.appendChild(buildStatsKpiGrid(data, 'all'));
+}
+
+// v1.2.13 — I KPI della Dashboard sono su tutto lo storico: il titolo lo dice,
+// col primo giorno registrato ("500 sessioni" senza periodo confondeva).
+function usageRangeTitle(data) {
+  const title = sectionTitle(t('section.utilizzoClaude'), 'bar-chart-3');
+  const days = (data && data.cache && Array.isArray(data.cache.dailyActivity)) ? data.cache.dailyActivity : [];
+  const first = days.reduce((min, d) => (d && d.date && (!min || d.date < min)) ? d.date : min, null);
+  const from = first
+    ? new Date(first + 'T00:00:00').toLocaleDateString(t('time.locale'), { day: 'numeric', month: 'short', year: 'numeric' })
+    : null;
+  title.appendChild(el('span', 'section-title-range',
+    from ? t('stats.rangeAllSince', { from }) : t('stats.rangeAllLabel')));
+  return title;
 }
 
 async function loadDashboardStats(container, token) {
@@ -1722,21 +1740,85 @@ function formatTokenSize(n) {
 // 'full' (Stats Overview, Top 30 + rank + mkt + % context window).
 // v1.0.109 — model switcher Sonnet/Opus + bottone Disabilita inline.
 //
-// Helper: estrae always/invoke per il modello attualmente selezionato.
+// v1.2.13 — Claude Code misura i pesi dei plugin solo per i modelli del suo
+// catalog (oggi claude-opus-4-7 e claude-sonnet-4-6). I modelli recenti
+// condividono il tokenizer di uno dei due (docs Anthropic, models overview):
+// Sonnet 5, Opus 4.8, Opus 5, Fable 5 e 5.1 usano quello introdotto con
+// Opus 4.7; Sonnet 4.6 e Haiku 4.5 quello precedente. Stesso tokenizer =
+// stessi token, quindi i modelli nuovi si mostrano leggendo la misura del
+// modello base. Da aggiornare insieme a CLAUDE_MODELS.
+const TOKENIZER_BASE = {
+  'claude-fable-5-1':  'claude-opus-4-7',
+  'claude-fable-5':    'claude-opus-4-7',
+  'claude-opus-5':     'claude-opus-4-7',
+  'claude-opus-4-8':   'claude-opus-4-7',
+  'claude-opus-4-7':   'claude-opus-4-7',
+  'claude-sonnet-5':   'claude-opus-4-7',
+  'claude-sonnet-4-6': 'claude-sonnet-4-6',
+  'claude-haiku-4-5':  'claude-sonnet-4-6',
+};
+// Id misurato da usare per `model` fra quelli in `measured`; null se nessuna
+// misura è applicabile.
+function tokenizerBaseFor(model, measured) {
+  if (measured.includes(model)) return model;
+  const base = TOKENIZER_BASE[model];
+  return base && measured.includes(base) ? base : null;
+}
+function measuredTokenModels(plugins) {
+  const ids = new Set();
+  (plugins || []).forEach(p => Object.keys(p.tokensByModel || {}).forEach(id => ids.add(id)));
+  return [...ids];
+}
+
+// v1.2.13 — Finestra di contesto con cui Claude Code usa ogni modello di
+// default (docs Anthropic + picker /model). Opus 4.x e Sonnet 4.6 arrivano a
+// 1M solo con la variante `[1m]`: qui il loro default, 200K.
+const MODEL_CONTEXT_WINDOW = {
+  'claude-fable-5-1': 1000000,
+  'claude-fable-5':   1000000,
+  'claude-opus-5':    1000000,
+  'claude-sonnet-5':  1000000,
+  'claude-opus-4-8':  200000,
+  'claude-opus-4-7':  200000,
+  'claude-opus-4-6':  200000,
+  'claude-sonnet-4-6':200000,
+  'claude-haiku-4-5': 200000,
+};
+function contextWindowFor(model) { return MODEL_CONTEXT_WINDOW[model] || 200000; }
+// Modello scelto nel menu "Modello:" dei pesi (persistito in state.tokenModel)
+function currentTokenModel() { return resolveTokenModel(availableTokenModels(state.plugins)); }
+// Il main stima il contesto su 200K fissi: qui lo si riporta alla finestra del
+// modello scelto. Cambiano spazio libero e percentuale, non le categorie.
+function withContextWindow(cb, model) {
+  if (!cb) return cb;
+  const max = contextWindowFor(model);
+  const used = cb.totalEstimate || 0;
+  return {
+    ...cb,
+    contextWindow: max,
+    contextModel: model,
+    freeSpace: { ...(cb.freeSpace || {}), tokens: Math.max(0, max - used) },
+    fillPercent: Math.min(100, Math.round((used / max) * 100)),
+  };
+}
+
+// Helper: estrae always/invoke per il modello selezionato, via tokenizer base.
 function tokenValuesFor(p, model) {
-  const m = (p.tokensByModel && p.tokensByModel[model]) || null;
+  const base = tokenizerBaseFor(model, Object.keys(p.tokensByModel || {}));
+  const m = (base && p.tokensByModel[base]) || null;
   if (m) return { always: m.always || 0, invoke: m.invoke || 0 };
   return { always: p.tokensAlways || 0, invoke: p.tokensInvoke || 0 };
 }
 
-// v1.1.34 — Modelli disponibili per il comparatore peso: derivati dagli id
-// realmente misurati nel catalog (es. 'claude-sonnet-4-6', 'claude-opus-4-7').
-// Ordine stabile: famiglia Sonnet, poi Opus, poi il resto in ordine alfabetico.
+// v1.1.34 — Modelli disponibili per il comparatore peso.
+// v1.2.13 — I modelli correnti (CLAUDE_MODELS, stesso ordine del menu Modello)
+// che hanno una misura applicabile, diretta o via tokenizer condiviso, più gli
+// eventuali id misurati dal catalog non ancora in lista.
 function availableTokenModels(plugins) {
-  const ids = new Set();
-  (plugins || []).forEach(p => Object.keys(p.tokensByModel || {}).forEach(id => ids.add(id)));
-  const rank = id => id.includes('sonnet') ? 0 : id.includes('opus') ? 1 : 2;
-  return [...ids].sort((a, b) => rank(a) - rank(b) || a.localeCompare(b));
+  const measured = measuredTokenModels(plugins);
+  const out = CLAUDE_MODELS.filter(id => tokenizerBaseFor(id, measured));
+  measured.filter(id => !out.includes(id)).sort().forEach(id => out.push(id));
+  return out;
 }
 
 // Risolve state.tokenModel a un id valido fra quelli passati (vedi
@@ -1797,8 +1879,15 @@ function renderTokenBudgetSection(container, plugins, opts = {}) {
   summary.appendChild(el('strong', 'token-budget-total-val', formatTokenSize(totalAlways) + ' tok'));
   summary.appendChild(el('span', 'token-budget-sub', t('tokenBudget.subtitle', { n: sorted.length, tok: formatTokenSize(totalInvoke) })));
   if (mode === 'full') {
-    const pctCtx = ((totalAlways / 200000) * 100).toFixed(1);
-    summary.appendChild(el('span', 'token-budget-sub', t('tokenBudget.pctContext', { pct: pctCtx })));
+    const win = contextWindowFor(model);
+    const pctCtx = ((totalAlways / win) * 100).toFixed(1);
+    summary.appendChild(el('span', 'token-budget-sub', t('tokenBudget.pctContext', { pct: pctCtx, win: fmtNum(win) })));
+  }
+  // v1.2.13 — modello non misurato direttamente: si dice quale misura si legge
+  const base = tokenizerBaseFor(model, measuredTokenModels(plugins));
+  if (base && base !== model) {
+    sel.title = t('token.tokenizerNote', { base: formatModelName(base), model: modelLabel });
+    summary.appendChild(el('span', 'token-budget-sub', t('token.tokenizerNoteShort', { base: formatModelName(base) })));
   }
   container.appendChild(summary);
 
@@ -5138,10 +5227,11 @@ function buildLiveKpiGrid(agg) {
     { num: agg.streak + 'g',        label: t('stats.kpiStreak'),       color: '#b8c79a' },
     { num: agg.longestStreak + 'g', label: t('stats.kpiLongestStreak'),color: '#9cc1ea' },
     { num: agg.peakHour != null ? agg.peakHour + ':00' : '—', label: t('stats.kpiPeakHour'), color: '#f97316' },
-    { num: favShort,                label: t('stats.kpiFavModel'),     color: '#d97757' },
+    { num: favShort,                label: t('stats.kpiFavModel'),     color: '#d97757', tip: t('stats.kpiFavModelTip') },
   ].forEach(k => {
     const card = el('div', 'kpi-card');
     card.style.setProperty('--kpi-color', k.color);
+    if (k.tip) card.title = k.tip;
     card.appendChild(el('div', 'kpi-num', String(k.num)));
     card.appendChild(el('div', 'kpi-label', k.label));
     grid.appendChild(card);
@@ -5384,10 +5474,11 @@ function buildStatsKpiGrid(data, range) {
     { num: (data.streak || 0) + 'g',     label: t('stats.kpiStreak'),         color: '#b8c79a' },
     { num: (data.longestStreak || 0) + 'g', label: t('stats.kpiLongestStreak'), color: '#9cc1ea' },
     { num: peakH != null ? peakH + ':00' : '—', label: t('stats.kpiPeakHour'),  color: '#f97316' },
-    { num: favShort,              label: t('stats.kpiFavModel'),     color: '#d97757' },
+    { num: favShort,              label: t('stats.kpiFavModel'),     color: '#d97757', tip: t('stats.kpiFavModelTip') },
   ].forEach(k => {
     const card = el('div', 'kpi-card');
     card.style.setProperty('--kpi-color', k.color);
+    if (k.tip) card.title = k.tip;
     card.appendChild(el('div', 'kpi-num', String(k.num)));
     card.appendChild(el('div', 'kpi-label', k.label));
     grid.appendChild(card);
@@ -5423,7 +5514,7 @@ function renderStatsOverview(container, live, legacy) {
   const cb = legacy && legacy.contextBreakdown;
   if (cb) {
     container.appendChild(sectionTitle(t('section.stimaContestoStile'), 'eye'));
-    container.appendChild(buildContextBreakdown(cb));
+    container.appendChild(buildContextBreakdown(withContextWindow(cb, currentTokenModel())));
   }
 
   // v1.0.108 — Pack C: token budget plugin completo (Top 30 + rank + mkt)
@@ -5445,6 +5536,12 @@ function contextCats(cb) {
   ];
 }
 
+// v1.2.13 — "42.2K / 1.0M tokens · Opus 5": la finestra dipende dal modello
+function ctxSummaryText(cb) {
+  return fmtNum(cb.totalEstimate) + ' / ' + fmtNum(cb.contextWindow) + ' tokens'
+    + (cb.contextModel ? ' · ' + formatModelName(cb.contextModel) : '');
+}
+
 function buildContextBreakdown(cb, opts = {}) {
   const { horizontalLegend = false, hideNote = false } = opts;
   const wrap = el('div', 'context-breakdown' + (horizontalLegend ? ' context-compact' : ''));
@@ -5452,7 +5549,7 @@ function buildContextBreakdown(cb, opts = {}) {
   const max = cb.contextWindow;
 
   const summary = el('div', 'context-summary');
-  summary.appendChild(el('span', 'context-summary-tokens', fmtNum(cb.totalEstimate) + ' / ' + fmtNum(max) + ' tokens'));
+  summary.appendChild(el('span', 'context-summary-tokens', ctxSummaryText(cb)));
   summary.appendChild(el('span', 'context-summary-pct', cb.fillPercent + '%'));
   wrap.appendChild(summary);
 
@@ -5500,7 +5597,7 @@ function updateCtxBarInPlace(barNode, cb) {
   const horizontalLegend = barNode.dataset.horizontalLegend === '1';
 
   const tokensEl = barNode.querySelector('.context-summary-tokens');
-  if (tokensEl) tokensEl.textContent = fmtNum(cb.totalEstimate) + ' / ' + fmtNum(max) + ' tokens';
+  if (tokensEl) tokensEl.textContent = ctxSummaryText(cb);
   const pctEl = barNode.querySelector('.context-summary-pct');
   if (pctEl) pctEl.textContent = cb.fillPercent + '%';
 

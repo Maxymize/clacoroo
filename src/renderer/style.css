@@ -816,9 +816,27 @@ body {
   color: var(--text);
   font-variant-numeric: tabular-nums;
 }
+/* v1.2.13 — colori delle barre quota della Dashboard; le soglie (sotto) vincono */
+.topbar-quota-dot { width: 7px; height: 7px; border-radius: 50%; align-self: center; flex-shrink: 0; }
+.topbar-quota-dot.band-fiveHour,       .topbar-quota-pct.band-fiveHour       { background: #6a9bcc; }
+.topbar-quota-dot.band-sevenDay,       .topbar-quota-pct.band-sevenDay       { background: #788c5d; }
+.topbar-quota-dot.band-sevenDaySonnet, .topbar-quota-pct.band-sevenDaySonnet { background: #d97757; }
+.topbar-quota-pct.band-fiveHour       { background: none; color: #9cc1ea; }
+.topbar-quota-pct.band-sevenDay       { background: none; color: #b8c79a; }
+.topbar-quota-pct.band-sevenDaySonnet { background: none; color: #e89478; }
 .topbar-quota-pct.is-warning  { color: #f59e0b; }
 .topbar-quota-pct.is-critical { color: #ef4444; }
 .topbar-quota-sep { color: var(--text-muted); }
+
+/* v1.2.13 — range accanto al titolo di sezione ("tutto lo storico · dal …") */
+.section-title-range {
+  margin-left: 10px;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--text-muted);
+}
 
 /* v1.1.24 — slot centrale dell'header per il badge "Ultimo aggiornamento" */
 .topbar-updated {

@@ -2,6 +2,13 @@
 
 > English translation of [CHANGELOG.md](./CHANGELOG.md) (Italian, canonical). Updated in sync with each release.
 
+## v1.2.13 — 2026-09-02 — Recent models in weights and context, KPI range
+
+- [FEATURE] "Plugins by weight" and the context estimate now also offer Opus 5, Opus 4.8, Sonnet 5, Fable 5 and 5.1. Claude Code measures weights only for Opus 4.7 and Sonnet 4.6, but the new models share the tokenizer of one of the two: CLACOROO reads that measurement and says so under the total
+- [IMPROVEMENT] The context window follows the selected model (1M for Opus 5, Sonnet 5 and Fable; 200K for Opus 4.x, Sonnet 4.6 and Haiku) and the model name appears next to "used / total"
+- [IMPROVEMENT] The "Claude Code usage" title states the period (all time, since the first recorded day), so "500 sessions" no longer lacks a reference; the favorite model explains in its tooltip how it is picked
+- [IMPROVEMENT] The compact quota in the header uses the Dashboard bar colors (blue Session, green Weekly, orange Weekly Sonnet)
+
 ## v1.2.12 — 2026-09-02 — Claude quotas always in view in the header
 
 - [FEATURE] Next to the title of every section, the Claude quota now appears in compact form (Session · Weekly (7d) · Weekly Sonnet), colored at the 80% and 95% thresholds. The tooltip shows when each band resets and the last update; a click opens the Dashboard
