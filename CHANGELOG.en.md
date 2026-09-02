@@ -2,6 +2,11 @@
 
 > English translation of [CHANGELOG.md](./CHANGELOG.md) (Italian, canonical). Updated in sync with each release.
 
+## v1.2.12 — 2026-09-02 — Claude quotas always in view in the header
+
+- [FEATURE] Next to the title of every section, the Claude quota now appears in compact form (Session · Weekly (7d) · Weekly Sonnet), colored at the 80% and 95% thresholds. The tooltip shows when each band resets and the last update; a click opens the Dashboard
+- [IMPROVEMENT] The indicator uses the same data and cadence as the Dashboard: no extra calls to the API
+
 ## v1.2.11 — 2026-09-02 — Model menu in Claude Code's picker order
 
 - [IMPROVEMENT] The "Default model" menu entries now follow the order of Claude Code's `/model` picker: Default, Opus, then from most to least capable (Fable, Sonnet, Haiku). Same order in the specific-versions group

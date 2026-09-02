@@ -791,6 +791,35 @@ body {
   -webkit-app-region: no-drag;
 }
 
+/* v1.2.12 — quota Claude compatta accanto al titolo, in ogni sezione */
+.topbar-quota {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 14px;
+  padding: 3px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  font-size: 11px;
+  color: var(--text-dim);
+  white-space: nowrap;
+  cursor: pointer;
+  flex-shrink: 0;
+  -webkit-app-region: no-drag;
+}
+.topbar-quota[hidden] { display: none; }
+.topbar-quota:hover { border-color: var(--border2); color: var(--text); }
+.topbar-quota-item { display: inline-flex; align-items: baseline; gap: 4px; }
+.topbar-quota-pct {
+  font-weight: 700;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+.topbar-quota-pct.is-warning  { color: #f59e0b; }
+.topbar-quota-pct.is-critical { color: #ef4444; }
+.topbar-quota-sep { color: var(--text-muted); }
+
 /* v1.1.24 — slot centrale dell'header per il badge "Ultimo aggiornamento" */
 .topbar-updated {
   flex: 1;

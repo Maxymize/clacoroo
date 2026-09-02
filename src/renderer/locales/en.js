@@ -32,6 +32,11 @@ window.LOCALES.en = {
     addMktTooltip:  'Add a marketplace from git URL, GitHub repo or local path',
     terminalTooltip: 'Toggle the integrated terminal (Cmd+`)',
     helpTooltip:    'Help & documentation (clacoroo.app/docs)',
+    // v1.2.12 — compact quota in the header
+    quotaSession:   'Session',
+    quotaWeekly:    'Weekly (7d)',
+    quotaWeeklySonnet: 'Weekly Sonnet',
+    quotaTooltip:   'Claude quotas · click to open the Dashboard',
   },
 
   // Section titles (Dashboard + main pages)

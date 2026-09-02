@@ -2,6 +2,11 @@
 
 > Italiano (canonico). English translation: [CHANGELOG.en.md](./CHANGELOG.en.md) — allineato a ogni release.
 
+## v1.2.12 — 2026-09-02 — Quote Claude sempre in vista nell'header
+
+- [FEATURE] Accanto al titolo di ogni sezione compare la quota Claude in versione compatta (Session · Weekly (7d) · Weekly Sonnet), con i colori delle soglie 80% e 95%. Il tooltip mostra quando si azzera ogni banda e l'ultimo aggiornamento; un click porta alla Dashboard
+- [IMPROVEMENT] L'indicatore usa gli stessi dati e la stessa cadenza della Dashboard: nessuna chiamata in più verso l'API
+
 ## v1.2.11 — 2026-09-02 — Menu modelli nell'ordine del picker di Claude Code
 
 - [IMPROVEMENT] Le voci del menu "Modello predefinito" seguono ora l'ordine del selettore `/model` di Claude Code: Default, Opus, poi dal più potente al meno potente (Fable, Sonnet, Haiku). Stesso ordine nel gruppo delle versioni fisse

@@ -754,6 +754,7 @@ async function runQuotaCheck() {
   // barre quota + tutte le sezioni da getStats().
   if (!usageRes.rateLimited && Number.isFinite(usageRes.fetchedAt)) {
     lastUsageData = usageRes;
+    paintTopbarQuota();
     // Badge "Ultimo aggiornamento" (Dashboard) + riga Account: nuovo timestamp
     document.querySelectorAll('.usage-updated').forEach((elx) => {
       elx.dataset.fetchedAt = String(usageRes.fetchedAt);
@@ -1022,6 +1023,9 @@ function setupNav() {
   document.querySelectorAll('.nav-item').forEach(btn => {
     btn.addEventListener('click', () => switchToSection(btn.dataset.section));
   });
+  // v1.2.12 — la quota compatta nell'header porta alla Dashboard (barre + Refresh)
+  const quotaBox = $('topbar-quota');
+  if (quotaBox) quotaBox.addEventListener('click', () => switchToSection('dashboard'));
   applyStaticI18n();
 }
 
@@ -1057,6 +1061,7 @@ function render() {
     settings:    'nav.settings',
   };
   $('topbar-title').textContent = t(sectionTitleKey[state.section] || '');
+  paintTopbarQuota();
 
   // v1.1.24 — badge "Ultimo aggiornamento" centrato nell'header, solo in
   // Dashboard (l'update riguarda tutti i dati live della Dashboard). Si
@@ -1258,6 +1263,43 @@ function buildDashboardUpdatedBadge() {
   }
   badge.appendChild(txt);
   return badge;
+}
+
+// v1.2.12 — Indicatore quota compatto nell'header, visibile in ogni sezione:
+// "Session 36% · Weekly (7d) 7% · Weekly Sonnet —". Legge SOLO lastUsageData:
+// nessuna chiamata API in più, stesso fetch e stessa cadenza della Dashboard
+// (in Manuale si popola quando la Dashboard/Stats/Account caricano i dati).
+// Colori alle soglie delle notifiche (80% ambra, 95% rosso). Tooltip con
+// azzeramento per banda e ultimo aggiornamento. Click → Dashboard.
+function paintTopbarQuota() {
+  const box = $('topbar-quota');
+  if (!box) return;
+  const d = lastUsageData && lastUsageData.ok && lastUsageData.data;
+  box.textContent = '';
+  if (!d) { box.hidden = true; return; }
+  const shortKeys = { fiveHour: 'topbar.quotaSession', sevenDay: 'topbar.quotaWeekly', sevenDaySonnet: 'topbar.quotaWeeklySonnet' };
+  const tips = [];
+  QUOTA_BANDS.forEach((b, i) => {
+    const band = d[b.key];
+    const pct = band && Number.isFinite(band.utilization)
+      ? Math.min(100, Math.max(0, band.utilization)) : null;
+    const pctTxt = pct != null ? Math.floor(pct) + '%' : '—';
+    if (i) box.appendChild(el('span', 'topbar-quota-sep', '·'));
+    const item = el('span', 'topbar-quota-item');
+    item.appendChild(el('span', 'topbar-quota-label', t(shortKeys[b.key])));
+    const val = el('span', 'topbar-quota-pct', pctTxt);
+    if (pct != null && pct >= 95) val.classList.add('is-critical');
+    else if (pct != null && pct >= 80) val.classList.add('is-warning');
+    item.appendChild(val);
+    box.appendChild(item);
+    const reset = band && band.resetsAt
+      ? ' · ' + t('settingsExtra.quotaResetsAt', { when: formatResetTime(band.resetsAt) }) : '';
+    tips.push(t(b.i18nKey) + ': ' + pctTxt + reset);
+  });
+  const ago = Number.isFinite(lastUsageData.fetchedAt)
+    ? '\n' + t('settingsExtra.usageLastUpdate', { ago: liveAgo(lastUsageData.fetchedAt) }) : '';
+  box.title = t('topbar.quotaTooltip') + '\n' + tips.join('\n') + ago;
+  box.hidden = false;
 }
 
 // v1.1.24 — aggiorna SOLO il testo "Ultimo aggiornamento" dei blocchi già in
@@ -7626,6 +7668,7 @@ async function loadAccountUsage(container, onResult) {
   try {
     data = await window.claudeAPI.getUsage({ force: consumeForceUsage() });
     lastUsageData = data;
+    paintTopbarQuota();
     paintUsageBars(container, data);
   } catch (e) {
     data = { ok: false, error: e.message };
@@ -7642,6 +7685,7 @@ async function loadDashboardUsage(container, token) {
     const data = await window.claudeAPI.getUsage({ force: consumeForceUsage() });
     if (token !== dashboardRenderToken) return;
     lastUsageData = data;
+    paintTopbarQuota();
     paintUsageBars(container, data, { compact: true });
   } catch { /* fail silently in dashboard */ }
 }
