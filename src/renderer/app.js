@@ -349,7 +349,7 @@ const NAME_SORTERS = {  // skill, agent (name-only)
   'name-asc':  (a, b) => (a.name || '').localeCompare(b.name || ''),
   'name-desc': (a, b) => (b.name || '').localeCompare(a.name || ''),
 };
-const MCP_STATUS_ORDER = { connected: 0, needsAuth: 1, error: 2, unknown: 3 };
+const MCP_STATUS_ORDER = { connected: 0, needsAuth: 1, warning: 2, error: 3, unknown: 4 };
 const MCP_SORTERS = {
   'name-asc':   (a, b) => (a.name || '').localeCompare(b.name || ''),
   'name-desc':  (a, b) => (b.name || '').localeCompare(a.name || ''),
@@ -6425,7 +6425,7 @@ async function renderMcp() {
   refreshBtn.title = t('mcpCard.refreshLiveTip');
   refreshBtn.addEventListener('click', async () => {
     refreshBtn.disabled = true;
-    refreshBtn.textContent = '…controllo…';
+    refreshBtn.textContent = t('mcpCard.checking');
     mcpCache = null;
     const data = await window.claudeAPI.getMcp({ force: true });
     if (myToken !== mcpRenderToken) return;
@@ -6521,7 +6521,9 @@ function applyMcpFilters(wrap) {
 }
 
 function mcpMatches(srv, f) {
-  if (f.status !== 'all' && srv.status !== f.status) return false;
+  // v1.2.9 — `warning` non ha un chip: rientra in "Errore" (è comunque un problema)
+  const st = srv.status === 'warning' ? 'error' : srv.status;
+  if (f.status !== 'all' && st !== f.status) return false;
   if (f.scope !== 'all' && srv.scope !== f.scope) return false;
   if (!f.search) return true;
   const q = f.search;
@@ -6739,9 +6741,10 @@ function buildMcpCard(srv) {
   // solo per server che NON sono connected (per non rumoreggiare il caso ok).
   if (srv.reconnect && srv.status !== 'connected') {
     const rcRow = el('div', 'mcp-card-reconnect-type');
-    rcRow.appendChild(el('span', 'mcp-rc-label', t('mcpReconnect.reconnectLabel')));
+    // v1.2.9 — per errori/avvisi la riga dice "Causa", non "Reconnect"
+    rcRow.appendChild(el('span', 'mcp-rc-label', t(srv.reconnect.rowLabelKey || 'mcpReconnect.reconnectLabel')));
     const typeBadge = el('span', 'mcp-rc-type mcp-rc-type-' + srv.reconnect.type, t(srv.reconnect.typeLabelKey));
-    typeBadge.title = t(srv.reconnect.descriptionKey);
+    typeBadge.title = t(srv.reconnect.descriptionKey, srv.reconnect.descriptionVars);
     rcRow.appendChild(typeBadge);
     body.appendChild(rcRow);
   }
@@ -6756,7 +6759,7 @@ function buildMcpCard(srv) {
   const footer = el('div', 'mcp-card-footer');
   if (srv.status === 'connected' || !srv.reconnect) {
     const hint = el('div', 'mcp-card-hint',
-      srv.scope === 'local'   ? t('mcpCard.projectScopedHint', { name: srv.projectName || srv.project })
+      srv.scope === 'local'   ? mcpProjectHint(srv)
       : srv.scope === 'plugin'  ? t('mcpCard.pluginManagedHint', { plugin: srv.plugin || '—' })
       : srv.scope === 'builtin' ? t('mcpCard.builtinManagedHint')
       : srv.status === 'connected' ? t('mcpCard.connectedHint')
@@ -6779,6 +6782,14 @@ function buildMcpCard(srv) {
         actionsWrap.appendChild(discBtn);
       }
     }
+    // v1.2.9 — project-scoped mai verificato: `claude mcp list` dalla sua
+    // cartella dà lo stato reale (vedi recheckMcp)
+    if (srv.scope === 'local' && srv.project && srv.status === 'unknown') {
+      const vBtn = btnWithIcon('btn btn-sm btn-primary', 'plug', t('mcpCard.verifyBtn'));
+      vBtn.title = t('mcpCard.verifyBtnTip', { project: srv.project });
+      vBtn.addEventListener('click', e => { e.stopPropagation(); recheckMcp(srv, vBtn); });
+      actionsWrap.appendChild(vBtn);
+    }
     appendMcpManageButtons(actionsWrap, srv);
     if (actionsWrap.childNodes.length) footer.appendChild(actionsWrap);
   } else {
@@ -6790,18 +6801,20 @@ function buildMcpCard(srv) {
         'open-url': 'external-link',
         'open-terminal': 'terminal',
         'clear-cache': 'ban',
+        'recheck': 'rotate-cw',
       };
       const btn = btnWithIcon('btn btn-sm ' + (act.kind === 'clear-cache' ? 'btn-ghost' : 'btn-primary'),
         iconByKind[act.kind] || 'play', act.labelKey ? t(act.labelKey) : (act.label || ''));
       btn.title = act.kind === 'open-url' ? act.url
         : act.kind === 'open-terminal' ? t('mcpReconnect.tipOpenTerminal', { cmd: act.command })
+        : act.kind === 'recheck' ? t('mcpReconnect.tipRecheck')
         : t('mcpReconnect.tipClearCache');
-      btn.addEventListener('click', e => { e.stopPropagation(); runMcpReconnectAction(srv, act); });
+      btn.addEventListener('click', e => { e.stopPropagation(); runMcpReconnectAction(srv, act, btn); });
       actionsWrap.appendChild(btn);
     });
     appendMcpManageButtons(actionsWrap, srv);
     footer.appendChild(actionsWrap);
-    const desc = el('div', 'mcp-card-hint', t(srv.reconnect.descriptionKey));
+    const desc = el('div', 'mcp-card-hint', t(srv.reconnect.descriptionKey, srv.reconnect.descriptionVars));
     footer.appendChild(desc);
   }
   card.appendChild(footer);
@@ -6966,11 +6979,53 @@ async function confirmMcpAction(srv, kind) {
   }
 }
 
-// v1.0.85 — Pack G v2: dispatcher delle 3 azioni reconnect.
-async function runMcpReconnectAction(srv, act) {
+// v1.2.9 — Rilancia il controllo di stato. Per un MCP project-scoped esegue
+// `claude mcp list` dalla cartella del progetto (l'unico modo per vederne lo
+// stato reale); per tutti gli altri forza il refresh della lista.
+async function recheckMcp(srv, btn) {
+  if (btn) { btn.disabled = true; btn.textContent = t('mcpCard.checking'); }
+  let checked = null;
+  try {
+    if (srv.scope === 'local' && srv.project) {
+      const r = await window.claudeAPI.mcpCheckProject(srv.project);
+      if (!r.ok) {
+        toast(t('toast.errorPrefix', { msg: r.error || '?' }), 'error');
+      } else {
+        checked = (r.servers || []).find(x => x.id === srv.id) || null;
+        if (!checked) toast(t('mcpCard.projectCheckNone', { name: srv.projectName || srv.project }), 'info');
+        mcpCache = await window.claudeAPI.getMcp({});   // la cache main è già aggiornata
+      }
+    } else {
+      mcpCache = await window.claudeAPI.getMcp({ force: true });
+      checked = ((mcpCache && mcpCache.servers) || []).find(x => x.id === srv.id) || null;
+    }
+    if (checked) {
+      toast(t('mcpCard.recheckDone', { id: srv.displayName || srv.id, status: t('mcp.status.' + checked.status) }),
+        checked.status === 'connected' ? 'success' : 'info');
+    }
+  } catch (e) {
+    toast(t('toast.errorPrefix', { msg: e.message || '?' }), 'error');
+    mcpCache = null;
+  }
+  // Ridisegna sempre: anche in errore, così il bottone torna al suo stato
+  if (state.section === 'mcp') renderMcp();
+  else if (btn) btn.disabled = false;
+}
+
+// v1.2.9 — Hint della card per un MCP project-scoped: verificato o no
+function mcpProjectHint(srv) {
+  const name = srv.projectName || srv.project;
+  if (!srv.verifiedAt) return t('mcpCard.projectScopedHint', { name });
+  const time = new Date(srv.verifiedAt).toLocaleTimeString(t('time.locale'), { hour: '2-digit', minute: '2-digit' });
+  return t('mcpCard.projectScopedVerifiedHint', { name, time });
+}
+
+// v1.0.85 — Pack G v2: dispatcher delle azioni reconnect.
+async function runMcpReconnectAction(srv, act, btn) {
+  if (act.kind === 'recheck') { await recheckMcp(srv, btn); return; }
   if (act.kind === 'open-url') {
     await window.claudeAPI.openExternal(act.url);
-    toast('Apro ' + act.url + ' nel browser', 'info');
+    toast(t('mcpReconnect.toastOpenUrl', { url: act.url }), 'info');
     return;
   }
   if (act.kind === 'open-terminal') {
@@ -6979,9 +7034,11 @@ async function runMcpReconnectAction(srv, act) {
     // claude ha finito di stampare banner + hook + caricato contesto, così
     // l'utente vede direttamente il menu /mcp di Claude Code. Niente Enter
     // automatico: la riga resta digitata, l'utente sceglie se inviare.
-    const tab = await openTerminalWithCommand(act.command);
+    // v1.2.9 — `act.cwd` (cartella del progetto per gli MCP project-scoped):
+    // `/mcp` elenca un server locale solo se `claude` gira da lì.
+    const tab = await openTerminalWithCommand(act.command, act.cwd ? { cwd: act.cwd } : {});
     if (tab && act.preDigit) {
-      toast('Apro `claude` e ti porto al menu ' + act.preDigit + ' (attendi qualche secondo)', 'info');
+      toast(t('mcpReconnect.toastOpenMcp', { menu: act.preDigit }), 'info');
       setTimeout(() => {
         try { window.claudeAPI.pty.write(tab.ptyId, act.preDigit); } catch {}
       }, 4000);

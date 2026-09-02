@@ -1151,6 +1151,12 @@ ipcMain.handle('get-stats', async (_e, { force } = {}) => {
 let MCP_CACHE = null;
 let MCP_CACHE_AT = 0;
 const MCP_TTL_MS = 30 * 1000;
+// v1.2.9 — Stato verificato degli MCP project-scoped (chiave project\0id).
+// Sopravvive alla scadenza di MCP_CACHE: `claude mcp list` dalla cwd di
+// CLACOROO non li vede, quindi senza questa mappa tornerebbero "unknown" a
+// ogni refresh. Si aggiorna solo con un nuovo check esplicito dell'utente.
+const PROJECT_MCP_STATUS = new Map();
+const projectKey = (project, id) => project + '\0' + id;
 
 ipcMain.handle('get-mcp', async (_e, { force } = {}) => {
   if (!force && MCP_CACHE && Date.now() - MCP_CACHE_AT < MCP_TTL_MS) {
@@ -1178,11 +1184,13 @@ ipcMain.handle('get-mcp', async (_e, { force } = {}) => {
     }
     return { ...s, reconnect: MCP.detectReconnectType(s) };
   });
-  // Aggiungi i project-scoped non visibili dalla cwd (reconnect null → read-only)
+  // Aggiungi i project-scoped non visibili dalla cwd: read-only (reconnect null)
+  // finché l'utente non li verifica dalla loro cartella (v1.2.9).
   for (const ps of projectServers) {
     if (seen.has(ps.id)) continue;
     seen.add(ps.id);
-    serversEnriched.push({ ...ps, reconnect: null });
+    const verified = PROJECT_MCP_STATUS.get(projectKey(ps.project, ps.id));
+    serversEnriched.push(verified ? { ...ps, ...verified } : { ...ps, reconnect: null });
   }
   MCP_CACHE = {
     ok: list.ok,
@@ -1210,6 +1218,25 @@ ipcMain.handle('mcp:clear-auth-cache', async (_e, { serverId } = {}) => {
     appendActivity({ kind: 'mcp', action: 'clear-auth-cache', target: serverId, success: true });
   }
   return result;
+});
+
+// v1.2.9 — Verifica lo stato degli MCP di una cartella progetto lanciando
+// `claude mcp list` da quella cwd. Il path è accettato solo se è un progetto
+// noto a Claude Code (validato in MCP.isKnownProjectPath). Il risultato entra
+// in PROJECT_MCP_STATUS e nella cache corrente, così la sezione lo mostra
+// subito e lo conserva ai refresh successivi.
+ipcMain.handle('mcp:check-project', async (_e, { project } = {}) => {
+  const r = await MCP.checkProjectMcp(CLAUDE_BIN, project);
+  if (!r.ok) return r;
+  for (const s of r.servers) PROJECT_MCP_STATUS.set(projectKey(project, s.id), s);
+  if (MCP_CACHE && Array.isArray(MCP_CACHE.servers)) {
+    MCP_CACHE.servers = MCP_CACHE.servers.map(x => {
+      if (x.scope !== 'local' || x.project !== project) return x;
+      return r.servers.find(s => s.id === x.id) || x;
+    });
+  }
+  appendActivity({ kind: 'mcp', action: 'check-project', target: project, success: true });
+  return r;
 });
 
 // v1.0.27 — Pack A: account/auth (Claude Max plan). Cache 5min: i dati

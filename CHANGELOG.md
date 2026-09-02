@@ -2,6 +2,14 @@
 
 > Italiano (canonico). English translation: [CHANGELOG.en.md](./CHANGELOG.en.md) — allineato a ogni release.
 
+## v1.2.9 — 2026-09-02 — MCP: cause reali degli errori + verifica dei server di progetto
+
+- [IMPROVEMENT] Le card MCP in errore ora dicono la causa (eseguibile mancante, server locale spento, host irraggiungibile, errore generico) e offrono **Ricontrolla** al posto dei bottoni OAuth, che con quegli errori non c'entravano
+- [FEATURE] I server MCP di altre cartelle progetto (stato "Sconosciuto") hanno il bottone **Verifica stato**: CLACOROO lancia il controllo dalla cartella del progetto e ricorda il risultato
+- [IMPROVEMENT] Lo stato *Warning* ha una card dedicata (causa citata + Ricontrolla) e rientra nel filtro Errore
+- [FIX] La descrizione dei server HTTP aggiunti dall'utente diceva "gestito dal plugin"
+- [FIX] "Apri /mcp in claude" su un server di progetto ora apre il terminale nella cartella di quel progetto, dove `/mcp` lo elenca davvero
+
 ## v1.2.8 — 2026-09-02 — Fable 5.1 nel menu modelli
 
 - [FEATURE] **Fable 5.1** è selezionabile nel menu "Modello predefinito" di Claude Config come versione fissa; l'alias *Fable* ora lo indica come modello corrente della famiglia

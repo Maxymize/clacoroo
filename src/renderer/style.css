@@ -3754,6 +3754,12 @@ body {
 .mcp-rc-type-claude-ai-oauth { background: rgba(106,155,204,.22); color: #9cc1ea; }
 .mcp-rc-type-http-oauth      { background: rgba(167,139,250,.22); color: #c4b5fd; }
 .mcp-rc-type-stdio-wrapper   { background: rgba(120,140,93,.22); color: #b8c79a; }
+/* v1.2.9 — cause di errore/avviso (non-auth): stessa scala rosso/ambra dei badge */
+.mcp-rc-type-missing-binary,
+.mcp-rc-type-local-down,
+.mcp-rc-type-error-generic  { background: rgba(239,68,68,.18);  color: #f0a3a3; }
+.mcp-rc-type-network-error,
+.mcp-rc-type-warning        { background: rgba(245,158,11,.18); color: #f5c76b; }
 
 .mcp-card-actions {
   display: flex; flex-wrap: wrap; gap: 6px;

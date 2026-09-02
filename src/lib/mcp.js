@@ -71,13 +71,17 @@ function parseListLine(line) {
   };
 }
 
-function runMcpList(claudeBin) {
+// v1.2.9 — `cwd` opzionale: eseguito dalla cartella di un progetto, Claude Code
+// include anche i server project-scoped di quella cartella (vedi checkProjectMcp).
+function runMcpList(claudeBin, cwd) {
   return new Promise((resolve) => {
     if (typeof claudeBin !== 'string' || !claudeBin) {
       resolve({ ok: false, error: 'claude binary not configured', servers: [] });
       return;
     }
-    execFile(claudeBin, ['mcp', 'list'], { timeout: 30000 }, (err, stdout, stderr) => {
+    const opts = { timeout: 30000 };
+    if (cwd) opts.cwd = cwd;
+    execFile(claudeBin, ['mcp', 'list'], opts, (err, stdout, stderr) => {
       if (err) {
         resolve({ ok: false, error: (stderr || err.message).trim(), servers: [] });
         return;
@@ -208,8 +212,88 @@ function fastEstimate(blockedFullIds) {
 // Il renderer fa lookup via `t('mcpReconnect.<key>')` così le stringhe seguono
 // la lingua attiva dell'utente (it/en/futuro). Niente più stringhe italiane
 // hardcoded nel backend. Vedi src/renderer/locales/it.js → namespace `mcpReconnect`.
+// v1.2.9 — Azioni riusabili. `open-terminal` porta con sé la cartella del
+// progetto (se il server è project-scoped): `/mcp` mostra un server locale solo
+// se `claude` gira da quella cartella.
+function actOpenMcp(srv) {
+  const a = { kind: 'open-terminal', labelKey: 'mcpReconnect.actOpenMcpInClaude', command: 'claude', preDigit: '/mcp' };
+  if (srv && srv.scope === 'local' && srv.project) a.cwd = srv.project;
+  return a;
+}
+const ACT_CLEAR_CACHE = { kind: 'clear-cache', labelKey: 'mcpReconnect.actClearAuthCache' };
+const ACT_RECHECK     = { kind: 'recheck',     labelKey: 'mcpReconnect.actRecheck' };
+
+const LOCAL_HOST_RE = /(localhost|127\.0\.0\.1|0\.0\.0\.0|\[::1\])/i;
+
+// Host leggibile dalla connessione: URL → host:porta; comando stdio → l'URL
+// che contiene (es. `npx mcp-remote http://…`), altrimenti il comando stesso.
+function hostOf(connection) {
+  const c = String(connection || '');
+  const m = c.match(/https?:\/\/[^\s"']+/i);
+  if (m) { try { return new URL(m[0]).host; } catch { return m[0]; } }
+  return c || '?';
+}
+
+// v1.2.9 — Classifica un `error` dal testo che Claude Code riporta in
+// `claude mcp list`. Prima ogni errore riceveva i bottoni OAuth: inutili per un
+// server locale spento o un eseguibile mancante. Ritorna null se il testo
+// somiglia a un problema di auth (→ si usano i tipi OAuth di sempre).
+function classifyMcpError(srv) {
+  const msg = String(srv.statusText || '').trim();
+  const conn = String(srv.connection || '');
+  if (/ENOENT|Executable not found|not found in \$?PATH|command not found|spawn .* ENOENT/i.test(msg)) {
+    const bin = conn.trim().split(/\s+/)[0] || '?';
+    return { type: 'missing-binary', vars: { bin } };
+  }
+  if (/ECONNREFUSED|ConnectionRefused|Unable to connect|connection refused/i.test(msg)) {
+    return LOCAL_HOST_RE.test(conn)
+      ? { type: 'local-down',    vars: { host: hostOf(conn) } }
+      : { type: 'network-error', vars: { host: hostOf(conn) } };
+  }
+  if (/ENOTFOUND|EAI_AGAIN|ETIMEDOUT|timed? ?out|ECONNRESET|EHOSTUNREACH|ENETUNREACH|fetch failed|network|DNS|\b50[0-4]\b/i.test(msg)) {
+    return { type: 'network-error', vars: { host: hostOf(conn) } };
+  }
+  if (/\b40[13]\b|unauthori[sz]ed|forbidden|invalid[_ ]?token|token expired|\bauth/i.test(msg)) {
+    return null;
+  }
+  return { type: 'error-generic', vars: { msg: msg || '?' } };
+}
+
 function detectReconnectType(srv) {
   if (!srv) return null;
+
+  // v1.2.9 — Rami per stato: error/warning hanno cause e rimedi diversi
+  // dall'auth; il vecchio codice li trattava tutti come "needs auth".
+  if (srv.status === 'error') {
+    const c = classifyMcpError(srv);
+    if (c) {
+      const local = c.type === 'missing-binary' || c.type === 'local-down';
+      return {
+        type: c.type,
+        typeLabelKey:    'mcpReconnect.type' + camel(c.type),
+        descriptionKey:  'mcpReconnect.desc' + camel(c.type),
+        descriptionVars: c.vars,
+        rowLabelKey:     'mcpReconnect.causeLabel',
+        // Locale (binario/porta): solo "Ricontrolla" — `/mcp` non può risolvere.
+        // Remoto/generico: anche `/mcp`, che mostra il dettaglio dell'errore.
+        actions: local ? [ACT_RECHECK] : [ACT_RECHECK, actOpenMcp(srv)],
+      };
+    }
+    // errore di auth → tipi OAuth qui sotto (senza il bottone cache, che
+    // riguarda solo le entry "Needs auth")
+  }
+  if (srv.status === 'warning') {
+    return {
+      type: 'warning',
+      typeLabelKey:    'mcpReconnect.typeWarning',
+      descriptionKey:  'mcpReconnect.descWarning',
+      descriptionVars: { msg: String(srv.statusText || '').trim() || '?' },
+      rowLabelKey:     'mcpReconnect.causeLabel',
+      actions: [ACT_RECHECK, actOpenMcp(srv)],
+    };
+  }
+
+  const cacheAct = srv.status === 'needsAuth' ? [ACT_CLEAR_CACHE] : [];
 
   if (srv.scope === 'builtin') {
     return {
@@ -218,7 +302,7 @@ function detectReconnectType(srv) {
       descriptionKey: 'mcpReconnect.descClaudeAiOauth',
       actions: [
         { kind: 'open-url', labelKey: 'mcpReconnect.actReauthClaudeAi', url: 'https://claude.ai/settings/connectors' },
-        { kind: 'clear-cache', labelKey: 'mcpReconnect.actClearAuthCache' },
+        ...cacheAct,
       ],
     };
   }
@@ -227,11 +311,10 @@ function detectReconnectType(srv) {
     return {
       type: 'http-oauth',
       typeLabelKey: 'mcpReconnect.typeHttpOauth',
-      descriptionKey: 'mcpReconnect.descHttpOauth',
-      actions: [
-        { kind: 'open-terminal', labelKey: 'mcpReconnect.actOpenMcpInClaude', command: 'claude', preDigit: '/mcp' },
-        { kind: 'clear-cache', labelKey: 'mcpReconnect.actClearAuthCache' },
-      ],
+      // v1.2.9 — testo distinto per i server aggiunti dall'utente: prima
+      // diceva "gestito dal plugin" anche per quelli user/local.
+      descriptionKey: srv.scope === 'plugin' ? 'mcpReconnect.descHttpOauth' : 'mcpReconnect.descHttpOauthUser',
+      actions: [actOpenMcp(srv), ...cacheAct],
     };
   }
 
@@ -241,11 +324,13 @@ function detectReconnectType(srv) {
     type: 'stdio-wrapper',
     typeLabelKey: 'mcpReconnect.typeStdioWrapper',
     descriptionKey: 'mcpReconnect.descStdioWrapper',
-    actions: [
-      { kind: 'open-terminal', labelKey: 'mcpReconnect.actOpenMcpInClaude', command: 'claude', preDigit: '/mcp' },
-      { kind: 'clear-cache', labelKey: 'mcpReconnect.actClearAuthCache' },
-    ],
+    actions: [actOpenMcp(srv), ...cacheAct],
   };
+}
+
+// 'local-down' → 'LocalDown' (suffisso delle chiavi locale type*/desc*)
+function camel(kebab) {
+  return String(kebab).split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join('');
 }
 
 // Rimuove l'entry per `serverId` da mcp-needs-auth-cache.json. Al prossimo
@@ -337,8 +422,53 @@ function readProjectMcpServers() {
   return out;
 }
 
+// v1.2.9 — Un path è verificabile solo se è una cartella progetto nota a
+// Claude Code (chiave di projects{} in ~/.claude.json) ed esiste su disco:
+// il renderer non può farci lanciare `claude` da una cartella arbitraria.
+function isKnownProjectPath(project) {
+  if (typeof project !== 'string' || !project || !path.isAbsolute(project)) return false;
+  const data = loadClaudeJson();
+  if (!data || !data.projects || !Object.prototype.hasOwnProperty.call(data.projects, project)) return false;
+  return safeIsDir(project);
+}
+
+// v1.2.9 — Health check degli MCP di un progetto: `claude mcp list` eseguito
+// con cwd = cartella del progetto, così Claude Code include i server
+// project-scoped che dalla cwd di CLACOROO restano "unknown". Ritorna solo i
+// server di quel progetto, già arricchiti con `reconnect` e `verifiedAt`.
+async function checkProjectMcp(claudeBin, project) {
+  if (!isKnownProjectPath(project)) {
+    return { ok: false, error: 'project path not known to Claude Code', servers: [] };
+  }
+  const list = await runMcpList(claudeBin, project);
+  if (!list.ok) return list;
+  const byName = new Map();
+  for (const s of readProjectMcpServers()) {
+    if (s.project === project) byName.set(s.id, s);
+  }
+  const now = Date.now();
+  const servers = [];
+  for (const srv of list.servers || []) {
+    const base = byName.get(srv.id);
+    if (!base) continue;   // user/plugin/builtin: già coperti dal get-mcp normale
+    const s = {
+      ...base,
+      transport:  srv.transport !== 'unknown' ? srv.transport : base.transport,
+      connection: srv.connection || base.connection,
+      status:     srv.status,
+      statusText: srv.statusText,
+      verifiedAt: now,
+    };
+    servers.push({ ...s, reconnect: detectReconnectType(s) });
+  }
+  return { ok: true, servers, checkedAt: now };
+}
+
 module.exports = {
   parseListLine,
+  classifyMcpError,
+  checkProjectMcp,
+  isKnownProjectPath,
   runMcpList,
   readPluginMcpDeclarations,
   readNeedsAuthCache,
