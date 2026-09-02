@@ -2,6 +2,11 @@
 
 > English translation of [CHANGELOG.md](./CHANGELOG.md) (Italian, canonical). Updated in sync with each release.
 
+## v1.2.10 — 2026-09-02 — Re-check without losing your place + cleaner menu
+
+- [IMPROVEMENT] After **Re-check** or **Check status** the MCP card updates in place, briefly highlighted: the section is no longer redrawn and the page no longer jumps to the top
+- [IMPROVEMENT] Removed the red number badge on the Plugins entry of the sidebar: it counted disabled plugins without saying so, and no other entry has one
+
 ## v1.2.9 — 2026-09-02 — MCP: real error causes + project server check
 
 - [IMPROVEMENT] MCP cards in error now name the cause (executable missing, local server down, host unreachable, generic error) and offer **Re-check** instead of the OAuth buttons, which had nothing to do with those errors

@@ -1015,14 +1015,6 @@ function processData() {
     };
   });
   applyMktSort();  // ordinamento dinamico in base a state.filters.mktSort
-
-  // Badge disattivati
-  const blockedCount = state.plugins.filter(p => p.blocked).length;
-  const badge = $('nav-badge-plugins');
-  if (badge) {
-    badge.textContent = String(blockedCount);
-    badge.classList.toggle('visible', blockedCount > 0);
-  }
 }
 
 /* ── NAVIGATION ───────────────────────────────────────────────────────── */
@@ -7007,9 +6999,38 @@ async function recheckMcp(srv, btn) {
     toast(t('toast.errorPrefix', { msg: e.message || '?' }), 'error');
     mcpCache = null;
   }
-  // Ridisegna sempre: anche in errore, così il bottone torna al suo stato
-  if (state.section === 'mcp') renderMcp();
+  // v1.2.10 — aggiorna solo la card (anche in errore, così il bottone torna al
+  // suo stato); ridisegno completo solo se la card non c'è più
+  if (state.section === 'mcp') { if (!replaceMcpCard(srv.id)) renderMcp(); }
   else if (btn) btn.disabled = false;
+}
+
+// v1.2.10 — Sostituisce una sola card con i dati freschi di mcpCache, senza
+// ridisegnare la sezione (che riporterebbe lo scroll in cima): la nuova card
+// prende il posto della vecchia, resta in vista e viene evidenziata un attimo.
+// Il contatore in testa viene ricalcolato dal DOM, ghost "disabilitati" inclusi.
+function replaceMcpCard(id) {
+  const old = document.querySelector('.mcp-card[data-mcp-id="' + CSS.escape(id) + '"]');
+  const srv = mcpCache && mcpCache.servers && mcpCache.servers.find(s => s.id === id);
+  if (!old || !srv) return false;
+  const fresh = buildMcpCard(srv);
+  fresh.style.display = mcpMatches(srv, mcpFilter) ? '' : 'none';
+  old.replaceWith(fresh);
+  const grid = fresh.closest('.mcp-grid');
+  const wrap = grid && grid.parentElement;
+  const countSpan = wrap && wrap.querySelector('.section-count');
+  if (grid && countSpan) {
+    const cards = Array.from(grid.querySelectorAll('.mcp-card'));
+    countSpan.textContent = t('counter.mcpServers', {
+      visible:   cards.filter(c => c.style.display !== 'none').length,
+      total:     cards.length,
+      connected: grid.querySelectorAll('.mcp-card .mcp-badge-connected').length,
+    });
+  }
+  fresh.classList.add('mcp-card-flash');
+  fresh.scrollIntoView({ block: 'nearest' });
+  setTimeout(() => fresh.classList.remove('mcp-card-flash'), 1600);
+  return true;
 }
 
 // v1.2.9 — Hint della card per un MCP project-scoped: verificato o no

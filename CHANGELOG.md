@@ -2,6 +2,11 @@
 
 > Italiano (canonico). English translation: [CHANGELOG.en.md](./CHANGELOG.en.md) — allineato a ogni release.
 
+## v1.2.10 — 2026-09-02 — Ricontrolla senza perdere la posizione + menu più pulito
+
+- [IMPROVEMENT] Dopo **Ricontrolla** o **Verifica stato** la card MCP si aggiorna sul posto, evidenziata per un attimo: la sezione non viene più ridisegnata e la pagina non torna in cima
+- [IMPROVEMENT] Rimosso il badge numerico rosso sulla voce Plugin del menu laterale: contava i plugin disattivati senza dirlo, e nessun'altra voce ne ha uno
+
 ## v1.2.9 — 2026-09-02 — MCP: cause reali degli errori + verifica dei server di progetto
 
 - [IMPROVEMENT] Le card MCP in errore ora dicono la causa (eseguibile mancante, server locale spento, host irraggiungibile, errore generico) e offrono **Ricontrolla** al posto dei bottoni OAuth, che con quegli errori non c'entravano

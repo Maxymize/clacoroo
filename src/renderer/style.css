@@ -542,18 +542,6 @@ body {
   flex-shrink: 0;
 }
 
-.nav-badge {
-  margin-left: auto;
-  background: var(--red);
-  color: #fff;
-  font-size: 10px;
-  font-weight: 700;
-  padding: 1px 6px;
-  border-radius: 10px;
-  display: none;
-}
-.nav-badge.visible { display: inline-block; }
-
 /* SIDEBAR RECENT (v1.0.10) */
 .sidebar-recent {
   padding: 8px 12px 4px;
@@ -3760,6 +3748,13 @@ body {
 .mcp-rc-type-error-generic  { background: rgba(239,68,68,.18);  color: #f0a3a3; }
 .mcp-rc-type-network-error,
 .mcp-rc-type-warning        { background: rgba(245,158,11,.18); color: #f5c76b; }
+
+/* v1.2.10 — evidenzia per un attimo la card appena ricontrollata */
+@keyframes mcp-card-flash {
+  0%   { box-shadow: 0 0 0 2px #d97757; }
+  100% { box-shadow: 0 0 0 0 rgba(217, 119, 87, 0); }
+}
+.mcp-card-flash { animation: mcp-card-flash 1.6s ease-out; }
 
 .mcp-card-actions {
   display: flex; flex-wrap: wrap; gap: 6px;
