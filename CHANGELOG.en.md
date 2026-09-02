@@ -2,6 +2,11 @@
 
 > English translation of [CHANGELOG.md](./CHANGELOG.md) (Italian, canonical). Updated in sync with each release.
 
+## v1.2.8 — 2026-09-02 — Fable 5.1 in the model menu
+
+- [FEATURE] **Fable 5.1** can be picked in the "Default model" menu in Claude Config as a specific version; the *Fable* alias now points to it as the family's current model
+- [IMPROVEMENT] Cost estimates: added exact Fable 5.1 pricing ($10/$50 per million tokens, $0.25 cache reads) — it was previously estimated with Fable 5 prices
+
 ## v1.2.7 — 2026-07-25 — Clearer model menu + Opus with 1M context
 
 - [IMPROVEMENT] The "Default model" menu is now split into sections — *Always the latest model*, *Specific version*, *Current setting* — instead of repeating a label on every row. It's immediately clear which entries follow new models automatically and which stay put

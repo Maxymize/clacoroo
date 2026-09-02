@@ -10,7 +10,9 @@
 //
 // Schema per modello: { input, output, cacheWrite, cacheRead }
 const PRICING = {
-  // Fable family — modello più capace disponibile, sopra Opus
+  // Fable family — modello più capace disponibile, sopra Opus.
+  // Fable 5.1: stesso $10/$50 di Fable 5, ma cache read a $0.25 (non 1/10 dell'input).
+  'claude-fable-5-1':  { input: 10,    output: 50,    cacheWrite: 12.50,  cacheRead: 0.25 },
   'claude-fable-5':    { input: 10,    output: 50,    cacheWrite: 12.50,  cacheRead: 1.00 },
   // Mythos family — stesso listino di Fable 5 (disponibilità limitata)
   'claude-mythos-5':   { input: 10,    output: 50,    cacheWrite: 12.50,  cacheRead: 1.00 },
@@ -45,7 +47,7 @@ function resolveModel(id) {
   // Fallback per famiglia → listino della generazione più recente nota, così un
   // modello nuovo non ancora in tabella (es. il prossimo Opus) viene stimato
   // col prezzo corrente della sua famiglia invece di restare senza costo.
-  if (/fable/i.test(id))  return PRICING['claude-fable-5'];
+  if (/fable/i.test(id))  return PRICING['claude-fable-5-1'];
   if (/mythos/i.test(id)) return PRICING['claude-mythos-5'];
   if (/opus/i.test(id))   return PRICING['claude-opus-5'];
   if (/sonnet/i.test(id)) return PRICING['claude-sonnet-5'];

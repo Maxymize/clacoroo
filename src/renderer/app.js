@@ -5276,6 +5276,7 @@ const MODEL_ALIASES = ['default', 'opus', 'opus[1m]', 'sonnet', 'haiku', 'fable'
 // sbagliato: quei dati dicono cosa hai USATO, non cosa risolve l'alias — chi non
 // aveva ancora usato Sonnet 5 vedeva "Sonnet · Sonnet 4.6". Fonte unica qui.
 const CLAUDE_MODELS = [
+  'claude-fable-5-1',
   'claude-fable-5',
   'claude-opus-5',
   'claude-opus-4-8',

@@ -2,6 +2,11 @@
 
 > Italiano (canonico). English translation: [CHANGELOG.en.md](./CHANGELOG.en.md) — allineato a ogni release.
 
+## v1.2.8 — 2026-09-02 — Fable 5.1 nel menu modelli
+
+- [FEATURE] **Fable 5.1** è selezionabile nel menu "Modello predefinito" di Claude Config come versione fissa; l'alias *Fable* ora lo indica come modello corrente della famiglia
+- [IMPROVEMENT] Stime di costo: aggiunto il listino esatto di Fable 5.1 ($10/$50 per milione di token, cache read $0.25) — prima veniva stimato con i prezzi di Fable 5
+
 ## v1.2.7 — 2026-07-25 — Menu modelli più leggibile + Opus a contesto 1M
 
 - [IMPROVEMENT] Il menu "Modello predefinito" ora è diviso in sezioni — *Sempre l'ultimo modello*, *Versione fissa*, *Impostazione attuale* — invece di ripetere un'etichetta su ogni riga. Si capisce a colpo d'occhio quali voci seguono automaticamente i modelli nuovi e quali restano ferme
