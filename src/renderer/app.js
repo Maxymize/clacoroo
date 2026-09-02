@@ -5253,11 +5253,14 @@ const MODEL_TIER_BASE = {
   fable:   'Fable',
 };
 
-// v1.2.7 — Alias offerti dal selettore, nell'ordine del picker di Claude Code.
-// `opus[1m]` è la variante a contesto esteso (1M token): il picker nativo la
-// espone SOLO per Opus, quindi non inventiamo sonnet[1m]/fable[1m] — sceglierli
-// se non esistono farebbe fallire le sessioni.
-const MODEL_ALIASES = ['default', 'opus', 'opus[1m]', 'sonnet', 'haiku', 'fable'];
+// v1.2.7 — Alias offerti dal selettore. `opus[1m]` è la variante a contesto
+// esteso (1M token): il picker nativo la espone SOLO per Opus, quindi non
+// inventiamo sonnet[1m]/fable[1m] — sceglierli se non esistono farebbe fallire
+// le sessioni.
+// v1.2.11 — ORDINE (regola per ogni lista di modelli, uguale al picker /model di
+// Claude Code): prima il default, cioè Opus, poi dal più potente al meno potente:
+// Fable, Sonnet, Haiku. Vale anche per CLAUDE_MODELS qui sotto.
+const MODEL_ALIASES = ['default', 'opus', 'opus[1m]', 'fable', 'sonnet', 'haiku'];
 
 // v1.2.6 — Modelli concreti selezionabili ("versione fissa"), dal più recente.
 // UNICA lista da aggiornare quando Anthropic rilascia un modello: da qui derivano
@@ -5267,12 +5270,14 @@ const MODEL_ALIASES = ['default', 'opus', 'opus[1m]', 'sonnet', 'haiku', 'fable'
 // NOTA: la v1.2.5 ricavava la versione dai dati d'uso locali (stats-cache). Era
 // sbagliato: quei dati dicono cosa hai USATO, non cosa risolve l'alias — chi non
 // aveva ancora usato Sonnet 5 vedeva "Sonnet · Sonnet 4.6". Fonte unica qui.
+// Ordine: famiglie come MODEL_ALIASES (Opus, Fable, Sonnet, Haiku), dentro ogni
+// famiglia dal più recente.
 const CLAUDE_MODELS = [
-  'claude-fable-5-1',
-  'claude-fable-5',
   'claude-opus-5',
   'claude-opus-4-8',
   'claude-opus-4-7',
+  'claude-fable-5-1',
+  'claude-fable-5',
   'claude-sonnet-5',
   'claude-sonnet-4-6',
   'claude-haiku-4-5',
@@ -5305,7 +5310,10 @@ function modelOptionLabel(value) {
     const latest = latestModelForTier(tier);
     return latest ? base + ' · ' + formatModelName(latest) : base;
   }
-  return formatModelName(value);
+  // v1.2.11 — id concreto con suffisso [1m] (es. salvato da `/model
+  // claude-fable-5-1[1m]`): senza il suffisso in etichetta sembrava un
+  // doppione della versione fissa.
+  return formatModelName(tier) + (ext ? ' ' + t('config.model1m') : '');
 }
 
 function buildStatsKpiGrid(data, range) {

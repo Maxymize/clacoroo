@@ -2,6 +2,11 @@
 
 > English translation of [CHANGELOG.md](./CHANGELOG.md) (Italian, canonical). Updated in sync with each release.
 
+## v1.2.11 — 2026-09-02 — Model menu in Claude Code's picker order
+
+- [IMPROVEMENT] The "Default model" menu entries now follow the order of Claude Code's `/model` picker: Default, Opus, then from most to least capable (Fable, Sonnet, Haiku). Same order in the specific-versions group
+- [FIX] A model saved by hand with extended context (e.g. `claude-fable-5-1[1m]`) shows the "(1M context)" suffix instead of looking like a duplicate of the specific version
+
 ## v1.2.10 — 2026-09-02 — Re-check without losing your place + cleaner menu
 
 - [IMPROVEMENT] After **Re-check** or **Check status** the MCP card updates in place, briefly highlighted: the section is no longer redrawn and the page no longer jumps to the top

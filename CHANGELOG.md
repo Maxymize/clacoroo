@@ -2,6 +2,11 @@
 
 > Italiano (canonico). English translation: [CHANGELOG.en.md](./CHANGELOG.en.md) — allineato a ogni release.
 
+## v1.2.11 — 2026-09-02 — Menu modelli nell'ordine del picker di Claude Code
+
+- [IMPROVEMENT] Le voci del menu "Modello predefinito" seguono ora l'ordine del selettore `/model` di Claude Code: Default, Opus, poi dal più potente al meno potente (Fable, Sonnet, Haiku). Stesso ordine nel gruppo delle versioni fisse
+- [FIX] Un modello salvato a mano con contesto esteso (es. `claude-fable-5-1[1m]`) mostra il suffisso "(contesto 1M)" invece di sembrare un doppione della versione fissa
+
 ## v1.2.10 — 2026-09-02 — Ricontrolla senza perdere la posizione + menu più pulito
 
 - [IMPROVEMENT] Dopo **Ricontrolla** o **Verifica stato** la card MCP si aggiorna sul posto, evidenziata per un attimo: la sezione non viene più ridisegnata e la pagina non torna in cima
