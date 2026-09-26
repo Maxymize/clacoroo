@@ -923,6 +923,9 @@ function processData() {
   state.localPlugins    = localData.localPlugins;
   state.localSkills     = localData.localSkills;
   state.localAgents     = localData.localAgents;
+  // v1.2.14 — skill/agent/comandi fuori dai plugin (personali e di progetto)
+  state.userItems    = raw.userData || { skills: [], agents: [], commands: [], broken: [] };
+  state.projectItems = localData.projectItems || [];
 
   const globalPlugins = (raw.installed.plugins || []).map(fullId => {
     const atIdx = fullId.lastIndexOf('@');
@@ -955,6 +958,7 @@ function processData() {
       author:      cache.author      || '',
       skills:      cache.skills      || [],
       agents:      cache.agents      || [],
+      commands:    cache.commands    || [],
       skillHealth: cache.skillHealth || {},
       agentHealth: cache.agentHealth || {},
       hasMcp:      cache.hasMcp      || false,
@@ -986,7 +990,7 @@ function processData() {
       fullId: lp.fullId, id, mkt,
       name: id, description: '',
       version: '—', author: '',
-      skills: skillsForPlugin, agents: agentsForPlugin,
+      skills: skillsForPlugin, agents: agentsForPlugin, commands: [],
       skillHealth: {}, agentHealth: {},
       hasMcp: false, hasHooks: false,
       blocked: false,
@@ -1330,8 +1334,10 @@ function renderDashboard() {
   const locals  = state.plugins.filter(p => p.scope === 'local');
   const active   = globals.filter(p => !p.blocked);
   const disabled = globals.filter(p => p.blocked);
-  const allSkills = state.plugins.flatMap(p => p.skills.map(s => ({ skill: s, plugin: p.fullId })));
-  const allAgents = state.plugins.flatMap(p => p.agents.map(a => ({ agent: a, plugin: p.fullId })));
+  // v1.2.14 — tutte le fonti (plugin, comandi, personali, di progetto); i link
+  // rotti non contano, Claude Code non li carica.
+  const allSkills = allSkillItems().filter(i => !i.broken);
+  const allAgents = allAgentItems().filter(i => !i.broken);
   const totalTokens = globals.reduce((s, p) => s + p.tokensAlways, 0);
   // v1.0.83 — Pack K: KPI hook (combo event+matcher) + plugin che li forniscono
   const hookList = buildHookList();
@@ -1344,9 +1350,9 @@ function renderDashboard() {
 
   // Health summary (idea #3): count skill+agent con status err/warn
   let healthErr = 0, healthWarn = 0;
-  state.plugins.forEach(p => {
-    Object.values(p.skillHealth).forEach(h => { if (h.status === 'err') healthErr++; else if (h.status === 'warn') healthWarn++; });
-    Object.values(p.agentHealth).forEach(h => { if (h.status === 'err') healthErr++; else if (h.status === 'warn') healthWarn++; });
+  [...allSkills, ...allAgents].forEach(i => {
+    if (!i.health) return;
+    if (i.health.status === 'err') healthErr++; else if (i.health.status === 'warn') healthWarn++;
   });
 
   // KPI MCP: usa cache se esiste (popolata dalla sezione MCP o dall'init prefetch),
@@ -1483,21 +1489,18 @@ function renderDashboard() {
     },
   });
 
-  // 3. Skill (recency = installedAt del plugin proprietario)
-  const allSkillItems = state.plugins.flatMap(p =>
-    (p.skills || []).map(s => ({ name: s, plugin: p.id, mkt: p.mkt, fullId: p.fullId, installedAt: p.installedAt }))
-  );
+  // 3. Skill (recency = installedAt del plugin, o data della cartella per le personali)
   renderDashboardSection({
     container: wrap, title: t('section.skillTitle'), iconName: 'sparkles', targetSection: 'skills',
-    items: allSkillItems,
-    getTimestamp: s => Date.parse(s.installedAt || '') || 0,
+    items: allSkills,
+    getTimestamp: s => Date.parse(s.addedAt || '') || 0,
     emptyText: t('empty.noSkill'),
     buildChip: (s) => {
       const chip = el('div', 'skill-chip clickable');
       chip.title = t('chip.openSection', { name: t('section.skillTitle') });
-      chip.style.borderLeftColor = mktColor(s.mkt);
+      chip.style.borderLeftColor = itemColor(s);
       const dot = el('span');
-      dot.style.cssText = 'width:8px;height:8px;border-radius:50%;flex-shrink:0;background:' + mktColor(s.mkt);
+      dot.style.cssText = 'width:8px;height:8px;border-radius:50%;flex-shrink:0;background:' + itemColor(s);
       chip.appendChild(dot);
       chip.appendChild(el('span', 'skill-chip-name', s.name));
       chip.appendChild(el('span', 'skill-chip-plugin', s.plugin));
@@ -1506,14 +1509,11 @@ function renderDashboard() {
     },
   });
 
-  // 4. Agent (recency = installedAt del plugin proprietario)
-  const allAgentItems = state.plugins.flatMap(p =>
-    (p.agents || []).map(a => ({ name: a, plugin: p.id, mkt: p.mkt, fullId: p.fullId, installedAt: p.installedAt }))
-  );
+  // 4. Agent (recency = installedAt del plugin, o data del file per i personali)
   renderDashboardSection({
     container: wrap, title: t('section.agentTitle'), iconName: 'bot', targetSection: 'agents',
-    items: allAgentItems,
-    getTimestamp: a => Date.parse(a.installedAt || '') || 0,
+    items: allAgents,
+    getTimestamp: a => Date.parse(a.addedAt || '') || 0,
     emptyText: t('empty.noAgent'),
     buildChip: (a) => {
       const chip = el('div', 'skill-chip clickable');
@@ -2386,6 +2386,9 @@ function showPluginContentModal(p) {
   });
   appendModalItemList(content, t('plugin.sectionAgents'), p.agents, item => {
     openMarkdownPreview(p.fullId, 'agent', item.name || item);
+  });
+  appendModalItemList(content, t('plugin.sectionCommands'), p.commands, item => {
+    openMarkdownPreview(p.fullId, 'command', item.name || item);
   });
 
   if (p.hasMcp) {
@@ -3371,16 +3374,107 @@ function renderMarketplaces() {
   setContent(wrap);
 }
 
-/* ── SKILLS ───────────────────────────────────────────────────────────── */
-function renderSkills() {
-  const globals = state.plugins.flatMap(p =>
-    p.skills.map(s => ({ name: s, plugin: p.id, mkt: p.mkt, blocked: p.blocked, health: p.skillHealth[s], fullId: p.fullId, scope: 'global' }))
-  );
+/* ── INVENTARIO SKILL / AGENT (v1.2.14) ───────────────────────────────── */
+// Tutte le fonti che Claude Code carica: plugin globali (skill + comandi),
+// plugin locali dei progetti tracciati, skill/agent/comandi personali in
+// ~/.claude e quelli di progetto in <progetto>/.claude. Ogni item ha `kind`
+// ('skill' | 'command' | 'agent'); gli item con `file` si aprono tramite
+// read-item-file, quelli dei plugin globali tramite fullId.
+
+// Skill, comandi o agent "sciolti" di una cartella .claude (personale o di progetto).
+function standaloneItems(src, forAgents, extra) {
+  const out = [];
+  const lists = forAgents
+    ? [['agent', src.agents]]
+    : [['skill', src.skills], ['command', src.commands]];
+  const folder = { skill: 'skills', agent: 'agents', command: 'commands' };
+  lists.forEach(([kind, list]) => (list || []).forEach(i => out.push({
+    name: i.name, kind, file: i.file, health: i.health || null, addedAt: i.addedAt || '',
+    plugin: extra.base + '/' + folder[kind], mkt: '', standalone: true, ...extra,
+  })));
+  (src.broken || [])
+    .filter(b => forAgents ? b.kind === 'agent' : b.kind !== 'agent')
+    .forEach(b => out.push({
+      name: b.name, kind: b.kind, file: b.path, broken: true, target: b.target,
+      plugin: extra.base + '/' + folder[b.kind], mkt: '', standalone: true, ...extra,
+    }));
+  return out;
+}
+
+function allStandaloneItems(forAgents) {
+  const user = standaloneItems(state.userItems || {}, forAgents, { scope: 'user', base: '~/.claude' });
+  const projects = (state.projectItems || []).flatMap(p => standaloneItems(p, forAgents, {
+    scope: 'local', base: '.claude', projectName: p.projectName, projectPath: p.projectPath,
+  }));
+  return [...user, ...projects];
+}
+
+function allSkillItems() {
+  const globals = state.plugins.filter(p => p.scope === 'global').flatMap(p => [
+    ...p.skills.map(s => ({ name: s, kind: 'skill', plugin: p.id, mkt: p.mkt, blocked: p.blocked, health: p.skillHealth[s], fullId: p.fullId, scope: 'global', addedAt: p.installedAt })),
+    ...(p.commands || []).map(c => ({ name: c, kind: 'command', plugin: p.id, mkt: p.mkt, blocked: p.blocked, health: null, fullId: p.fullId, scope: 'global', addedAt: p.installedAt })),
+  ]);
   const locals = (state.localSkills || []).map(s => {
     const at = s.plugin.lastIndexOf('@');
-    return { name: s.name, plugin: s.plugin.slice(0, at), mkt: s.plugin.slice(at + 1), blocked: false, fullId: s.plugin, scope: 'local', projectName: s.projectName, projectPath: s.projectPath };
+    return { name: s.name, kind: 'skill', file: s.file, plugin: s.plugin.slice(0, at), mkt: s.plugin.slice(at + 1), blocked: false, scope: 'local', projectName: s.projectName, projectPath: s.projectPath };
   });
-  const all = [...globals, ...locals].sort(NAME_SORTERS[state.skillSort] || NAME_SORTERS['name-asc']);
+  return [...globals, ...locals, ...allStandaloneItems(false)];
+}
+
+function allAgentItems() {
+  const globals = state.plugins.filter(p => p.scope === 'global').flatMap(p =>
+    p.agents.map(a => ({ name: a, kind: 'agent', plugin: p.id, mkt: p.mkt, blocked: p.blocked, health: p.agentHealth[a], fullId: p.fullId, scope: 'global', addedAt: p.installedAt }))
+  );
+  const locals = (state.localAgents || []).map(a => {
+    const at = a.plugin.lastIndexOf('@');
+    return { name: a.name, kind: 'agent', file: a.file, plugin: a.plugin.slice(0, at), mkt: a.plugin.slice(at + 1), scope: 'local', projectName: a.projectName, projectPath: a.projectPath };
+  });
+  return [...globals, ...locals, ...allStandaloneItems(true)];
+}
+
+// Colore del bordo: personali viola, di progetto verde, plugin = colore marketplace.
+function itemColor(item) {
+  if (item.scope === 'user') return '#a78bfa';
+  if (item.standalone)       return '#b8c79a';
+  return mktColor(item.mkt);
+}
+
+function scopeLabel(item) {
+  if (item.scope === 'user')  return t('badge.scopeUser');
+  if (item.scope === 'local') return item.projectName || t('badge.scopeLocal');
+  return t('badge.scopeGlobal');
+}
+
+// Apre l'anteprima di un item (skill, comando o agent) da qualsiasi fonte.
+async function openItemPreview(item) {
+  if (item.broken) return;
+  if (!item.file) return openMarkdownPreview(item.fullId, item.kind, item.name);
+  const r = await window.claudeAPI.readItemFile(item.file);
+  if (!r.success) { toast(t('toast.readItemError', { kind: item.kind, msg: r.error }), 'error'); return; }
+  showMarkdownModal(item.name, item.kind, r.content, null, r.editable ? item.file : null);
+}
+
+// v1.2.14 — Filtro per fonte delle sezioni Skill/Agent. I plugin installati in
+// un progetto restano "Plugin"; "Progetto" = file sciolti in <progetto>/.claude.
+function itemSource(item) {
+  if (!item.standalone) return 'plugin';
+  return item.scope === 'user' ? 'user' : 'project';
+}
+function sourceFilterConfig(allLabelKey) {
+  return {
+    getKey: itemSource,
+    options: [
+      { key: 'all',     label: t(allLabelKey) },
+      { key: 'plugin',  label: t('filter.sourcePlugin') },
+      { key: 'user',    label: t('filter.sourceUser') },
+      { key: 'project', label: t('filter.sourceProject') },
+    ],
+  };
+}
+
+/* ── SKILLS ───────────────────────────────────────────────────────────── */
+function renderSkills() {
+  const all = allSkillItems().sort(NAME_SORTERS[state.skillSort] || NAME_SORTERS['name-asc']);
   const mode = state.viewMode.skills;
   const gridCls = mode === 'cards' ? 'browse-card-grid' : 'skill-grid';
   const builder = mode === 'cards'
@@ -3402,6 +3496,7 @@ function renderSkills() {
         section: 'skills', mode,
         onChange: (m) => setViewMode('skills', m),
       },
+      sourceFilter: sourceFilterConfig('filter.allSkills'),
     },
     {
       title: t('empty.bigNoSkillTitle'),
@@ -3412,14 +3507,7 @@ function renderSkills() {
 
 /* ── AGENTS ───────────────────────────────────────────────────────────── */
 function renderAgents() {
-  const globals = state.plugins.flatMap(p =>
-    p.agents.map(a => ({ name: a, plugin: p.id, mkt: p.mkt, health: p.agentHealth[a], fullId: p.fullId, scope: 'global' }))
-  );
-  const locals = (state.localAgents || []).map(a => {
-    const at = a.plugin.lastIndexOf('@');
-    return { name: a.name, plugin: a.plugin.slice(0, at), mkt: a.plugin.slice(at + 1), fullId: a.plugin, scope: 'local', projectName: a.projectName, projectPath: a.projectPath };
-  });
-  const all = [...globals, ...locals].sort(NAME_SORTERS[state.agentSort] || NAME_SORTERS['name-asc']);
+  const all = allAgentItems().sort(NAME_SORTERS[state.agentSort] || NAME_SORTERS['name-asc']);
   const mode = state.viewMode.agents;
   const gridCls = mode === 'cards' ? 'browse-card-grid' : 'skill-grid';
   const builder = mode === 'cards'
@@ -3441,6 +3529,7 @@ function renderAgents() {
         section: 'agents', mode,
         onChange: (m) => setViewMode('agents', m),
       },
+      sourceFilter: sourceFilterConfig('filter.all'),
     },
     {
       title: t('empty.bigNoAgentTitle'),
@@ -3453,20 +3542,23 @@ function renderAgents() {
 // (era inline in renderSkills/renderAgents prima del refactor). `kind` =
 // 'skill' | 'agent' per dot color e icon nel modal preview.
 function buildSkillAgentChip(item, kind) {
-  const chip = el('div', 'skill-chip' + (item.scope === 'local' ? ' local-scope' : ' clickable') + (item.blocked ? ' blocked' : ''));
-  chip.style.borderLeftColor = mktColor(item.mkt);
+  const chip = el('div', 'skill-chip' + (item.broken ? ' blocked' : ' clickable') + (item.blocked ? ' blocked' : ''));
+  chip.style.borderLeftColor = itemColor(item);
   const dot = el('span');
-  const dotColor = kind === 'agent' ? '#f97316' : mktColor(item.mkt);
+  const dotColor = kind === 'agent' ? '#f97316' : itemColor(item);
   dot.style.cssText = 'width:6px;height:6px;border-radius:50%;flex-shrink:0;background:' + dotColor;
   chip.appendChild(dot);
   chip.appendChild(el('span', 'skill-chip-name', item.name));
   chip.appendChild(el('span', 'skill-chip-plugin', item.plugin));
+  if (item.kind === 'command') chip.appendChild(el('span', 'kind-tag', t('badge.command')));
+  if (item.broken) {
+    chip.appendChild(el('span', 'kind-tag kind-tag-broken', t('badge.brokenLink')));
+    chip.title = t('skillAgent.brokenHint', { target: item.target || '?' });
+  }
   appendHealthBadge(chip, item.health);
   appendScopeBadge(chip, item);
   appendModifiedBadge(chip, item, kind, 'chip');
-  if (item.scope === 'global') {
-    chip.addEventListener('click', () => openMarkdownPreview(item.fullId, kind, item.name));
-  }
+  if (!item.broken) chip.addEventListener('click', () => openItemPreview(item));
   return chip;
 }
 
@@ -3488,8 +3580,8 @@ function translateHealthIssue(issue) {
 // Layout simile a .hook-card: header con name grande + plugin/mkt dot,
 // body con scope badge + health badge, footer con bottone "Apri preview".
 function buildSkillAgentCard(item, kind) {
-  const card = el('div', 'browse-card' + (item.blocked ? ' blocked' : ''));
-  card.style.borderLeftColor = kind === 'agent' ? '#f97316' : mktColor(item.mkt);
+  const card = el('div', 'browse-card' + (item.blocked || item.broken ? ' blocked' : ''));
+  card.style.borderLeftColor = kind === 'agent' ? '#f97316' : itemColor(item);
 
   // Header: nome grande + plugin + dot mkt
   const head = el('div', 'browse-card-head');
@@ -3497,7 +3589,7 @@ function buildSkillAgentCard(item, kind) {
   titleWrap.appendChild(el('div', 'browse-card-title', item.name));
   const pluginLine = el('div', 'browse-card-plugin-line');
   const dot = el('span', 'browse-card-mkt-dot');
-  dot.style.background = mktColor(item.mkt);
+  dot.style.background = itemColor(item);
   pluginLine.appendChild(dot);
   pluginLine.appendChild(el('span', 'browse-card-plugin', item.plugin));
   if (item.mkt) pluginLine.appendChild(el('span', 'browse-card-mkt', item.mkt));
@@ -3508,10 +3600,15 @@ function buildSkillAgentCard(item, kind) {
   // Body: scope + health
   const body = el('div', 'browse-card-body');
   const badgeRow = el('div', 'browse-card-badges');
-  const scopeBadge = el('span', 'scope-badge scope-' + item.scope,
-    item.scope === 'local' ? (item.projectName || t('badge.scopeLocal')) : t('badge.scopeGlobal'));
+  const scopeBadge = el('span', 'scope-badge scope-' + item.scope, scopeLabel(item));
   if (item.projectPath) scopeBadge.title = item.projectPath;
   badgeRow.appendChild(scopeBadge);
+  if (item.kind === 'command') badgeRow.appendChild(el('span', 'kind-tag', t('badge.command')));
+  if (item.broken) {
+    const bb = el('span', 'browse-card-blocked', t('badge.brokenLink'));
+    bb.title = t('skillAgent.brokenHint', { target: item.target || '?' });
+    badgeRow.appendChild(bb);
+  }
   if (item.health && item.health.status !== 'ok') {
     // v1.0.98 — Badge rettangolare proper + tooltip esplicativo arricchito
     // che spiega cos'è il problema e come può essere risolto. Gli health
@@ -3534,32 +3631,50 @@ function buildSkillAgentCard(item, kind) {
   }
   appendModifiedBadge(badgeRow, item, kind, 'card');
   body.appendChild(badgeRow);
+  // v1.2.14 — per le voci personali/di progetto la nota sta nel body: nel
+  // footer ci sono già due bottoni (anteprima + cartella).
+  if (item.standalone && !item.broken) {
+    const note = el('span', 'browse-card-hint', item.scope === 'user'
+      ? t('skillAgent.userNote')
+      : t('skillAgent.projectNote', { project: item.projectName || '' }));
+    note.title = t('skillAgent.standaloneTip');
+    body.appendChild(note);
+  }
   card.appendChild(body);
 
-  // Footer: bottone azione (solo per scope global, locali non hanno preview)
-  if (item.scope === 'global') {
-    const foot = el('div', 'browse-card-foot');
-    const openBtn = btnWithIcon('btn btn-sm btn-ghost', 'eye', t('button.openPreview'));
-    openBtn.addEventListener('click', e => {
-      e.stopPropagation();
-      openMarkdownPreview(item.fullId, kind, item.name);
-    });
-    foot.appendChild(openBtn);
+  // Footer. v1.2.14 — anteprima per tutte le fonti (prima solo per i plugin
+  // globali); per le voci personali/di progetto c'è "Mostra nella cartella".
+  const foot = el('div', 'browse-card-foot');
+  if (item.broken) {
+    const revealBtn = btnWithIcon('btn btn-sm btn-ghost', 'folder-open', t('skillAgent.reveal'));
+    revealBtn.addEventListener('click', e => { e.stopPropagation(); window.claudeAPI.revealItemFile(item.file); });
+    foot.appendChild(revealBtn);
+    const hint = el('span', 'browse-card-managed', t('skillAgent.brokenShort'));
+    hint.title = t('skillAgent.brokenHint', { target: item.target || '?' });
+    foot.appendChild(hint);
+    card.appendChild(foot);
+    return card;
+  }
+  const openBtn = btnWithIcon('btn btn-sm btn-ghost', 'eye', t('button.openPreview'));
+  openBtn.addEventListener('click', e => {
+    e.stopPropagation();
+    openItemPreview(item);
+  });
+  foot.appendChild(openBtn);
+  if (item.standalone) {
+    const revealBtn = btnWithIcon('btn btn-sm btn-ghost', 'folder-open', t('skillAgent.reveal'));
+    revealBtn.addEventListener('click', e => { e.stopPropagation(); window.claudeAPI.revealItemFile(item.file); });
+    foot.appendChild(revealBtn);
+  } else {
     // v1.1.26 — Nota: skill/agent non si attivano singolarmente (Claude Code non
     // lo permette). Si gestiscono abilitando/disabilitando il plugin proprietario.
-    const mng = el('span', 'browse-card-managed', t('skillAgent.managedByPlugin', { plugin: item.plugin }));
-    mng.title = t('skillAgent.managedByPluginTip');
-    foot.appendChild(mng);
-    card.appendChild(foot);
-    card.style.cursor = 'pointer';
-    card.addEventListener('click', () => openMarkdownPreview(item.fullId, kind, item.name));
-  } else {
-    // Locali: no preview, mostra path progetto
-    const foot = el('div', 'browse-card-foot');
-    foot.appendChild(el('span', 'browse-card-hint',
-      'Locale al progetto · preview disponibile solo per global'));
-    card.appendChild(foot);
+    const note = el('span', 'browse-card-managed', t('skillAgent.managedByPlugin', { plugin: item.plugin }));
+    note.title = t('skillAgent.managedByPluginTip');
+    foot.appendChild(note);
   }
+  card.appendChild(foot);
+  card.style.cursor = 'pointer';
+  card.addEventListener('click', () => openItemPreview(item));
 
   return card;
 }
@@ -4120,8 +4235,7 @@ function showHookDetailsModal(item) {
 }
 
 function appendScopeBadge(chip, item) {
-  const badge = el('span', 'scope-badge scope-' + item.scope,
-    item.scope === 'local' ? (item.projectName || t('badge.scopeLocal')) : t('badge.scopeGlobal'));
+  const badge = el('span', 'scope-badge scope-' + item.scope, scopeLabel(item));
   if (item.projectPath) badge.title = item.projectPath;
   chip.appendChild(badge);
 }
@@ -4138,7 +4252,7 @@ function appendHealthBadge(chip, health) {
 // v1.0.99 — Passa anche fullId a showMarkdownModal per abilitare l'editor inline
 async function openMarkdownPreview(fullId, kind, name) {
   const r = await window.claudeAPI.readMarkdownFile(fullId, kind, name);
-  if (!r.success) { toast('Errore lettura ' + kind + ': ' + r.error, 'error'); return; }
+  if (!r.success) { toast(t('toast.readItemError', { kind, msg: r.error }), 'error'); return; }
   showMarkdownModal(name, kind, r.content, fullId);
 }
 
@@ -4233,7 +4347,9 @@ function renderMarkdownToContainer(container, content) {
 // `fullId` è opzionale: se passato, abilita l'editor. Senza fullId resta
 // solo preview (es. quando il modal viene aperto da un context dove non
 // abbiamo l'id del plugin).
-function showMarkdownModal(name, kind, content, fullId) {
+// v1.2.14 — `file`: path di una skill/agent/comando personale o di progetto.
+// Se presente, la modifica scrive direttamente quel file (via write-item-file).
+function showMarkdownModal(name, kind, content, fullId, file) {
   const overlay = el('div', 'md-overlay');
   const modal   = el('div', 'md-modal');
   modal.setAttribute('role', 'dialog');
@@ -4263,7 +4379,7 @@ function showMarkdownModal(name, kind, content, fullId) {
 
   // v1.0.99 — Bottone Modifica/Salva/Annulla (solo se fullId presente)
   const editBtn = btnWithIcon('md-copy', 'pencil', t('button.edit'));
-  editBtn.title = t('mdEdit.editTip');
+  editBtn.title = file ? t('mdEdit.editOwnTip') : t('mdEdit.editTip');
 
   const saveBtn   = btnWithIcon('md-copy md-save-btn', 'check', t('button.save'));
   saveBtn.title   = t('mdEdit.saveTip');
@@ -4278,7 +4394,7 @@ function showMarkdownModal(name, kind, content, fullId) {
 
   header.appendChild(title);
   header.appendChild(copyAllBtn);
-  if (fullId) {
+  if (fullId || file) {
     header.appendChild(editBtn);
     header.appendChild(saveBtn);
     header.appendChild(cancelBtn);
@@ -4300,9 +4416,10 @@ function showMarkdownModal(name, kind, content, fullId) {
     const warn = el('div', 'md-editor-warn');
     warn.appendChild(icon('triangle-alert'));
     const wText = el('div', 'md-editor-warn-text');
-    wText.appendChild(el('strong', null, t('mdEdit.warnTitle')));
-    wText.appendChild(el('div', null,
-      t('mdEdit.warnBody', { plugin: fullId || '<plugin>' })));
+    wText.appendChild(el('strong', null, file ? t('mdEdit.warnOwnTitle') : t('mdEdit.warnTitle')));
+    wText.appendChild(el('div', null, file
+      ? t('mdEdit.warnOwnBody', { file })
+      : t('mdEdit.warnBody', { plugin: fullId || '<plugin>' })));
     warn.appendChild(wText);
     contentEl.appendChild(warn);
 
@@ -4344,9 +4461,16 @@ function showMarkdownModal(name, kind, content, fullId) {
     const newContent = editorTextarea.value;
     if (newContent === currentContent) { switchToPreview(); return; }
     saveBtn.disabled = true; cancelBtn.disabled = true;
-    const r = await window.claudeAPI.writeMarkdownFile(fullId, kind, name, newContent);
+    const r = file
+      ? await window.claudeAPI.writeItemFile(file, newContent)
+      : await window.claudeAPI.writeMarkdownFile(fullId, kind, name, newContent);
     saveBtn.disabled = false; cancelBtn.disabled = false;
-    if (r.success) {
+    if (r.success && file) {
+      currentContent = newContent;
+      toast(t('mdEdit.savedOwn'), 'success');
+      switchToPreview();
+      try { await loadData(); } catch { /* graceful */ }
+    } else if (r.success) {
       currentContent = newContent;
       toast(t('mdEdit.saved'), 'success');
       // v1.0.100 — Marca il file come modificato localmente per mostrare badge
@@ -4534,6 +4658,10 @@ async function showClaudeMdEditor(filePath, displayName) {
 // aggiunge il toggle vista cards/compatta accanto al sort dropdown.
 function renderListSection(items, key, buildChip, searchFn, gridCls, sortConfig, mascotEmpty) {
   const f = state.filters[key] || { search: '' };
+  // v1.2.14 — filtro opzionale per fonte (sortConfig.sourceFilter): chip
+  // Tutte / Plugin / Personali / Progetto, combinato con la ricerca.
+  const sf = sortConfig && sortConfig.sourceFilter;
+  let source = (sf && f.source) || 'all';
   const wrap = el('div');
 
   // v1.1.8 — Empty state "full page" con mascotte se nessun item del tutto
@@ -4561,6 +4689,22 @@ function renderListSection(items, key, buildChip, searchFn, gridCls, sortConfig,
   inp.value = f.search;
   sw.appendChild(inp);
   bar.appendChild(sw);
+  const sourceChips = [];
+  if (sf) {
+    const group = el('div', 'hook-filter-group');
+    sf.options.forEach(o => {
+      const n = o.key === 'all' ? items.length : items.filter(i => sf.getKey(i) === o.key).length;
+      const chip = el('button', 'hook-filter-chip' + (source === o.key ? ' active' : ''), o.label + ' (' + n + ')');
+      chip.addEventListener('click', () => {
+        source = o.key;
+        sourceChips.forEach(c => c.classList.toggle('active', c === chip));
+        filter();
+      });
+      sourceChips.push(chip);
+      group.appendChild(chip);
+    });
+    bar.appendChild(group);
+  }
   wrap.appendChild(bar);
 
   const hdr = el('div', 'section-header');
@@ -4580,10 +4724,11 @@ function renderListSection(items, key, buildChip, searchFn, gridCls, sortConfig,
 
   function filter() {
     const q = inp.value.toLowerCase();
-    state.filters[key] = { search: q };
+    state.filters[key] = { search: q, source };
     let visible = 0;
     chips.forEach((chip, i) => {
-      const show = !q || searchFn(items[i]).toLowerCase().includes(q);
+      const show = (!q || searchFn(items[i]).toLowerCase().includes(q))
+        && (source === 'all' || sf.getKey(items[i]) === source);
       chip.style.display = show ? '' : 'none';
       if (show) visible++;
     });
@@ -8358,16 +8503,16 @@ function buildPaletteItems() {
     kind: 'marketplace', icon: '🏪', label: m.id, sub: t('palette.pluginsCount', { n: m.plugins.length }),
     run: () => switchToSection('marketplaces'),
   }));
-  // Skill
-  state.plugins.forEach(p => p.skills.forEach(s => items.push({
-    kind: 'skill', icon: '⚡', label: s, sub: p.id,
-    run: () => openMarkdownPreview(p.fullId, 'skill', s),
-  })));
+  // Skill (v1.2.14 — tutte le fonti: plugin, comandi, personali, di progetto)
+  allSkillItems().filter(i => !i.broken).forEach(i => items.push({
+    kind: 'skill', icon: '⚡', label: i.name, sub: i.projectName ? i.plugin + ' · ' + i.projectName : i.plugin,
+    run: () => openItemPreview(i),
+  }));
   // Agent
-  state.plugins.forEach(p => p.agents.forEach(a => items.push({
-    kind: 'agent', icon: '🤖', label: a, sub: p.id,
-    run: () => openMarkdownPreview(p.fullId, 'agent', a),
-  })));
+  allAgentItems().filter(i => !i.broken).forEach(i => items.push({
+    kind: 'agent', icon: '🤖', label: i.name, sub: i.projectName ? i.plugin + ' · ' + i.projectName : i.plugin,
+    run: () => openItemPreview(i),
+  }));
   return items;
 }
 

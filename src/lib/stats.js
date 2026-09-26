@@ -150,45 +150,14 @@ function frontmatterBytes(filePath) {
 // ufficiali (airtable, adobe-for-creativity, ecc.).
 const MCP_TOKENS_PER_CONNECTED_SERVER = 400;
 
-function computeContextBreakdown(claudeDir, blockedSet, mcpInfo) {
-  const cacheDir = path.join(claudeDir, 'plugins', 'cache');
-  const skills = [], agents = [];
-  const blocked = blockedSet instanceof Set ? blockedSet : new Set();
-
-  if (fs.existsSync(cacheDir)) {
-    for (const mkt of fs.readdirSync(cacheDir)) {
-      const mktPath = path.join(cacheDir, mkt);
-      try { if (!fs.statSync(mktPath).isDirectory()) continue; } catch { continue; }
-      for (const plug of fs.readdirSync(mktPath)) {
-        const fullId = plug + '@' + mkt;
-        if (blocked.has(fullId)) continue;  // plugin disabilitato → escluso dal contesto
-        const plugPath = path.join(mktPath, plug);
-        try { if (!fs.statSync(plugPath).isDirectory()) continue; } catch { continue; }
-        const versions = fs.readdirSync(plugPath).filter(d => {
-          try { return fs.statSync(path.join(plugPath, d)).isDirectory(); }
-          catch { return false; }
-        });
-        if (!versions.length) continue;
-        const ver = versions[versions.length - 1];
-        const root = path.join(plugPath, ver);
-        const skillsDir = path.join(root, 'skills');
-        const agentsDir = path.join(root, 'agents');
-        if (fs.existsSync(skillsDir)) {
-          for (const s of fs.readdirSync(skillsDir)) {
-            const skMd = path.join(skillsDir, s, 'SKILL.md');
-            if (fs.existsSync(skMd)) skills.push(skMd);
-          }
-        }
-        if (fs.existsSync(agentsDir)) {
-          for (const a of fs.readdirSync(agentsDir)) {
-            if (a.endsWith('.md') && a.toLowerCase() !== 'readme.md') {
-              agents.push(path.join(agentsDir, a));
-            }
-          }
-        }
-      }
-    }
-  }
+// v1.2.14 — `files` = { skills, agents }: path dei file che finiscono
+// nell'indice (plugin attivi nella versione installata + skill, agent e comandi
+// personali), calcolati da inventory.contextFiles. Prima si riscansionava la
+// cache intera, contando anche versioni vecchie e cartelle temporanee e
+// ignorando le skill personali in ~/.claude/skills.
+function computeContextBreakdown(claudeDir, mcpInfo, files) {
+  const skills = (files && files.skills) || [];
+  const agents = (files && files.agents) || [];
 
   // Memory files: ~/.claude/CLAUDE.md (globale)
   const globalClaudeMd = path.join(claudeDir, 'CLAUDE.md');

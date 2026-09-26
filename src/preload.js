@@ -25,6 +25,10 @@ contextBridge.exposeInMainWorld('claudeAPI', {
   openInEditor:       (fullId)            => ipcRenderer.invoke('open-in-editor',     fullId),
   readMarkdownFile:   (fullId, kind, name) => ipcRenderer.invoke('read-markdown-file', { fullId, kind, name }),
   writeMarkdownFile:  (fullId, kind, name, content) => ipcRenderer.invoke('write-markdown-file', { fullId, kind, name, content }),
+  // v1.2.14 — skill/agent/comandi personali e di progetto (path in allowlist nel main)
+  readItemFile:       (file)              => ipcRenderer.invoke('read-item-file',     { file }),
+  writeItemFile:      (file, content)     => ipcRenderer.invoke('write-item-file',    { file, content }),
+  revealItemFile:     (file)              => ipcRenderer.invoke('reveal-item-file',   { file }),
   readClaudeMd:       (filePath)          => ipcRenderer.invoke('read-claude-md',  { filePath }),
   writeClaudeMd:      (filePath, content) => ipcRenderer.invoke('write-claude-md', { filePath, content }),
   getActivityLog:     ()                  => ipcRenderer.invoke('get-activity-log'),

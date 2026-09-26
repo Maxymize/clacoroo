@@ -206,6 +206,9 @@ window.LOCALES.it = {
     scopeProgetto:    'progetto',
     scopeLocalNamed:  'locale: {name}',
     scopeLocalParen:  'locale ({name})',
+    scopeUser:        'personale',
+    command:          'comando',
+    brokenLink:       'link rotto',
     pluginActive:     'attivo',
     healthError:      'health: errore',
     healthWarn:       'health: warning',
@@ -298,6 +301,10 @@ window.LOCALES.it = {
 
   // Filter chips
   filter: {
+    allSkills:     'Tutte',
+    sourcePlugin:  'Plugin',
+    sourceUser:    'Personali',
+    sourceProject: 'Progetto',
     all:           'Tutti',
     allKinds:      'Tutti i tipi',
     fromPlugin:    'Dai plugin',
@@ -329,6 +336,7 @@ window.LOCALES.it = {
     modifiedNote:  '\n\nLa modifica verrà sovrascritta al prossimo `claude plugins update {id}`.',
     sectionSkills: 'Skills',
     sectionAgents: 'Agents',
+    sectionCommands: 'Comandi',
     sectionHook:   'Hook',
     pluginsInMkt:  'Plugin nel marketplace',
     loadingPlugins:'Caricamento lista plugin…',
@@ -450,6 +458,10 @@ window.LOCALES.it = {
     unsavedClose:   'Hai modifiche non salvate. Vuoi davvero chiudere?',
     saved:          'File salvato — ricordati che verrà sovrascritto al prossimo `claude plugins update`',
     saveError:      'Errore salvataggio: {msg}',
+    editOwnTip:     'Modifica il file .md (è un tuo file: la modifica è permanente)',
+    warnOwnTitle:   'Stai modificando il file originale',
+    warnOwnBody:    'Il salvataggio scrive direttamente su {file}. Nessun aggiornamento di plugin lo sovrascriverà.',
+    savedOwn:       'File salvato',
   },
 
   // Command palette (Cmd+K) — labels comuni
@@ -757,6 +769,12 @@ window.LOCALES.it = {
   skillAgent: {
     managedByPlugin:    'Gestito dal plugin {plugin}',
     managedByPluginTip: 'Skill e agent non si attivano singolarmente: si abilitano o disabilitano insieme al plugin che li fornisce. Usa il toggle del plugin nella sezione Plugin.',
+    reveal:             'Mostra nella cartella',
+    userNote:           'Personale, attiva in ogni sessione',
+    projectNote:        'Del progetto {project}',
+    standaloneTip:      'Non arriva da un plugin: Claude Code la carica dalla cartella .claude. Non ha un interruttore: per disattivarla sposta o elimina il suo file o la sua cartella.',
+    brokenShort:        'Claude Code lo ignora',
+    brokenHint:         'Il link punta a {target}, che non esiste più. Claude Code lo ignora: puoi eliminarlo.',
   },
 
   // Hooks page
@@ -965,9 +983,9 @@ window.LOCALES.it = {
     bigNoPluginMsg:  'Vai al Marketplace per scoprire e installare plugin Claude Code. Una volta installati appariranno qui con tutti i loro skill, agent, hook e MCP server.',
     bigNoPluginCta:  'Vai al Marketplace',
     bigNoSkillTitle: 'Nessuna skill disponibile',
-    bigNoSkillMsg:   'Le skill vengono fornite dai plugin che installi. Installa un plugin che esponga skill (es. claude-mem, andrej-karpathy-skills) per popolare questa sezione.',
+    bigNoSkillMsg:   'Nessuna skill trovata, né nei plugin installati né in ~/.claude/skills. Installa un plugin che esponga skill (es. claude-mem, andrej-karpathy-skills) oppure crea in ~/.claude/skills una cartella con un file SKILL.md.',
     bigNoAgentTitle: 'Nessun agent disponibile',
-    bigNoAgentMsg:   'Gli agent vengono forniti dai plugin che installi. Installa un plugin che esponga agent (es. bug-hunter, code-review) per popolare questa sezione.',
+    bigNoAgentMsg:   'Nessun agent trovato, né nei plugin installati né in ~/.claude/agents. Installa un plugin che esponga agent (es. bug-hunter, code-review) oppure aggiungi un file .md in ~/.claude/agents.',
     bigNoMcpTitle:   'Nessun MCP server configurato',
     bigNoMcpMsg:     'Aggiungi un MCP server (HTTP, SSE o stdio) col bottone "+ MCP" in alto, oppure installa un plugin che esponga MCP server (es. cloudflare, neon-plugin, context7).',
     bigNoMcpCta:     'Aggiungi MCP',
@@ -1190,6 +1208,7 @@ window.LOCALES.it = {
 
   // Toast messages comuni
   toast: {
+    readItemError:  'Errore lettura {kind}: {msg}',
     dataReloaded:    'Dati ricaricati',
     copied:          'Copiato negli appunti',
     hookJsonCopied:  'JSON hook copiato negli appunti',

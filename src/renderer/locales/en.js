@@ -206,6 +206,9 @@ window.LOCALES.en = {
     scopeProgetto:    'project',
     scopeLocalNamed:  'local: {name}',
     scopeLocalParen:  'local ({name})',
+    scopeUser:        'user',
+    command:          'command',
+    brokenLink:       'broken link',
     pluginActive:     'active',
     healthError:      'health: error',
     healthWarn:       'health: warning',
@@ -298,6 +301,10 @@ window.LOCALES.en = {
 
   // Filter chips
   filter: {
+    allSkills:     'All',
+    sourcePlugin:  'Plugins',
+    sourceUser:    'User',
+    sourceProject: 'Project',
     all:           'All',
     allKinds:      'All types',
     fromPlugin:    'From plugins',
@@ -329,6 +336,7 @@ window.LOCALES.en = {
     modifiedNote:  '\n\nThe change will be overwritten by the next `claude plugins update {id}`.',
     sectionSkills: 'Skills',
     sectionAgents: 'Agents',
+    sectionCommands: 'Commands',
     sectionHook:   'Hook',
     pluginsInMkt:  'Plugins in the marketplace',
     loadingPlugins:'Loading plugin list…',
@@ -450,6 +458,10 @@ window.LOCALES.en = {
     unsavedClose:   'You have unsaved changes. Close anyway?',
     saved:          'File saved — remember it will be overwritten on the next `claude plugins update`',
     saveError:      'Save error: {msg}',
+    editOwnTip:     'Edit the .md file (it is your own file: the change is permanent)',
+    warnOwnTitle:   'You are editing the original file',
+    warnOwnBody:    'Saving writes directly to {file}. No plugin update will overwrite it.',
+    savedOwn:       'File saved',
   },
 
   // Command palette (Cmd+K) — common labels
@@ -747,6 +759,12 @@ window.LOCALES.en = {
   skillAgent: {
     managedByPlugin:    'Managed by the {plugin} plugin',
     managedByPluginTip: 'Skills and agents can\'t be toggled individually: they\'re enabled or disabled together with the plugin that provides them. Use the plugin toggle in the Plugins section.',
+    reveal:             'Show in folder',
+    userNote:           'Yours, active in every session',
+    projectNote:        'From project {project}',
+    standaloneTip:      'Not from a plugin: Claude Code loads it from the .claude folder. It has no toggle: to turn it off, move or delete its file or folder.',
+    brokenShort:        'Claude Code ignores it',
+    brokenHint:         'The link points to {target}, which no longer exists. Claude Code ignores it: you can delete it.',
   },
 
   // Hooks page
@@ -955,9 +973,9 @@ window.LOCALES.en = {
     bigNoPluginMsg:  'Go to Marketplace to discover and install Claude Code plugins. Once installed they will appear here with all their skills, agents, hooks and MCP servers.',
     bigNoPluginCta:  'Go to Marketplace',
     bigNoSkillTitle: 'No skill available',
-    bigNoSkillMsg:   'Skills are provided by the plugins you install. Install a plugin that exposes skills (e.g. claude-mem, andrej-karpathy-skills) to populate this section.',
+    bigNoSkillMsg:   'No skills found, neither in installed plugins nor in ~/.claude/skills. Install a plugin that exposes skills (e.g. claude-mem, andrej-karpathy-skills) or create a folder with a SKILL.md file in ~/.claude/skills.',
     bigNoAgentTitle: 'No agent available',
-    bigNoAgentMsg:   'Agents are provided by the plugins you install. Install a plugin that exposes agents (e.g. bug-hunter, code-review) to populate this section.',
+    bigNoAgentMsg:   'No agents found, neither in installed plugins nor in ~/.claude/agents. Install a plugin that exposes agents (e.g. bug-hunter, code-review) or add a .md file to ~/.claude/agents.',
     bigNoMcpTitle:   'No MCP server configured',
     bigNoMcpMsg:     'Add an MCP server (HTTP, SSE or stdio) with the "+ MCP" button above, or install a plugin that exposes MCP servers (e.g. cloudflare, neon-plugin, context7).',
     bigNoMcpCta:     'Add MCP',
@@ -1180,6 +1198,7 @@ window.LOCALES.en = {
 
   // Toast messages comuni
   toast: {
+    readItemError:  'Error reading {kind}: {msg}',
     dataReloaded:    'Data reloaded',
     copied:          'Copied to clipboard',
     hookJsonCopied:  'Hook JSON copied to clipboard',

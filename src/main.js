@@ -90,6 +90,7 @@ const STATS_LIVE = require('./lib/stats-live');
 const SESSIONS   = require('./lib/sessions');
 const PTY     = require('./lib/pty');
 const APIKEY  = require('./lib/apikey');
+const INVENTORY = require('./lib/inventory');
 
 /* ── CONFIG PATHS ──────────────────────────────────────────────────────── */
 
@@ -263,112 +264,130 @@ function readHookEvents(hooksDir) {
 
 function scanCache() {
   const details = {};
-  if (!fs.existsSync(CACHE_DIR)) {
-    LAST_CACHE = details;
-    return details;
+  // v1.2.14 — Cartella da leggere per ogni plugin. Base: l'ultima versione in
+  // ordine alfabetico nella cache (vecchio comportamento). Per i plugin
+  // installati vince installPath di installed_plugins.json, cioè la versione
+  // che Claude Code usa davvero: con due versioni in cache l'ordine alfabetico
+  // sceglieva spesso quella sbagliata (es. 1.2.2 al posto della 1.0.0 in uso).
+  const roots = {};
+  if (fs.existsSync(CACHE_DIR)) {
+    for (const mkt of fs.readdirSync(CACHE_DIR)) {
+      const mktPath = path.join(CACHE_DIR, mkt);
+      if (!fs.statSync(mktPath).isDirectory()) continue;
+
+      for (const pluginName of fs.readdirSync(mktPath)) {
+        const pluginPath = path.join(mktPath, pluginName);
+        if (!fs.statSync(pluginPath).isDirectory()) continue;
+
+        const versions = fs.readdirSync(pluginPath)
+          .filter(d => fs.statSync(path.join(pluginPath, d)).isDirectory());
+        if (!versions.length) continue;
+        roots[`${pluginName}@${mkt}`] = { root: path.join(pluginPath, versions[versions.length - 1]), pluginPath };
+      }
+    }
+  }
+  const installedRaw = safeReadJson(INSTALLED, { plugins: {} });
+  if (installedRaw.plugins && !Array.isArray(installedRaw.plugins)) {
+    for (const fullId of Object.keys(installedRaw.plugins)) {
+      const ip = INVENTORY.installPathFor(installedRaw, fullId);
+      if (ip) roots[fullId] = { root: ip, pluginPath: roots[fullId]?.pluginPath || path.dirname(ip) };
+    }
   }
 
-  for (const mkt of fs.readdirSync(CACHE_DIR)) {
-    const mktPath = path.join(CACHE_DIR, mkt);
-    if (!fs.statSync(mktPath).isDirectory()) continue;
-
-    for (const pluginName of fs.readdirSync(mktPath)) {
-      const pluginPath = path.join(mktPath, pluginName);
-      if (!fs.statSync(pluginPath).isDirectory()) continue;
-
-      const versions = fs.readdirSync(pluginPath)
-        .filter(d => fs.statSync(path.join(pluginPath, d)).isDirectory());
-      if (!versions.length) continue;
-
-      const ver  = versions[versions.length - 1];
-      const root = path.join(pluginPath, ver);
-
-      let meta = {};
-      for (const loc of ['plugin.json', '.claude-plugin/plugin.json', '.codex-plugin/plugin.json']) {
-        const mp = path.join(root, loc);
-        if (fs.existsSync(mp)) { meta = safeReadJson(mp, {}); break; }
-      }
-
-      const skillsDir = path.join(root, 'skills');
-      const agentsDir = path.join(root, 'agents');
-      const hooksDir  = path.join(root, 'hooks');
-      // v1.1.36 — la convenzione standard di Claude Code è `.mcp.json` (dotfile)
-      // nella root del plugin; prima si controllava solo `mcp.json` (senza punto)
-      // e `.claude-plugin/mcp.json`, quindi quasi tutti i plugin con MCP (che usano
-      // `.mcp.json`) risultavano senza MCP. Ora si conta anche il numero di server.
-      const mcpPaths  = [
-        path.join(root, '.mcp.json'),
-        path.join(root, 'mcp.json'),
-        path.join(root, '.claude-plugin', 'mcp.json'),
-      ];
-      const mcpFile = mcpPaths.find(p => fs.existsSync(p));
-      // .mcp.json ha due formati (wrapper mcpServers o top-level): normalizzati
-      // da MCP.mcpServersFromRaw, condiviso con readPluginMcpDeclarations.
-      const mcpServerNames = mcpFile
-        ? Object.keys(MCP.mcpServersFromRaw(safeReadJson(mcpFile, {})))
-        : [];
-      const mcpCount = mcpServerNames.length;
-
-      // Skills: each skill is a subdirectory containing SKILL.md
-      const skills = fs.existsSync(skillsDir)
-        ? fs.readdirSync(skillsDir).filter(d => fs.statSync(path.join(skillsDir, d)).isDirectory())
-        : [];
-      // Agents: each agent is a .md file inside agents/ (not a directory)
-      const agents = fs.existsSync(agentsDir)
-        ? fs.readdirSync(agentsDir)
-            .filter(f => f.endsWith('.md') && f.toLowerCase() !== 'readme.md')
-            .map(f => f.replace(/\.md$/, ''))
-        : [];
-
-      // Health check (idea #3): scan SKILL.md / agent.md frontmatter
-      const skillHealth = {};
-      skills.forEach(s => {
-        skillHealth[s] = checkMarkdownHealth(path.join(skillsDir, s, 'SKILL.md'));
-      });
-      const agentHealth = {};
-      agents.forEach(a => {
-        agentHealth[a] = checkMarkdownHealth(path.join(agentsDir, a + '.md'));
-      });
-
-      // v1.0.82 — installedAt per ordinamento "Aggiunti di recente" in sezione
-      // Plugin: birthtime della dir cache del plugin (timestamp di prima creazione).
-      let installedAt = '';
-      try {
-        const st = fs.statSync(pluginPath);
-        installedAt = (st.birthtime || st.ctime || st.mtime).toISOString();
-      } catch { /* ignore */ }
-
-      const key = `${pluginName}@${mkt}`;
-      details[key] = {
-        name:        meta.name        || pluginName,
-        description: meta.description || '',
-        version:     meta.version     || ver,
-        author:      meta.author      || '',
-        path:        root,
-        installedAt,
-        skills,
-        agents,
-        skillHealth,
-        agentHealth,
-        hasMcp:   mcpCount > 0,
-        mcpCount,
-        mcpServerNames,
-        hasHooks: fs.existsSync(hooksDir) && fs.readdirSync(hooksDir).length > 0,
-        hookEvents: readHookEvents(hooksDir),
-      };
+  for (const [key, { root, pluginPath }] of Object.entries(roots)) {
+    const pluginName = key.slice(0, key.lastIndexOf('@'));
+    let meta = {};
+    for (const loc of ['plugin.json', '.claude-plugin/plugin.json', '.codex-plugin/plugin.json']) {
+      const mp = path.join(root, loc);
+      if (fs.existsSync(mp)) { meta = safeReadJson(mp, {}); break; }
     }
+
+    const hooksDir  = path.join(root, 'hooks');
+    // v1.1.36 — la convenzione standard di Claude Code è `.mcp.json` (dotfile)
+    // nella root del plugin; prima si controllava solo `mcp.json` (senza punto)
+    // e `.claude-plugin/mcp.json`, quindi quasi tutti i plugin con MCP (che usano
+    // `.mcp.json`) risultavano senza MCP. Ora si conta anche il numero di server.
+    const mcpPaths  = [
+      path.join(root, '.mcp.json'),
+      path.join(root, 'mcp.json'),
+      path.join(root, '.claude-plugin', 'mcp.json'),
+    ];
+    const mcpFile = mcpPaths.find(p => fs.existsSync(p));
+    // .mcp.json ha due formati (wrapper mcpServers o top-level): normalizzati
+    // da MCP.mcpServersFromRaw, condiviso con readPluginMcpDeclarations.
+    const mcpServerNames = mcpFile
+      ? Object.keys(MCP.mcpServersFromRaw(safeReadJson(mcpFile, {})))
+      : [];
+    const mcpCount = mcpServerNames.length;
+
+    // v1.2.14 — skill (sottocartelle con SKILL.md), agent (.md piatti) e
+    // comandi (commands/*.md), inclusi i percorsi extra dichiarati in plugin.json.
+    const items = INVENTORY.scanPluginItems(root, meta);
+    const toFiles = list => Object.fromEntries(list.map(i => [i.name, i.file]));
+    const skillFiles   = toFiles(items.skills);
+    const agentFiles   = toFiles(items.agents);
+    const commandFiles = toFiles(items.commands);
+    const skills   = Object.keys(skillFiles);
+    const agents   = Object.keys(agentFiles);
+    const commands = Object.keys(commandFiles);
+
+    // Health check (idea #3): scan SKILL.md / agent.md frontmatter
+    const skillHealth = {};
+    skills.forEach(s => { skillHealth[s] = checkMarkdownHealth(skillFiles[s]); });
+    const agentHealth = {};
+    agents.forEach(a => { agentHealth[a] = checkMarkdownHealth(agentFiles[a]); });
+
+    // v1.0.82 — installedAt per ordinamento "Aggiunti di recente" in sezione
+    // Plugin: birthtime della dir cache del plugin (timestamp di prima creazione).
+    let installedAt = '';
+    try {
+      const st = fs.statSync(pluginPath);
+      installedAt = (st.birthtime || st.ctime || st.mtime).toISOString();
+    } catch { /* ignore */ }
+
+    details[key] = {
+      name:        meta.name        || pluginName,
+      description: meta.description || '',
+      version:     meta.version     || path.basename(root),
+      author:      meta.author      || '',
+      path:        root,
+      installedAt,
+      skills,
+      agents,
+      commands,
+      skillFiles,
+      agentFiles,
+      commandFiles,
+      skillHealth,
+      agentHealth,
+      hasMcp:   mcpCount > 0,
+      mcpCount,
+      mcpServerNames,
+      hasHooks: fs.existsSync(hooksDir) && fs.readdirSync(hooksDir).length > 0,
+      hookEvents: readHookEvents(hooksDir),
+    };
   }
   LAST_CACHE = details;
   return details;
+}
+
+// v1.2.14 — Dettagli dei soli plugin installati (la cache contiene anche
+// versioni vecchie e cartelle temporanee che Claude Code non carica).
+function installedDetails(pluginIds) {
+  const all = scanCache();
+  return Object.fromEntries(pluginIds.filter(id => all[id]).map(id => [id, all[id]]));
 }
 
 function scanLocalProjects(trackedProjects) {
   // Per ogni progetto tracciato leggi <project>/.claude/plugins/installed_plugins.json
   // e scan cache locale per skills/agents. Ritorna oggetto:
   // { localPlugins: [{ fullId, projectPath, projectName, scope: 'local' }],
-  //   localSkills:  [{ name, plugin, projectName, scope: 'local' }],
-  //   localAgents:  [{ name, plugin, projectName, scope: 'local' }] }
-  const out = { localPlugins: [], localSkills: [], localAgents: [] };
+  //   localSkills:  [{ name, plugin, file, projectName, scope: 'local' }],
+  //   localAgents:  [{ name, plugin, file, projectName, scope: 'local' }],
+  //   projectItems: [{ projectPath, projectName, skills, agents, commands, broken }] }
+  // v1.2.14 — projectItems = skill/agent/comandi "sciolti" in <project>/.claude/,
+  // che Claude Code carica quando lavori in quel progetto.
+  const out = { localPlugins: [], localSkills: [], localAgents: [], projectItems: [] };
   if (!Array.isArray(trackedProjects)) return out;
 
   for (const projectPath of trackedProjects) {
@@ -377,14 +396,16 @@ function scanLocalProjects(trackedProjects) {
     const localPluginsFile = path.join(projectPath, '.claude', 'plugins', 'installed_plugins.json');
     const localCacheDir    = path.join(projectPath, '.claude', 'plugins', 'cache');
 
+    out.projectItems.push({ projectPath, projectName, ...INVENTORY.scanStandalone(path.join(projectPath, '.claude')) });
+
     // Plugin list (formato v2)
-    if (fs.existsSync(localPluginsFile)) {
-      const raw = safeReadJson(localPluginsFile, { plugins: {} });
-      const ids = Array.isArray(raw.plugins) ? raw.plugins : Object.keys(raw.plugins || {});
-      ids.forEach(fullId => out.localPlugins.push({
-        fullId, projectPath, projectName, scope: 'local',
-      }));
-    }
+    const localInstalled = fs.existsSync(localPluginsFile)
+      ? safeReadJson(localPluginsFile, { plugins: {} })
+      : { plugins: {} };
+    const ids = Array.isArray(localInstalled.plugins) ? localInstalled.plugins : Object.keys(localInstalled.plugins || {});
+    ids.forEach(fullId => out.localPlugins.push({
+      fullId, projectPath, projectName, scope: 'local',
+    }));
 
     // Cache scan locale (per skills + agents)
     if (!fs.existsSync(localCacheDir)) continue;
@@ -397,24 +418,16 @@ function scanLocalProjects(trackedProjects) {
         const versions = fs.readdirSync(pluginRoot)
           .filter(d => fs.statSync(path.join(pluginRoot, d)).isDirectory());
         if (!versions.length) continue;
-        const versionRoot = path.join(pluginRoot, versions[versions.length - 1]);
-        const skillsDir = path.join(versionRoot, 'skills');
-        const agentsDir = path.join(versionRoot, 'agents');
-        if (fs.existsSync(skillsDir)) {
-          fs.readdirSync(skillsDir)
-            .filter(d => fs.statSync(path.join(skillsDir, d)).isDirectory())
-            .forEach(name => out.localSkills.push({
-              name, plugin: pluginName + '@' + mkt, projectName, projectPath, scope: 'local',
-            }));
-        }
-        if (fs.existsSync(agentsDir)) {
-          fs.readdirSync(agentsDir)
-            .filter(f => f.endsWith('.md') && f.toLowerCase() !== 'readme.md')
-            .map(f => f.replace(/\.md$/, ''))
-            .forEach(name => out.localAgents.push({
-              name, plugin: pluginName + '@' + mkt, projectName, projectPath, scope: 'local',
-            }));
-        }
+        const fullId = pluginName + '@' + mkt;
+        const versionRoot = INVENTORY.installPathFor(localInstalled, fullId)
+          || path.join(pluginRoot, versions[versions.length - 1]);
+        const items = INVENTORY.scanPluginItems(versionRoot, {});
+        items.skills.forEach(i => out.localSkills.push({
+          name: i.name, file: i.file, plugin: fullId, projectName, projectPath, scope: 'local',
+        }));
+        items.agents.forEach(i => out.localAgents.push({
+          name: i.name, file: i.file, plugin: fullId, projectName, projectPath, scope: 'local',
+        }));
       }
     }
   }
@@ -463,6 +476,24 @@ function readMarketplaceAddedAt(marketplaceId) {
   } catch { return null; }
 }
 
+// v1.2.14 — File di skill/agent/comandi fuori dalla cache dei plugin globali
+// (personali, di progetto, plugin locali) che il renderer può aprire.
+// Mappa path assoluto → { editable }. Si rigenera a ogni readAllData: gli
+// handler read/write/reveal-item-file rifiutano qualsiasi path non presente qui.
+let ITEM_FILES = new Map();
+
+function buildItemFileAllowlist(userData, localData) {
+  const map = new Map();
+  const addStandalone = (src) => {
+    [...src.skills, ...src.agents, ...src.commands].forEach(i => map.set(i.file, { editable: true }));
+    src.broken.forEach(b => map.set(b.path, { editable: false, broken: true }));
+  };
+  addStandalone(userData);
+  (localData.projectItems || []).forEach(addStandalone);
+  [...localData.localSkills, ...localData.localAgents].forEach(i => map.set(i.file, { editable: false }));
+  ITEM_FILES = map;
+}
+
 async function readAllData() {
   const installedRaw = safeReadJson(INSTALLED, { version: 2, plugins: {} });
   // plugins can be an array of IDs (old format) or an object {id: [...entries...]} (v2)
@@ -479,6 +510,9 @@ async function readAllData() {
   // v1.0.11 — Scope locale: scan progetti tracciati
   const appState = readState();
   const localData = scanLocalProjects(appState.trackedProjects || []);
+  // v1.2.14 — skill/agent/comandi personali in ~/.claude/{skills,agents,commands}
+  const userData = INVENTORY.scanStandalone(CLAUDE_DIR);
+  buildItemFileAllowlist(userData, localData);
 
   // Source of truth for enabled/disabled state is ~/.claude/settings.json
   // field 'enabledPlugins' (boolean per pluginId).
@@ -526,6 +560,7 @@ async function readAllData() {
     hookDepsAvailability,
     trackedProjects: appState.trackedProjects || [],
     localData,
+    userData,
     claudeDir:    CLAUDE_DIR,
     claudeBin:    CLAUDE_BIN,
     platform:     process.platform,
@@ -638,6 +673,16 @@ function createWindow() {
       if (newHash && newHash === lastConfigHash[f]) return;
       lastConfigHash[f] = newHash;
       notifyConfigChanged();
+    });
+  });
+
+  // v1.2.14 — skill/agent/comandi personali: aggiungere o togliere una voce
+  // cambia l'mtime della cartella. Polling come sopra (fs.watch su macOS perde
+  // gli eventi con rename atomici); una cartella che non esiste ancora viene
+  // segnalata quando la crei.
+  ['skills', 'agents', 'commands'].forEach(sub => {
+    fs.watchFile(path.join(CLAUDE_DIR, sub), { interval: 2000 }, (curr, prev) => {
+      if (curr.mtimeMs !== prev.mtimeMs) notifyConfigChanged();
     });
   });
 
@@ -1128,7 +1173,8 @@ ipcMain.handle('get-stats', async (_e, { force } = {}) => {
         Object.entries(cache.modelUsage || {}).map(([m, u]) => [m, PRICING.costForUsage(m, u)])
       ) : {},
     },
-    contextBreakdown: STATS.computeContextBreakdown(CLAUDE_DIR, blockedSet, mcpInfo),
+    contextBreakdown: STATS.computeContextBreakdown(CLAUDE_DIR, mcpInfo,
+      INVENTORY.contextFiles(installedDetails(pluginIds), blockedSet, INVENTORY.scanStandalone(CLAUDE_DIR))),
     projects: projects.slice(0, 20).map(key => {
       const t = projectTokens[key] || {};
       // path: usa cwd reale dal JSONL se disponibile (più accurato del decode ambiguo
@@ -1608,20 +1654,33 @@ ipcMain.handle('remove-tracked-project', async (_e, projectPath) => {
 
 // Watcher dinamici per progetti tracciati
 const TRACKED_WATCHERS = new Map();
+// v1.2.14 — oltre a installed_plugins.json osserva le cartelle skills/agents/
+// commands del progetto (skill e agent di progetto).
+function trackedProjectWatchPaths(projectPath) {
+  const base = path.join(projectPath, '.claude');
+  return [
+    path.join(base, 'plugins', 'installed_plugins.json'),
+    path.join(base, 'skills'),
+    path.join(base, 'agents'),
+    path.join(base, 'commands'),
+  ];
+}
 function watchTrackedProject(projectPath) {
-  const f = path.join(projectPath, '.claude', 'plugins', 'installed_plugins.json');
-  if (TRACKED_WATCHERS.has(f)) return;
-  fs.watchFile(f, { interval: 2000 }, (curr, prev) => {
-    if (curr.mtimeMs === prev.mtimeMs) return;
-    if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('config-changed');
-  });
-  TRACKED_WATCHERS.set(f, true);
+  for (const f of trackedProjectWatchPaths(projectPath)) {
+    if (TRACKED_WATCHERS.has(f)) continue;
+    fs.watchFile(f, { interval: 2000 }, (curr, prev) => {
+      if (curr.mtimeMs === prev.mtimeMs) return;
+      if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('config-changed');
+    });
+    TRACKED_WATCHERS.set(f, true);
+  }
 }
 function unwatchTrackedProject(projectPath) {
-  const f = path.join(projectPath, '.claude', 'plugins', 'installed_plugins.json');
-  if (TRACKED_WATCHERS.has(f)) {
-    fs.unwatchFile(f);
-    TRACKED_WATCHERS.delete(f);
+  for (const f of trackedProjectWatchPaths(projectPath)) {
+    if (TRACKED_WATCHERS.has(f)) {
+      fs.unwatchFile(f);
+      TRACKED_WATCHERS.delete(f);
+    }
   }
 }
 
@@ -1677,6 +1736,15 @@ ipcMain.handle('set-claude-bin', async (_e, binPath) => {
 function resolvePluginPath(fullId) {
   if (!validPluginId(fullId)) return null;
   return LAST_CACHE[fullId]?.path || null;
+}
+
+// v1.2.14 — File .md di una skill/agent/comando di plugin, dalle mappe
+// costruite in scanCache (tengono conto dei percorsi extra di plugin.json).
+function pluginItemFile(fullId, kind, name) {
+  const d = LAST_CACHE[fullId];
+  if (!d) return null;
+  const map = kind === 'skill' ? d.skillFiles : kind === 'agent' ? d.agentFiles : kind === 'command' ? d.commandFiles : null;
+  return map && Object.prototype.hasOwnProperty.call(map, name) ? map[name] : null;
 }
 
 ipcMain.handle('open-plugin-path', async (_e, fullId) => {
@@ -1787,10 +1855,8 @@ ipcMain.handle('read-markdown-file', async (_e, { fullId, kind, name }) => {
   const root = resolvePluginPath(fullId);
   if (!root) return { success: false, error: 'Path plugin non trovato.' };
   if (!/^[a-zA-Z0-9][a-zA-Z0-9_.-]*$/.test(name)) return { success: false, error: 'Nome non valido.' };
-  let filePath;
-  if (kind === 'skill')      filePath = path.join(root, 'skills', name, 'SKILL.md');
-  else if (kind === 'agent') filePath = path.join(root, 'agents', name + '.md');
-  else return { success: false, error: 'Tipo non riconosciuto.' };
+  const filePath = pluginItemFile(fullId, kind, name);
+  if (!filePath) return { success: false, error: 'Tipo non riconosciuto.' };
   if (!fs.existsSync(filePath)) return { success: false, error: 'File non trovato.' };
   try {
     const content = fs.readFileSync(filePath, 'utf8');
@@ -1856,10 +1922,8 @@ ipcMain.handle('write-markdown-file', async (_e, { fullId, kind, name, content }
   if (typeof content !== 'string') return { success: false, error: 'Contenuto non valido (richiesta string).' };
   // Limite hardcoded per sanity: nessun file .md skill/agent dovrebbe superare 500KB
   if (content.length > 500 * 1024) return { success: false, error: 'File troppo grande (max 500KB).' };
-  let filePath;
-  if (kind === 'skill')      filePath = path.join(root, 'skills', name, 'SKILL.md');
-  else if (kind === 'agent') filePath = path.join(root, 'agents', name + '.md');
-  else return { success: false, error: 'Tipo non riconosciuto.' };
+  const filePath = pluginItemFile(fullId, kind, name);
+  if (!filePath) return { success: false, error: 'Tipo non riconosciuto.' };
   // Verifica che il path finale sia effettivamente dentro root (paranoia su edge cases)
   const resolved = path.resolve(filePath);
   if (!resolved.startsWith(path.resolve(root) + path.sep)) {
@@ -1877,4 +1941,36 @@ ipcMain.handle('write-markdown-file', async (_e, { fullId, kind, name, content }
     appendActivity({ kind: kind, action: 'edit', target: name + ' (' + fullId + ')', success: false, error: e.message });
     return { success: false, error: e.message };
   }
+});
+
+// v1.2.14 — Anteprima/modifica/Finder per skill, agent e comandi fuori dai
+// plugin globali. Accettano solo path presenti in ITEM_FILES (vedi
+// buildItemFileAllowlist): il renderer non può leggere o scrivere altro.
+ipcMain.handle('read-item-file', async (_e, { file } = {}) => {
+  const entry = typeof file === 'string' ? ITEM_FILES.get(file) : null;
+  if (!entry || entry.broken) return { success: false, error: 'File non consentito.' };
+  try { return { success: true, content: fs.readFileSync(file, 'utf8'), editable: entry.editable }; }
+  catch (e) { return { success: false, error: e.message }; }
+});
+
+ipcMain.handle('write-item-file', async (_e, { file, content } = {}) => {
+  const entry = typeof file === 'string' ? ITEM_FILES.get(file) : null;
+  if (!entry || !entry.editable) return { success: false, error: 'File non consentito.' };
+  if (typeof content !== 'string') return { success: false, error: 'Contenuto non valido (richiesta string).' };
+  if (content.length > 500 * 1024) return { success: false, error: 'File troppo grande (max 500KB).' };
+  if (!fs.existsSync(file)) return { success: false, error: 'File non trovato.' };
+  try {
+    fs.writeFileSync(file, content, 'utf8');
+    appendActivity({ kind: 'edit', action: 'edit', target: file, success: true });
+    return { success: true };
+  } catch (e) {
+    appendActivity({ kind: 'edit', action: 'edit', target: file, success: false, error: e.message });
+    return { success: false, error: e.message };
+  }
+});
+
+ipcMain.handle('reveal-item-file', async (_e, { file } = {}) => {
+  if (typeof file !== 'string' || !ITEM_FILES.has(file)) return { success: false, error: 'File non consentito.' };
+  shell.showItemInFolder(file);
+  return { success: true };
 });

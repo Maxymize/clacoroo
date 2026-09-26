@@ -2,6 +2,14 @@
 
 > Italiano (canonico). English translation: [CHANGELOG.en.md](./CHANGELOG.en.md) — allineato a ogni release.
 
+## v1.2.14 — 2026-09-26 — Tutte le skill e gli agent che Claude Code carica
+
+- [FEATURE] Skill e Agent mostrano anche le tue voci personali in `~/.claude/skills`, `~/.claude/agents` e `~/.claude/commands` (badge PERSONALE) e quelle nelle cartelle `.claude` dei progetti tracciati. Si aprono in anteprima, si modificano sul file originale e hanno "Mostra nella cartella"
+- [FEATURE] Filtro Tutte / Plugin / Personali / Progetto in cima alle sezioni Skill e Agent, con il numero di voci per ogni fonte
+- [FEATURE] I comandi dei plugin (per esempio `pm-product-discovery:brainstorm`) compaiono tra le skill con il tag COMANDO e nel dettaglio del plugin
+- [FIX] Con più versioni di un plugin in cache, CLACOROO leggeva l'ultima in ordine alfabetico invece di quella installata: skill e agent ora corrispondono alla versione che Claude Code usa davvero
+- [IMPROVEMENT] I link simbolici rotti in `~/.claude/skills` sono segnalati con il badge LINK ROTTO; KPI della Dashboard, stima del contesto e palette comandi contano tutte le fonti
+
 ## v1.2.13 — 2026-09-02 — Modelli recenti nei pesi e nel contesto, range dei KPI
 
 - [FEATURE] "Plugin per peso" e la stima del contesto ora offrono anche Opus 5, Opus 4.8, Sonnet 5, Fable 5 e 5.1. Claude Code misura i pesi solo per Opus 4.7 e Sonnet 4.6, ma i modelli nuovi condividono il tokenizer di uno dei due: CLACOROO legge quella misura e lo dice sotto al totale

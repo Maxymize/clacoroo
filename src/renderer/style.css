@@ -4149,6 +4149,23 @@ body {
 }
 .scope-badge.scope-global { background: rgba(106,155,204,.18); color: #9cc1ea; }
 .scope-badge.scope-local  { background: rgba(120,140,93,.22); color: #b8c79a; }
+.scope-badge.scope-user   { background: rgba(167,139,250,.18); color: #c4b5fd; }
+/* v1.2.14 — tag "comando" / "link rotto" su chip e card skill/agent */
+.kind-tag {
+  display: inline-block;
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  padding: 2px 7px;
+  border-radius: 4px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  background: rgba(176,174,165,.14);
+  color: var(--text-dim);
+  border: 1px solid rgba(176,174,165,.28);
+}
+.kind-tag-broken { background: rgba(239,68,68,.18); color: #fca5a5; border-color: rgba(239,68,68,.36); }
 
 .plugin-card.local-scope { opacity: .92; }
 .plugin-card.local-scope .pc-id { color: var(--text); }
