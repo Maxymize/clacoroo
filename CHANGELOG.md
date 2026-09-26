@@ -2,6 +2,12 @@
 
 > Italiano (canonico). English translation: [CHANGELOG.en.md](./CHANGELOG.en.md) — allineato a ogni release.
 
+## v1.2.15 — 2026-09-26 — Supporto a Claude Opus 5.5
+
+- [FEATURE] Opus 5.5 si può scegliere come modello predefinito in Claude Config, e l'alias Opus ora indica "Opus · Opus 5.5"
+- [FEATURE] "Plugin per peso" e la stima del contesto offrono Opus 5.5, con finestra da 1M e la misura dei pesi di Opus 4.7 (stesso tokenizer)
+- [FIX] Il costo API delle sessioni con Opus 5.5 usa il suo listino ($4 / $20, cache read $0,20): prima veniva calcolato col prezzo di Opus 5
+
 ## v1.2.14 — 2026-09-26 — Tutte le skill e gli agent che Claude Code carica
 
 - [FEATURE] Skill e Agent mostrano anche le tue voci personali in `~/.claude/skills`, `~/.claude/agents` e `~/.claude/commands` (badge PERSONALE) e quelle nelle cartelle `.claude` dei progetti tracciati. Si aprono in anteprima, si modificano sul file originale e hanno "Mostra nella cartella"

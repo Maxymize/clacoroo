@@ -18,8 +18,11 @@ const PRICING = {
   'claude-mythos-5':   { input: 10,    output: 50,    cacheWrite: 12.50,  cacheRead: 1.00 },
   // Opus family — top tier. Dalla generazione Opus 4.5 il prezzo è $5/$25
   // ($15/$75 era Opus 4.1 e precedenti — fix v1.2.4, prima sovrastimava 3x).
-  // Nota: Opus 5/4.8 hanno un "fast mode" a $10/$50 — non rilevabile dai dati
-  // di usage locali, quindi qui resta il listino standard.
+  // Nota: Opus 5/4.8 hanno un "fast mode" a $10/$50 (Opus 5.5: $8/$40) — non
+  // rilevabile dai dati di usage locali, quindi qui resta il listino standard.
+  // v1.2.14 — Opus 5.5 (settembre 2026): $4/$20, cache read $0.20, più economico
+  // di Opus 5. Prima finiva nel fallback famiglia e veniva stimato a $5/$25.
+  'claude-opus-5-5':   { input: 4,     output: 20,    cacheWrite: 5.00,   cacheRead: 0.20 },
   'claude-opus-5':     { input: 5,     output: 25,    cacheWrite: 6.25,   cacheRead: 0.50 },
   'claude-opus-4-8':   { input: 5,     output: 25,    cacheWrite: 6.25,   cacheRead: 0.50 },
   'claude-opus-4-7':   { input: 5,     output: 25,    cacheWrite: 6.25,   cacheRead: 0.50 },
@@ -49,7 +52,7 @@ function resolveModel(id) {
   // col prezzo corrente della sua famiglia invece di restare senza costo.
   if (/fable/i.test(id))  return PRICING['claude-fable-5-1'];
   if (/mythos/i.test(id)) return PRICING['claude-mythos-5'];
-  if (/opus/i.test(id))   return PRICING['claude-opus-5'];
+  if (/opus/i.test(id))   return PRICING['claude-opus-5-5'];
   if (/sonnet/i.test(id)) return PRICING['claude-sonnet-5'];
   if (/haiku/i.test(id))  return PRICING['claude-haiku-4-5'];
   return null;

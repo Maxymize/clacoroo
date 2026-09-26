@@ -2,6 +2,12 @@
 
 > English translation of [CHANGELOG.md](./CHANGELOG.md) (Italian, canonical). Updated in sync with each release.
 
+## v1.2.15 — 2026-09-26 — Claude Opus 5.5 support
+
+- [FEATURE] Opus 5.5 can be picked as the default model in Claude Config, and the Opus alias now reads "Opus · Opus 5.5"
+- [FEATURE] "Plugins by weight" and the context estimate offer Opus 5.5, with a 1M window and the Opus 4.7 weight measurement (same tokenizer)
+- [FIX] The API cost of sessions on Opus 5.5 uses its own price list ($4 / $20, cache read $0.20): it used to be computed at Opus 5 prices
+
 ## v1.2.14 — 2026-09-26 — Every skill and agent Claude Code loads
 
 - [FEATURE] Skills and Agents now also show your own items in `~/.claude/skills`, `~/.claude/agents` and `~/.claude/commands` (USER badge) and those in the `.claude` folders of tracked projects. They open in preview, can be edited on the original file and have "Show in folder"
