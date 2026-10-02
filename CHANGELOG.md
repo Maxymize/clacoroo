@@ -2,6 +2,13 @@
 
 > Italiano (canonico). English translation: [CHANGELOG.en.md](./CHANGELOG.en.md) — allineato a ogni release.
 
+## v1.2.16 — 2026-10-02 — Supporto a Claude Sonnet 5.5
+
+- [FEATURE] Sonnet 5.5 si può scegliere come modello predefinito in Claude Config, e l'alias Sonnet ora indica "Sonnet · Sonnet 5.5"
+- [FEATURE] "Plugin per peso" e la stima del contesto offrono Sonnet 5.5, con finestra da 1M e la misura dei pesi di Opus 4.7 (stesso tokenizer)
+- [FIX] Il costo API di Sonnet 5 usa $2 / $10, il prezzo standard confermato da Anthropic: il rincaro a $3 / $15 previsto per settembre non c'è stato, ma CLACOROO lo contava ancora
+- [FIX] Le sessioni con Sonnet 5.5 usano il suo listino ($2 / $10, cache read $0,20)
+
 ## v1.2.15 — 2026-09-26 — Supporto a Claude Opus 5.5
 
 - [FEATURE] Opus 5.5 si può scegliere come modello predefinito in Claude Config, e l'alias Opus ora indica "Opus · Opus 5.5"

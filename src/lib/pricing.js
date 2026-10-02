@@ -1,7 +1,7 @@
 'use strict';
 
 // Anthropic API pricing — USD per million tokens.
-// Fonte: docs ufficiali Anthropic (models overview), riverificati 2026-07-02.
+// Fonte: docs ufficiali Anthropic (pagina Pricing), riverificati 2026-10-02.
 // I prezzi possono cambiare, aggiornare qui se Anthropic li modifica.
 // Convenzione cache: cacheWrite = input × 1.25 (TTL 5m), cacheRead = input × 0.1. Per gli utenti Max plan il
 // costo reale è 0 (incluso nella subscription) — qui calcoliamo il
@@ -30,9 +30,12 @@ const PRICING = {
   'claude-opus-4-5':   { input: 5,     output: 25,    cacheWrite: 6.25,   cacheRead: 0.50 },
   'claude-opus-4-1':   { input: 15,    output: 75,    cacheWrite: 18.75,  cacheRead: 1.50 },
   // Sonnet family — balanced
-  // claude-sonnet-5: prezzo standard $3/$15 (intro $2/$10 fino al 31 ago 2026,
-  // temporaneo → non cablato qui: la mappa è statica e non conosce la data).
-  'claude-sonnet-5':   { input: 3,     output: 15,    cacheWrite: 3.75,   cacheRead: 0.30 },
+  // v1.2.16 — Sonnet 5 e 5.5: $2/$10. Il $2/$10 di Sonnet 5 era "introduttivo
+  // fino al 31 ago 2026", ma Anthropic ha confermato che è diventato il prezzo
+  // standard (nessun rincaro a $3/$15 dal 1 settembre). Fino a v1.2.15 qui
+  // restava $3/$15: i costi di Sonnet 5 risultavano gonfiati del 50%.
+  'claude-sonnet-5-5': { input: 2,     output: 10,    cacheWrite: 2.50,   cacheRead: 0.20 },
+  'claude-sonnet-5':   { input: 2,     output: 10,    cacheWrite: 2.50,   cacheRead: 0.20 },
   'claude-sonnet-4-6': { input: 3,     output: 15,    cacheWrite: 3.75,   cacheRead: 0.30 },
   'claude-sonnet-4-5': { input: 3,     output: 15,    cacheWrite: 3.75,   cacheRead: 0.30 },
   // Haiku family — fast/cheap. Haiku 4.5 = $1/$5 ($0.80/$4 era Haiku 3.5 — fix v1.2.4).
@@ -53,7 +56,7 @@ function resolveModel(id) {
   if (/fable/i.test(id))  return PRICING['claude-fable-5-1'];
   if (/mythos/i.test(id)) return PRICING['claude-mythos-5'];
   if (/opus/i.test(id))   return PRICING['claude-opus-5-5'];
-  if (/sonnet/i.test(id)) return PRICING['claude-sonnet-5'];
+  if (/sonnet/i.test(id)) return PRICING['claude-sonnet-5-5'];
   if (/haiku/i.test(id))  return PRICING['claude-haiku-4-5'];
   return null;
 }

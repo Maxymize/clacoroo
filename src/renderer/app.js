@@ -1743,7 +1743,7 @@ function formatTokenSize(n) {
 // v1.2.13 — Claude Code misura i pesi dei plugin solo per i modelli del suo
 // catalog (oggi claude-opus-4-7 e claude-sonnet-4-6). I modelli recenti
 // condividono il tokenizer di uno dei due (docs Anthropic, models overview):
-// Sonnet 5, Opus 4.8, Opus 5 e 5.5, Fable 5 e 5.1 usano quello introdotto con
+// Sonnet 5 e 5.5, Opus 4.8, Opus 5 e 5.5, Fable 5 e 5.1 usano quello introdotto con
 // Opus 4.7; Sonnet 4.6 e Haiku 4.5 quello precedente. Stesso tokenizer =
 // stessi token, quindi i modelli nuovi si mostrano leggendo la misura del
 // modello base. Da aggiornare insieme a CLAUDE_MODELS.
@@ -1754,6 +1754,7 @@ const TOKENIZER_BASE = {
   'claude-opus-5':     'claude-opus-4-7',
   'claude-opus-4-8':   'claude-opus-4-7',
   'claude-opus-4-7':   'claude-opus-4-7',
+  'claude-sonnet-5-5': 'claude-opus-4-7',
   'claude-sonnet-5':   'claude-opus-4-7',
   'claude-sonnet-4-6': 'claude-sonnet-4-6',
   'claude-haiku-4-5':  'claude-sonnet-4-6',
@@ -1779,6 +1780,7 @@ const MODEL_CONTEXT_WINDOW = {
   'claude-fable-5':   1000000,
   'claude-opus-5-5':  1000000,
   'claude-opus-5':    1000000,
+  'claude-sonnet-5-5':1000000,
   'claude-sonnet-5':  1000000,
   'claude-opus-4-8':  200000,
   'claude-opus-4-7':  200000,
@@ -5558,6 +5560,7 @@ const CLAUDE_MODELS = [
   'claude-opus-4-7',
   'claude-fable-5-1',
   'claude-fable-5',
+  'claude-sonnet-5-5',
   'claude-sonnet-5',
   'claude-sonnet-4-6',
   'claude-haiku-4-5',
@@ -6322,7 +6325,7 @@ function renderConfigContent(container, data) {
   // v1.2.1 — il dropdown rispecchia il selettore /model DI DEFAULT di Claude Code:
   // solo i tier, scritti come alias (es. "sonnet"), NON gli ID specifici
   // "altri/previous". Gli alias risolvono al modello corrente del tier
-  // (sonnet→Sonnet 5 oggi), quindi la lista non va aggiornata a ogni nuovo modello.
+  // (sonnet→Sonnet 5.5 oggi), quindi la lista non va aggiornata a ogni nuovo modello.
   // "fable" è valido: se Fable 5 non è disponibile Claude Code fa fallback al
   // default senza rompere. Valori già salvati in settings.json preservati (v1.1.16).
   // v1.2.6 — alias (seguono sempre l'ultimo modello della famiglia) + modelli
