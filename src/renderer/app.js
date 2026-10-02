@@ -607,9 +607,9 @@ async function init() {
       clearStatsCaches();  // invalida solo per il prossimo accesso, niente reload
       return;
     }
-    // Il toggle di un plugin ha già ricaricato i dati: niente secondo reload né toast
-    // per una modifica fatta da noi (watcher: polling 1s + debounce 2s).
-    if (Date.now() - lastPluginToggleAt < 5000) {
+    // Una nostra modifica ha già ricaricato i dati: niente secondo reload né toast
+    // (watcher: polling 1-2s + debounce 2s).
+    if (Date.now() - lastSelfChangeAt < 5000) {
       clearStatsCaches();
       return;
     }
@@ -3441,9 +3441,11 @@ function allAgentItems() {
   return [...globals, ...locals, ...allStandaloneItems(true)];
 }
 
-// Ultimo toggle di plugin fatto da questa app: il reload da config-changed che ne
-// segue (settings.json riscritto dalla CLI) sarebbe un secondo getData inutile.
-let lastPluginToggleAt = 0;
+// Ultima modifica alla configurazione fatta da questa app (toggle di un plugin,
+// eliminazione, Doctor): il reload da config-changed che ne segue (settings.json
+// riscritto dalla CLI, cartella skills/agents cambiata) sarebbe un secondo getData
+// inutile, con il suo toast.
+let lastSelfChangeAt = 0;
 
 // Esegue fn() con il toggle in stato "loading"; se fn() torna false ripristina
 // `revertTo` e riabilita il toggle.
@@ -3468,7 +3470,7 @@ async function setPluginEnabled(p, enable) {
   toast(t(enable ? 'plugin.toastEnabled' : 'plugin.toastDisabled', { id: p.id }), enable ? 'success' : 'warn');
   window.claudeAPI.showNotification(enable ? t('plugin.notifActivated') : t('plugin.notifDeactivated'), p.id);
   clearStatsCaches();  // forza re-fetch contextBreakdown → barra si aggiorna
-  lastPluginToggleAt = Date.now();
+  lastSelfChangeAt = Date.now();
   await loadData();
   return true;
 }
@@ -3511,6 +3513,7 @@ function buildItemPluginToggle(item, withLabel) {
 
 // Elimina una voce personale o di progetto (o un link rotto) spostandola nel
 // Cestino. Le voci dei plugin non si eliminano da qui: si disinstalla il plugin.
+// Torna true solo se la voce è stata eliminata (false: annullato o errore).
 async function deleteItem(item) {
   const choice = await window.claudeAPI.confirmDialog({
     title:   t('confirm.deleteItem.title', { name: item.name }),
@@ -3520,12 +3523,14 @@ async function deleteItem(item) {
     detail:  item.removePath,
     buttons: [t('button.cancel'), t('confirm.deleteItem.yes')],
   });
-  if (choice !== 1) return;
+  if (choice !== 1) return false;
   const r = await window.claudeAPI.trashItemFile(item.file);
-  if (!r.success) { toast(t('toast.itemTrashError', { msg: r.error || '?' }), 'error'); return; }
+  if (!r.success) { toast(t('toast.itemTrashError', { msg: r.error || '?' }), 'error'); return false; }
   toast(t('toast.itemTrashed', { name: item.name }), 'success');
   clearStatsCaches();
+  lastSelfChangeAt = Date.now();
   await loadData();
+  return true;
 }
 
 // Bottone con sola icona nel footer di una card (la card intera è cliccabile:

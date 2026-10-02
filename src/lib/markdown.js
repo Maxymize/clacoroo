@@ -4,13 +4,14 @@ const fs   = require('fs');
 const path = require('path');
 
 // Naive frontmatter parser: top-level `key: value` pairs, enough for SKILL.md /
-// agent.md where we only need name + description.
-// v1.2.18 — valori su più righe: blocchi YAML (`description: >`, `|`, `>-`…) e
-// righe di continuazione indentate. Prima `description: >` restituiva ">" e la
-// descrizione risultava "troppo corta" (falsi warning su 30 skill di questa
-// macchina, mostrati come HEALTH: WARNING e nel Doctor).
+// agent.md where we only need name + description. Non è YAML: i valori restano
+// testo grezzo (senza tipi né annidamenti) e servono solo per presenza e
+// lunghezza di name/description.
+// Valori su più righe: blocchi (`description: >`, `|`, `>-`…) e righe di
+// continuazione indentate. Un BOM iniziale si ignora e le virgolette che
+// racchiudono il valore si tolgono (`description: ""` è vuota, non lunga 2).
 function parseFrontmatter(content) {
-  const m = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+  const m = content.replace(/^\uFEFF/, '').match(/^---\r?\n([\s\S]*?)\r?\n---/);
   if (!m) return null;
   const fm = {};
   let lastKey = null;
@@ -23,7 +24,8 @@ function parseFrontmatter(content) {
     if (idx < 0 || /^\s/.test(line)) { lastKey = null; return; }
     const key = line.slice(0, idx).trim();
     let val = line.slice(idx + 1).trim();
-    if (/^[>|][+-]?\d*$/.test(val)) val = '';  // il testo è nelle righe indentate sotto
+    if (/^[>|](?:[+-]\d?|\d[+-]?)?$/.test(val)) val = '';  // il testo è nelle righe indentate sotto
+    else val = val.replace(/^(["'])(.*)\1$/, '$2');
     if (key) { fm[key] = val; lastKey = key; }
   });
   return Object.keys(fm).length ? fm : null;

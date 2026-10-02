@@ -204,7 +204,9 @@ function runClaudeArgs(args, opts) {
     // che `claude` risolve in base alla cartella di lavoro corrente.
     if (opts && typeof opts.cwd === 'string' && opts.cwd) execOpts.cwd = opts.cwd;
     execFile(CLAUDE_BIN, args, execOpts, (err, stdout, stderr) => {
-      if (err) resolve({ success: false, error: (stderr || err.message).trim() });
+      // `output` anche in caso di errore: qualche comando (claude doctor) scrive il
+      // risultato su stdout e poi esce con un codice non zero.
+      if (err) resolve({ success: false, error: (stderr || err.message).trim(), output: String(stdout || '').trim() });
       else     resolve({ success: true,  output: stdout.trim() });
     });
   });
@@ -2016,34 +2018,24 @@ ipcMain.handle('trash-item-file', async (_e, { file } = {}) => {
   }
 });
 
-// v1.2.18 — Doctor: `claude doctor` (sola diagnostica) nella home e in ogni
-// progetto tracciato, perché il comando legge anche i settings della cartella
-// in cui gira. Exit code sempre 0 anche con problemi: si tiene lo stdout comunque.
-// Le esecuzioni vanno IN SEQUENZA: il controllo del Portachiavi scrive una voce
-// di prova, e due `claude doctor` in parallelo si scontrano dando un falso
-// "macOS Keychain is not writable (-25299)" (verificato: 2 su 3 in parallelo).
-function runDoctorIn(cwd) {
-  return new Promise(resolve => {
-    execFile(CLAUDE_BIN, ['doctor'], {
-      cwd, timeout: 30000, maxBuffer: 2 * 1024 * 1024,
-      env: { ...process.env, NO_COLOR: '1', FORCE_COLOR: '0' },
-    }, (err, stdout, stderr) => {
-      const raw = String(stdout || '');
-      resolve({ cwd, raw, error: raw.trim() ? null : String(stderr || (err && err.message) || '').trim() });
-    });
-  });
-}
+// v1.2.18 — Doctor: `claude doctor` (sola diagnostica) nella home e nei progetti
+// tracciati, perché il comando legge anche i settings della cartella in cui gira.
+// Exit code sempre 0 anche con problemi. Le esecuzioni vanno IN SEQUENZA: il
+// controllo del Portachiavi scrive una voce di prova, e due `claude doctor` in
+// parallelo si scontrano dando un falso "macOS Keychain is not writable (-25299)"
+// (verificato: 2 su 3 in parallelo, 0 su 3 in sequenza). Solo i progetti che hanno
+// una configurazione propria, con un tetto: gli altri darebbero lo stesso testo.
+const DOCTOR_MAX_PROJECTS = 8;
 
 ipcMain.handle('doctor:run', async () => {
-  if (!CLAUDE_BIN) return { ok: false, error: 'Binario claude non trovato. Configura il percorso nelle Impostazioni.' };
-  const cwds = [os.homedir(), ...trackedProjectPaths().filter(p => fs.existsSync(p))];
+  const hasConfig = p => fs.existsSync(path.join(p, '.claude')) || fs.existsSync(path.join(p, '.mcp.json'));
+  const cwds = [os.homedir(), ...trackedProjectPaths().filter(hasConfig).slice(0, DOCTOR_MAX_PROJECTS)];
   const runs = [];
-  for (const cwd of cwds) runs.push(await runDoctorIn(cwd));
-  const readable = runs.filter(r => r.raw.trim());
+  for (const cwd of cwds) {
+    const r = await runClaudeArgs(['doctor'], { cwd });
+    runs.push({ cwd, raw: r.output || '', error: r.success ? null : r.error });
+  }
+  const readable = runs.filter(r => r.raw);
   if (!readable.length) return { ok: false, error: runs[0].error || 'claude doctor non ha prodotto output.' };
-  return {
-    ok: true,
-    ...DOCTOR.mergeDoctorRuns(readable.map(r => DOCTOR.parseDoctorOutput(r.raw))),
-    runs: runs.map(r => ({ cwd: r.cwd, raw: r.raw, error: r.error })),
-  };
+  return { ok: true, ...DOCTOR.mergeDoctorRuns(readable.map(r => DOCTOR.parseDoctorOutput(r.raw))), runs };
 });

@@ -5119,7 +5119,6 @@ body {
 .tr-tool-detail { background: var(--surface2); padding: 8px; border-radius: 6px; overflow-x: auto; font-size: 11px; white-space: pre-wrap; }
 
 /* ── DOCTOR (v1.2.18) ─────────────────────────────────────────────────── */
-.doctor-btn { position: relative; }
 /* rosso "pronto soccorso": bordo rosso, pieno al passaggio (schema di btn-accent-outline) */
 .btn-doctor { background: transparent; color: var(--red); border-color: var(--red); }
 .btn-doctor:hover:not(:disabled) { background: var(--red); color: #fff; border-color: var(--red); }
@@ -5128,11 +5127,10 @@ body {
   display: inline-flex; align-items: center; justify-content: center;
   min-width: 16px; height: 16px; padding: 0 4px; margin-left: 6px;
   border-radius: 8px; font-size: 10px; font-weight: 700; line-height: 1;
-  background: var(--red); color: #fff;
+  /* il badge sta su un bottone rosso: bianco con il numero rosso */
+  background: #fff; color: var(--red);
 }
-.doctor-badge.ok { background: var(--green); }
-/* su un bottone rosso il badge rosso sparirebbe: bianco con numero rosso */
-.btn-doctor .doctor-badge:not(.ok) { background: #fff; color: var(--red); }
+.doctor-badge.ok { background: var(--green); color: #fff; }
 .doctor-badge .inline-icon { width: 10px; height: 10px; margin: 0; }
 .doctor-modal { max-width: 900px; }
 .doctor-body {

@@ -14,9 +14,10 @@
 // diagnostica) e i controlli che CLACOROO fa già (link rotti, front matter di
 // skill/agent, server MCP, programmi mancanti degli hook).
 // - Gira solo al click: niente polling (vedi il caso rate limit della v1.1.35).
-// - "Correggi tutto" esegue solo azioni sicure e reversibili (oggi: link rotti
-//   nel Cestino). Il resto è guidato: apri file, copia comando, esegui nel
-//   terminale, vai alla sezione. Ogni voce si può ignorare (persistito).
+// - "Correggi tutto" esegue solo azioni sicure e reversibili (action.auto: oggi i
+//   link rotti, spostati nel Cestino). Il resto è guidato: apri file, copia
+//   comando, esegui nel terminale, vai alla sezione. Ogni voce si può ignorare
+//   (persistito in state.doctorIgnored).
 // - "Con Claude" apre una sessione nel terminale integrato per /doctor, il
 //   checkup completo con l'AI, che chiede conferma per ogni correzione. Il
 //   comando non si passa come prompt iniziale: Claude Code può prima chiedere
@@ -24,137 +25,119 @@
 // Usa i global di app.js (el, t, icon, toast, state, ...): è caricato prima,
 // ma le funzioni vengono chiamate solo dopo l'avvio.
 
-const doctorState = { result: null, running: false, showIgnored: false, showRaw: false, count: null };
+// cc = risposta di doctor:run, mcp = risposta di get-mcp: restano salvati per
+// rifare i gruppi dopo una correzione senza rilanciare i comandi. groups =
+// [{ title, source, severity: 'error'|'warning'|'info', items: [{ key, text, detail, action }] }]
+const doctorState = { cc: null, mcp: null, groups: [], running: false, showIgnored: false, showRaw: false };
 
-function doctorIgnored() {
-  return Array.isArray(state.doctorIgnored) ? state.doctorIgnored : [];
-}
+const doctorIsIgnored = key => state.doctorIgnored.includes(key);
+
+// Da sistemare: voci non ignorate dei gruppi che non sono solo informativi (le
+// voci "info", come il front matter dei plugin, le corregge l'autore).
+// Definizione unica per badge, riepilogo e "Correggi tutto".
+const doctorPending = groups => groups
+  .filter(g => g.severity !== 'info')
+  .flatMap(g => g.items)
+  .filter(i => !doctorIsIgnored(i.key));
 
 async function setDoctorIgnored(list) {
   state.doctorIgnored = list;
   try { await window.claudeAPI.setState({ doctorIgnored: list }); } catch { /* graceful */ }
-  if (doctorState.result) doctorState.count = doctorProblemCount(doctorState.result.groups);
   refreshDoctorBadge();
 }
 
-// Problemi da sistemare: voci non ignorate dei gruppi error/warning. Le voci
-// "info" (es. front matter dei plugin, che corregge l'autore) non contano.
-function doctorProblemCount(groups) {
-  const ign = new Set(doctorIgnored());
-  return groups
-    .filter(g => g.severity !== 'info')
-    .reduce((n, g) => n + g.items.filter(i => !ign.has(i.key)).length, 0);
-}
+// Titoli tradotti per i blocchi di `claude doctor` che si riconoscono; gli altri
+// restano col loro titolo originale.
+const DOCTOR_CC_TITLES = { error: 'doctor.groupSettings', warning: 'doctor.groupInstall' };
+// Le chiavi di "ignora" devono sopravvivere a un aggiornamento: via i numeri di
+// versione, e per MCP/front matter/hook il codice del problema, così se lo stato
+// cambia (es. da needsAuth a error) la voce riappare.
+const ccKey = text => 'cc:' + text.replace(/\d+(?:\.\d+)+/g, '#').replace(/\s+/g, ' ');
 
-function doctorAutoItems(groups) {
-  const ign = new Set(doctorIgnored());
-  return groups.flatMap(g => g.items).filter(i => i.action.type === 'trash' && !ign.has(i.key));
-}
-
-// Gruppi: { id, title, source, severity: 'error'|'warning'|'info', items: [{ key, text, detail, action }] }
-async function collectDoctorFindings() {
-  const [cc, mcp] = await Promise.all([
-    window.claudeAPI.doctorRun(),
-    window.claudeAPI.getMcp({}).catch(() => null),
-  ]);
+function buildDoctorGroups(cc, mcp) {
   const groups = [];
+  const add = (title, severity, items, source = 'CLACOROO') => {
+    if (items.length) groups.push({ title, source, severity, items });
+  };
 
-  // 1. claude doctor: i titoli noti si traducono, voci e correzioni restano
-  //    nel testo originale di Claude Code (in inglese).
-  if (cc && cc.ok) {
+  // 1. claude doctor: voci e correzioni restano nel testo originale (in inglese)
+  if (cc.ok) {
     for (const s of cc.sections) {
-      if (!s.items.length) continue;
-      const severity = s.kind === 'error' ? 'error' : s.kind === 'warning' ? 'warning' : 'info';
-      const title = s.kind === 'error' ? t('doctor.groupSettings')
-        : s.kind === 'warning' ? t('doctor.groupInstall') : s.title;
-      groups.push({
-        id: 'cc:' + s.title, title, source: 'claude doctor', severity,
-        items: s.items.map(it => ({ key: 'cc:' + it.text, text: it.text, detail: it.fix, action: it.action })),
-      });
+      add(DOCTOR_CC_TITLES[s.kind] ? t(DOCTOR_CC_TITLES[s.kind]) : s.title,
+        s.kind === 'unknown' ? 'warning' : s.kind,
+        s.items.map(it => ({ key: ccKey(it.text), text: it.text, detail: it.fix, action: it.action })),
+        'claude doctor');
     }
   }
 
   // 2. link rotti (Claude Code li ignora): gli unici con correzione automatica
   const all = [...allSkillItems(), ...allAgentItems()];
-  const broken = all.filter(i => i.broken);
-  if (broken.length) {
-    groups.push({
-      id: 'broken', title: t('doctor.groupBroken'), source: 'CLACOROO', severity: 'warning',
-      items: broken.map(i => ({
-        key: 'broken:' + i.file,
-        text: i.plugin + '/' + i.name,
-        detail: t('skillAgent.brokenHint', { target: i.target || '?' }),
-        action: i.removePath ? { type: 'trash', file: i.file } : { type: 'none' },
-      })),
-    });
-  }
+  add(t('doctor.groupBroken'), 'warning', all.filter(i => i.broken).map(i => ({
+    key: 'broken:' + i.file,
+    text: i.plugin + '/' + i.name,
+    detail: t('skillAgent.brokenHint', { target: i.target || '?' }),
+    action: i.removePath ? { type: 'trash', item: i, auto: true } : { type: 'none' },
+  })));
 
   // 3. front matter: le tue voci le correggi tu, quelle dei plugin l'autore
   const unhealthy = all.filter(i => !i.broken && i.health && i.health.status !== 'ok');
   const healthItem = i => ({
-    key: 'health:' + (i.file || i.fullId + ':' + i.kind + ':' + i.name),
+    key: 'health:' + (i.file || i.fullId + ':' + i.kind + ':' + i.name) + ':' + i.health.issues.join(','),
     text: i.name + ' · ' + i.plugin,
-    detail: (i.health.issues || []).map(translateHealthIssue).join(' · '),
+    detail: i.health.issues.map(translateHealthIssue).join(' · '),
     action: { type: 'preview', item: i },
   });
-  const own = unhealthy.filter(i => i.standalone);
-  const fromPlugins = unhealthy.filter(i => !i.standalone);
-  if (own.length) groups.push({ id: 'health-own', title: t('doctor.groupHealthOwn'), source: 'CLACOROO', severity: 'warning', items: own.map(healthItem) });
-  if (fromPlugins.length) groups.push({ id: 'health-plugins', title: t('doctor.groupHealthPlugins'), source: 'CLACOROO', severity: 'info', items: fromPlugins.map(healthItem) });
+  add(t('doctor.groupHealthOwn'), 'warning', unhealthy.filter(i => i.standalone).map(healthItem));
+  add(t('doctor.groupHealthPlugins'), 'info', unhealthy.filter(i => !i.standalone).map(healthItem));
 
   // 4. server MCP non connessi
   const badMcp = ((mcp && mcp.servers) || []).filter(s => ['error', 'needsAuth', 'warning'].includes(s.status));
-  if (badMcp.length) {
-    groups.push({
-      id: 'mcp', title: t('doctor.groupMcp'), source: 'CLACOROO',
-      severity: badMcp.some(s => s.status === 'error') ? 'error' : 'warning',
-      items: badMcp.map(s => ({
-        key: 'mcp:' + s.id, text: s.displayName || s.id, detail: s.statusText || s.status,
-        action: { type: 'goto', section: 'mcp' },
-      })),
-    });
-  }
+  add(t('doctor.groupMcp'), badMcp.some(s => s.status === 'error') ? 'error' : 'warning', badMcp.map(s => ({
+    key: 'mcp:' + s.id + ':' + s.status,
+    text: s.displayName || s.id,
+    detail: s.statusText || s.status,
+    action: { type: 'goto', section: 'mcp' },
+  })));
 
   // 5. hook con programmi mancanti
   const hooks = buildHookList().map(h => ({ h, missing: missingDepsForHook(h) })).filter(x => x.missing.length);
-  if (hooks.length) {
-    groups.push({
-      id: 'hooks', title: t('doctor.groupHooks'), source: 'CLACOROO', severity: 'warning',
-      items: hooks.map(({ h, missing }) => ({
-        key: 'hook:' + h.fullId + ':' + h.event + ':' + h.matcher,
-        text: h.event + (h.matcher ? ' · ' + h.matcher : '') + ' · ' + h.pluginId,
-        detail: t('doctor.hookMissing', { tools: missing.join(', ') }),
-        action: { type: 'goto', section: 'hooks' },
-      })),
-    });
-  }
+  add(t('doctor.groupHooks'), 'warning', hooks.map(({ h, missing }) => ({
+    key: 'hook:' + h.fullId + ':' + h.event + ':' + h.matcher + ':' + missing.join(','),
+    text: h.event + (h.matcher ? ' · ' + h.matcher : '') + ' · ' + h.pluginId,
+    detail: t('doctor.hookMissing', { tools: missing.join(', ') }),
+    action: { type: 'goto', section: 'hooks' },
+  })));
 
-  return { cc, groups };
+  return groups;
 }
 
+function rebuildDoctor() {
+  doctorState.groups = buildDoctorGroups(doctorState.cc, doctorState.mcp);
+  refreshDoctorBadge();
+}
+
+// Controllo completo: claude doctor (home + progetti) e server MCP insieme.
+// Provato: `claude mcp list` in parallelo a `claude doctor` non dà il falso
+// allarme del Portachiavi che si ha tra due `claude doctor` paralleli.
 async function runDoctor(render) {
   doctorState.running = true;
   render();
   try {
-    doctorState.result = await collectDoctorFindings();
+    [doctorState.cc, doctorState.mcp] = await Promise.all([
+      window.claudeAPI.doctorRun(),
+      window.claudeAPI.getMcp({}).catch(() => null),
+    ]);
   } catch (e) {
-    doctorState.result = { cc: { ok: false, error: e.message }, groups: [] };
+    doctorState.cc = { ok: false, error: e.message };
+    doctorState.mcp = null;
   }
   doctorState.running = false;
-  doctorState.count = doctorProblemCount(doctorState.result.groups);
-  refreshDoctorBadge();
+  rebuildDoctor();
   render();
 }
 
-// Dopo una correzione: dati freschi (le liste cambiano) e nuovo controllo.
-async function afterDoctorFix(render) {
-  clearStatsCaches();
-  await loadData();
-  await runDoctor(render);
-}
-
 async function doctorFixAll(render) {
-  const items = doctorAutoItems(doctorState.result.groups);
+  const items = doctorPending(doctorState.groups).filter(i => i.action.auto);
   if (!items.length) return;
   const choice = await window.claudeAPI.confirmDialog({
     title:   t('doctor.fixAllConfirm.title', { n: items.length }),
@@ -165,17 +148,23 @@ async function doctorFixAll(render) {
   if (choice !== 1) return;
   let ok = 0, fail = 0;
   for (const i of items) {
-    const r = await window.claudeAPI.trashItemFile(i.action.file);
+    const r = await window.claudeAPI.trashItemFile(i.action.item.file);
     if (r.success) ok++; else fail++;
   }
   toast(fail ? t('doctor.fixAllPartial', { ok, fail }) : t('doctor.fixAllDone', { n: ok }), fail ? 'warn' : 'success');
-  await afterDoctorFix(render);
+  // Le correzioni toccano solo skill/agent: dati app freschi e gruppi rifatti,
+  // senza rilanciare claude doctor né i controlli MCP.
+  clearStatsCaches();
+  lastSelfChangeAt = Date.now();
+  await loadData();
+  rebuildDoctor();
+  render();
 }
 
 /* ── Header ───────────────────────────────────────────────────────────── */
 
 function buildDoctorButton() {
-  const btn = btnWithIcon('btn btn-sm btn-refresh btn-doctor doctor-btn', 'stethoscope', t('topbar.doctor'));
+  const btn = btnWithIcon('btn btn-sm btn-refresh btn-doctor', 'stethoscope', t('topbar.doctor'));
   btn.title = t('topbar.doctorTooltip');
   btn.addEventListener('click', openDoctorModal);
   paintDoctorBadge(btn);
@@ -187,15 +176,16 @@ function buildDoctorButton() {
 function paintDoctorBadge(btn) {
   const old = btn.querySelector('.doctor-badge');
   if (old) old.remove();
-  if (doctorState.count == null) return;
-  const badge = el('span', 'doctor-badge' + (doctorState.count ? '' : ' ok'));
-  if (doctorState.count) badge.textContent = String(doctorState.count);
+  if (!doctorState.cc) return;
+  const count = doctorPending(doctorState.groups).length;
+  const badge = el('span', 'doctor-badge' + (count ? '' : ' ok'));
+  if (count) badge.textContent = String(count);
   else badge.appendChild(icon('check'));
   btn.appendChild(badge);
 }
 
 function refreshDoctorBadge() {
-  const btn = document.querySelector('.doctor-btn');
+  const btn = document.querySelector('.btn-doctor');
   if (btn) paintDoctorBadge(btn);
 }
 
@@ -241,48 +231,49 @@ function openDoctorModal() {
 function renderDoctorBody(body, foot, render, close) {
   body.textContent = '';
   foot.textContent = '';
-  if (doctorState.running || !doctorState.result) {
+  if (doctorState.running) {
     body.appendChild(el('div', 'doctor-running', t('doctor.running')));
     return;
   }
-  const { cc, groups } = doctorState.result;
-  const ign = new Set(doctorIgnored());
+  const { cc, groups } = doctorState;
 
-  if (cc && cc.ok) {
+  if (cc.ok) {
     const meta = [cc.info.Running && t('doctor.metaVersion', { v: cc.info.Running }), cc.info.Platform].filter(Boolean).join(' · ');
-    if (meta) body.appendChild(el('div', 'doctor-meta', meta));
+    // Il blocco chiave: valore (versione, piattaforma) è la parte più stabile
+    // dell'output: se manca, il formato è cambiato e non si deve dire "tutto ok".
+    body.appendChild(el('div', meta ? 'doctor-meta' : 'doctor-error', meta || t('doctor.unrecognized')));
   } else {
-    body.appendChild(el('div', 'doctor-error', t('doctor.ccError', { msg: (cc && cc.error) || '?' })));
+    body.appendChild(el('div', 'doctor-error', t('doctor.ccError', { msg: cc.error || '?' })));
   }
 
-  const count = doctorProblemCount(groups);
-  const autoItems = doctorAutoItems(groups);
-  body.appendChild(el('div', 'doctor-summary' + (count ? ' has-issues' : ' clean'),
-    count ? t('doctor.summary', { n: count, auto: autoItems.length }) : t('doctor.allGood')));
+  const pending = doctorPending(groups);
+  const autoCount = pending.filter(i => i.action.auto).length;
+  body.appendChild(el('div', 'doctor-summary ' + (pending.length ? 'has-issues' : 'clean'),
+    pending.length ? t('doctor.summary', { n: pending.length, auto: autoCount }) : t('doctor.allGood')));
 
   for (const g of groups) {
-    const visible = g.items.filter(i => doctorState.showIgnored || !ign.has(i.key));
+    const visible = g.items.filter(i => doctorState.showIgnored || !doctorIsIgnored(i.key));
     if (!visible.length) continue;
     const sec = el('div', 'doctor-group sev-' + g.severity);
     const head = el('div', 'doctor-group-head');
     head.appendChild(el('span', 'doctor-dot'));
     head.appendChild(el('span', 'doctor-group-title', g.title));
     head.appendChild(el('span', 'doctor-group-src', g.source + ' · ' + visible.length));
-    const pending = g.items.filter(i => !ign.has(i.key));
-    if (pending.length > 1) {
+    const open = g.items.filter(i => !doctorIsIgnored(i.key));
+    if (open.length > 1) {
       const ignAll = el('button', 'btn btn-sm btn-ghost', t('doctor.ignoreGroup'));
       ignAll.addEventListener('click', async () => {
-        await setDoctorIgnored([...doctorIgnored(), ...pending.map(i => i.key)]);
+        await setDoctorIgnored([...state.doctorIgnored, ...open.map(i => i.key)]);
         render();
       });
       head.appendChild(ignAll);
     }
     sec.appendChild(head);
-    visible.forEach(it => sec.appendChild(buildDoctorRow(it, ign.has(it.key), render, close)));
+    visible.forEach(it => sec.appendChild(buildDoctorRow(it, render, close)));
     body.appendChild(sec);
   }
 
-  if (doctorState.showRaw && cc && Array.isArray(cc.runs)) {
+  if (doctorState.showRaw && cc.ok) {
     for (const run of cc.runs) {
       body.appendChild(el('div', 'doctor-raw-title', run.cwd));
       body.appendChild(el('pre', 'doctor-raw', run.raw || run.error || ''));
@@ -291,8 +282,8 @@ function renderDoctorBody(body, foot, render, close) {
 
   // Footer: azioni globali a sinistra, vista e chiusura a destra
   const left = el('div', 'doctor-foot-group');
-  const fixAll = el('button', 'btn btn-sm btn-accent-outline', t('doctor.fixAll', { n: autoItems.length }));
-  fixAll.disabled = !autoItems.length;
+  const fixAll = el('button', 'btn btn-sm btn-accent-outline', t('doctor.fixAll', { n: autoCount }));
+  fixAll.disabled = !autoCount;
   fixAll.title = t('doctor.fixAllTip');
   fixAll.addEventListener('click', () => doctorFixAll(render));
   const withClaude = el('button', 'btn btn-sm btn-ghost', t('doctor.withClaude'));
@@ -313,7 +304,7 @@ function renderDoctorBody(body, foot, render, close) {
   const rawBtn = el('button', 'btn btn-sm btn-ghost', t(doctorState.showRaw ? 'doctor.hideRaw' : 'doctor.showRaw'));
   rawBtn.addEventListener('click', () => { doctorState.showRaw = !doctorState.showRaw; render(); });
   right.appendChild(rawBtn);
-  const ignoredCount = groups.flatMap(g => g.items).filter(i => ign.has(i.key)).length;
+  const ignoredCount = groups.flatMap(g => g.items).filter(i => doctorIsIgnored(i.key)).length;
   if (ignoredCount) {
     const ignBtn = el('button', 'btn btn-sm btn-ghost',
       doctorState.showIgnored ? t('doctor.hideIgnored') : t('doctor.showIgnored', { n: ignoredCount }));
@@ -327,7 +318,8 @@ function renderDoctorBody(body, foot, render, close) {
   foot.appendChild(right);
 }
 
-function buildDoctorRow(it, ignored, render, close) {
+function buildDoctorRow(it, render, close) {
+  const ignored = doctorIsIgnored(it.key);
   const row = el('div', 'doctor-row' + (ignored ? ' ignored' : ''));
   const txt = el('div', 'doctor-row-text');
   txt.appendChild(el('div', 'doctor-row-main', it.text));
@@ -340,41 +332,44 @@ function buildDoctorRow(it, ignored, render, close) {
     b.addEventListener('click', onClick);
     acts.appendChild(b);
   };
-  const a = it.action;
+  row.appendChild(acts);
+
   if (ignored) {
     add(t('doctor.restore'), async () => {
-      await setDoctorIgnored(doctorIgnored().filter(k => k !== it.key));
+      await setDoctorIgnored(state.doctorIgnored.filter(k => k !== it.key));
       render();
     });
-  } else {
-    if (a.type === 'trash') add(t('doctor.fix'), async () => {
-      const r = await window.claudeAPI.trashItemFile(a.file);
-      if (r.success) toast(t('doctor.fixed'), 'success');
-      else toast(t('toast.itemTrashError', { msg: r.error || '?' }), 'error');
-      await afterDoctorFix(render);
-    }, 'btn-accent-outline');
-    if (a.type === 'terminal') add(t('doctor.runInTerminal', { cmd: a.command }), () => {
-      close();
-      openTerminalWithCommand(a.command);
-    });
-    if (a.type === 'copy') add(t('doctor.copyCommand'), async () => {
-      try { await navigator.clipboard.writeText(a.command); toast(t('doctor.copied'), 'success'); }
-      catch (e) { toast(t('toast.errorPrefix', { msg: e.message }), 'error'); }
-    });
-    if (a.type === 'open') add(t('doctor.openFile'), async () => {
-      const r = await window.claudeAPI.openDirectory(a.file);
-      if (!r.success) toast(t('toast.errorPrefix', { msg: r.error || '?' }), 'error');
-    });
-    if (a.type === 'preview') add(t('doctor.open'), () => openItemPreview(a.item));
-    if (a.type === 'goto') add(t(a.section === 'mcp' ? 'doctor.gotoMcp' : 'doctor.gotoHooks'), () => {
-      close();
-      switchToSection(a.section);
-    });
-    add(t('doctor.ignore'), async () => {
-      await setDoctorIgnored([...doctorIgnored(), it.key]);
-      render();
-    });
+    return row;
   }
-  row.appendChild(acts);
+
+  const a = it.action;
+  // Stessa eliminazione della card Skill/Agent (con la sua conferma); si rifanno
+  // i gruppi sui dati app già ricaricati, senza rilanciare claude doctor.
+  if (a.type === 'trash') add(t('doctor.fix'), async () => {
+    if (!(await deleteItem(a.item))) return;
+    rebuildDoctor();
+    render();
+  }, 'btn-accent-outline');
+  if (a.type === 'terminal') add(t('doctor.runInTerminal', { cmd: a.command }), () => {
+    close();
+    openTerminalWithCommand(a.command);
+  });
+  if (a.type === 'copy') add(t('doctor.copyCommand'), async () => {
+    try { await navigator.clipboard.writeText(a.command); toast(t('doctor.copied'), 'success'); }
+    catch (e) { toast(t('toast.errorPrefix', { msg: e.message }), 'error'); }
+  });
+  if (a.type === 'open') add(t('doctor.openFile'), async () => {
+    const r = await window.claudeAPI.openDirectory(a.file);
+    if (!r.success) toast(t('toast.errorPrefix', { msg: r.error || '?' }), 'error');
+  });
+  if (a.type === 'preview') add(t('doctor.open'), () => openItemPreview(a.item));
+  if (a.type === 'goto') add(t(a.section === 'mcp' ? 'doctor.gotoMcp' : 'doctor.gotoHooks'), () => {
+    close();
+    switchToSection(a.section);
+  });
+  add(t('doctor.ignore'), async () => {
+    await setDoctorIgnored([...state.doctorIgnored, it.key]);
+    render();
+  });
   return row;
 }
