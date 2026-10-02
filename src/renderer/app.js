@@ -604,6 +604,12 @@ async function init() {
       clearStatsCaches();  // invalida solo per il prossimo accesso, niente reload
       return;
     }
+    // Il toggle di un plugin ha già ricaricato i dati: niente secondo reload né toast
+    // per una modifica fatta da noi (watcher: polling 1s + debounce 2s).
+    if (Date.now() - lastPluginToggleAt < 5000) {
+      clearStatsCaches();
+      return;
+    }
     toast(t('toast.configChanged'), 'info');
     clearStatsCaches();
     loadData();
@@ -864,8 +870,8 @@ async function loadData() {
   // in cima (toggle di un plugin, eliminazione, reload da config-changed): si
   // riporta la lista dov'era, se la sezione è la stessa.
   const keepSection = state.section;
-  const scroller = contentScroller();
-  const keepTop = scroller ? scroller.scrollTop : 0;
+  const area = $('content-area');
+  const keepTop = area.scrollTop;
   const result = await window.claudeAPI.getData();
   if (!result.ok) {
     setStatus('error', t('uiErr.dataLoad'));
@@ -876,10 +882,7 @@ async function loadData() {
   if (result.data.appVersion) _currentAppVersion = result.data.appVersion;
   processData();
   render();
-  if (state.section === keepSection) {
-    const after = contentScroller();
-    if (after) after.scrollTop = keepTop;
-  }
+  if (state.section === keepSection) area.scrollTop = keepTop;
   refreshSidebarRecent();
   refreshFooterStatus(window._latestUpdateInfo || null);
 }
@@ -2615,14 +2618,7 @@ function buildPluginCard(p) {
   toggleWrap.appendChild(inp); toggleWrap.appendChild(track); toggleWrap.appendChild(thumb);
 
   inp.addEventListener('change', async () => {
-    toggleWrap.classList.add('loading');
-    inp.disabled = true;
-    const ok = await setPluginEnabled(p, !!p.blocked);
-    if (!ok) {
-      inp.checked = !inp.checked; // revert
-      toggleWrap.classList.remove('loading');
-      inp.disabled = false;
-    }
+    await withToggleLoading(toggleWrap, inp, () => setPluginEnabled(p, !!p.blocked), !inp.checked);
   });
 
   footer.appendChild(toggleWrap);
@@ -3396,13 +3392,13 @@ function standaloneItems(src, forAgents, extra) {
   const folder = { skill: 'skills', agent: 'agents', command: 'commands' };
   lists.forEach(([kind, list]) => (list || []).forEach(i => out.push({
     name: i.name, kind, file: i.file, health: i.health || null, addedAt: i.addedAt || '',
-    removable: !!i.removePath,
+    removePath: i.removePath || null,
     plugin: extra.base + '/' + folder[kind], mkt: '', standalone: true, ...extra,
   })));
   (src.broken || [])
     .filter(b => forAgents ? b.kind === 'agent' : b.kind !== 'agent')
     .forEach(b => out.push({
-      name: b.name, kind: b.kind, file: b.path, broken: true, target: b.target, removable: true,
+      name: b.name, kind: b.kind, file: b.path, broken: true, target: b.target, removePath: b.removePath || null,
       plugin: extra.base + '/' + folder[b.kind], mkt: '', standalone: true, ...extra,
     }));
   return out;
@@ -3439,12 +3435,22 @@ function allAgentItems() {
   return [...globals, ...locals, ...allStandaloneItems(true)];
 }
 
-// v1.2.17 — Elemento che scorre nell'area contenuti (il contenitore o un suo avo).
-function contentScroller() {
-  let node = $('content-area');
-  while (node && node.scrollHeight <= node.clientHeight + 1) node = node.parentElement;
-  return node;
+// Ultimo toggle di plugin fatto da questa app: il reload da config-changed che ne
+// segue (settings.json riscritto dalla CLI) sarebbe un secondo getData inutile.
+let lastPluginToggleAt = 0;
+
+// Esegue fn() con il toggle in stato "loading"; se fn() torna false ripristina
+// `revertTo` e riabilita il toggle.
+async function withToggleLoading(wrap, inp, fn, revertTo) {
+  wrap.classList.add('loading');
+  inp.disabled = true;
+  if (!(await fn())) {
+    inp.checked = revertTo;
+    wrap.classList.remove('loading');
+    inp.disabled = false;
+  }
 }
+
 // Attiva/disattiva un plugin globale: unica via per la card Plugin e per i
 // toggle di skill/agent.
 async function setPluginEnabled(p, enable) {
@@ -3456,6 +3462,7 @@ async function setPluginEnabled(p, enable) {
   toast(t(enable ? 'plugin.toastEnabled' : 'plugin.toastDisabled', { id: p.id }), enable ? 'success' : 'warn');
   window.claudeAPI.showNotification(enable ? t('plugin.notifActivated') : t('plugin.notifDeactivated'), p.id);
   clearStatsCaches();  // forza re-fetch contextBreakdown → barra si aggiorna
+  lastPluginToggleAt = Date.now();
   await loadData();
   return true;
 }
@@ -3470,7 +3477,7 @@ function buildItemPluginToggle(item, withLabel) {
   const tip = t('skillAgent.pluginToggleTip', { plugin: p.id, skills: p.skills.length, agents: p.agents.length });
   const wrap = el('div', 'item-toggle-wrap');
   wrap.title = tip;
-  const toggle = el('label', 'toggle item-toggle');
+  const toggle = el('label', 'toggle');
   const inp = el('input');
   inp.type = 'checkbox';
   inp.checked = enabled;
@@ -3491,10 +3498,7 @@ function buildItemPluginToggle(item, withLabel) {
       });
       if (choice !== 1) { inp.checked = true; return; }
     }
-    toggle.classList.add('loading');
-    inp.disabled = true;
-    const ok = await setPluginEnabled(p, !enabled);
-    if (!ok) { inp.checked = enabled; toggle.classList.remove('loading'); inp.disabled = false; }
+    await withToggleLoading(toggle, inp, () => setPluginEnabled(p, !enabled), enabled);
   });
   return wrap;
 }
@@ -3502,13 +3506,12 @@ function buildItemPluginToggle(item, withLabel) {
 // Elimina una voce personale o di progetto (o un link rotto) spostandola nel
 // Cestino. Le voci dei plugin non si eliminano da qui: si disinstalla il plugin.
 async function deleteItem(item) {
-  const path = item.kind === 'skill' ? item.file.replace(/[\\/]SKILL\.md$/, '') : item.file;
   const choice = await window.claudeAPI.confirmDialog({
     title:   t('confirm.deleteItem.title', { name: item.name }),
     message: item.broken
       ? t('confirm.deleteItem.messageBroken', { target: item.target || '?' })
       : t('confirm.deleteItem.message'),
-    detail:  path,
+    detail:  item.removePath,
     buttons: [t('button.cancel'), t('confirm.deleteItem.yes')],
   });
   if (choice !== 1) return;
@@ -3519,13 +3522,21 @@ async function deleteItem(item) {
   await loadData();
 }
 
-function buildItemDeleteButton(item) {
-  const btn = el('button', 'btn btn-sm btn-ghost btn-icon item-delete-btn');
-  btn.title = t('skillAgent.delete');
-  btn.setAttribute('aria-label', t('skillAgent.delete'));
-  btn.appendChild(icon('trash-2'));
-  btn.addEventListener('click', e => { e.stopPropagation(); deleteItem(item); });
+// Bottone con sola icona nel footer di una card (la card intera è cliccabile:
+// il click non deve arrivarle). Tooltip immediato `data-tt`, come la card Plugin.
+function buildIconButton(iconName, label, onClick, extraCls) {
+  const btn = el('button', 'btn btn-sm btn-ghost btn-icon' + (extraCls ? ' ' + extraCls : ''));
+  btn.dataset.tt = label;
+  btn.setAttribute('aria-label', label);
+  btn.appendChild(icon(iconName));
+  btn.addEventListener('click', e => { e.stopPropagation(); onClick(); });
   return btn;
+}
+function buildItemRevealButton(item) {
+  return buildIconButton('folder-open', t('skillAgent.reveal'), () => window.claudeAPI.revealItemFile(item.file));
+}
+function buildItemDeleteButton(item) {
+  return buildIconButton('trash-2', t('skillAgent.delete'), () => deleteItem(item), 'item-delete-btn');
 }
 
 // Colore del bordo: personali viola, di progetto verde, plugin = colore marketplace.
@@ -3567,18 +3578,18 @@ function itemStatuses(item) {
   if (!item.blocked && !item.broken) out.push('active');
   return out;
 }
-// `masc`: gli agent sono maschili (Tutti/Attivi/Disabilitati), le skill femminili.
-function listFilters(masc) {
-  const g = masc ? 'M' : '';
+// `lbl` = { all, active, disabled }: gli agent sono maschili (Tutti/Attivi/Disabilitati),
+// le skill femminili (Tutte/Attive/Disabilitate), quindi le etichette arrivano dal chiamante.
+function listFilters(lbl) {
   return [
     { id: 'status', label: t('filter.groupStatus'), getKeys: itemStatuses, options: [
-      { key: 'all',      label: t(masc ? 'filter.all' : 'filter.allSkills') },
-      { key: 'active',   label: t('filter.statusActive' + g) },
-      { key: 'disabled', label: t('filter.statusDisabled' + g) },
+      { key: 'all',      label: lbl.all },
+      { key: 'active',   label: lbl.active },
+      { key: 'disabled', label: lbl.disabled },
       { key: 'warning',  label: t('filter.statusWarning') },
     ] },
     { id: 'source', label: t('filter.groupSource'), getKeys: i => [itemSource(i)], options: [
-      { key: 'all',     label: t(masc ? 'filter.all' : 'filter.allSkills') },
+      { key: 'all',     label: lbl.all },
       { key: 'plugin',  label: t('filter.sourcePlugin') },
       { key: 'user',    label: t('filter.sourceUser') },
       { key: 'project', label: t('filter.sourceProject') },
@@ -3610,7 +3621,7 @@ function renderSkills() {
         section: 'skills', mode,
         onChange: (m) => setViewMode('skills', m),
       },
-      filters: listFilters(false),
+      filters: listFilters({ all: t('filter.allSkills'), active: t('filter.statusActive'), disabled: t('filter.statusDisabled') }),
     },
     {
       title: t('empty.bigNoSkillTitle'),
@@ -3643,7 +3654,7 @@ function renderAgents() {
         section: 'agents', mode,
         onChange: (m) => setViewMode('agents', m),
       },
-      filters: listFilters(true),
+      filters: listFilters({ all: t('filter.all'), active: t('filter.active'), disabled: t('filter.statusDisabledM') }),
     },
     {
       title: t('empty.bigNoAgentTitle'),
@@ -3673,10 +3684,8 @@ function buildSkillAgentChip(item, kind) {
   appendScopeBadge(chip, item);
   appendModifiedBadge(chip, item, kind, 'chip');
   if (!item.broken) chip.addEventListener('click', () => openItemPreview(item));
-  if (!item.standalone && item.scope === 'global') {
-    const toggle = buildItemPluginToggle(item, false);
-    if (toggle) chip.appendChild(toggle);
-  }
+  const toggle = buildItemPluginToggle(item, false);
+  if (toggle) chip.appendChild(toggle);
   return chip;
 }
 
@@ -3764,13 +3773,8 @@ function buildSkillAgentCard(item, kind) {
   // globali); per le voci personali/di progetto c'è "Mostra nella cartella".
   const foot = el('div', 'browse-card-foot');
   if (item.broken) {
-    const revealBtn = el('button', 'btn btn-sm btn-ghost btn-icon');
-    revealBtn.title = t('skillAgent.reveal');
-    revealBtn.setAttribute('aria-label', t('skillAgent.reveal'));
-    revealBtn.appendChild(icon('folder-open'));
-    revealBtn.addEventListener('click', e => { e.stopPropagation(); window.claudeAPI.revealItemFile(item.file); });
-    foot.appendChild(revealBtn);
-    if (item.removable) foot.appendChild(buildItemDeleteButton(item));
+    foot.appendChild(buildItemRevealButton(item));
+    if (item.removePath) foot.appendChild(buildItemDeleteButton(item));
     const hint = el('span', 'browse-card-managed', t('skillAgent.brokenShort'));
     hint.title = t('skillAgent.brokenHint', { target: item.target || '?' });
     foot.appendChild(hint);
@@ -3784,13 +3788,8 @@ function buildSkillAgentCard(item, kind) {
   });
   foot.appendChild(openBtn);
   if (item.standalone) {
-    const revealBtn = el('button', 'btn btn-sm btn-ghost btn-icon');
-    revealBtn.title = t('skillAgent.reveal');
-    revealBtn.setAttribute('aria-label', t('skillAgent.reveal'));
-    revealBtn.appendChild(icon('folder-open'));
-    revealBtn.addEventListener('click', e => { e.stopPropagation(); window.claudeAPI.revealItemFile(item.file); });
-    foot.appendChild(revealBtn);
-    if (item.removable) foot.appendChild(buildItemDeleteButton(item));
+    foot.appendChild(buildItemRevealButton(item));
+    if (item.removePath) foot.appendChild(buildItemDeleteButton(item));
   } else {
     // v1.1.26 — skill/agent non si attivano singolarmente (Claude Code non lo
     // permette). v1.2.17 — il toggle agisce sul plugin proprietario (tutte le

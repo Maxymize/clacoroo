@@ -308,7 +308,6 @@ window.LOCALES.it = {
     groupStatus:   'Stato',
     groupSource:   'Fonte',
     statusActive:  'Attive',
-    statusActiveM: 'Attivi',
     statusDisabled:  'Disabilitate',
     statusDisabledM: 'Disabilitati',
     statusWarning: 'Warning',

@@ -7,7 +7,7 @@
 - [FEATURE] Filtri per Stato (Tutte / Attive / Disabilitate / Warning) e per Fonte (Plugin / Personali / Progetto) nelle sezioni Skill e Agent, combinabili tra loro e con la ricerca, con il numero di voci su ogni chip
 - [FEATURE] Interruttore sulle card e nelle righe compatte: attiva o disattiva il plugin che fornisce la skill o l'agent, con una conferma che dice quante skill e agent si spengono insieme
 - [FEATURE] Bottone cestino su skill, agent e comandi personali o di progetto e sui link rotti: li sposta nel Cestino di sistema, da cui si ripristinano
-- [IMPROVEMENT] Dopo un reload (interruttore, Aggiorna, modifica esterna alla configurazione) la lista resta dov'era invece di tornare in cima
+- [IMPROVEMENT] Dopo un reload (interruttore, Aggiorna, modifica esterna alla configurazione) la lista resta dov'era invece di tornare in cima; attivare o disattivare un plugin non fa più un secondo ricaricamento con il toast "Configurazione aggiornata"
 
 ## v1.2.16 — 2026-10-02 — Supporto a Claude Sonnet 5.5
 

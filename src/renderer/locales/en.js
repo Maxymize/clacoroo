@@ -308,7 +308,6 @@ window.LOCALES.en = {
     groupStatus:   'Status',
     groupSource:   'Source',
     statusActive:  'Active',
-    statusActiveM: 'Active',
     statusDisabled:  'Disabled',
     statusDisabledM: 'Disabled',
     statusWarning: 'Warning',

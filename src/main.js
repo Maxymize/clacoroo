@@ -486,9 +486,8 @@ function buildItemFileAllowlist(userData, localData) {
   const map = new Map();
   const addStandalone = (src) => {
     // removePath: cosa si sposta nel Cestino per eliminare la voce (vedi trash-item-file)
-    const add = (list, kind) => list.forEach(i => map.set(i.file, { editable: true, removePath: i.removePath, kind, name: i.name }));
-    add(src.skills, 'skill'); add(src.commands, 'skill'); add(src.agents, 'agent');
-    src.broken.forEach(b => map.set(b.path, { editable: false, broken: true, removePath: b.path, kind: b.kind === 'agent' ? 'agent' : 'skill', name: b.name }));
+    [...src.skills, ...src.agents, ...src.commands].forEach(i => map.set(i.file, { editable: true, removePath: i.removePath }));
+    src.broken.forEach(b => map.set(b.path, { editable: false, broken: true, removePath: b.removePath }));
   };
   addStandalone(userData);
   (localData.projectItems || []).forEach(addStandalone);
@@ -1878,6 +1877,10 @@ ipcMain.handle('read-markdown-file', async (_e, { fullId, kind, name }) => {
 // (~/.claude/CLAUDE.md) o quello di un progetto tracciato. Sicurezza:
 // - Path validato per essere "CLAUDE.md" (case-insensitive) E
 // - Stare in CLAUDE_DIR oppure in uno dei trackedProjects persistiti
+function trackedProjectPaths() {
+  return (readState().trackedProjects || []).map(p => path.resolve(p));
+}
+
 function isAllowedClaudeMdPath(p) {
   if (typeof p !== 'string') return false;
   const norm = path.resolve(p);
@@ -1885,8 +1888,7 @@ function isAllowedClaudeMdPath(p) {
   // Globale: ~/.claude/CLAUDE.md
   if (norm === path.join(CLAUDE_DIR, 'CLAUDE.md')) return true;
   // Per-progetto: <projectPath>/CLAUDE.md, projectPath deve essere in trackedProjects
-  const tracked = (readState().trackedProjects || []).map(function (p) { return path.resolve(p); });
-  for (const proj of tracked) {
+  for (const proj of trackedProjectPaths()) {
     if (norm === path.join(proj, 'CLAUDE.md')) return true;
   }
   return false;
@@ -1990,8 +1992,7 @@ function isSafeRemovePath(p) {
   const base = path.dirname(parent);
   if (base === CLAUDE_DIR) return true;
   if (path.basename(base) !== '.claude') return false;
-  const tracked = (readState().trackedProjects || []).map(x => path.resolve(x));
-  return tracked.includes(path.dirname(base));
+  return trackedProjectPaths().includes(path.dirname(base));
 }
 
 ipcMain.handle('trash-item-file', async (_e, { file } = {}) => {
@@ -1999,13 +2000,17 @@ ipcMain.handle('trash-item-file', async (_e, { file } = {}) => {
   if (!entry || !entry.removePath || !isSafeRemovePath(entry.removePath)) {
     return { success: false, error: 'Elemento non eliminabile.' };
   }
+  // Registro attività: 'skill' anche per i comandi, perché da Recenti si aprono
+  // nella sezione Skill. Niente 'command' (la sidebar lo instraderebbe a Plugin).
+  const logKind = path.basename(path.dirname(entry.removePath)) === 'agents' ? 'agent' : 'skill';
+  const logName = path.basename(entry.removePath, '.md');
   try {
     await shell.trashItem(entry.removePath);
     STATS_CACHE = null;  // la stima del contesto conta le skill personali
-    appendActivity({ kind: entry.kind, action: 'delete', target: entry.name, success: true });
+    appendActivity({ kind: logKind, action: 'delete', target: logName, success: true });
     return { success: true };
   } catch (e) {
-    appendActivity({ kind: entry.kind, action: 'delete', target: entry.name, success: false, error: e.message });
+    appendActivity({ kind: logKind, action: 'delete', target: logName, success: false, error: e.message });
     return { success: false, error: e.message };
   }
 });
