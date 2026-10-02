@@ -2,6 +2,13 @@
 
 > English translation of [CHANGELOG.md](./CHANGELOG.md) (Italian, canonical). Updated in sync with each release.
 
+## v1.2.17 — 2026-10-02 — Filters, plugin switch and deletion in Skills and Agents
+
+- [FEATURE] Status (All / Active / Disabled / Warning) and Source (Plugins / User / Project) filters in the Skills and Agents sections, combinable with each other and with search, with the number of items on every chip
+- [FEATURE] Switch on cards and compact rows: turns on or off the plugin that provides the skill or agent, with a confirmation saying how many skills and agents go off together
+- [FEATURE] Trash button on user or project skills, agents and commands and on broken links: it moves them to the system Trash, from where they can be restored
+- [IMPROVEMENT] After a reload (switch, Refresh, external change to the configuration) the list stays where it was instead of jumping back to the top
+
 ## v1.2.16 — 2026-10-02 — Claude Sonnet 5.5 support
 
 - [FEATURE] Sonnet 5.5 can be picked as the default model in Claude Config, and the Sonnet alias now reads "Sonnet · Sonnet 5.5"

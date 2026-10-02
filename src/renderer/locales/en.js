@@ -305,6 +305,13 @@ window.LOCALES.en = {
     sourcePlugin:  'Plugins',
     sourceUser:    'User',
     sourceProject: 'Project',
+    groupStatus:   'Status',
+    groupSource:   'Source',
+    statusActive:  'Active',
+    statusActiveM: 'Active',
+    statusDisabled:  'Disabled',
+    statusDisabledM: 'Disabled',
+    statusWarning: 'Warning',
     all:           'All',
     allKinds:      'All types',
     fromPlugin:    'From plugins',
@@ -758,11 +765,15 @@ window.LOCALES.en = {
   // Skill / Agent (management note)
   skillAgent: {
     managedByPlugin:    'Managed by the {plugin} plugin',
-    managedByPluginTip: 'Skills and agents can\'t be toggled individually: they\'re enabled or disabled together with the plugin that provides them. Use the plugin toggle in the Plugins section.',
+    managedByPluginTip: "Skills and agents can't be toggled individually: they're enabled or disabled together with the plugin that provides them, using the switch next to them or the Plugins section. To remove them for good, uninstall the plugin.",
     reveal:             'Show in folder',
     userNote:           'Yours, active in every session',
     projectNote:        'From project {project}',
-    standaloneTip:      'Not from a plugin: Claude Code loads it from the .claude folder. It has no toggle: to turn it off, move or delete its file or folder.',
+    standaloneTip:      'Not from a plugin: Claude Code loads it from the .claude folder. It has no toggle: to remove it use the Delete button, which moves it to the Trash.',
+    pluginOn:           'Plugin on',
+    pluginOff:          'Plugin off',
+    pluginToggleTip:    "Turn the {plugin} plugin on or off. It applies to all its skills and agents ({skills} skills, {agents} agents): Claude Code doesn't manage them one by one.",
+    delete:             'Delete (move to Trash)',
     brokenShort:        'Claude Code ignores it',
     brokenHint:         'The link points to {target}, which no longer exists. Claude Code ignores it: you can delete it.',
   },
@@ -1062,6 +1073,18 @@ window.LOCALES.en = {
 
   // Confirm dialogs (Electron native dialog: title/message/detail/buttons)
   confirm: {
+    disablePluginFromItem: {
+      title:   'Turn off the {plugin} plugin?',
+      message: 'All its skills and agents will be turned off ({skills} skills, {agents} agents), not just this one.',
+      detail:  'You can turn it back on any time from the same switch.',
+      yes:     'Turn off plugin',
+    },
+    deleteItem: {
+      title:         'Delete "{name}"?',
+      message:       'It is moved to the Trash, where you can restore it. Claude Code will no longer load it.',
+      messageBroken: 'The link points to {target}, which no longer exists. It is moved to the Trash and nothing else is touched.',
+      yes:           'Move to Trash',
+    },
     disablePlugin: {
       title:   'Disable plugin',
       message: 'Disable "{id}"?',
@@ -1198,6 +1221,8 @@ window.LOCALES.en = {
 
   // Toast messages comuni
   toast: {
+    itemTrashed:    'Moved to the Trash: {name}',
+    itemTrashError: 'Could not delete: {msg}',
     readItemError:  'Error reading {kind}: {msg}',
     dataReloaded:    'Data reloaded',
     copied:          'Copied to clipboard',

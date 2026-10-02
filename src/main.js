@@ -485,8 +485,10 @@ let ITEM_FILES = new Map();
 function buildItemFileAllowlist(userData, localData) {
   const map = new Map();
   const addStandalone = (src) => {
-    [...src.skills, ...src.agents, ...src.commands].forEach(i => map.set(i.file, { editable: true }));
-    src.broken.forEach(b => map.set(b.path, { editable: false, broken: true }));
+    // removePath: cosa si sposta nel Cestino per eliminare la voce (vedi trash-item-file)
+    const add = (list, kind) => list.forEach(i => map.set(i.file, { editable: true, removePath: i.removePath, kind, name: i.name }));
+    add(src.skills, 'skill'); add(src.commands, 'skill'); add(src.agents, 'agent');
+    src.broken.forEach(b => map.set(b.path, { editable: false, broken: true, removePath: b.path, kind: b.kind === 'agent' ? 'agent' : 'skill', name: b.name }));
   };
   addStandalone(userData);
   (localData.projectItems || []).forEach(addStandalone);
@@ -1973,4 +1975,37 @@ ipcMain.handle('reveal-item-file', async (_e, { file } = {}) => {
   if (typeof file !== 'string' || !ITEM_FILES.has(file)) return { success: false, error: 'File non consentito.' };
   shell.showItemInFolder(file);
   return { success: true };
+});
+
+// v1.2.17 — Elimina una skill/agent/comando personale o di progetto (o un link
+// rotto): lo sposta nel Cestino di sistema, quindi è recuperabile. Accetta solo
+// voci presenti in ITEM_FILES con un removePath, e rivalida che sia un figlio
+// diretto di skills/agents/commands di ~/.claude o di un progetto tracciato.
+// Per un link simbolico il Cestino prende il link, non la cartella a cui punta.
+function isSafeRemovePath(p) {
+  if (typeof p !== 'string') return false;
+  const abs = path.resolve(p);
+  const parent = path.dirname(abs);
+  if (!['skills', 'agents', 'commands'].includes(path.basename(parent))) return false;
+  const base = path.dirname(parent);
+  if (base === CLAUDE_DIR) return true;
+  if (path.basename(base) !== '.claude') return false;
+  const tracked = (readState().trackedProjects || []).map(x => path.resolve(x));
+  return tracked.includes(path.dirname(base));
+}
+
+ipcMain.handle('trash-item-file', async (_e, { file } = {}) => {
+  const entry = typeof file === 'string' ? ITEM_FILES.get(file) : null;
+  if (!entry || !entry.removePath || !isSafeRemovePath(entry.removePath)) {
+    return { success: false, error: 'Elemento non eliminabile.' };
+  }
+  try {
+    await shell.trashItem(entry.removePath);
+    STATS_CACHE = null;  // la stima del contesto conta le skill personali
+    appendActivity({ kind: entry.kind, action: 'delete', target: entry.name, success: true });
+    return { success: true };
+  } catch (e) {
+    appendActivity({ kind: entry.kind, action: 'delete', target: entry.name, success: false, error: e.message });
+    return { success: false, error: e.message };
+  }
 });

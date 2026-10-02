@@ -860,6 +860,12 @@ function switchToSection(name) {
 /* ── DATA ─────────────────────────────────────────────────────────────── */
 async function loadData() {
   setStatus('loading', t('status.loading'));
+  // v1.2.17 — il re-render sostituisce l'intera sezione e riporterebbe lo scroll
+  // in cima (toggle di un plugin, eliminazione, reload da config-changed): si
+  // riporta la lista dov'era, se la sezione è la stessa.
+  const keepSection = state.section;
+  const scroller = contentScroller();
+  const keepTop = scroller ? scroller.scrollTop : 0;
   const result = await window.claudeAPI.getData();
   if (!result.ok) {
     setStatus('error', t('uiErr.dataLoad'));
@@ -870,6 +876,10 @@ async function loadData() {
   if (result.data.appVersion) _currentAppVersion = result.data.appVersion;
   processData();
   render();
+  if (state.section === keepSection) {
+    const after = contentScroller();
+    if (after) after.scrollTop = keepTop;
+  }
   refreshSidebarRecent();
   refreshFooterStatus(window._latestUpdateInfo || null);
 }
@@ -2607,16 +2617,8 @@ function buildPluginCard(p) {
   inp.addEventListener('change', async () => {
     toggleWrap.classList.add('loading');
     inp.disabled = true;
-    const action = p.blocked ? 'enable' : 'disable';
-    const result = await window.claudeAPI.pluginAction(action, p.fullId);
-    if (result.success) {
-      toast(t(action === 'enable' ? 'plugin.toastEnabled' : 'plugin.toastDisabled', { id: p.id }),
-            action === 'enable' ? 'success' : 'warn');
-      window.claudeAPI.showNotification(action === 'enable' ? t('plugin.notifActivated') : t('plugin.notifDeactivated'), p.id);
-      clearStatsCaches();  // forza re-fetch contextBreakdown → barra si aggiorna
-      await loadData();
-    } else {
-      toast(t('toast.errorPrefix', { msg: result.error }), 'error');
+    const ok = await setPluginEnabled(p, !!p.blocked);
+    if (!ok) {
       inp.checked = !inp.checked; // revert
       toggleWrap.classList.remove('loading');
       inp.disabled = false;
@@ -3394,12 +3396,13 @@ function standaloneItems(src, forAgents, extra) {
   const folder = { skill: 'skills', agent: 'agents', command: 'commands' };
   lists.forEach(([kind, list]) => (list || []).forEach(i => out.push({
     name: i.name, kind, file: i.file, health: i.health || null, addedAt: i.addedAt || '',
+    removable: !!i.removePath,
     plugin: extra.base + '/' + folder[kind], mkt: '', standalone: true, ...extra,
   })));
   (src.broken || [])
     .filter(b => forAgents ? b.kind === 'agent' : b.kind !== 'agent')
     .forEach(b => out.push({
-      name: b.name, kind: b.kind, file: b.path, broken: true, target: b.target,
+      name: b.name, kind: b.kind, file: b.path, broken: true, target: b.target, removable: true,
       plugin: extra.base + '/' + folder[b.kind], mkt: '', standalone: true, ...extra,
     }));
   return out;
@@ -3436,6 +3439,95 @@ function allAgentItems() {
   return [...globals, ...locals, ...allStandaloneItems(true)];
 }
 
+// v1.2.17 — Elemento che scorre nell'area contenuti (il contenitore o un suo avo).
+function contentScroller() {
+  let node = $('content-area');
+  while (node && node.scrollHeight <= node.clientHeight + 1) node = node.parentElement;
+  return node;
+}
+// Attiva/disattiva un plugin globale: unica via per la card Plugin e per i
+// toggle di skill/agent.
+async function setPluginEnabled(p, enable) {
+  const result = await window.claudeAPI.pluginAction(enable ? 'enable' : 'disable', p.fullId);
+  if (!result.success) {
+    toast(t('toast.errorPrefix', { msg: result.error }), 'error');
+    return false;
+  }
+  toast(t(enable ? 'plugin.toastEnabled' : 'plugin.toastDisabled', { id: p.id }), enable ? 'success' : 'warn');
+  window.claudeAPI.showNotification(enable ? t('plugin.notifActivated') : t('plugin.notifDeactivated'), p.id);
+  clearStatsCaches();  // forza re-fetch contextBreakdown → barra si aggiorna
+  await loadData();
+  return true;
+}
+
+// Toggle del plugin proprietario di una skill/agent. Agisce su TUTTE le skill e
+// gli agent del plugin (Claude Code non li attiva singolarmente): lo dicono il
+// tooltip, l'etichetta e la conferma alla disattivazione. Solo plugin globali.
+function buildItemPluginToggle(item, withLabel) {
+  const p = state.plugins.find(x => x.fullId === item.fullId && x.scope === 'global');
+  if (!p) return null;
+  const enabled = !p.blocked;
+  const tip = t('skillAgent.pluginToggleTip', { plugin: p.id, skills: p.skills.length, agents: p.agents.length });
+  const wrap = el('div', 'item-toggle-wrap');
+  wrap.title = tip;
+  const toggle = el('label', 'toggle item-toggle');
+  const inp = el('input');
+  inp.type = 'checkbox';
+  inp.checked = enabled;
+  toggle.appendChild(inp);
+  toggle.appendChild(el('span', 'toggle-track'));
+  toggle.appendChild(el('span', 'toggle-thumb'));
+  wrap.appendChild(toggle);
+  if (withLabel) wrap.appendChild(el('span', 'item-toggle-label', t(enabled ? 'skillAgent.pluginOn' : 'skillAgent.pluginOff')));
+  // la card intera apre l'anteprima: il toggle non deve farlo
+  wrap.addEventListener('click', e => e.stopPropagation());
+  inp.addEventListener('change', async () => {
+    if (enabled) {
+      const choice = await window.claudeAPI.confirmDialog({
+        title:   t('confirm.disablePluginFromItem.title', { plugin: p.id }),
+        message: t('confirm.disablePluginFromItem.message', { skills: p.skills.length, agents: p.agents.length }),
+        detail:  t('confirm.disablePluginFromItem.detail'),
+        buttons: [t('button.cancel'), t('confirm.disablePluginFromItem.yes')],
+      });
+      if (choice !== 1) { inp.checked = true; return; }
+    }
+    toggle.classList.add('loading');
+    inp.disabled = true;
+    const ok = await setPluginEnabled(p, !enabled);
+    if (!ok) { inp.checked = enabled; toggle.classList.remove('loading'); inp.disabled = false; }
+  });
+  return wrap;
+}
+
+// Elimina una voce personale o di progetto (o un link rotto) spostandola nel
+// Cestino. Le voci dei plugin non si eliminano da qui: si disinstalla il plugin.
+async function deleteItem(item) {
+  const path = item.kind === 'skill' ? item.file.replace(/[\\/]SKILL\.md$/, '') : item.file;
+  const choice = await window.claudeAPI.confirmDialog({
+    title:   t('confirm.deleteItem.title', { name: item.name }),
+    message: item.broken
+      ? t('confirm.deleteItem.messageBroken', { target: item.target || '?' })
+      : t('confirm.deleteItem.message'),
+    detail:  path,
+    buttons: [t('button.cancel'), t('confirm.deleteItem.yes')],
+  });
+  if (choice !== 1) return;
+  const r = await window.claudeAPI.trashItemFile(item.file);
+  if (!r.success) { toast(t('toast.itemTrashError', { msg: r.error || '?' }), 'error'); return; }
+  toast(t('toast.itemTrashed', { name: item.name }), 'success');
+  clearStatsCaches();
+  await loadData();
+}
+
+function buildItemDeleteButton(item) {
+  const btn = el('button', 'btn btn-sm btn-ghost btn-icon item-delete-btn');
+  btn.title = t('skillAgent.delete');
+  btn.setAttribute('aria-label', t('skillAgent.delete'));
+  btn.appendChild(icon('trash-2'));
+  btn.addEventListener('click', e => { e.stopPropagation(); deleteItem(item); });
+  return btn;
+}
+
 // Colore del bordo: personali viola, di progetto verde, plugin = colore marketplace.
 function itemColor(item) {
   if (item.scope === 'user') return '#a78bfa';
@@ -3458,22 +3550,40 @@ async function openItemPreview(item) {
   showMarkdownModal(item.name, item.kind, r.content, null, r.editable ? item.file : null);
 }
 
-// v1.2.14 — Filtro per fonte delle sezioni Skill/Agent. I plugin installati in
-// un progetto restano "Plugin"; "Progetto" = file sciolti in <progetto>/.claude.
+// v1.2.14/v1.2.17 — Filtri delle sezioni Skill/Agent: Stato e Fonte.
+// Fonte: i plugin installati in un progetto restano "Plugin"; "Progetto" = file
+// sciolti in <progetto>/.claude.
 function itemSource(item) {
   if (!item.standalone) return 'plugin';
   return item.scope === 'user' ? 'user' : 'project';
 }
-function sourceFilterConfig(allLabelKey) {
-  return {
-    getKey: itemSource,
-    options: [
-      { key: 'all',     label: t(allLabelKey) },
+// Stato: un item può avere più chiavi. Disabilitata = plugin proprietario
+// spento; Warning = health del file non ok oppure link rotto; Attiva = Claude
+// Code la carica (plugin acceso, link valido), anche se ha un warning.
+function itemStatuses(item) {
+  const out = [];
+  if (item.blocked) out.push('disabled');
+  if (item.broken || (item.health && item.health.status !== 'ok')) out.push('warning');
+  if (!item.blocked && !item.broken) out.push('active');
+  return out;
+}
+// `masc`: gli agent sono maschili (Tutti/Attivi/Disabilitati), le skill femminili.
+function listFilters(masc) {
+  const g = masc ? 'M' : '';
+  return [
+    { id: 'status', label: t('filter.groupStatus'), getKeys: itemStatuses, options: [
+      { key: 'all',      label: t(masc ? 'filter.all' : 'filter.allSkills') },
+      { key: 'active',   label: t('filter.statusActive' + g) },
+      { key: 'disabled', label: t('filter.statusDisabled' + g) },
+      { key: 'warning',  label: t('filter.statusWarning') },
+    ] },
+    { id: 'source', label: t('filter.groupSource'), getKeys: i => [itemSource(i)], options: [
+      { key: 'all',     label: t(masc ? 'filter.all' : 'filter.allSkills') },
       { key: 'plugin',  label: t('filter.sourcePlugin') },
       { key: 'user',    label: t('filter.sourceUser') },
       { key: 'project', label: t('filter.sourceProject') },
-    ],
-  };
+    ] },
+  ];
 }
 
 /* ── SKILLS ───────────────────────────────────────────────────────────── */
@@ -3500,7 +3610,7 @@ function renderSkills() {
         section: 'skills', mode,
         onChange: (m) => setViewMode('skills', m),
       },
-      sourceFilter: sourceFilterConfig('filter.allSkills'),
+      filters: listFilters(false),
     },
     {
       title: t('empty.bigNoSkillTitle'),
@@ -3533,7 +3643,7 @@ function renderAgents() {
         section: 'agents', mode,
         onChange: (m) => setViewMode('agents', m),
       },
-      sourceFilter: sourceFilterConfig('filter.all'),
+      filters: listFilters(true),
     },
     {
       title: t('empty.bigNoAgentTitle'),
@@ -3563,6 +3673,10 @@ function buildSkillAgentChip(item, kind) {
   appendScopeBadge(chip, item);
   appendModifiedBadge(chip, item, kind, 'chip');
   if (!item.broken) chip.addEventListener('click', () => openItemPreview(item));
+  if (!item.standalone && item.scope === 'global') {
+    const toggle = buildItemPluginToggle(item, false);
+    if (toggle) chip.appendChild(toggle);
+  }
   return chip;
 }
 
@@ -3650,9 +3764,13 @@ function buildSkillAgentCard(item, kind) {
   // globali); per le voci personali/di progetto c'è "Mostra nella cartella".
   const foot = el('div', 'browse-card-foot');
   if (item.broken) {
-    const revealBtn = btnWithIcon('btn btn-sm btn-ghost', 'folder-open', t('skillAgent.reveal'));
+    const revealBtn = el('button', 'btn btn-sm btn-ghost btn-icon');
+    revealBtn.title = t('skillAgent.reveal');
+    revealBtn.setAttribute('aria-label', t('skillAgent.reveal'));
+    revealBtn.appendChild(icon('folder-open'));
     revealBtn.addEventListener('click', e => { e.stopPropagation(); window.claudeAPI.revealItemFile(item.file); });
     foot.appendChild(revealBtn);
+    if (item.removable) foot.appendChild(buildItemDeleteButton(item));
     const hint = el('span', 'browse-card-managed', t('skillAgent.brokenShort'));
     hint.title = t('skillAgent.brokenHint', { target: item.target || '?' });
     foot.appendChild(hint);
@@ -3666,15 +3784,25 @@ function buildSkillAgentCard(item, kind) {
   });
   foot.appendChild(openBtn);
   if (item.standalone) {
-    const revealBtn = btnWithIcon('btn btn-sm btn-ghost', 'folder-open', t('skillAgent.reveal'));
+    const revealBtn = el('button', 'btn btn-sm btn-ghost btn-icon');
+    revealBtn.title = t('skillAgent.reveal');
+    revealBtn.setAttribute('aria-label', t('skillAgent.reveal'));
+    revealBtn.appendChild(icon('folder-open'));
     revealBtn.addEventListener('click', e => { e.stopPropagation(); window.claudeAPI.revealItemFile(item.file); });
     foot.appendChild(revealBtn);
+    if (item.removable) foot.appendChild(buildItemDeleteButton(item));
   } else {
-    // v1.1.26 — Nota: skill/agent non si attivano singolarmente (Claude Code non
-    // lo permette). Si gestiscono abilitando/disabilitando il plugin proprietario.
-    const note = el('span', 'browse-card-managed', t('skillAgent.managedByPlugin', { plugin: item.plugin }));
-    note.title = t('skillAgent.managedByPluginTip');
-    foot.appendChild(note);
+    // v1.1.26 — skill/agent non si attivano singolarmente (Claude Code non lo
+    // permette). v1.2.17 — il toggle agisce sul plugin proprietario (tutte le
+    // sue skill e agent); i plugin locali di progetto restano senza toggle.
+    const toggle = buildItemPluginToggle(item, true);
+    if (toggle) {
+      foot.appendChild(toggle);
+    } else {
+      const note = el('span', 'browse-card-managed', t('skillAgent.managedByPlugin', { plugin: item.plugin }));
+      note.title = t('skillAgent.managedByPluginTip');
+      foot.appendChild(note);
+    }
   }
   card.appendChild(foot);
   card.style.cursor = 'pointer';
@@ -4662,10 +4790,15 @@ async function showClaudeMdEditor(filePath, displayName) {
 // aggiunge il toggle vista cards/compatta accanto al sort dropdown.
 function renderListSection(items, key, buildChip, searchFn, gridCls, sortConfig, mascotEmpty) {
   const f = state.filters[key] || { search: '' };
-  // v1.2.14 — filtro opzionale per fonte (sortConfig.sourceFilter): chip
-  // Tutte / Plugin / Personali / Progetto, combinato con la ricerca.
-  const sf = sortConfig && sortConfig.sourceFilter;
-  let source = (sf && f.source) || 'all';
+  // v1.2.14/v1.2.17 — gruppi di filtri opzionali (sortConfig.filters), a chip e
+  // combinati fra loro e con la ricerca. Ogni gruppo: { id, label, options,
+  // getKeys(item) → chiavi dell'item }. Scelta persistita in state.filters.
+  const groups = (sortConfig && sortConfig.filters) || [];
+  const selected = {};
+  groups.forEach(g => {
+    const prev = f.groups && f.groups[g.id];
+    selected[g.id] = g.options.some(o => o.key === prev) ? prev : 'all';
+  });
   const wrap = el('div');
 
   // v1.1.8 — Empty state "full page" con mascotte se nessun item del tutto
@@ -4693,21 +4826,27 @@ function renderListSection(items, key, buildChip, searchFn, gridCls, sortConfig,
   inp.value = f.search;
   sw.appendChild(inp);
   bar.appendChild(sw);
-  const sourceChips = [];
-  if (sf) {
-    const group = el('div', 'hook-filter-group');
-    sf.options.forEach(o => {
-      const n = o.key === 'all' ? items.length : items.filter(i => sf.getKey(i) === o.key).length;
-      const chip = el('button', 'hook-filter-chip' + (source === o.key ? ' active' : ''), o.label + ' (' + n + ')');
-      chip.addEventListener('click', () => {
-        source = o.key;
-        sourceChips.forEach(c => c.classList.toggle('active', c === chip));
-        filter();
+  const groupChips = {};
+  if (groups.length) {
+    const row = el('div', 'filter-groups-row');
+    groups.forEach(g => {
+      const group = el('div', 'hook-filter-group');
+      group.appendChild(el('span', 'hook-filter-label', g.label));
+      groupChips[g.id] = [];
+      g.options.forEach(o => {
+        const n = o.key === 'all' ? items.length : items.filter(i => g.getKeys(i).includes(o.key)).length;
+        const chip = el('button', 'hook-filter-chip' + (selected[g.id] === o.key ? ' active' : ''), o.label + ' (' + n + ')');
+        chip.addEventListener('click', () => {
+          selected[g.id] = o.key;
+          groupChips[g.id].forEach(c => c.classList.toggle('active', c === chip));
+          filter();
+        });
+        groupChips[g.id].push(chip);
+        group.appendChild(chip);
       });
-      sourceChips.push(chip);
-      group.appendChild(chip);
+      row.appendChild(group);
     });
-    bar.appendChild(group);
+    bar.appendChild(row);
   }
   wrap.appendChild(bar);
 
@@ -4728,11 +4867,11 @@ function renderListSection(items, key, buildChip, searchFn, gridCls, sortConfig,
 
   function filter() {
     const q = inp.value.toLowerCase();
-    state.filters[key] = { search: q, source };
+    state.filters[key] = { search: q, groups: { ...selected } };
     let visible = 0;
     chips.forEach((chip, i) => {
       const show = (!q || searchFn(items[i]).toLowerCase().includes(q))
-        && (source === 'all' || sf.getKey(items[i]) === source);
+        && groups.every(g => selected[g.id] === 'all' || g.getKeys(items[i]).includes(selected[g.id]));
       chip.style.display = show ? '' : 'none';
       if (show) visible++;
     });

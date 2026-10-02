@@ -305,6 +305,13 @@ window.LOCALES.it = {
     sourcePlugin:  'Plugin',
     sourceUser:    'Personali',
     sourceProject: 'Progetto',
+    groupStatus:   'Stato',
+    groupSource:   'Fonte',
+    statusActive:  'Attive',
+    statusActiveM: 'Attivi',
+    statusDisabled:  'Disabilitate',
+    statusDisabledM: 'Disabilitati',
+    statusWarning: 'Warning',
     all:           'Tutti',
     allKinds:      'Tutti i tipi',
     fromPlugin:    'Dai plugin',
@@ -768,11 +775,15 @@ window.LOCALES.it = {
   // Skill / Agent (nota gestione)
   skillAgent: {
     managedByPlugin:    'Gestito dal plugin {plugin}',
-    managedByPluginTip: 'Skill e agent non si attivano singolarmente: si abilitano o disabilitano insieme al plugin che li fornisce. Usa il toggle del plugin nella sezione Plugin.',
+    managedByPluginTip: "Skill e agent non si attivano singolarmente: si abilitano o disabilitano insieme al plugin che li fornisce, con l'interruttore accanto o dalla sezione Plugin. Per rimuoverli del tutto disinstalla il plugin.",
     reveal:             'Mostra nella cartella',
     userNote:           'Personale, attiva in ogni sessione',
     projectNote:        'Del progetto {project}',
-    standaloneTip:      'Non arriva da un plugin: Claude Code la carica dalla cartella .claude. Non ha un interruttore: per disattivarla sposta o elimina il suo file o la sua cartella.',
+    standaloneTip:      'Non arriva da un plugin: Claude Code lo carica dalla cartella .claude. Non ha un interruttore: per toglierlo usa il bottone Elimina, che lo sposta nel Cestino.',
+    pluginOn:           'Plugin attivo',
+    pluginOff:          'Plugin disattivato',
+    pluginToggleTip:    'Attiva o disattiva il plugin {plugin}. Vale per tutte le sue skill e i suoi agent ({skills} skill, {agents} agent): Claude Code non li gestisce uno per uno.',
+    delete:             'Elimina (sposta nel Cestino)',
     brokenShort:        'Claude Code lo ignora',
     brokenHint:         'Il link punta a {target}, che non esiste più. Claude Code lo ignora: puoi eliminarlo.',
   },
@@ -1072,6 +1083,18 @@ window.LOCALES.it = {
 
   // Confirm dialogs (Electron native dialog: title/message/detail/buttons)
   confirm: {
+    disablePluginFromItem: {
+      title:   'Disattivare il plugin {plugin}?',
+      message: 'Si disattivano tutte le sue skill e i suoi agent ({skills} skill, {agents} agent), non solo questo elemento.',
+      detail:  'Puoi riattivarlo quando vuoi dallo stesso interruttore.',
+      yes:     'Disattiva plugin',
+    },
+    deleteItem: {
+      title:         'Eliminare "{name}"?',
+      message:       "L'elemento viene spostato nel Cestino, da cui lo puoi ripristinare. Claude Code non lo caricherà più.",
+      messageBroken: "Il link punta a {target}, che non esiste più. Viene spostato nel Cestino: non tocca nient'altro.",
+      yes:           'Sposta nel Cestino',
+    },
     disablePlugin: {
       title:   'Disabilita plugin',
       message: 'Disabilitare "{id}"?',
@@ -1208,6 +1231,8 @@ window.LOCALES.it = {
 
   // Toast messages comuni
   toast: {
+    itemTrashed:    'Spostato nel Cestino: {name}',
+    itemTrashError: 'Impossibile eliminare: {msg}',
     readItemError:  'Errore lettura {kind}: {msg}',
     dataReloaded:    'Dati ricaricati',
     copied:          'Copiato negli appunti',

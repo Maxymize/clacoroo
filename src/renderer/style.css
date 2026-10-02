@@ -4166,6 +4166,16 @@ body {
   border: 1px solid rgba(176,174,165,.28);
 }
 .kind-tag-broken { background: rgba(239,68,68,.18); color: #fca5a5; border-color: rgba(239,68,68,.36); }
+/* v1.2.17 — filtri Stato/Fonte su una riga propria sotto la ricerca */
+.filter-groups-row {
+  flex-basis: 100%;
+  display: flex; flex-wrap: wrap; gap: 8px 24px;
+}
+/* toggle del plugin proprietario su card e righe compatte di skill/agent */
+.item-toggle-wrap { display: inline-flex; align-items: center; gap: 8px; flex-shrink: 0; margin-left: auto; }
+.item-toggle-label { font-size: 11px; color: var(--text-dim); white-space: nowrap; }
+.skill-chip .item-toggle-wrap { transform: scale(.78); transform-origin: right center; }
+.item-delete-btn:hover:not(:disabled) { color: var(--red); border-color: rgba(239,68,68,.45); background: rgba(239,68,68,.12); }
 
 .plugin-card.local-scope { opacity: .92; }
 .plugin-card.local-scope .pc-id { color: var(--text); }

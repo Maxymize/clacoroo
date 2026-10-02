@@ -2,6 +2,13 @@
 
 > Italiano (canonico). English translation: [CHANGELOG.en.md](./CHANGELOG.en.md) — allineato a ogni release.
 
+## v1.2.17 — 2026-10-02 — Filtri, interruttore del plugin ed eliminazione in Skill e Agent
+
+- [FEATURE] Filtri per Stato (Tutte / Attive / Disabilitate / Warning) e per Fonte (Plugin / Personali / Progetto) nelle sezioni Skill e Agent, combinabili tra loro e con la ricerca, con il numero di voci su ogni chip
+- [FEATURE] Interruttore sulle card e nelle righe compatte: attiva o disattiva il plugin che fornisce la skill o l'agent, con una conferma che dice quante skill e agent si spengono insieme
+- [FEATURE] Bottone cestino su skill, agent e comandi personali o di progetto e sui link rotti: li sposta nel Cestino di sistema, da cui si ripristinano
+- [IMPROVEMENT] Dopo un reload (interruttore, Aggiorna, modifica esterna alla configurazione) la lista resta dov'era invece di tornare in cima
+
 ## v1.2.16 — 2026-10-02 — Supporto a Claude Sonnet 5.5
 
 - [FEATURE] Sonnet 5.5 si può scegliere come modello predefinito in Claude Config, e l'alias Sonnet ora indica "Sonnet · Sonnet 5.5"

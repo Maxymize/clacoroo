@@ -29,6 +29,7 @@ contextBridge.exposeInMainWorld('claudeAPI', {
   readItemFile:       (file)              => ipcRenderer.invoke('read-item-file',     { file }),
   writeItemFile:      (file, content)     => ipcRenderer.invoke('write-item-file',    { file, content }),
   revealItemFile:     (file)              => ipcRenderer.invoke('reveal-item-file',   { file }),
+  trashItemFile:      (file)              => ipcRenderer.invoke('trash-item-file',    { file }),
   readClaudeMd:       (filePath)          => ipcRenderer.invoke('read-claude-md',  { filePath }),
   writeClaudeMd:      (filePath, content) => ipcRenderer.invoke('write-claude-md', { filePath, content }),
   getActivityLog:     ()                  => ipcRenderer.invoke('get-activity-log'),

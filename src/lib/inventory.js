@@ -47,7 +47,8 @@ const isAgentMd = f => f.endsWith('.md') && f.toLowerCase() !== 'readme.md';
 // (plugin.json con `skills: ["./skills/foo"]`) vale come singola skill.
 function scanSkillDir(dir, out, broken) {
   if (isFile(path.join(dir, 'SKILL.md'))) {
-    out.push({ name: path.basename(dir), dir, file: path.join(dir, 'SKILL.md') });
+    // root: la cartella scansionata è essa stessa la skill, non una sua figlia
+    out.push({ name: path.basename(dir), dir, file: path.join(dir, 'SKILL.md'), root: true });
     return;
   }
   for (const entry of listDir(dir)) {
@@ -125,11 +126,19 @@ function scanStandalone(claudeDir) {
   scanSkillDir(path.join(claudeDir, 'skills'), skills, broken);
   scanAgentDir(path.join(claudeDir, 'agents'), agents, broken);
   scanCommandDir(path.join(claudeDir, 'commands'), commands, broken);
+  // Percorso da spostare nel Cestino per eliminare la voce: la cartella della
+  // skill, o il file .md di agent/comando. Solo figli diretti di
+  // skills/agents/commands: mai la cartella contenitore.
+  const removePathFor = (i, kind) => {
+    if (kind === 'skill') return i.root ? null : i.dir;
+    return path.dirname(i.file) === path.join(claudeDir, kind === 'agent' ? 'agents' : 'commands') ? i.file : null;
+  };
   const withMeta = (i, kind) => ({
     name: i.name,
     file: i.file,
     addedAt: addedAt(kind === 'skill' ? i.dir : i.file),
     health: kind === 'command' ? null : checkMarkdownHealth(i.file),
+    removePath: removePathFor(i, kind),
   });
   return {
     skills:   skills.map(i => withMeta(i, 'skill')),
