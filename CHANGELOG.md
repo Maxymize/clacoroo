@@ -7,6 +7,7 @@
 - [FEATURE] Bottone rosso Doctor nell'header, accanto ad Aggiorna: controlla Claude Code (`claude doctor` nella home e nei progetti tracciati) insieme a link rotti, front matter, server MCP e hook, e mostra in una finestra cosa sistemare, con il numero di problemi sul bottone
 - [FEATURE] Per ogni voce: correggi, apri il file, copia il comando, esegui nel terminale, vai alla sezione oppure ignora. "Correggi tutto" applica solo le correzioni sicure e reversibili
 - [FEATURE] "Con Claude" apre una sessione nel terminale integrato per il checkup completo di /doctor, dove approvi ogni correzione
+- [IMPROVEMENT] Il KPI Health della Dashboard, il filtro Warning e il Doctor usano la stessa definizione di problema (front matter non valido o link rotto, non per i plugin spenti); il KPI apre il Doctor e non conta ciò che hai ignorato. Riaprendo il Doctor vedi subito l'ultimo risultato, e le voci ignorate che non compaiono più si tolgono da sole
 - [FIX] Le descrizioni YAML su più righe (`description: >`) non risultano più "troppo corte": spariscono i falsi HEALTH: WARNING su molte skill
 
 ## v1.2.17 — 2026-10-02 — Filtri, interruttore del plugin ed eliminazione in Skill e Agent

@@ -1367,11 +1367,14 @@ function renderDashboard() {
 
   const wrap = el('div');
 
-  // Health summary (idea #3): count skill+agent con status err/warn
+  // Health: voci con un problema (stessa definizione del Doctor, itemProblem),
+  // senza quelle che l'utente ha già ignorato nel Doctor. Include i link rotti,
+  // che i KPI "totali" qui sopra non contano.
   let healthErr = 0, healthWarn = 0;
-  [...allSkills, ...allAgents].forEach(i => {
-    if (!i.health) return;
-    if (i.health.status === 'err') healthErr++; else if (i.health.status === 'warn') healthWarn++;
+  [...allSkillItems(), ...allAgentItems()].forEach(i => {
+    const p = itemProblem(i);
+    if (!p || state.doctorIgnored.includes(itemProblemKey(i))) return;
+    if (p === 'err') healthErr++; else healthWarn++;
   });
 
   // KPI MCP: usa cache se esiste (popolata dalla sezione MCP o dall'init prefetch),
@@ -1421,7 +1424,7 @@ function renderDashboard() {
       label: t('kpi.tokensAlways'),  color: '#6a9bcc' },                            // Anthropic blue
     { num: healthErr + healthWarn,
       label: healthErr ? t('kpi.healthIssues') : (healthWarn ? t('kpi.healthWarning') : t('kpi.health')),
-      color: healthErr ? '#ef4444' : (healthWarn ? '#f59e0b' : '#788c5d') },
+      color: healthErr ? '#ef4444' : (healthWarn ? '#f59e0b' : '#788c5d'), kind: 'health' },
   ];
   kpis.forEach(k => {
     const card = el('div', 'kpi-card');
@@ -1438,6 +1441,12 @@ function renderDashboard() {
         ? t('kpi.hooksWarnTooltip')
         : t('kpi.hooksTooltip');
       card.addEventListener('click', () => switchToSection('hooks'));
+    }
+    // v1.2.18 — KPI Health cliccabile → apre il Doctor (stesso conteggio)
+    if (k.kind === 'health') {
+      card.style.cursor = 'pointer';
+      card.title = t('kpi.healthTooltip');
+      card.addEventListener('click', openDoctorModal);
     }
     kpiGrid.appendChild(card);
   });
@@ -3579,13 +3588,33 @@ function itemSource(item) {
   if (!item.standalone) return 'plugin';
   return item.scope === 'user' ? 'user' : 'project';
 }
+// Problema di una skill, agent o comando: link rotto, oppure front matter non
+// valido. UNICA definizione, usata dal filtro Warning, dal KPI Health della
+// Dashboard e dal Doctor. Una voce di un plugin spento non conta: Claude Code
+// non la carica. Torna 'broken' | 'err' | 'warn' | null.
+function itemProblem(item) {
+  if (item.blocked) return null;
+  if (item.broken) return 'broken';
+  const st = item.health && item.health.status;
+  return st === 'err' || st === 'warn' ? st : null;
+}
+// Chiave stabile di un problema (lo stesso problema sulla stessa voce): è la
+// chiave di "Ignora" del Doctor, e il KPI Health la usa per non contare ciò che
+// l'utente ha già ignorato.
+function itemProblemKey(item) {
+  const p = itemProblem(item);
+  if (!p) return null;
+  return p === 'broken'
+    ? 'broken:' + item.file
+    : 'health:' + (item.file || item.fullId + ':' + item.kind + ':' + item.name) + ':' + item.health.issues.join(',');
+}
 // Stato: un item può avere più chiavi. Disabilitata = plugin proprietario
-// spento; Warning = health del file non ok oppure link rotto; Attiva = Claude
-// Code la carica (plugin acceso, link valido), anche se ha un warning.
+// spento; Warning = ha un problema (itemProblem); Attiva = Claude Code la
+// carica (plugin acceso, link valido), anche se ha un warning.
 function itemStatuses(item) {
   const out = [];
   if (item.blocked) out.push('disabled');
-  if (item.broken || (item.health && item.health.status !== 'ok')) out.push('warning');
+  if (itemProblem(item)) out.push('warning');
   if (!item.blocked && !item.broken) out.push('active');
   return out;
 }
