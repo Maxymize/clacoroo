@@ -92,6 +92,7 @@ const PTY     = require('./lib/pty');
 const APIKEY  = require('./lib/apikey');
 const INVENTORY = require('./lib/inventory');
 const DOCTOR    = require('./lib/doctor');
+const PROJECTS  = require('./lib/projects');
 
 /* ── CONFIG PATHS ──────────────────────────────────────────────────────── */
 
@@ -2028,8 +2029,7 @@ ipcMain.handle('trash-item-file', async (_e, { file } = {}) => {
 const DOCTOR_MAX_PROJECTS = 8;
 
 ipcMain.handle('doctor:run', async () => {
-  const hasConfig = p => fs.existsSync(path.join(p, '.claude')) || fs.existsSync(path.join(p, '.mcp.json'));
-  const cwds = [os.homedir(), ...trackedProjectPaths().filter(hasConfig).slice(0, DOCTOR_MAX_PROJECTS)];
+  const cwds = [os.homedir(), ...trackedProjectPaths().filter(PROJECTS.hasProjectConfig).slice(0, DOCTOR_MAX_PROJECTS)];
   const runs = [];
   for (const cwd of cwds) {
     const r = await runClaudeArgs(['doctor'], { cwd });
@@ -2039,3 +2039,40 @@ ipcMain.handle('doctor:run', async () => {
   if (!readable.length) return { ok: false, error: runs[0].error || 'claude doctor non ha prodotto output.' };
   return { ok: true, ...DOCTOR.mergeDoctorRuns(readable.map(r => DOCTOR.parseDoctorOutput(r.raw))), runs };
 });
+
+// v1.2.18 — Progetti del Doctor: quali cartelle `claude doctor` controlla (la home
+// e i progetti tracciati, con l'esito: controllata, saltata perché senza
+// configurazione, sparita) e quali progetti usati da Claude Code non sono
+// tracciati. Si può aggiungere solo una cartella proposta da qui: il renderer non
+// sceglie percorsi a piacere.
+let DOCTOR_CANDIDATES = new Set();
+
+ipcMain.handle('doctor:projects', async () => {
+  const tracked = trackedProjectPaths();
+  const checkedFirst = new Set(tracked.filter(p => fs.existsSync(p) && PROJECTS.hasProjectConfig(p)).slice(0, DOCTOR_MAX_PROJECTS));
+  const candidates = PROJECTS.untrackedProjects(tracked);
+  DOCTOR_CANDIDATES = new Set(candidates.map(c => c.path));
+  return {
+    home: os.homedir(),
+    tracked: tracked.map(p => ({
+      path: p, name: path.basename(p), exists: fs.existsSync(p),
+      checked: checkedFirst.has(p),
+      hasConfig: fs.existsSync(p) && PROJECTS.hasProjectConfig(p),
+    })),
+    candidates,
+    max: DOCTOR_MAX_PROJECTS,
+  };
+});
+
+ipcMain.handle('doctor:add-project', async (_e, { path: p } = {}) => {
+  if (typeof p !== 'string' || !DOCTOR_CANDIDATES.has(p)) return { success: false, error: 'Cartella non consentita.' };
+  const list = Array.isArray(readState().trackedProjects) ? readState().trackedProjects : [];
+  if (!list.includes(p)) {
+    list.push(p);
+    writeState({ trackedProjects: list });
+    watchTrackedProject(p);
+  }
+  DOCTOR_CANDIDATES.delete(p);
+  return { success: true };
+});
+

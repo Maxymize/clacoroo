@@ -20,6 +20,9 @@
 //   comando, esegui nel terminale, vai alla sezione. Ogni voce si può ignorare
 //   (persistito in state.doctorIgnored; a ogni controllo si tolgono le voci che
 //   non compaiono più).
+// - Sezione "Cartelle controllate": le cartelle in cui gira `claude doctor` (home
+//   e progetti tracciati, con Rimuovi) e i progetti con configurazione che Claude
+//   Code ha usato ma non sono tracciati (con Aggiungi).
 // - "Con Claude" apre una sessione nel terminale integrato per /doctor, il
 //   checkup completo con l'AI, che chiede conferma per ogni correzione. Il
 //   comando non si passa come prompt iniziale: Claude Code può prima chiedere
@@ -36,7 +39,8 @@
 // vede già l'ultimo risultato. paint = ridisegno della finestra aperta (null se
 // chiusa): un controllo che finisce dopo una chiusura e riapertura aggiorna
 // comunque la finestra giusta.
-const doctorState = { cc: null, mcp: null, groups: [], running: false, refreshing: false, paint: null, showIgnored: false, showRaw: false };
+const doctorState = { cc: null, mcp: null, projects: null, groups: [], running: false, refreshing: false, paint: null, showIgnored: false, showRaw: false, showAllProjects: false };
+const DOCTOR_PROJECTS_PREVIEW = 5;
 
 const doctorIsIgnored = key => state.doctorIgnored.includes(key);
 const paintDoctor = () => { if (doctorState.paint) doctorState.paint(); };
@@ -145,9 +149,10 @@ async function runDoctor() {
   if (doctorState.cc) doctorState.refreshing = true; else doctorState.running = true;
   paintDoctor();
   try {
-    [doctorState.cc, doctorState.mcp] = await Promise.all([
+    [doctorState.cc, doctorState.mcp, doctorState.projects] = await Promise.all([
       window.claudeAPI.doctorRun(),
       window.claudeAPI.getMcp({}).catch(() => null),
+      window.claudeAPI.doctorProjects().catch(() => null),
     ]);
   } catch (e) {
     doctorState.cc = { ok: false, error: e.message };
@@ -301,6 +306,8 @@ function renderDoctorBody(body, foot, close) {
     body.appendChild(sec);
   }
 
+  if (doctorState.projects) body.appendChild(buildDoctorProjects());
+
   if (doctorState.showRaw && cc.ok) {
     for (const run of cc.runs) {
       body.appendChild(el('div', 'doctor-raw-title', run.cwd));
@@ -345,6 +352,83 @@ function renderDoctorBody(body, foot, close) {
   right.appendChild(leave);
   foot.appendChild(left);
   foot.appendChild(right);
+}
+
+// Dopo aver cambiato i progetti tracciati la lista delle cartelle controllate è
+// cambiata: dati app freschi e nuovo controllo (il risultato vecchio resta visibile
+// mentre si aggiorna). lastSelfChangeAt evita il reload con toast da config-changed.
+async function doctorProjectsChanged() {
+  await loadData();
+  runDoctor();
+}
+async function doctorAddProject(c) {
+  lastSelfChangeAt = Date.now();
+  const r = await window.claudeAPI.doctorAddProject(c.path);
+  if (!r.success) { toast(t('toast.errorPrefix', { msg: r.error || '?' }), 'error'); return; }
+  toast(t('doctor.projectAdded', { name: c.name }), 'success');
+  await doctorProjectsChanged();
+}
+async function doctorRemoveProject(p) {
+  lastSelfChangeAt = Date.now();
+  const r = await window.claudeAPI.removeTrackedProject(p.path);
+  if (!r.success) { toast(t('toast.errorPrefix', { msg: r.error || '?' }), 'error'); return; }
+  toast(t('toast.projectRemoved'), 'success');
+  await doctorProjectsChanged();
+}
+
+// Dove gira `claude doctor` e cosa resta fuori. Una riga per cartella, con lo
+// stesso aspetto delle voci dei gruppi.
+function buildDoctorProjects() {
+  const p = doctorState.projects;
+  const short = x => (x.startsWith(p.home) ? '~' + x.slice(p.home.length) : x);
+  const sec = el('div', 'doctor-group');
+  const head = el('div', 'doctor-group-head');
+  head.appendChild(el('span', 'doctor-group-title', t('doctor.projectsTitle')));
+  head.appendChild(el('span', 'doctor-group-src', t('doctor.projectsHint', { max: p.max })));
+  sec.appendChild(head);
+
+  const row = (name, pathText, meta, label, onClick) => {
+    const r = el('div', 'doctor-row');
+    const txt = el('div', 'doctor-row-text');
+    txt.appendChild(el('div', 'doctor-row-main', name));
+    txt.appendChild(el('div', 'doctor-row-detail', pathText + ' · ' + meta));
+    r.appendChild(txt);
+    const acts = el('div', 'doctor-row-actions');
+    if (label) {
+      const b = el('button', 'btn btn-sm btn-ghost', label);
+      b.addEventListener('click', onClick);
+      acts.appendChild(b);
+    }
+    r.appendChild(acts);
+    return r;
+  };
+
+  sec.appendChild(row(t('doctor.projectHome'), '~', t('doctor.projectChecked')));
+  p.tracked.forEach(x => {
+    const status = !x.exists ? t('doctor.projectMissing')
+      : x.checked ? t('doctor.projectChecked')
+      : x.hasConfig ? t('doctor.projectOverLimit', { max: p.max })
+      : t('doctor.projectSkipped');
+    sec.appendChild(row(x.name, short(x.path), status, t('button.remove'), () => doctorRemoveProject(x)));
+  });
+
+  if (p.candidates.length) {
+    const sub = el('div', 'doctor-subhead');
+    sub.appendChild(el('span', 'doctor-subhead-title', t('doctor.projectsUnchecked', { n: p.candidates.length })));
+    if (p.candidates.length > DOCTOR_PROJECTS_PREVIEW) {
+      const more = el('button', 'btn btn-sm btn-ghost',
+        doctorState.showAllProjects ? t('doctor.showFewerProjects') : t('doctor.showAllProjects', { n: p.candidates.length }));
+      more.addEventListener('click', () => { doctorState.showAllProjects = !doctorState.showAllProjects; paintDoctor(); });
+      sub.appendChild(more);
+    }
+    sec.appendChild(sub);
+    const shown = doctorState.showAllProjects ? p.candidates : p.candidates.slice(0, DOCTOR_PROJECTS_PREVIEW);
+    shown.forEach(c => sec.appendChild(row(
+      c.name, short(c.path),
+      t('doctor.projectMeta', { n: c.sessions, when: relativeTime(c.lastActivity) }),
+      t('doctor.add'), () => doctorAddProject(c))));
+  }
+  return sec;
 }
 
 function buildDoctorRow(it, close) {
