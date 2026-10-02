@@ -44,6 +44,7 @@ const LUCIDE_ICONS = {
   'plus':        '<line x1="12" x2="12" y1="5" y2="19"/><line x1="5" x2="19" y1="12" y2="12"/>',
   'x':           '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
   'check':       '<path d="M20 6 9 17l-5-5"/>',
+  'stethoscope': '<path d="M11 2v2"/><path d="M5 2v2"/><path d="M5 3H4a2 2 0 0 0-2 2v4a6 6 0 0 0 12 0V5a2 2 0 0 0-2-2h-1"/><path d="M8 15a6 6 0 0 0 12 0v-3"/><circle cx="20" cy="10" r="2"/>',
   'trash-2':     '<path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/>',
   'play':        '<polygon points="6 3 20 12 6 21 6 3"/>',
   'copy':        '<rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>',
@@ -303,6 +304,8 @@ const state = {
   // Chiave: `kind:fullId:name` (es. "skill:claude-mem@thedotmack:mcp-search").
   // Value: timestamp ISO ultima modifica.
   modifiedFiles: {},
+  // v1.2.18 — chiavi delle voci del Doctor che l'utente ha scelto di ignorare
+  doctorIgnored: [],
   // v1.0.109 — Modello selezionato per il token budget visualizzato.
   // v1.1.34: ora è un id-modello completo (es. 'claude-sonnet-4-6'); i vecchi
   // sentinel 'sonnet'/'opus' restano accettati e vengono migrati da
@@ -640,6 +643,7 @@ async function init() {
   if (appState.modifiedFiles && typeof appState.modifiedFiles === 'object') {
     state.modifiedFiles = appState.modifiedFiles;
   }
+  if (Array.isArray(appState.doctorIgnored)) state.doctorIgnored = appState.doctorIgnored;
   // v1.0.109 — restore tokenModel preferito (id-modello completo o sentinel legacy)
   if (typeof appState.tokenModel === 'string' && appState.tokenModel) {
     state.tokenModel = appState.tokenModel;
@@ -1144,6 +1148,8 @@ function render() {
     toast(t('toast.dataReloaded'), 'success');
   });
   actions.insertBefore(refreshBtn, actions.firstChild);
+  // v1.2.18 — Doctor subito dopo Aggiorna (doctor.js)
+  refreshBtn.after(buildDoctorButton());
 
   // v1.0.67 — Pack B: toggle terminale integrato
   if (termState && termState.caps && termState.caps.available) {

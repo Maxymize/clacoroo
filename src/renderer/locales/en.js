@@ -21,6 +21,8 @@ window.LOCALES.en = {
 
   // Topbar
   topbar: {
+    doctor:          'Doctor',
+    doctorTooltip:   'Check the Claude Code setup and show what to fix',
     refresh:        'Refresh',
     terminal:       'Terminal',
     addProject:     'Project',
@@ -1219,6 +1221,54 @@ window.LOCALES.en = {
   },
 
   // Toast messages comuni
+  // v1.2.18 — Doctor (header)
+  doctor: {
+    title:          'Doctor',
+    running:        'CLACOROO is checking Claude Code…',
+    metaVersion:    'Claude Code {v}',
+    ccError:        'claude doctor did not respond: {msg}',
+    summary:        'To fix: {n} · fixable automatically: {auto}',
+    allGood:        'All in order: nothing to fix.',
+    groupSettings:  'Invalid settings',
+    groupInstall:   'Installation and environment',
+    groupBroken:    'Broken links',
+    groupHealthOwn: 'Front matter of your skills and agents',
+    groupHealthPlugins: 'Plugin front matter (the author fixes it)',
+    groupMcp:       'MCP servers not connected',
+    groupHooks:     'Hooks with missing programs',
+    hookMissing:    'Missing: {tools}',
+    fix:            'Fix',
+    fixed:          'Fixed',
+    runInTerminal:  'Run {cmd}',
+    copyCommand:    'Copy command',
+    copied:         'Command copied to clipboard',
+    openFile:       'Open file',
+    open:           'Open',
+    gotoMcp:        'Go to MCP',
+    gotoHooks:      'Go to Hooks',
+    ignore:         'Ignore',
+    ignoreGroup:    'Ignore all',
+    restore:        'Restore',
+    fixAll:         'Fix all ({n})',
+    fixAllTip:      'Runs only safe, reversible fixes: today it moves broken links to the Trash. You decide the rest, item by item.',
+    fixAllConfirm: {
+      title:   'Automatic fixes: {n}',
+      message: 'They are moved to the Trash, where you can restore them. Nothing else is changed.',
+      yes:     'Fix',
+    },
+    fixAllDone:     'Fixes applied: {n}',
+    fixAllPartial:  'Applied: {ok} · failed: {fail}',
+    withClaude:     'With Claude',
+    withClaudeTip:  'Opens a Claude Code session in the built-in terminal for the full /doctor checkup: Claude proposes fixes and asks for confirmation on each one. Uses quota.',
+    withClaudeHint: '/doctor is on the clipboard: paste it into the session when it is ready and press Enter.',
+    recheck:        'Check again',
+    showRaw:        'Full output',
+    hideRaw:        'Hide output',
+    showIgnored:    'Show ignored ({n})',
+    hideIgnored:    'Hide ignored',
+    leave:          'Leave as is',
+  },
+
   toast: {
     itemTrashed:    'Moved to the Trash: {name}',
     itemTrashError: 'Could not delete: {msg}',

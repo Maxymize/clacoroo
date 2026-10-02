@@ -3,18 +3,28 @@
 const fs   = require('fs');
 const path = require('path');
 
-// Naive frontmatter parser: handles only single-line `key: value` pairs.
-// Sufficient for SKILL.md / agent.md where we only need name + description.
+// Naive frontmatter parser: top-level `key: value` pairs, enough for SKILL.md /
+// agent.md where we only need name + description.
+// v1.2.18 — valori su più righe: blocchi YAML (`description: >`, `|`, `>-`…) e
+// righe di continuazione indentate. Prima `description: >` restituiva ">" e la
+// descrizione risultava "troppo corta" (falsi warning su 30 skill di questa
+// macchina, mostrati come HEALTH: WARNING e nel Doctor).
 function parseFrontmatter(content) {
   const m = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
   if (!m) return null;
   const fm = {};
+  let lastKey = null;
   m[1].split(/\r?\n/).forEach(line => {
+    if (lastKey && /^\s+\S/.test(line)) {
+      fm[lastKey] = (fm[lastKey] ? fm[lastKey] + ' ' : '') + line.trim();
+      return;
+    }
     const idx = line.indexOf(':');
-    if (idx < 0) return;
+    if (idx < 0 || /^\s/.test(line)) { lastKey = null; return; }
     const key = line.slice(0, idx).trim();
-    const val = line.slice(idx + 1).trim();
-    if (key) fm[key] = val;
+    let val = line.slice(idx + 1).trim();
+    if (/^[>|][+-]?\d*$/.test(val)) val = '';  // il testo è nelle righe indentate sotto
+    if (key) { fm[key] = val; lastKey = key; }
   });
   return Object.keys(fm).length ? fm : null;
 }

@@ -2,6 +2,13 @@
 
 > English translation of [CHANGELOG.md](./CHANGELOG.md) (Italian, canonical). Updated in sync with each release.
 
+## v1.2.18 — 2026-10-02 — Doctor in the header
+
+- [FEATURE] Red Doctor button in the header, next to Refresh: it checks Claude Code (`claude doctor` in the home folder and in tracked projects) together with broken links, front matter, MCP servers and hooks, and shows what to fix in a window, with the number of problems on the button
+- [FEATURE] For each item: fix, open the file, copy the command, run it in the terminal, go to the section or ignore. "Fix all" applies only safe, reversible fixes
+- [FEATURE] "With Claude" opens a session in the built-in terminal for the full /doctor checkup, where you approve each fix
+- [FIX] Multi-line YAML descriptions (`description: >`) are no longer reported as "too short": the false HEALTH: WARNING badges on many skills are gone
+
 ## v1.2.17 — 2026-10-02 — Filters, plugin switch and deletion in Skills and Agents
 
 - [FEATURE] Status (All / Active / Disabled / Warning) and Source (Plugins / User / Project) filters in the Skills and Agents sections, combinable with each other and with search, with the number of items on every chip

@@ -91,6 +91,7 @@ const SESSIONS   = require('./lib/sessions');
 const PTY     = require('./lib/pty');
 const APIKEY  = require('./lib/apikey');
 const INVENTORY = require('./lib/inventory');
+const DOCTOR    = require('./lib/doctor');
 
 /* ── CONFIG PATHS ──────────────────────────────────────────────────────── */
 
@@ -2013,4 +2014,36 @@ ipcMain.handle('trash-item-file', async (_e, { file } = {}) => {
     appendActivity({ kind: logKind, action: 'delete', target: logName, success: false, error: e.message });
     return { success: false, error: e.message };
   }
+});
+
+// v1.2.18 — Doctor: `claude doctor` (sola diagnostica) nella home e in ogni
+// progetto tracciato, perché il comando legge anche i settings della cartella
+// in cui gira. Exit code sempre 0 anche con problemi: si tiene lo stdout comunque.
+// Le esecuzioni vanno IN SEQUENZA: il controllo del Portachiavi scrive una voce
+// di prova, e due `claude doctor` in parallelo si scontrano dando un falso
+// "macOS Keychain is not writable (-25299)" (verificato: 2 su 3 in parallelo).
+function runDoctorIn(cwd) {
+  return new Promise(resolve => {
+    execFile(CLAUDE_BIN, ['doctor'], {
+      cwd, timeout: 30000, maxBuffer: 2 * 1024 * 1024,
+      env: { ...process.env, NO_COLOR: '1', FORCE_COLOR: '0' },
+    }, (err, stdout, stderr) => {
+      const raw = String(stdout || '');
+      resolve({ cwd, raw, error: raw.trim() ? null : String(stderr || (err && err.message) || '').trim() });
+    });
+  });
+}
+
+ipcMain.handle('doctor:run', async () => {
+  if (!CLAUDE_BIN) return { ok: false, error: 'Binario claude non trovato. Configura il percorso nelle Impostazioni.' };
+  const cwds = [os.homedir(), ...trackedProjectPaths().filter(p => fs.existsSync(p))];
+  const runs = [];
+  for (const cwd of cwds) runs.push(await runDoctorIn(cwd));
+  const readable = runs.filter(r => r.raw.trim());
+  if (!readable.length) return { ok: false, error: runs[0].error || 'claude doctor non ha prodotto output.' };
+  return {
+    ok: true,
+    ...DOCTOR.mergeDoctorRuns(readable.map(r => DOCTOR.parseDoctorOutput(r.raw))),
+    runs: runs.map(r => ({ cwd: r.cwd, raw: r.raw, error: r.error })),
+  };
 });

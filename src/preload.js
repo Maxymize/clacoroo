@@ -30,6 +30,8 @@ contextBridge.exposeInMainWorld('claudeAPI', {
   writeItemFile:      (file, content)     => ipcRenderer.invoke('write-item-file',    { file, content }),
   revealItemFile:     (file)              => ipcRenderer.invoke('reveal-item-file',   { file }),
   trashItemFile:      (file)              => ipcRenderer.invoke('trash-item-file',    { file }),
+  // v1.2.18 — Doctor: `claude doctor` nella home e nei progetti tracciati
+  doctorRun:          ()                  => ipcRenderer.invoke('doctor:run'),
   readClaudeMd:       (filePath)          => ipcRenderer.invoke('read-claude-md',  { filePath }),
   writeClaudeMd:      (filePath, content) => ipcRenderer.invoke('write-claude-md', { filePath, content }),
   getActivityLog:     ()                  => ipcRenderer.invoke('get-activity-log'),

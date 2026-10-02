@@ -21,6 +21,8 @@ window.LOCALES.it = {
 
   // Topbar
   topbar: {
+    doctor:          'Doctor',
+    doctorTooltip:   'Controlla la configurazione di Claude Code e mostra cosa sistemare',
     refresh:        'Aggiorna',
     terminal:       'Terminale',
     addProject:     'Progetto',
@@ -1229,6 +1231,54 @@ window.LOCALES.it = {
   },
 
   // Toast messages comuni
+  // v1.2.18 — Doctor (header)
+  doctor: {
+    title:          'Doctor',
+    running:        'CLACOROO sta controllando Claude Code…',
+    metaVersion:    'Claude Code {v}',
+    ccError:        'claude doctor non ha risposto: {msg}',
+    summary:        'Da sistemare: {n} · correggibili in automatico: {auto}',
+    allGood:        'Tutto in ordine: niente da sistemare.',
+    groupSettings:  'Impostazioni non valide',
+    groupInstall:   'Installazione e ambiente',
+    groupBroken:    'Link rotti',
+    groupHealthOwn: 'Front matter delle tue skill e dei tuoi agent',
+    groupHealthPlugins: "Front matter dei plugin (lo corregge l'autore)",
+    groupMcp:       'Server MCP non connessi',
+    groupHooks:     'Hook con programmi mancanti',
+    hookMissing:    'Manca: {tools}',
+    fix:            'Correggi',
+    fixed:          'Corretto',
+    runInTerminal:  'Esegui {cmd}',
+    copyCommand:    'Copia comando',
+    copied:         'Comando copiato negli appunti',
+    openFile:       'Apri file',
+    open:           'Apri',
+    gotoMcp:        'Vai a MCP',
+    gotoHooks:      'Vai a Hook',
+    ignore:         'Ignora',
+    ignoreGroup:    'Ignora tutti',
+    restore:        'Ripristina',
+    fixAll:         'Correggi tutto ({n})',
+    fixAllTip:      'Esegue solo le correzioni sicure e reversibili: oggi sposta nel Cestino i link rotti. Il resto lo decidi tu, voce per voce.',
+    fixAllConfirm: {
+      title:   'Correzioni automatiche: {n}',
+      message: "Vengono spostati nel Cestino, da cui li puoi ripristinare. Nient'altro viene modificato.",
+      yes:     'Correggi',
+    },
+    fixAllDone:     'Correzioni eseguite: {n}',
+    fixAllPartial:  'Corrette: {ok} · non riuscite: {fail}',
+    withClaude:     'Con Claude',
+    withClaudeTip:  'Apre una sessione di Claude Code nel terminale integrato per il checkup completo di /doctor: Claude propone le correzioni e chiede conferma per ognuna. Consuma quota.',
+    withClaudeHint: '/doctor è negli appunti: incollalo nella sessione quando è pronta e premi Invio.',
+    recheck:        'Ricontrolla',
+    showRaw:        'Output completo',
+    hideRaw:        'Nascondi output',
+    showIgnored:    'Mostra ignorati ({n})',
+    hideIgnored:    'Nascondi ignorati',
+    leave:          'Lascia così',
+  },
+
   toast: {
     itemTrashed:    'Spostato nel Cestino: {name}',
     itemTrashError: 'Impossibile eliminare: {msg}',
