@@ -41,6 +41,7 @@ function mktColor(mkt) { return MKT_COLORS[mkt] || '#d97757'; }
  * un nodo <svg> inline (cssClass `inline-icon`).
  */
 const LUCIDE_ICONS = {
+  'sliders-horizontal': '<line x1="21" x2="14" y1="4" y2="4"/><line x1="10" x2="3" y1="4" y2="4"/><line x1="21" x2="12" y1="12" y2="12"/><line x1="8" x2="3" y1="12" y2="12"/><line x1="21" x2="16" y1="20" y2="20"/><line x1="12" x2="3" y1="20" y2="20"/><line x1="14" x2="14" y1="2" y2="6"/><line x1="8" x2="8" y1="10" y2="14"/><line x1="16" x2="16" y1="18" y2="22"/>',
   'plus':        '<line x1="12" x2="12" y1="5" y2="19"/><line x1="5" x2="19" y1="12" y2="12"/>',
   'arrow-left':  '<path d="m12 19-7-7 7-7"/><path d="M19 12H5"/>',
   'x':           '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
@@ -2963,6 +2964,10 @@ function showProjectsModal() {
     const openBtn = btnWithIcon('btn btn-sm btn-ghost btn-with-icon', 'folder-open', ' ' + t('pluginCard.openFinder'));
     openBtn.addEventListener('click', () => window.claudeAPI.openDirectory(projectPath));
     tools.appendChild(openBtn);
+    const scopeBtn = btnWithIcon('btn btn-sm btn-primary btn-with-icon', 'sliders-horizontal', ' ' + t('modalScope.open'));
+    scopeBtn.title = t('modalScope.openHint');
+    scopeBtn.addEventListener('click', () => renderScope(projectPath));
+    tools.appendChild(scopeBtn);
     content.appendChild(tools);
 
     content.appendChild(projectSection('modalProj.secPlugins', data.plugins));
@@ -2970,6 +2975,189 @@ function showProjectsModal() {
     content.appendChild(projectSection('modalProj.secAgents', data.agents));
     content.appendChild(projectSection('modalProj.secCommands', data.commands));
     content.appendChild(projectSection('modalProj.secMcp', data.mcp));
+  }
+
+  // v1.2.20 — Da globale a locale: skill personali e plugin assegnati a progetti.
+  const home = () => ((state.rawData && state.rawData.claudeDir) || '').replace(/\/\.claude\/?$/, '');
+  const short = p => (home() && p.startsWith(home()) ? '~' + p.slice(home().length) : p);
+  const baseName = p => p.split('/').pop() || p;
+
+  function scopeErr(code) {
+    const [k, arg] = String(code).split(':');
+    return t('modalScope.err.' + k, { project: arg ? baseName(arg) : '' });
+  }
+
+  async function renderScope(projectPath, filter) {
+    current = projectPath;
+    setTitle(t('modalScope.title'), () => renderDetail(projectPath));
+    content.textContent = '';
+    content.appendChild(el('p', 'proj-intro', t('modalScope.intro', { name: baseName(projectPath) })));
+    const [inv, last] = await Promise.all([window.claudeAPI.scopeInventory(), window.claudeAPI.scopeLast()]);
+    if (current !== projectPath) return;
+    if (last) {
+      const bar = el('div', 'scope-undo');
+      const what = last.op.target === 'global' ? 'modalScope.undoToGlobal' : 'modalScope.undoToLocal';
+      bar.appendChild(el('span', null, t(what, { name: last.op.name })));
+      const undoBtn = el('button', 'btn btn-sm btn-ghost', t('modalScope.undo'));
+      undoBtn.addEventListener('click', async () => {
+        undoBtn.disabled = true;
+        const r = await window.claudeAPI.scopeUndo(last.id);
+        if (r.success) { toast(t('modalScope.undone'), 'success'); await loadData(); } else toast(t('toast.errorPrefix', { msg: (r.message || (r.errors || []).map(scopeErr).join(' ')) }), 'error');
+        renderScope(projectPath, filter);
+      });
+      bar.appendChild(undoBtn);
+      content.appendChild(bar);
+    }
+    const search = el('input', 'scope-filter');
+    search.type = 'search';
+    search.placeholder = t('modalScope.filter');
+    search.value = filter || '';
+    content.appendChild(search);
+    const holder = el('div');
+    content.appendChild(holder);
+    const draw = () => {
+      holder.textContent = '';
+      const q = search.value.trim().toLowerCase();
+      holder.appendChild(scopeSection('modalScope.secSkills', inv.skills.filter(i => i.name.toLowerCase().includes(q)).map(i => ({ ...i, label: i.name, op: { kind: 'skill', name: i.name } })), projectPath, inv));
+      holder.appendChild(scopeSection('modalScope.secPlugins', inv.plugins.filter(i => i.id.toLowerCase().includes(q)).map(i => ({ ...i, label: i.id, op: { kind: 'plugin', id: i.id } })), projectPath, inv));
+    };
+    search.addEventListener('input', draw);
+    draw();
+  }
+
+  function scopeSection(titleKey, rows, projectPath, inv) {
+    const sec = el('div', 'proj-section');
+    const head = el('div', 'proj-section-title', t(titleKey));
+    head.appendChild(el('span', 'proj-count', String(rows.length)));
+    sec.appendChild(head);
+    if (!rows.length) { sec.appendChild(el('div', 'proj-empty', t('modalProj.none'))); return sec; }
+    rows.sort((a, b) => b.tokens - a.tokens);
+    rows.forEach(r => {
+      const row = el('div', 'proj-item scope-row');
+      const main = el('div', 'scope-main');
+      main.appendChild(el('span', 'proj-item-name', r.label));
+      const bits = [t('modalScope.where.' + r.where)];
+      if (r.where !== 'global' && r.projects.length) bits.push(t('modalScope.inProjects', { n: r.projects.length }));
+      bits.push(t('modalScope.tokens', { n: r.tokens }));
+      main.appendChild(el('span', 'proj-item-meta', bits.join(' · ')));
+      row.appendChild(main);
+      const acts = el('div', 'scope-acts');
+      const open = (target, projects) => renderScopePreview(projectPath, { ...r.op, target, projects, gitExclude: true });
+      if (r.where === 'global') {
+        const b = el('button', 'btn btn-sm btn-primary', t('modalScope.makeLocal'));
+        b.addEventListener('click', () => open('projects', [projectPath]));
+        acts.appendChild(b);
+      } else {
+        const inP = r.projects.includes(projectPath);
+        const b = el('button', 'btn btn-sm btn-ghost', t(inP ? 'modalScope.removeHere' : 'modalScope.addHere'));
+        b.addEventListener('click', () => open('projects', inP ? r.projects.filter(p => p !== projectPath) : [...r.projects, projectPath]));
+        acts.appendChild(b);
+        const g = el('button', 'btn btn-sm btn-ghost', t('modalScope.makeGlobal'));
+        g.addEventListener('click', () => open('global', []));
+        acts.appendChild(g);
+      }
+      row.appendChild(acts);
+      sec.appendChild(row);
+    });
+    return sec;
+  }
+
+  async function renderScopePreview(projectPath, op) {
+    current = projectPath;
+    setTitle(t('modalScope.previewTitle'), () => renderScope(projectPath));
+    content.textContent = '';
+    const name = op.name || op.id;
+    content.appendChild(el('p', 'proj-intro', t(op.target === 'global' ? 'modalScope.previewToGlobal' : 'modalScope.previewToLocal', { name })));
+
+    if (op.target === 'projects') {
+      const box = el('div', 'proj-section');
+      box.appendChild(el('div', 'proj-section-title', t('modalScope.assignTo')));
+      (state.trackedProjects || []).forEach(pp => {
+        const lbl = el('label', 'scope-check');
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.checked = op.projects.includes(pp);
+        cb.addEventListener('change', () => {
+          const set = new Set(op.projects);
+          if (cb.checked) set.add(pp); else set.delete(pp);
+          renderScopePreview(projectPath, { ...op, projects: [...set] });
+        });
+        lbl.appendChild(cb);
+        lbl.appendChild(el('span', null, baseName(pp)));
+        lbl.appendChild(el('span', 'proj-item-meta', pp));
+        box.appendChild(lbl);
+      });
+      content.appendChild(box);
+    }
+
+    const pv = await window.claudeAPI.scopePreview(op);
+    if (current !== projectPath) return;
+    const back = el('div', 'add-mkt-actions');
+    const backBtn = el('button', 'btn btn-sm btn-ghost', t('modalScope.cancel'));
+    backBtn.addEventListener('click', () => renderScope(projectPath));
+    back.appendChild(backBtn);
+
+    if (!pv.ok) {
+      const msg = pv.errors.includes('nothing') ? t('modalScope.nothing') : pv.errors.map(scopeErr).join(' ');
+      content.appendChild(el('div', 'scope-error', msg));
+      content.appendChild(back);
+      return;
+    }
+
+    const tok = el('div', 'scope-tokens');
+    tok.textContent = op.target === 'global'
+      ? t('modalScope.tokensAdded', { n: pv.tokens.addedPerSession })
+      : t('modalScope.tokensSaved', { n: pv.tokens.savedPerSession });
+    content.appendChild(tok);
+
+    const sec = el('div', 'proj-section');
+    sec.appendChild(el('div', 'proj-section-title', t('modalScope.changes')));
+    pv.actions.forEach(a => {
+      const text = a.type === 'move'    ? t('modalScope.act.move',    { from: short(a.from), to: short(a.to) })
+                 : a.type === 'link'    ? t('modalScope.act.link',    { at: short(a.at) })
+                 : a.type === 'unlink'  ? t('modalScope.act.unlink',  { at: short(a.at) })
+                 : a.type === 'exclude' ? t('modalScope.act.exclude', { line: a.line, file: short(a.file) })
+                 : a.del                ? t('modalScope.act.settingDel', { key: a.key, file: short(a.file) })
+                 :                        t('modalScope.act.setting', { key: a.key, value: String(a.value), file: short(a.file) });
+      sec.appendChild(el('div', 'proj-item', text));
+    });
+    content.appendChild(sec);
+    content.appendChild(el('p', 'proj-intro', t('modalScope.backupNote')));
+
+    const gitWarn = pv.warnings.length ? pv.warnings : null;
+    if (gitWarn) {
+      const w = el('div', 'scope-warn');
+      w.appendChild(el('strong', null, t('modalScope.gitTitle')));
+      w.appendChild(el('p', null, t('modalScope.gitBody')));
+      gitWarn.forEach(x => w.appendChild(el('div', 'proj-item-meta', baseName(x.project) + ' · ' + x.path)));
+      const lbl = el('label', 'scope-check');
+      const cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.checked = op.gitExclude !== false;
+      cb.addEventListener('change', () => renderScopePreview(projectPath, { ...op, gitExclude: cb.checked }));
+      lbl.appendChild(cb);
+      lbl.appendChild(el('span', null, t('modalScope.gitExclude')));
+      w.appendChild(lbl);
+      content.appendChild(w);
+    }
+
+    const ok = el('button', 'btn btn-sm btn-primary', t('modalScope.apply'));
+    ok.addEventListener('click', async () => {
+      ok.disabled = true;
+      const r = await window.claudeAPI.scopeApply(op, pv.planHash);
+      if (r.success) {
+        toast(t('modalScope.applied', { name }), 'success');
+        await loadData();
+        renderScope(projectPath);
+      } else {
+        const msg = r.errors && r.errors.includes('stale') ? t('modalScope.err.stale')
+          : (r.message || (r.errors || []).map(scopeErr).join(' '));
+        toast(t('toast.errorPrefix', { msg }), 'error');
+        renderScopePreview(projectPath, op);
+      }
+    });
+    back.insertBefore(ok, backBtn);
+    content.appendChild(back);
   }
 
   function onKey(e) { if (e.key === 'Escape') close(); }

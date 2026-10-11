@@ -93,6 +93,7 @@ const APIKEY  = require('./lib/apikey');
 const INVENTORY = require('./lib/inventory');
 const DOCTOR    = require('./lib/doctor');
 const PROJECTS  = require('./lib/projects');
+const SCOPE_LIB = require('./lib/scope');
 
 /* ── CONFIG PATHS ──────────────────────────────────────────────────────── */
 
@@ -1631,6 +1632,48 @@ ipcMain.handle('apply-snapshot', async (_e, { mktToAdd, pluginsToInstall, snap }
     success: log.every(l => l.success), error: log.filter(l => !l.success).map(l => l.id).join(',') || undefined,
   });
   return { success: log.every(l => l.success), log };
+});
+
+// v1.2.20 — Da globale a locale: skill e plugin assegnati ai progetti tracciati.
+// Logica e backup in lib/scope.js; qui solo i canali IPC.
+const SCOPE = SCOPE_LIB.create({
+  claudeDir:       CLAUDE_DIR,
+  backupRoot:      path.join(os.homedir(), '.claude-control-room', 'scope-backups'),
+  ledgerFile:      path.join(os.homedir(), '.claude-control-room', 'scope-ledger.json'),
+  trackedProjects: () => trackedProjectPaths(),
+});
+
+function scopeOp(raw) {
+  const o = raw && typeof raw === 'object' ? raw : {};
+  return {
+    kind: o.kind === 'plugin' ? 'plugin' : 'skill',
+    name: typeof o.name === 'string' ? o.name : undefined,
+    id: typeof o.id === 'string' ? o.id : undefined,
+    target: o.target,
+    projects: Array.isArray(o.projects) ? o.projects.filter(p => typeof p === 'string') : [],
+    gitExclude: o.gitExclude === true,
+  };
+}
+
+function scopeNotify() {
+  if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('config-changed');
+}
+
+ipcMain.handle('scope:inventory', async () => SCOPE.inventory());
+ipcMain.handle('scope:last', async () => SCOPE.last());
+ipcMain.handle('scope:preview', async (_e, { op } = {}) => SCOPE.preview(scopeOp(op)));
+ipcMain.handle('scope:apply', async (_e, { op, planHash } = {}) => {
+  const o = scopeOp(op);
+  const r = SCOPE.apply(o, typeof planHash === 'string' ? planHash : undefined);
+  appendActivity({ kind: 'scope', action: o.target === 'global' ? 'to-global' : 'to-local', target: o.name || o.id, success: !!r.success, error: r.success ? undefined : (r.message || (r.errors || []).join(',')) });
+  if (r.success) scopeNotify();
+  return r;
+});
+ipcMain.handle('scope:undo', async (_e, { id } = {}) => {
+  const r = SCOPE.undo(typeof id === 'string' ? id : '');
+  appendActivity({ kind: 'scope', action: 'undo', target: id, success: !!r.success, error: r.success ? undefined : (r.message || (r.errors || []).join(',')) });
+  if (r.success) scopeNotify();
+  return r;
 });
 
 // v1.0.11 — Tracked projects (scope locale/globale)

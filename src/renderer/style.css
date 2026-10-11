@@ -5220,3 +5220,15 @@ body {
 .proj-item-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .proj-item-meta { color: var(--text-muted); font-size: 11px; flex-shrink: 0; max-width: 55%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .proj-empty { color: var(--text-muted); font-size: 12px; padding: 4px 10px; }
+
+/* v1.2.20 — Globale o locale */
+.scope-undo { display: flex; gap: 10px; align-items: center; justify-content: space-between; padding: 8px 10px; margin-bottom: 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface2); font-size: 12px; }
+.scope-filter { width: 100%; box-sizing: border-box; margin: 4px 0 8px; padding: 6px 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface2); color: var(--text); font-size: 13px; }
+.scope-row { align-items: center; }
+.scope-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+.scope-acts { display: flex; gap: 6px; flex-shrink: 0; }
+.scope-check { display: flex; gap: 8px; align-items: center; padding: 5px 10px; font-size: 13px; cursor: pointer; }
+.scope-tokens { margin: 8px 0; padding: 8px 10px; border-radius: 8px; background: var(--surface2); font-size: 13px; }
+.scope-warn { margin-top: 12px; padding: 10px 12px; border: 1px solid #f59e0b; border-radius: 8px; font-size: 12px; }
+.scope-warn p { margin: 6px 0; color: var(--text-muted); line-height: 1.5; }
+.scope-error { margin: 12px 0; padding: 10px 12px; border: 1px solid #ef4444; border-radius: 8px; font-size: 13px; }

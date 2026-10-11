@@ -2,6 +2,12 @@
 
 > Italiano (canonico). English translation: [CHANGELOG.en.md](./CHANGELOG.en.md) — allineato a ogni release.
 
+## v1.2.20 — 2026-10-11 — Globale o locale
+
+- [FEATURE] Nella finestra Progetti, dentro un progetto, il bottone "Globale o locale" assegna skill personali e plugin globali ai soli progetti che li usano, per alleggerire il contesto delle altre sessioni
+- [FEATURE] Anteprima di ogni modifica con stima dei token risparmiati, backup automatico dei file toccati e pulsante per annullare l'ultima modifica
+- [IMPROVEMENT] Se il progetto è un repository git, un avviso segnala i file nuovi che finirebbero nei commit e li esclude in locale su richiesta
+
 ## v1.2.19 — 2026-10-11 — Finestra Progetti
 
 - [FEATURE] Il bottone Progetti nell'header apre una finestra con tutti i progetti tracciati: puoi rimuoverli da CLACOROO e aggiungerne altri, e il Finder si apre solo da "Aggiungi progetto", restando poi nella finestra

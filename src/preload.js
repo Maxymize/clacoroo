@@ -34,6 +34,12 @@ contextBridge.exposeInMainWorld('claudeAPI', {
   doctorRun:          ()                  => ipcRenderer.invoke('doctor:run'),
   doctorProjects:     ()                  => ipcRenderer.invoke('doctor:projects'),
   doctorAddProject:   (p)                 => ipcRenderer.invoke('doctor:add-project', { path: p }),
+  // v1.2.20 — da globale a locale (skill e plugin → progetti)
+  scopeInventory:     ()                  => ipcRenderer.invoke('scope:inventory'),
+  scopeLast:          ()                  => ipcRenderer.invoke('scope:last'),
+  scopePreview:       (op)                => ipcRenderer.invoke('scope:preview', { op }),
+  scopeApply:         (op, planHash)      => ipcRenderer.invoke('scope:apply',   { op, planHash }),
+  scopeUndo:          (id)                => ipcRenderer.invoke('scope:undo',    { id }),
   readClaudeMd:       (filePath)          => ipcRenderer.invoke('read-claude-md',  { filePath }),
   writeClaudeMd:      (filePath, content) => ipcRenderer.invoke('write-claude-md', { filePath, content }),
   getActivityLog:     ()                  => ipcRenderer.invoke('get-activity-log'),

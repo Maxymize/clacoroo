@@ -2,6 +2,12 @@
 
 > English translation of [CHANGELOG.md](./CHANGELOG.md) (Italian, canonical). Updated in sync with each release.
 
+## v1.2.20 — 2026-10-11 — Global or local
+
+- [FEATURE] In the Projects window, inside a project, the "Global or local" button assigns personal skills and global plugins only to the projects that use them, to lighten the context of other sessions
+- [FEATURE] Preview of every change with estimated tokens saved, automatic backup of the touched files and a button to undo the last change
+- [IMPROVEMENT] If the project is a git repository, a warning flags the new files that would end up in commits and excludes them locally on request
+
 ## v1.2.19 — 2026-10-11 — Projects window
 
 - [FEATURE] The Projects button in the header opens a window with all tracked projects: you can remove them from CLACOROO and add more, and the Finder opens only from "Add project", after which you stay in the window
