@@ -3002,6 +3002,8 @@ function showProjectsModal() {
     const [k, arg] = String(code).split(':');
     return t('modalScope.err.' + k, { project: arg ? baseName(arg) : '' });
   }
+  // Messaggio di un esito negativo di scopeApply/scopeUndo.
+  const scopeFailMsg = r => r.message || (r.errors || []).map(scopeErr).join(' ');
 
   async function renderScope(projectPath, filter) {
     current = projectPath;
@@ -3018,7 +3020,7 @@ function showProjectsModal() {
       undoBtn.addEventListener('click', async () => {
         undoBtn.disabled = true;
         const r = await window.claudeAPI.scopeUndo(last.id);
-        if (r.success) { toast(t('modalScope.undone'), 'success'); await loadData(); } else toast(t('toast.errorPrefix', { msg: (r.message || (r.errors || []).map(scopeErr).join(' ')) }), 'error');
+        if (r.success) { toast(t('modalScope.undone'), 'success'); await loadData(); } else toast(t('toast.errorPrefix', { msg: scopeFailMsg(r) }), 'error');
         renderScope(projectPath, filter);
       });
       bar.appendChild(undoBtn);
@@ -3140,12 +3142,11 @@ function showProjectsModal() {
     content.appendChild(sec);
     content.appendChild(el('p', 'proj-intro', t('modalScope.backupNote')));
 
-    const gitWarn = pv.warnings.length ? pv.warnings : null;
-    if (gitWarn) {
+    if (pv.warnings.length) {
       const w = el('div', 'scope-warn');
       w.appendChild(el('strong', null, t('modalScope.gitTitle')));
       w.appendChild(el('p', null, t('modalScope.gitBody')));
-      gitWarn.forEach(x => w.appendChild(el('div', 'proj-item-meta', baseName(x.project) + ' · ' + x.path)));
+      pv.warnings.forEach(x => w.appendChild(el('div', 'proj-item-meta', baseName(x.project) + ' · ' + x.path)));
       const lbl = el('label', 'scope-check');
       const cb = document.createElement('input');
       cb.type = 'checkbox';
@@ -3166,9 +3167,7 @@ function showProjectsModal() {
         await loadData();
         renderScope(projectPath);
       } else {
-        const msg = r.errors && r.errors.includes('stale') ? t('modalScope.err.stale')
-          : (r.message || (r.errors || []).map(scopeErr).join(' '));
-        toast(t('toast.errorPrefix', { msg }), 'error');
+        toast(t('toast.errorPrefix', { msg: scopeFailMsg(r) }), 'error');
         renderScopePreview(projectPath, op);
       }
     });
@@ -3792,8 +3791,9 @@ function allSkillItems() {
     return { name: s.name, kind: 'skill', file: s.file, plugin: s.plugin.slice(0, at), mkt: s.plugin.slice(at + 1), blocked: false, scope: 'local', projectName: s.projectName, projectPath: s.projectPath };
   });
   const lib = (state.scopeAssignments && state.scopeAssignments.library) || [];
+  const libLinks = new Set(lib.flatMap(l => l.projects.map(pp => l.name + '\0' + pp)));
   const standalone = allStandaloneItems(false).map(i => (i.scope === 'local' && i.kind === 'skill'
-    && lib.some(l => l.name === i.name && l.projects.includes(i.projectPath))) ? { ...i, fromLibrary: true } : i);
+    && libLinks.has(i.name + '\0' + i.projectPath)) ? { ...i, fromLibrary: true } : i);
   // Skill in libreria senza progetti: non stanno in nessuna cartella scansionata, le mostriamo qui.
   const orphans = lib.filter(l => !l.projects.length).map(l => ({
     name: l.name, kind: 'skill', file: l.file, health: null, addedAt: '', removePath: null,

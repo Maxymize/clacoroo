@@ -320,6 +320,8 @@ function countRealSessions(daysFilter) {
 }
 
 module.exports = {
+  frontmatterBytes,
+  MCP_TOKENS_PER_CONNECTED_SERVER,
   readStatsCache,
   computeStreak,
   computeLongestStreak,

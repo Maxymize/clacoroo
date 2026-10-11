@@ -26,11 +26,11 @@ const crypto = require('crypto');
 const { execFileSync } = require('child_process');
 const INVENTORY = require('./inventory');
 const { mcpServersFromRaw } = require('./mcp');
+const { frontmatterBytes, MCP_TOKENS_PER_CONNECTED_SERVER } = require('./stats');
 
 const NAME_RE   = /^[A-Za-z0-9][A-Za-z0-9_.-]*$/;
 const PLUGIN_RE = /^[a-zA-Z0-9][a-zA-Z0-9_.-]*@[a-zA-Z0-9][a-zA-Z0-9_.-]*$/;
 const BYTES_PER_TOKEN = 3.5;   // stessa stima di stats.js
-const MCP_TOKENS = 400;        // stessa stima di stats.js per server MCP connesso
 const MAX_BACKUPS = 20;
 
 const isDir  = p => { try { return fs.statSync(p).isDirectory(); } catch { return false; } };
@@ -55,12 +55,7 @@ function detectIndent(file) {
   try { return /^\t/m.test(fs.readFileSync(file, 'utf8')) ? '\t' : 2; } catch { return 2; }
 }
 
-function frontmatterTokens(file) {
-  try {
-    const m = fs.readFileSync(file, 'utf8').match(/^---\r?\n[\s\S]*?\r?\n---/);
-    return m ? Math.round(Buffer.byteLength(m[0], 'utf8') / BYTES_PER_TOKEN) : 0;
-  } catch { return 0; }
-}
+const frontmatterTokens = file => Math.round(frontmatterBytes(file) / BYTES_PER_TOKEN);
 
 function getPath(obj, keys) {
   let cur = obj;
@@ -98,12 +93,11 @@ function git(cwd, args) {
   } catch (e) { return { code: typeof e.status === 'number' ? e.status : -1, out: '' }; }
 }
 
+// Una sola chiamata: [è nel work tree, prefisso del progetto nel repo, file di esclusione locale].
 function gitRepoInfo(project) {
-  if (git(project, ['rev-parse', '--is-inside-work-tree']).out !== 'true') return null;
-  const prefix = git(project, ['rev-parse', '--show-prefix']).out;
-  const ex = git(project, ['rev-parse', '--git-path', 'info/exclude']).out;
-  if (!ex) return null;
-  return { prefix, excludeFile: path.resolve(project, ex) };
+  const lines = git(project, ['rev-parse', '--is-inside-work-tree', '--show-prefix', '--git-path', 'info/exclude']).out.split('\n');
+  if (lines[0] !== 'true' || !lines[2]) return null;
+  return { prefix: lines[1], excludeFile: path.resolve(project, lines[2]) };
 }
 
 // ── modulo ───────────────────────────────────────────────────────────────────
@@ -132,8 +126,7 @@ function create(opts) {
   // ── token ──
   function skillTokens(dir) { return frontmatterTokens(path.join(dir, 'SKILL.md')); }
 
-  function pluginTokens(id) {
-    const installed = readJson(installedFile, { plugins: {} });
+  function pluginTokens(id, installed = readJson(installedFile, { plugins: {} })) {
     const root = INVENTORY.installPathFor(installed, id);
     if (!root) return 0;
     let meta = {};
@@ -146,14 +139,13 @@ function create(opts) {
     for (const i of [...items.skills, ...items.agents, ...items.commands]) tok += frontmatterTokens(i.file);
     for (const f of ['.mcp.json', 'mcp.json', path.join('.claude-plugin', 'mcp.json')]) {
       const mf = path.join(root, f);
-      if (isFile(mf)) { tok += Object.keys(mcpServersFromRaw(readJson(mf, {}))).length * MCP_TOKENS; break; }
+      if (isFile(mf)) { tok += Object.keys(mcpServersFromRaw(readJson(mf, {}))).length * MCP_TOKENS_PER_CONNECTED_SERVER; break; }
     }
     return tok;
   }
 
   // ── inventario ──
   function inventory() {
-    const projects = tracked();
     const known = knownProjects();
     const settings = readJson(userSetting, {});
     const skills = [];
@@ -184,10 +176,10 @@ function create(opts) {
       if (!PLUGIN_RE.test(id) || !Array.isArray(entries) || !entries.some(e => e && e.scope === 'user')) continue;
       const localProjects = known.filter(p => getPath(readJson(projLocalFile(p), {}), ['enabledPlugins', id]) === true);
       const where = enabled[id] === true ? 'global' : (localProjects.length ? 'local' : 'off');
-      plugins.push({ id, where, projects: localProjects, tokens: pluginTokens(id) });
+      plugins.push({ id, where, projects: localProjects, tokens: pluginTokens(id, installed) });
     }
     plugins.sort((a, b) => a.id.localeCompare(b.id));
-    return { projects, skills, plugins, libraryDir: libDir };
+    return { skills, plugins };
   }
 
   // Assegnazioni correnti per le card: plugin attivati in locale e skill in
@@ -265,7 +257,7 @@ function create(opts) {
           if (off) actions.push(localOn(p));
         }
       }
-      return { errors, actions, tokens, projects: want, fixed: [] };
+      return { errors, actions, tokens, projects: want };
     }
 
     if (op.kind === 'plugin') {
@@ -307,9 +299,10 @@ function create(opts) {
     for (const [proj, files] of byProject) {
       const info = gitRepoInfo(proj);
       if (!info) continue;
-      for (const file of files) {
-        const rel = path.relative(proj, file);
-        if (git(proj, ['check-ignore', '-q', '--', rel]).code === 0) continue;
+      const rels = [...files].map(f => path.relative(proj, f));
+      const ignored = new Set(git(proj, ['check-ignore', '--', ...rels]).out.split('\n'));   // un processo per progetto
+      for (const rel of rels) {
+        if (ignored.has(rel)) continue;
         const line = '/' + (info.prefix || '') + rel.split(path.sep).join('/');
         warnings.push({ project: proj, path: rel, line });
         excludeActions.push({ t: 'excludeAdd', file: info.excludeFile, line });
@@ -340,14 +333,12 @@ function create(opts) {
     if (!p.actions.length) return { ok: false, errors: ['nothing'] };
     const g = gitCheck(p.actions);
     const actions = op.gitExclude ? [...p.actions, ...g.excludeActions] : p.actions;
-    const touched = [...new Set(actions.flatMap(a => a.t === 'moveDir' ? [a.from, a.to] : [a.at || a.file]))];
     // Risparmio: il costo dell'elemento esce dalle sessioni fuori dai progetti assegnati.
     // Tornando globale è l'inverso (nessun risparmio, costo aggiunto ovunque).
     const saving = op.target === 'projects' ? p.tokens : 0;
     return {
       ok: true,
       actions: actions.map(describe),
-      touched,
       tokens: { item: p.tokens, savedPerSession: saving, addedPerSession: op.target === 'global' ? p.tokens : 0 },
       warnings: g.warnings,
       planHash: planHash(actions),
@@ -483,7 +474,6 @@ function create(opts) {
     for (const d of dirs) {
       const m = readJson(path.join(backupRoot, d, 'manifest.json'), null);
       if (m && !m.undone) return { id: m.id, createdAt: m.createdAt, op: m.op, dir: path.join(backupRoot, d) };
-      if (m && m.undone) continue;
     }
     return null;
   }
