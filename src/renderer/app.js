@@ -42,6 +42,7 @@ function mktColor(mkt) { return MKT_COLORS[mkt] || '#d97757'; }
  */
 const LUCIDE_ICONS = {
   'plus':        '<line x1="12" x2="12" y1="5" y2="19"/><line x1="5" x2="19" y1="12" y2="12"/>',
+  'arrow-left':  '<path d="m12 19-7-7 7-7"/><path d="M19 12H5"/>',
   'x':           '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
   'check':       '<path d="M20 6 9 17l-5-5"/>',
   'stethoscope': '<path d="M11 2v2"/><path d="M5 2v2"/><path d="M5 3H4a2 2 0 0 0-2 2v4a6 6 0 0 0 12 0V5a2 2 0 0 0-2-2h-1"/><path d="M8 15a6 6 0 0 0 12 0v-3"/><circle cx="20" cy="10" r="2"/>',
@@ -1111,18 +1112,11 @@ function render() {
     addMcpBtn.addEventListener('click', () => showAddMcpModal());
     actions.appendChild(addMcpBtn);
   } else {
-    // v1.0.11 — Bottone "+" per aggiungere progetto tracciato (locale)
-    const addProjBtn = btnWithIcon('btn btn-sm btn-ghost btn-refresh', 'plus', t('topbar.addProject'));
+    // v1.2.19 — "Progetti" apre la modale con l'elenco dei progetti tracciati;
+    // il Finder si apre solo da "Aggiungi progetto" dentro la modale.
+    const addProjBtn = btnWithIcon('btn btn-sm btn-ghost btn-refresh', 'folder-open', t('topbar.addProject'));
     addProjBtn.title = t('topbar.addProjectTooltip');
-    addProjBtn.addEventListener('click', async () => {
-      const r = await window.claudeAPI.addTrackedProject();
-      if (r.success) {
-        toast(t('toast.projectAdded', { name: r.path.split('/').pop() }), 'success');
-        await loadData();
-      } else if (r.error !== t('uiErr.cancelled')) {
-        toast(t('toast.errorPrefix', { msg: r.error }), 'error');
-      }
-    });
+    addProjBtn.addEventListener('click', () => showProjectsModal());
     actions.appendChild(addProjBtn);
   }
 
@@ -2836,6 +2830,163 @@ function showAddMarketplaceModal() {
 
   // Focus automatico sull'input
   setTimeout(() => input.focus(), 50);
+}
+
+// v1.2.19 — Modale Progetti: elenco dei progetti tracciati (aggiungi/rimuovi)
+// e, cliccando un progetto, solo ciò che ha in locale (plugin, skill, agent,
+// comandi, MCP). Tutto dai dati già in `state`: nessuno scan nuovo.
+function projectLocalData(projectPath) {
+  const item = (state.projectItems || []).find(p => p.projectPath === projectPath);
+  if (!item) return null;
+  const plugins = state.plugins.filter(p => p.scope === 'local' && p.projectPath === projectPath);
+  const fromPlugins = key => plugins.flatMap(p => (p[key] || []).map(n => ({ name: n, meta: p.fullId })));
+  const own = key => (item[key] || []).map(i => ({ name: i.name, meta: '.claude/' + key }));
+  return {
+    plugins:  plugins.map(p => ({ name: p.fullId, meta: t('modalProj.pluginCounts', { skills: p.skills.length, agents: p.agents.length }) })),
+    skills:   [...own('skills'), ...fromPlugins('skills')],
+    agents:   [...own('agents'), ...fromPlugins('agents')],
+    commands: own('commands'),
+    mcp:      (item.mcp || []).map(m => ({ name: m.name, meta: m.transport + (m.connection ? ' · ' + m.connection : '') })),
+  };
+}
+
+function projectSection(titleKey, rows) {
+  const sec = el('div', 'proj-section');
+  const head = el('div', 'proj-section-title', t(titleKey));
+  head.appendChild(el('span', 'proj-count', String(rows.length)));
+  sec.appendChild(head);
+  if (!rows.length) { sec.appendChild(el('div', 'proj-empty', t('modalProj.none'))); return sec; }
+  rows.forEach(r => {
+    const row = el('div', 'proj-item');
+    row.appendChild(el('span', 'proj-item-name', r.name));
+    if (r.meta) row.appendChild(el('span', 'proj-item-meta', r.meta));
+    sec.appendChild(row);
+  });
+  return sec;
+}
+
+function showProjectsModal() {
+  const overlay = el('div', 'md-overlay');
+  const modal = el('div', 'md-modal');
+  modal.setAttribute('role', 'dialog');
+  modal.setAttribute('aria-modal', 'true');
+
+  const header = el('div', 'md-header');
+  const title = el('div', 'md-title');
+  const closeBtn = el('button', 'md-close'); closeBtn.appendChild(icon('x'));
+  closeBtn.setAttribute('aria-label', t('button.close'));
+  header.appendChild(title); header.appendChild(closeBtn);
+  const content = el('div', 'md-content');
+
+  let current = null;   // percorso del progetto aperto in dettaglio, null = elenco
+
+  function setTitle(text, backTo) {
+    title.textContent = '';
+    if (backTo) {
+      const back = el('button', 'proj-back');
+      back.setAttribute('aria-label', t('modalProj.back'));
+      back.appendChild(icon('arrow-left'));
+      back.addEventListener('click', backTo);
+      title.appendChild(back);
+    }
+    title.appendChild(el('span', null, text));
+  }
+
+  async function addProject() {
+    const r = await window.claudeAPI.addTrackedProject();
+    if (r.success) {
+      toast(t('toast.projectAdded', { name: r.path.split('/').pop() }), 'success');
+      await loadData();
+      renderList();
+    } else if (r.error !== t('uiErr.cancelled')) {
+      toast(t('toast.errorPrefix', { msg: r.error }), 'error');
+    }
+  }
+
+  async function removeProject(projectPath) {
+    const r = await window.claudeAPI.removeTrackedProject(projectPath);
+    if (r.success) {
+      toast(t('toast.projectRemoved'), 'success');
+      await loadData();
+      renderList();
+    }
+  }
+
+  function renderList() {
+    current = null;
+    setTitle(t('modalProj.title'));
+    content.textContent = '';
+    content.appendChild(el('p', 'proj-intro', t('modalProj.intro')));
+
+    const list = state.trackedProjects || [];
+    if (!list.length) content.appendChild(el('div', 'proj-empty', t('empty.noTrackedProjects')));
+    list.forEach(projectPath => {
+      const data = projectLocalData(projectPath);
+      const row = el('div', 'proj-row' + (data ? '' : ' proj-row-missing'));
+      const main = el('button', 'proj-row-main');
+      main.appendChild(el('span', 'proj-row-name', projectPath.split('/').pop() || projectPath));
+      main.appendChild(el('span', 'proj-row-path', projectPath));
+      main.appendChild(el('span', 'proj-row-meta', data
+        ? t('modalProj.counts', { plugins: data.plugins.length, skills: data.skills.length, agents: data.agents.length, mcp: data.mcp.length })
+        : t('modalProj.missing')));
+      if (data) main.addEventListener('click', () => renderDetail(projectPath));
+      else main.disabled = true;
+      row.appendChild(main);
+      const rm = el('button', 'btn btn-sm btn-danger', t('button.remove'));
+      rm.addEventListener('click', () => removeProject(projectPath));
+      row.appendChild(rm);
+      content.appendChild(row);
+    });
+
+    const actions = el('div', 'add-mkt-actions');
+    const addBtn = btnWithIcon('btn btn-sm btn-primary', 'plus', t('modalProj.add'));
+    addBtn.addEventListener('click', addProject);
+    actions.appendChild(addBtn);
+    content.appendChild(actions);
+  }
+
+  function renderDetail(projectPath) {
+    current = projectPath;
+    const data = projectLocalData(projectPath);
+    if (!data) { renderList(); return; }
+    const name = projectPath.split('/').pop() || projectPath;
+    setTitle(name, renderList);
+    content.textContent = '';
+    content.appendChild(el('p', 'proj-intro', t('modalProj.detailIntro')));
+    content.appendChild(el('div', 'proj-row-path', projectPath));
+
+    const tools = el('div', 'proj-tools');
+    const cmBtn = btnWithIcon('btn btn-sm btn-ghost btn-with-icon', 'changelog', ' CLAUDE.md');
+    cmBtn.title = t('settingsExtra.claudeMdProjectEdit');
+    cmBtn.addEventListener('click', () => showClaudeMdEditor(projectPath + '/CLAUDE.md', 'CLAUDE.md — ' + name));
+    tools.appendChild(cmBtn);
+    const openBtn = btnWithIcon('btn btn-sm btn-ghost btn-with-icon', 'folder-open', ' ' + t('pluginCard.openFinder'));
+    openBtn.addEventListener('click', () => window.claudeAPI.openDirectory(projectPath));
+    tools.appendChild(openBtn);
+    content.appendChild(tools);
+
+    content.appendChild(projectSection('modalProj.secPlugins', data.plugins));
+    content.appendChild(projectSection('modalProj.secSkills', data.skills));
+    content.appendChild(projectSection('modalProj.secAgents', data.agents));
+    content.appendChild(projectSection('modalProj.secCommands', data.commands));
+    content.appendChild(projectSection('modalProj.secMcp', data.mcp));
+  }
+
+  function onKey(e) { if (e.key === 'Escape') close(); }
+  function close() {
+    document.removeEventListener('keydown', onKey);
+    overlay.remove();
+  }
+  closeBtn.addEventListener('click', close);
+  overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+  document.addEventListener('keydown', onKey);
+
+  modal.appendChild(header);
+  modal.appendChild(content);
+  overlay.appendChild(modal);
+  overlay._close = close;
+  swapModalOverlay(overlay);
+  renderList();
 }
 
 // v1.0.94 — Pack G v2 chiusura: modal "Aggiungi MCP server" che chiama
@@ -8254,49 +8405,15 @@ function renderSettings() {
   // v1.0.40 — Rimossa sezione Statistiche: già presente in Dashboard e Stats
   // v1.0.11 — Progetti tracciati (scope locale)
   const gProj = group(t('settings.trackedProjects'));
-  const projDesc = el('div', 'settings-row');
-  const projDescL = el('div');
-  projDescL.appendChild(el('div', 'settings-row-label', t('settings.trackedProjectsLabel')));
-  projDescL.appendChild(el('div', 'settings-row-desc', t('settings.trackedProjectsDesc')));
-  projDesc.appendChild(projDescL);
-  gProj.appendChild(projDesc);
-
-  (state.trackedProjects || []).forEach(projectPath => {
-    const projRow = el('div', 'settings-row');
-    const left = el('div');
-    const projName = projectPath.split('/').pop() || projectPath;
-    left.appendChild(el('div', 'settings-row-label', projName));
-    left.appendChild(el('div', 'settings-row-desc', projectPath));
-    projRow.appendChild(left);
-    const right = el('div');
-    right.style.cssText = 'display:flex;gap:6px;align-items:center;';
-    // v1.1.7 — Bottone CLAUDE.md editor inline per progetto tracciato
-    const cmBtn = btnWithIcon('btn btn-sm btn-ghost btn-with-icon', 'changelog', ' CLAUDE.md');
-    cmBtn.title = t('settingsExtra.claudeMdProjectEdit');
-    cmBtn.addEventListener('click', () => {
-      showClaudeMdEditor(projectPath + '/CLAUDE.md', 'CLAUDE.md — ' + projName);
-    });
-    right.appendChild(cmBtn);
-    const removeBtn = el('button', 'btn btn-sm btn-danger', t('button.remove'));
-    removeBtn.addEventListener('click', async () => {
-      const r = await window.claudeAPI.removeTrackedProject(projectPath);
-      if (r.success) {
-        toast(t('toast.projectRemoved'), 'success');
-        await loadData();
-      }
-    });
-    right.appendChild(removeBtn);
-    projRow.appendChild(right);
-    gProj.appendChild(projRow);
-  });
-
-  if (!state.trackedProjects?.length) {
-    const empty = el('div', 'settings-row');
-    const emptyL = el('div');
-    emptyL.appendChild(el('div', 'settings-row-desc', t('empty.noTrackedProjects')));
-    empty.appendChild(emptyL);
-    gProj.appendChild(empty);
-  }
+  const projRow = el('div', 'settings-row');
+  const projLeft = el('div');
+  projLeft.appendChild(el('div', 'settings-row-label', t('settings.trackedProjectsLabel')));
+  projLeft.appendChild(el('div', 'settings-row-desc', t('settings.trackedProjectsDesc')));
+  projRow.appendChild(projLeft);
+  const manageBtn = btnWithIcon('btn btn-sm btn-ghost btn-with-icon', 'folder-open', ' ' + t('settings.manageProjects'));
+  manageBtn.addEventListener('click', () => showProjectsModal());
+  projRow.appendChild(manageBtn);
+  gProj.appendChild(projRow);
 
   // Sviluppo plugin (idea #6 riformulata)
   // v1.0.57 — Editor esterno: usato dal bottone "Apri in editor" delle

@@ -5187,3 +5187,36 @@ body {
 }
 .doctor-foot-group { display: flex; flex-wrap: wrap; gap: 8px; }
 
+
+/* v1.2.19 — Modale Progetti */
+.proj-intro { margin: 0 0 12px; color: var(--text-muted); font-size: 13px; line-height: 1.5; }
+.proj-row { display: flex; gap: 8px; align-items: stretch; margin-bottom: 8px; }
+.proj-row-main {
+  flex: 1; min-width: 0; text-align: left; cursor: pointer;
+  display: flex; flex-direction: column; gap: 2px;
+  padding: 10px 12px;
+  background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm);
+  color: var(--text); font: inherit;
+  transition: border-color .15s;
+}
+.proj-row-main:hover:not(:disabled) { border-color: var(--accent); }
+.proj-row-main:disabled { cursor: default; opacity: .65; }
+.proj-row-name { font-weight: 600; font-size: 13px; }
+.proj-row-path { font-family: "SF Mono", "Fira Code", Menlo, monospace; font-size: 11px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.proj-row-meta { font-size: 11px; color: var(--text-muted); }
+.proj-row-missing .proj-row-meta { color: #f59e0b; }
+.proj-row > .btn { align-self: center; }
+.proj-back { background: none; border: 0; color: var(--text-muted); cursor: pointer; padding: 2px; display: inline-flex; }
+.proj-back:hover { color: var(--text); }
+.proj-tools { display: flex; gap: 8px; margin: 12px 0 4px; }
+.proj-section { margin-top: 16px; }
+.proj-section-title {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 11px; text-transform: uppercase; letter-spacing: .06em;
+  color: var(--text-muted); font-weight: 600; margin-bottom: 6px;
+}
+.proj-count { background: var(--surface2); border-radius: 8px; padding: 0 6px; font-size: 10px; }
+.proj-item { display: flex; gap: 10px; justify-content: space-between; padding: 6px 10px; border-bottom: 1px solid var(--border); font-size: 13px; }
+.proj-item-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.proj-item-meta { color: var(--text-muted); font-size: 11px; flex-shrink: 0; max-width: 55%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.proj-empty { color: var(--text-muted); font-size: 12px; padding: 4px 10px; }

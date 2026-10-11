@@ -422,6 +422,30 @@ function readProjectMcpServers() {
   return out;
 }
 
+// v1.2.19 — Server MCP di un singolo progetto, per la modale Progetti: quelli
+// in ~/.claude.json (projects[<cartella>].mcpServers) e quelli di <cartella>/.mcp.json.
+// Sola lettura, nessun health check; `source` dice da dove arriva la voce.
+function readMcpServersForProject(projectPath) {
+  const out = [];
+  const seen = new Set();
+  const push = (name, cfg, source) => {
+    if (seen.has(name)) return;
+    seen.add(name);
+    const s = mcpConfigToServer(name, cfg, projectPath);
+    out.push({ name, transport: s.transport, connection: s.connection, source });
+  };
+  const data = loadClaudeJson();
+  const own = data && data.projects && data.projects[projectPath];
+  for (const [name, cfg] of Object.entries((own && own.mcpServers) || {})) push(name, cfg, 'user-config');
+  try {
+    const raw = JSON.parse(fs.readFileSync(path.join(projectPath, '.mcp.json'), 'utf8'));
+    for (const [name, cfg] of Object.entries(mcpServersFromRaw(raw))) {
+      if (cfg && typeof cfg === 'object') push(name, cfg, 'mcp-json');
+    }
+  } catch { /* .mcp.json assente o non valido */ }
+  return out;
+}
+
 // v1.2.9 — Un path è verificabile solo se è una cartella progetto nota a
 // Claude Code (chiave di projects{} in ~/.claude.json) ed esiste su disco:
 // il renderer non può farci lanciare `claude` da una cartella arbitraria.
@@ -477,5 +501,6 @@ module.exports = {
   clearAuthCacheEntry,
   readUserMcpConfig,
   readProjectMcpServers,
+  readMcpServersForProject,
   mcpServersFromRaw,
 };

@@ -400,7 +400,11 @@ function scanLocalProjects(trackedProjects) {
     const localPluginsFile = path.join(projectPath, '.claude', 'plugins', 'installed_plugins.json');
     const localCacheDir    = path.join(projectPath, '.claude', 'plugins', 'cache');
 
-    out.projectItems.push({ projectPath, projectName, ...INVENTORY.scanStandalone(path.join(projectPath, '.claude')) });
+    out.projectItems.push({
+      projectPath, projectName,
+      ...INVENTORY.scanStandalone(path.join(projectPath, '.claude')),
+      mcp: MCP.readMcpServersForProject(projectPath),
+    });
 
     // Plugin list (formato v2)
     const localInstalled = fs.existsSync(localPluginsFile)

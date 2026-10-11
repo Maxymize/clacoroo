@@ -2,6 +2,12 @@
 
 > English translation of [CHANGELOG.md](./CHANGELOG.md) (Italian, canonical). Updated in sync with each release.
 
+## v1.2.19 — 2026-10-11 — Projects window
+
+- [FEATURE] The Projects button in the header opens a window with all tracked projects: you can remove them from CLACOROO and add more, and the Finder opens only from "Add project", after which you stay in the window
+- [FEATURE] Clicking a project shows only what it has locally, without the global ones: plugins, skills, agents, commands and MCP servers, with quick access to CLAUDE.md and the folder
+- [IMPROVEMENT] In Settings the project list gives way to a "Manage projects" link
+
 ## v1.2.18 — 2026-10-02 — Doctor in the header
 
 - [FEATURE] Red Doctor button in the header, next to Refresh: it checks Claude Code (`claude doctor` in the home folder and in tracked projects) together with broken links, front matter, MCP servers and hooks, and shows what to fix in a window, with the number of problems on the button

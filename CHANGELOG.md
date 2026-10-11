@@ -2,6 +2,12 @@
 
 > Italiano (canonico). English translation: [CHANGELOG.en.md](./CHANGELOG.en.md) — allineato a ogni release.
 
+## v1.2.19 — 2026-10-11 — Finestra Progetti
+
+- [FEATURE] Il bottone Progetti nell'header apre una finestra con tutti i progetti tracciati: puoi rimuoverli da CLACOROO e aggiungerne altri, e il Finder si apre solo da "Aggiungi progetto", restando poi nella finestra
+- [FEATURE] Cliccando un progetto vedi solo ciò che ha in locale, senza i globali: plugin, skill, agent, comandi e server MCP, con accesso rapido a CLAUDE.md e alla cartella
+- [IMPROVEMENT] In Impostazioni l'elenco dei progetti lascia il posto al link "Gestisci progetti"
+
 ## v1.2.18 — 2026-10-02 — Doctor nell'header
 
 - [FEATURE] Bottone rosso Doctor nell'header, accanto ad Aggiorna: controlla Claude Code (`claude doctor` nella home e nei progetti tracciati) insieme a link rotti, front matter, server MCP e hook, e mostra in una finestra cosa sistemare, con il numero di problemi sul bottone
