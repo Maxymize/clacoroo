@@ -39,6 +39,12 @@ const PRICING = {
   'claude-sonnet-4-6': { input: 3,     output: 15,    cacheWrite: 3.75,   cacheRead: 0.30 },
   'claude-sonnet-4-5': { input: 3,     output: 15,    cacheWrite: 3.75,   cacheRead: 0.30 },
   // Haiku family — fast/cheap. Haiku 4.5 = $1/$5 ($0.80/$4 era Haiku 3.5 — fix v1.2.4).
+  // v1.2.23 — Haiku 5.5: $0.10/$0.50, cache read $0.01 (5% dell'input fino a 100K).
+  // Prezzo a scaglioni PER RICHIESTA: sopra 100K token di prompt costa $0.50/$2.50
+  // (cache write $0.625, cache read $0.05). Qui c'è lo scaglione base: i dati d'uso
+  // locali sono aggregati e non permettono di separare le richieste lunghe, quindi
+  // il costo di Haiku 5.5 con prompt oltre 100K risulta sottostimato.
+  'claude-haiku-5-5':  { input: 0.10,  output: 0.50,  cacheWrite: 0.125,  cacheRead: 0.01 },
   'claude-haiku-4-5':  { input: 1,     output: 5,     cacheWrite: 1.25,   cacheRead: 0.10 },
 };
 
@@ -57,7 +63,7 @@ function resolveModel(id) {
   if (/mythos/i.test(id)) return PRICING['claude-mythos-5'];
   if (/opus/i.test(id))   return PRICING['claude-opus-5-5'];
   if (/sonnet/i.test(id)) return PRICING['claude-sonnet-5-5'];
-  if (/haiku/i.test(id))  return PRICING['claude-haiku-4-5'];
+  if (/haiku/i.test(id))  return PRICING['claude-haiku-5-5'];
   return null;
 }
 

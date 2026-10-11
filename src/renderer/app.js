@@ -906,14 +906,30 @@ async function refreshSidebarRecent() {
     return;
   }
   container.style.display = '';
-  const title = el('div', 'sidebar-recent-title', 'RECENTI');
-  container.appendChild(title);
-  log.slice(0, 4).forEach(entry => {
+  // v1.2.21 — chiusa di default: sui monitor piccoli rubava spazio al menu.
+  // Header cliccabile (titolo + conteggio + chevron), lo stato resta in localStorage.
+  const open = sidebarRecentOpen();
+  const shown = log.slice(0, 4);
+  const header = el('button', 'sidebar-recent-title' + (open ? ' open' : ''));
+  header.type = 'button';
+  header.setAttribute('aria-expanded', open ? 'true' : 'false');
+  header.appendChild(el('span', 'sidebar-recent-label', t('sidebar.recent')));
+  header.appendChild(el('span', 'sidebar-recent-count', String(shown.length)));
+  const chev = icon('chevron-down');
+  chev.classList.add('sidebar-recent-chev');
+  header.appendChild(chev);
+  header.addEventListener('click', () => {
+    try { localStorage.setItem('clacoroo.sidebarRecentOpen', open ? '0' : '1'); } catch (_) { /* ignora */ }
+    refreshSidebarRecent();
+  });
+  container.appendChild(header);
+  if (!open) return;
+  shown.forEach(entry => {
     const row = el('button', 'sidebar-recent-row' + (entry.success ? ' ok' : ' err'));
     row.title = entry.kind + ' ' + entry.action + ' · ' + entry.target;
-    const icon = el('span', 'sidebar-recent-icon', entry.success ? '✓' : '✗');
+    const ic = el('span', 'sidebar-recent-icon', entry.success ? '✓' : '✗');
     const txt = el('span', 'sidebar-recent-txt', entry.target.split('@')[0]);
-    row.appendChild(icon); row.appendChild(txt);
+    row.appendChild(ic); row.appendChild(txt);
     row.addEventListener('click', () => {
       // v1.0.100 — routing esteso per i nuovi kind (skill/agent/mcp/hooks)
       const map = {
@@ -927,6 +943,10 @@ async function refreshSidebarRecent() {
     });
     container.appendChild(row);
   });
+}
+
+function sidebarRecentOpen() {
+  try { return localStorage.getItem('clacoroo.sidebarRecentOpen') === '1'; } catch (_) { return false; }
 }
 
 // v1.2.20 — plugin e skill assegnati a progetti da "Globale o locale".
@@ -1776,7 +1796,7 @@ function formatTokenSize(n) {
 // v1.2.13 — Claude Code misura i pesi dei plugin solo per i modelli del suo
 // catalog (oggi claude-opus-4-7 e claude-sonnet-4-6). I modelli recenti
 // condividono il tokenizer di uno dei due (docs Anthropic, models overview):
-// Sonnet 5 e 5.5, Opus 4.8, Opus 5 e 5.5, Fable 5 e 5.1 usano quello introdotto con
+// Sonnet 5 e 5.5, Haiku 5.5, Opus 4.8, Opus 5 e 5.5, Fable 5 e 5.1 usano quello introdotto con
 // Opus 4.7; Sonnet 4.6 e Haiku 4.5 quello precedente. Stesso tokenizer =
 // stessi token, quindi i modelli nuovi si mostrano leggendo la misura del
 // modello base. Da aggiornare insieme a CLAUDE_MODELS.
@@ -1790,6 +1810,7 @@ const TOKENIZER_BASE = {
   'claude-sonnet-5-5': 'claude-opus-4-7',
   'claude-sonnet-5':   'claude-opus-4-7',
   'claude-sonnet-4-6': 'claude-sonnet-4-6',
+  'claude-haiku-5-5':  'claude-opus-4-7',
   'claude-haiku-4-5':  'claude-sonnet-4-6',
 };
 // Id misurato da usare per `model` fra quelli in `measured`; null se nessuna
@@ -1815,6 +1836,7 @@ const MODEL_CONTEXT_WINDOW = {
   'claude-opus-5':    1000000,
   'claude-sonnet-5-5':1000000,
   'claude-sonnet-5':  1000000,
+  'claude-haiku-5-5': 1000000,
   'claude-opus-4-8':  200000,
   'claude-opus-4-7':  200000,
   'claude-opus-4-6':  200000,
@@ -6109,6 +6131,7 @@ const CLAUDE_MODELS = [
   'claude-sonnet-5-5',
   'claude-sonnet-5',
   'claude-sonnet-4-6',
+  'claude-haiku-5-5',
   'claude-haiku-4-5',
 ];
 

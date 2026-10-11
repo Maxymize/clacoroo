@@ -625,6 +625,7 @@ window.LOCALES.it = {
 
   // Sidebar
   sidebar: {
+    recent:         'RECENTI',
     support:        'Supporta',
     supportSub:     'Se questa applicazione ti è utile, considera di supportare il progetto con una donazione.',
     supportAriaWrap:'Supporta CLACOROO',

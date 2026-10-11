@@ -2,6 +2,15 @@
 
 > English translation of [CHANGELOG.md](./CHANGELOG.md) (Italian, canonical). Updated in sync with each release.
 
+## v1.2.23 — 2026-10-11 — Haiku 5.5
+
+- [FEATURE] Haiku 5.5 now shows up in the default model menu, in "Plugins by weight" and in estimated costs
+- [IMPROVEMENT] Haiku 5.5 cost uses the base price ($0.10/$0.50): above 100K prompt tokens the real price is higher, so the estimate can come out slightly low
+
+## v1.2.22 — 2026-10-11 — Collapsible Recent
+
+- [IMPROVEMENT] The Recent box in the sidebar starts collapsed to leave room for the menu on small screens; click to open and close it, and it remembers your choice
+
 ## v1.2.21 — 2026-10-11 — Assigned projects on cards
 
 - [FEATURE] Plugin and skill cards show which projects they are assigned to ("Local: project name") and no longer look disabled when active in a project

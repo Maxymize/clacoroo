@@ -620,6 +620,7 @@ window.LOCALES.en = {
 
   // Sidebar
   sidebar: {
+    recent:         'RECENT',
     support:        'Support',
     supportSub:     'If you find this app useful, please consider supporting the project with a donation.',
     supportAriaWrap:'Support CLACOROO',

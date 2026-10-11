@@ -549,13 +549,25 @@ body {
   -webkit-app-region: no-drag;
 }
 .sidebar-recent-title {
+  display: flex; align-items: center; gap: 6px;
+  width: 100%;
+  border: none; background: transparent;
   font-size: 9px;
   font-weight: 700;
+  font-family: inherit;
   color: var(--text-dim);
   letter-spacing: .08em;
-  margin-bottom: 6px;
-  padding: 0 4px;
+  margin-bottom: 0;
+  padding: 2px 4px;
+  cursor: pointer;
+  text-align: left;
 }
+.sidebar-recent-title.open { margin-bottom: 6px; }
+.sidebar-recent-title:hover { color: var(--text); }
+.sidebar-recent-label { flex: 1; }
+.sidebar-recent-count { font-weight: 600; opacity: .7; }
+.sidebar-recent-chev { width: 12px; height: 12px; transition: transform .15s; }
+.sidebar-recent-title.open .sidebar-recent-chev { transform: rotate(180deg); }
 .sidebar-recent-row {
   display: flex; align-items: center; gap: 6px;
   width: 100%;
