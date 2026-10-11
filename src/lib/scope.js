@@ -32,6 +32,8 @@ const NAME_RE   = /^[A-Za-z0-9][A-Za-z0-9_.-]*$/;
 const PLUGIN_RE = /^[a-zA-Z0-9][a-zA-Z0-9_.-]*@[a-zA-Z0-9][a-zA-Z0-9_.-]*$/;
 const BYTES_PER_TOKEN = 3.5;   // stessa stima di stats.js
 const MAX_BACKUPS = 20;
+// Su Windows i link simbolici a cartelle richiedono privilegi; le giunzioni no.
+const LINK_TYPE = process.platform === 'win32' ? 'junction' : 'dir';
 
 const isDir  = p => { try { return fs.statSync(p).isDirectory(); } catch { return false; } };
 const isFile = p => { try { return fs.statSync(p).isFile(); } catch { return false; } };
@@ -354,7 +356,7 @@ function create(opts) {
       if (lstat(a.to)) throw new Error('Destinazione già presente: ' + a.to);
       fs.mkdirSync(path.dirname(a.to), { recursive: true });
       if (st.isSymbolicLink()) {
-        fs.symlinkSync(fs.realpathSync(a.from), a.to);   // assoluto: il link relativo si romperebbe
+        fs.symlinkSync(fs.realpathSync(a.from), a.to, LINK_TYPE);   // assoluto: il link relativo si romperebbe
         fs.unlinkSync(a.from);
       } else fs.renameSync(a.from, a.to);
       return { t: 'moveDir', from: a.to, to: a.from };
@@ -362,7 +364,7 @@ function create(opts) {
     link(a) {
       if (lstat(a.at)) throw new Error('Esiste già: ' + a.at);
       fs.mkdirSync(path.dirname(a.at), { recursive: true });
-      fs.symlinkSync(a.target, a.at);
+      fs.symlinkSync(a.target, a.at, LINK_TYPE);
       return { t: 'unlink', at: a.at, expect: a.target };
     },
     unlink(a) {
