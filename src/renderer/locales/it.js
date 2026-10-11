@@ -204,6 +204,7 @@ window.LOCALES.it = {
 
   // Badge / Status
   badge: {
+    scopeLibrary: 'In libreria',
     scopeGlobal:      'globale',
     scopeLocal:       'locale',
     scopeProgetto:    'progetto',
@@ -304,6 +305,7 @@ window.LOCALES.it = {
 
   // Filter chips
   filter: {
+    sourceAssigned: 'Assegnati a progetti',
     allSkills:     'Tutte',
     sourcePlugin:  'Plugin',
     sourceUser:    'Personali',
@@ -779,6 +781,7 @@ window.LOCALES.it = {
     managedByPlugin:    'Gestito dal plugin {plugin}',
     managedByPluginTip: "Skill e agent non si attivano singolarmente: si abilitano o disabilitano insieme al plugin che li fornisce, con l'interruttore accanto o dalla sezione Plugin. Per rimuoverli del tutto disinstalla il plugin.",
     reveal:             'Mostra nella cartella',
+    libraryNote:        'In libreria, non caricata in nessuna sessione finché non la assegni',
     userNote:           'Personale, attiva in ogni sessione',
     projectNote:        'Del progetto {project}',
     standaloneTip:      'Non arriva da un plugin: Claude Code lo carica dalla cartella .claude. Non ha un interruttore: per toglierlo usa il bottone Elimina, che lo sposta nel Cestino.',
@@ -1206,6 +1209,7 @@ window.LOCALES.it = {
     addHere:        'Aggiungi a questo progetto',
     removeHere:     'Togli da questo progetto',
     makeGlobal:     'Torna globale',
+    assignedHint:   'Attivo solo nei progetti indicati: disattivato a livello globale',
     previewTitle:   'Anteprima modifiche',
     previewToLocal: '{name} non sarà più globale: lo caricheranno solo i progetti scelti.',
     previewToGlobal:'{name} tornerà globale e sarà caricato in ogni sessione.',

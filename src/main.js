@@ -523,6 +523,9 @@ async function readAllData() {
   // v1.2.14 — skill/agent/comandi personali in ~/.claude/{skills,agents,commands}
   const userData = INVENTORY.scanStandalone(CLAUDE_DIR);
   buildItemFileAllowlist(userData, localData);
+  // v1.2.20 — skill in libreria (da Globale o locale): leggibili in anteprima, non modificabili da qui
+  const scopeAssignments = SCOPE.assignments();
+  scopeAssignments.library.forEach(l => ITEM_FILES.set(l.file, { editable: false }));
 
   // Source of truth for enabled/disabled state is ~/.claude/settings.json
   // field 'enabledPlugins' (boolean per pluginId).
@@ -571,6 +574,7 @@ async function readAllData() {
     trackedProjects: appState.trackedProjects || [],
     localData,
     userData,
+    scopeAssignments,
     claudeDir:    CLAUDE_DIR,
     claudeBin:    CLAUDE_BIN,
     platform:     process.platform,

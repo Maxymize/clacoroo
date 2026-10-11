@@ -204,6 +204,7 @@ window.LOCALES.en = {
 
   // Badge / Status
   badge: {
+    scopeLibrary: 'In library',
     scopeGlobal:      'global',
     scopeLocal:       'local',
     scopeProgetto:    'project',
@@ -304,6 +305,7 @@ window.LOCALES.en = {
 
   // Filter chips
   filter: {
+    sourceAssigned: 'Assigned to projects',
     allSkills:     'All',
     sourcePlugin:  'Plugins',
     sourceUser:    'User',
@@ -769,6 +771,7 @@ window.LOCALES.en = {
     managedByPlugin:    'Managed by the {plugin} plugin',
     managedByPluginTip: "Skills and agents can't be toggled individually: they're enabled or disabled together with the plugin that provides them, using the switch next to them or the Plugins section. To remove them for good, uninstall the plugin.",
     reveal:             'Show in folder',
+    libraryNote:        'In library, not loaded in any session until you assign it',
     userNote:           'Yours, active in every session',
     projectNote:        'From project {project}',
     standaloneTip:      'Not from a plugin: Claude Code loads it from the .claude folder. It has no toggle: to remove it use the Delete button, which moves it to the Trash.',
@@ -1196,6 +1199,7 @@ window.LOCALES.en = {
     addHere:        'Add to this project',
     removeHere:     'Remove from this project',
     makeGlobal:     'Back to global',
+    assignedHint:   'Active only in the listed projects: disabled globally',
     previewTitle:   'Preview changes',
     previewToLocal: '{name} will no longer be global: only the chosen projects will load it.',
     previewToGlobal:'{name} will be global again and loaded in every session.',

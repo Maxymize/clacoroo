@@ -2,6 +2,12 @@
 
 > Italiano (canonico). English translation: [CHANGELOG.en.md](./CHANGELOG.en.md) — allineato a ogni release.
 
+## v1.2.21 — 2026-10-11 — Progetti assegnati sulle card
+
+- [FEATURE] Le card di plugin e skill mostrano a quali progetti sono assegnati ("Locale: nome progetto") e non risultano più spente se sono attive in un progetto
+- [FEATURE] Le skill spostate in libreria restano visibili con il badge "In libreria", anche senza progetti
+- [IMPROVEMENT] Nuovo filtro "Assegnati a progetti" nelle sezioni Plugin, Skill e Agent
+
 ## v1.2.20 — 2026-10-11 — Globale o locale
 
 - [FEATURE] Nella finestra Progetti, dentro un progetto, il bottone "Globale o locale" assegna skill personali e plugin globali ai soli progetti che li usano, per alleggerire il contesto delle altre sessioni

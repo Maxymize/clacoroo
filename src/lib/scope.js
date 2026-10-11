@@ -190,6 +190,27 @@ function create(opts) {
     return { projects, skills, plugins, libraryDir: libDir };
   }
 
+  // Assegnazioni correnti per le card: plugin attivati in locale e skill in
+  // libreria con i loro progetti. Nessun calcolo di token, costa poco.
+  function assignments() {
+    const known = knownProjects();
+    const plugins = {};
+    for (const p of known) {
+      const en = getPath(readJson(projLocalFile(p), {}), ['enabledPlugins']);
+      if (!en || typeof en !== 'object') continue;
+      for (const [id, v] of Object.entries(en)) if (v === true && PLUGIN_RE.test(id)) (plugins[id] = plugins[id] || []).push(p);
+    }
+    const library = [];
+    let entries = [];
+    try { entries = fs.readdirSync(libDir); } catch { /* nessuna libreria */ }
+    for (const name of entries.sort()) {
+      const d = path.join(libDir, name), file = path.join(d, 'SKILL.md');
+      if (name.startsWith('.') || !NAME_RE.test(name) || !isFile(file)) continue;
+      library.push({ name, file, projects: known.filter(p => linksTo(projSkillLink(p, name), d)) });
+    }
+    return { plugins, library };
+  }
+
   // ── pianificazione ──
   const settingAction = (file, keys, value, del) => ({ t: 'setting', file, keys, value, del: !!del });
 
@@ -488,7 +509,7 @@ function create(opts) {
     return { success: true, id };
   }
 
-  return { inventory, preview, apply, last, undo, _plan: plan };
+  return { inventory, assignments, preview, apply, last, undo, _plan: plan };
 }
 
 module.exports = { create, NAME_RE, PLUGIN_RE };

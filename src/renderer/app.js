@@ -929,6 +929,14 @@ async function refreshSidebarRecent() {
   });
 }
 
+// v1.2.20 — plugin e skill assegnati a progetti da "Globale o locale".
+// `assignedProjects` = nomi dei progetti in cui l'elemento è attivo.
+const hasAssigned = x => Array.isArray(x.assignedProjects) && x.assignedProjects.length > 0;
+// Spento davvero ovunque: bloccato a livello utente e non attivo in nessun progetto.
+const isOffEverywhere = x => !!x.blocked && !hasAssigned(x);
+const isAssignedItem = x => hasAssigned(x) || !!x.library || !!x.fromLibrary;
+function scopeClass(item) { return isAssignedItem(item) ? 'local' : item.scope; }
+
 function processData() {
   const raw     = state.rawData;
   const blocked = new Set((raw.blocklist.plugins || []).map(b => b.plugin));
@@ -939,6 +947,7 @@ function processData() {
   state._hookListCache = null;
 
   state.trackedProjects = raw.trackedProjects || [];
+  state.scopeAssignments = raw.scopeAssignments || { plugins: {}, library: [] };
   state.localPlugins    = localData.localPlugins;
   state.localSkills     = localData.localSkills;
   state.localAgents     = localData.localAgents;
@@ -988,6 +997,7 @@ function processData() {
       installedAt: cache.installedAt || '',
       blocked:     blocked.has(fullId),
       scope:       'global',
+      assignedProjects: ((state.scopeAssignments.plugins || {})[fullId] || []).map(pp => pp.split('/').pop() || pp),
       tokensAlways: tokenInfo?.always_on  || 0,
       tokensInvoke: tokenInfo?.on_invoke  || 0,
       tokensByModel,
@@ -2230,6 +2240,7 @@ function renderPlugins() {
     { key: 'all',     label: t('filter.all') },
     { key: 'active',  label: t('filter.active'),    dot: '#10b981' },
     { key: 'blocked', label: t('filter.disabled'),  dot: '#ef4444' },
+    { key: 'assigned', label: t('filter.sourceAssigned'), dot: '#a78bfa' },
   ];
   const chips = el('div', 'chips');
   chipDefs.forEach(c => {
@@ -2311,8 +2322,9 @@ function renderPlugins() {
 
 function pluginMatchesFilter(p, f) {
   const statusOk = f.status === 'all'
-    || (f.status === 'active'  && !p.blocked)
-    || (f.status === 'blocked' &&  p.blocked);
+    || (f.status === 'active'  && !isOffEverywhere(p))
+    || (f.status === 'blocked' &&  isOffEverywhere(p))
+    || (f.status === 'assigned' && hasAssigned(p));
   const mktOk = f.mkt === 'all' || p.mkt === f.mkt;
   const q = f.search;
   const searchOk = !q
@@ -2500,7 +2512,7 @@ function showPluginContentModal(p) {
 function buildPluginCompactRow(p) {
   const row = el('div', 'compact-row plugin-compact-row');
   row.style.borderLeftColor = mktColor(p.mkt);
-  if (p.blocked) row.classList.add('blocked');
+  if (isOffEverywhere(p)) row.classList.add('blocked');
   // Dot mkt
   const dot = el('span', 'compact-row-dot');
   dot.style.background = mktColor(p.mkt);
@@ -2517,6 +2529,7 @@ function buildPluginCompactRow(p) {
       : t('badge.scopeLocal');
     statusClass = 'plugin-status-local';
   }
+  else if (hasAssigned(p)) { statusLabel = t('badge.scopeLocalNamed', { name: p.assignedProjects.join(', ') }); statusClass = 'plugin-status-local'; }
   else if (p.blocked) { statusLabel = t('badge.disabled');     statusClass = 'plugin-status-blocked'; }
   else                { statusLabel = t('badge.pluginActive'); statusClass = 'plugin-status-active'; }
   row.appendChild(el('span', 'compact-row-pstatus ' + statusClass, statusLabel));
@@ -2535,7 +2548,7 @@ function buildPluginCompactRow(p) {
 
 function buildPluginCard(p) {
   const col = mktColor(p.mkt);
-  const card = el('div', 'plugin-card' + (p.blocked ? ' blocked' : '') + (p.scope === 'local' ? ' local-scope' : ''));
+  const card = el('div', 'plugin-card' + (isOffEverywhere(p) ? ' blocked' : '') + (p.scope === 'local' ? ' local-scope' : ''));
   card.style.setProperty('--mkt-color', col);
 
   // BODY
@@ -2554,11 +2567,14 @@ function buildPluginCard(p) {
   pill.style.color = col;
   rightCol.appendChild(pill);
   // Badge scope (v1.0.11)
-  const scopeBadge = el('span', 'scope-badge scope-' + p.scope,
-    p.scope === 'local'
+  const assigned = hasAssigned(p);
+  const scopeBadge = el('span', 'scope-badge scope-' + (assigned ? 'local' : p.scope),
+    assigned ? t('badge.scopeLocalNamed', { name: p.assignedProjects.join(', ') })
+    : p.scope === 'local'
       ? t('badge.scopeLocalNamed', { name: p.projectName || t('badge.scopeProgetto') })
       : t('badge.scopeGlobal'));
   if (p.projectPath) scopeBadge.title = p.projectPath;
+  if (assigned) scopeBadge.title = t('modalScope.assignedHint');
   rightCol.appendChild(scopeBadge);
 
   top.appendChild(leftCol); top.appendChild(rightCol);
@@ -2591,7 +2607,7 @@ function buildPluginCard(p) {
     t('pluginCard.hookTip'), openDetails);
   if (p.tokensAlways)   addBadge(p.tokensAlways + ' tok', 'b-tokens',
     t('pluginCard.alwaysTokensTip'));
-  if (p.blocked)        addBadge(t('badge.disabled'), 'b-blocked');
+  if (isOffEverywhere(p)) addBadge(t('badge.disabled'), 'b-blocked');
   body.appendChild(badges);
   card.appendChild(body);
 
@@ -3768,19 +3784,27 @@ function allStandaloneItems(forAgents) {
 
 function allSkillItems() {
   const globals = state.plugins.filter(p => p.scope === 'global').flatMap(p => [
-    ...p.skills.map(s => ({ name: s, kind: 'skill', plugin: p.id, mkt: p.mkt, blocked: p.blocked, health: p.skillHealth[s], fullId: p.fullId, scope: 'global', addedAt: p.installedAt })),
-    ...(p.commands || []).map(c => ({ name: c, kind: 'command', plugin: p.id, mkt: p.mkt, blocked: p.blocked, health: null, fullId: p.fullId, scope: 'global', addedAt: p.installedAt })),
+    ...p.skills.map(s => ({ name: s, kind: 'skill', plugin: p.id, mkt: p.mkt, blocked: p.blocked, health: p.skillHealth[s], fullId: p.fullId, scope: 'global', assignedProjects: p.assignedProjects, addedAt: p.installedAt })),
+    ...(p.commands || []).map(c => ({ name: c, kind: 'command', plugin: p.id, mkt: p.mkt, blocked: p.blocked, health: null, fullId: p.fullId, scope: 'global', assignedProjects: p.assignedProjects, addedAt: p.installedAt })),
   ]);
   const locals = (state.localSkills || []).map(s => {
     const at = s.plugin.lastIndexOf('@');
     return { name: s.name, kind: 'skill', file: s.file, plugin: s.plugin.slice(0, at), mkt: s.plugin.slice(at + 1), blocked: false, scope: 'local', projectName: s.projectName, projectPath: s.projectPath };
   });
-  return [...globals, ...locals, ...allStandaloneItems(false)];
+  const lib = (state.scopeAssignments && state.scopeAssignments.library) || [];
+  const standalone = allStandaloneItems(false).map(i => (i.scope === 'local' && i.kind === 'skill'
+    && lib.some(l => l.name === i.name && l.projects.includes(i.projectPath))) ? { ...i, fromLibrary: true } : i);
+  // Skill in libreria senza progetti: non stanno in nessuna cartella scansionata, le mostriamo qui.
+  const orphans = lib.filter(l => !l.projects.length).map(l => ({
+    name: l.name, kind: 'skill', file: l.file, health: null, addedAt: '', removePath: null,
+    plugin: '~/.claude/skills-library', mkt: '', standalone: true, scope: 'library', library: true, assignedProjects: [],
+  }));
+  return [...globals, ...locals, ...standalone, ...orphans];
 }
 
 function allAgentItems() {
   const globals = state.plugins.filter(p => p.scope === 'global').flatMap(p =>
-    p.agents.map(a => ({ name: a, kind: 'agent', plugin: p.id, mkt: p.mkt, blocked: p.blocked, health: p.agentHealth[a], fullId: p.fullId, scope: 'global', addedAt: p.installedAt }))
+    p.agents.map(a => ({ name: a, kind: 'agent', plugin: p.id, mkt: p.mkt, blocked: p.blocked, health: p.agentHealth[a], fullId: p.fullId, scope: 'global', assignedProjects: p.assignedProjects, addedAt: p.installedAt }))
   );
   const locals = (state.localAgents || []).map(a => {
     const at = a.plugin.lastIndexOf('@');
@@ -3906,6 +3930,8 @@ function itemColor(item) {
 }
 
 function scopeLabel(item) {
+  if (hasAssigned(item)) return t('badge.scopeLocalNamed', { name: item.assignedProjects.join(', ') });
+  if (item.library)      return t('badge.scopeLibrary');
   if (item.scope === 'user')  return t('badge.scopeUser');
   if (item.scope === 'local') return item.projectName || t('badge.scopeLocal');
   return t('badge.scopeGlobal');
@@ -3925,7 +3951,7 @@ async function openItemPreview(item) {
 // sciolti in <progetto>/.claude.
 function itemSource(item) {
   if (!item.standalone) return 'plugin';
-  return item.scope === 'user' ? 'user' : 'project';
+  return item.scope === 'user' || item.library ? 'user' : 'project';
 }
 // Problema di una skill, agent o comando: link rotto, oppure front matter non
 // valido. UNICA definizione, usata dal filtro Warning, dal KPI Health della
@@ -3952,9 +3978,9 @@ function itemProblemKey(item) {
 // carica (plugin acceso, link valido), anche se ha un warning.
 function itemStatuses(item) {
   const out = [];
-  if (item.blocked) out.push('disabled');
+  if (isOffEverywhere(item)) out.push('disabled');
   if (itemProblem(item)) out.push('warning');
-  if (!item.blocked && !item.broken) out.push('active');
+  if (!isOffEverywhere(item) && !item.broken) out.push('active');
   return out;
 }
 // `lbl` = { all, active, disabled }: gli agent sono maschili (Tutti/Attivi/Disabilitati),
@@ -3967,11 +3993,12 @@ function listFilters(lbl) {
       { key: 'disabled', label: lbl.disabled },
       { key: 'warning',  label: t('filter.statusWarning') },
     ] },
-    { id: 'source', label: t('filter.groupSource'), getKeys: i => [itemSource(i)], options: [
+    { id: 'source', label: t('filter.groupSource'), getKeys: i => (isAssignedItem(i) ? [itemSource(i), 'assigned'] : [itemSource(i)]), options: [
       { key: 'all',     label: lbl.all },
       { key: 'plugin',  label: t('filter.sourcePlugin') },
       { key: 'user',    label: t('filter.sourceUser') },
       { key: 'project', label: t('filter.sourceProject') },
+      { key: 'assigned', label: t('filter.sourceAssigned') },
     ] },
   ];
 }
@@ -4046,7 +4073,7 @@ function renderAgents() {
 // (era inline in renderSkills/renderAgents prima del refactor). `kind` =
 // 'skill' | 'agent' per dot color e icon nel modal preview.
 function buildSkillAgentChip(item, kind) {
-  const chip = el('div', 'skill-chip' + (item.broken ? ' blocked' : ' clickable') + (item.blocked ? ' blocked' : ''));
+  const chip = el('div', 'skill-chip' + (item.broken ? ' blocked' : ' clickable') + (isOffEverywhere(item) ? ' blocked' : ''));
   chip.style.borderLeftColor = itemColor(item);
   const dot = el('span');
   const dotColor = kind === 'agent' ? '#f97316' : itemColor(item);
@@ -4086,7 +4113,7 @@ function translateHealthIssue(issue) {
 // Layout simile a .hook-card: header con name grande + plugin/mkt dot,
 // body con scope badge + health badge, footer con bottone "Apri preview".
 function buildSkillAgentCard(item, kind) {
-  const card = el('div', 'browse-card' + (item.blocked || item.broken ? ' blocked' : ''));
+  const card = el('div', 'browse-card' + (isOffEverywhere(item) || item.broken ? ' blocked' : ''));
   card.style.borderLeftColor = kind === 'agent' ? '#f97316' : itemColor(item);
 
   // Header: nome grande + plugin + dot mkt
@@ -4106,7 +4133,7 @@ function buildSkillAgentCard(item, kind) {
   // Body: scope + health
   const body = el('div', 'browse-card-body');
   const badgeRow = el('div', 'browse-card-badges');
-  const scopeBadge = el('span', 'scope-badge scope-' + item.scope, scopeLabel(item));
+  const scopeBadge = el('span', 'scope-badge scope-' + scopeClass(item), scopeLabel(item));
   if (item.projectPath) scopeBadge.title = item.projectPath;
   badgeRow.appendChild(scopeBadge);
   if (item.kind === 'command') badgeRow.appendChild(el('span', 'kind-tag', t('badge.command')));
@@ -4132,7 +4159,7 @@ function buildSkillAgentCard(item, kind) {
     });
     badgeRow.appendChild(hb);
   }
-  if (item.blocked) {
+  if (isOffEverywhere(item)) {
     badgeRow.appendChild(el('span', 'browse-card-blocked', t('badge.disabled')));
   }
   appendModifiedBadge(badgeRow, item, kind, 'card');
@@ -4140,7 +4167,9 @@ function buildSkillAgentCard(item, kind) {
   // v1.2.14 — per le voci personali/di progetto la nota sta nel body: nel
   // footer ci sono già due bottoni (anteprima + cartella).
   if (item.standalone && !item.broken) {
-    const note = el('span', 'browse-card-hint', item.scope === 'user'
+    const note = el('span', 'browse-card-hint', item.library
+      ? t('skillAgent.libraryNote')
+      : item.scope === 'user'
       ? t('skillAgent.userNote')
       : t('skillAgent.projectNote', { project: item.projectName || '' }));
     note.title = t('skillAgent.standaloneTip');
@@ -4745,7 +4774,7 @@ function showHookDetailsModal(item) {
 }
 
 function appendScopeBadge(chip, item) {
-  const badge = el('span', 'scope-badge scope-' + item.scope, scopeLabel(item));
+  const badge = el('span', 'scope-badge scope-' + scopeClass(item), scopeLabel(item));
   if (item.projectPath) badge.title = item.projectPath;
   chip.appendChild(badge);
 }
