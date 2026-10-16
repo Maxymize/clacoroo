@@ -45,6 +45,8 @@ const LUCIDE_ICONS = {
   'plus':        '<line x1="12" x2="12" y1="5" y2="19"/><line x1="5" x2="19" y1="12" y2="12"/>',
   'arrow-left':  '<path d="m12 19-7-7 7-7"/><path d="M19 12H5"/>',
   'x':           '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
+  'message-circle': '<path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/>',
+  'send':        '<path d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z"/><path d="m21.854 2.147-10.94 10.939"/>',
   'check':       '<path d="M20 6 9 17l-5-5"/>',
   'stethoscope': '<path d="M11 2v2"/><path d="M5 2v2"/><path d="M5 3H4a2 2 0 0 0-2 2v4a6 6 0 0 0 12 0V5a2 2 0 0 0-2-2h-1"/><path d="M8 15a6 6 0 0 0 12 0v-3"/><circle cx="20" cy="10" r="2"/>',
   'trash-2':     '<path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/>',
@@ -1211,6 +1213,7 @@ function render() {
     case 'config':       renderConfig();      break;
     case 'settings':     renderSettings();    break;
   }
+  syncFeedbackWidget();   // v1.2.24 — nuvoletta suggerimenti (solo Dashboard)
 }
 
 /* ── UTILS: DOM ───────────────────────────────────────────────────────── */

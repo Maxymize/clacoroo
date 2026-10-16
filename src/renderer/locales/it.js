@@ -639,6 +639,22 @@ window.LOCALES.it = {
 
   feedback: {
     button: 'Feedback',
+    tooltip:     'Suggerimenti e segnalazioni',
+    title:       'Dicci cosa ne pensi',
+    placeholder: 'Una funzione che vorresti, o un problema che hai incontrato…',
+    hint:        'Anonimo · Cmd/Ctrl+Invio',
+    send:        'Invia',
+    sending:     'Invio…',
+    close:       'Chiudi',
+    thanksTitle: 'Grazie!',
+    thanksBody:  'Il messaggio è arrivato. Lo leggiamo con attenzione.',
+    err: {
+      tooShort:  'Scrivi almeno qualche parola in più.',
+      tooLong:   'Il messaggio è troppo lungo.',
+      rateLimit: 'Hai appena inviato un messaggio. Riprova fra poco.',
+      network:   'Non riesco a collegarmi. Controlla la connessione e riprova.',
+      delivery:  'Il messaggio non è stato recapitato. Riprova più tardi.',
+    },
   },
 
   // API key buttons & toast

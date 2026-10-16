@@ -94,6 +94,7 @@ const INVENTORY = require('./lib/inventory');
 const DOCTOR    = require('./lib/doctor');
 const PROJECTS  = require('./lib/projects');
 const SCOPE_LIB = require('./lib/scope');
+const FEEDBACK  = require('./lib/feedback');
 
 /* ── CONFIG PATHS ──────────────────────────────────────────────────────── */
 
@@ -1776,6 +1777,11 @@ ipcMain.handle('confirm-dialog', async (_e, { title, message, detail, buttons })
   });
   return r.response;
 });
+
+// v1.2.24 — Suggerimenti dalla dashboard: l'invio passa dal main (la CSP del
+// renderer blocca le chiamate esterne) e lascia al sito il recapito della mail.
+ipcMain.handle('feedback:send', async (_e, { message, lang } = {}) =>
+  FEEDBACK.send({ message, lang, version: app.getVersion(), platform: process.platform }));
 
 ipcMain.handle('open-external', async (_e, url) => {
   await shell.openExternal(url);

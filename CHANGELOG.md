@@ -2,6 +2,11 @@
 
 > Italiano (canonico). English translation: [CHANGELOG.en.md](./CHANGELOG.en.md) — allineato a ogni release.
 
+## v1.2.24 — 2026-10-16 — Suggerimenti dalla Dashboard
+
+- [FEATURE] Nuvoletta in basso a destra della Dashboard per mandare suggerimenti o segnalare problemi: scrivi, premi Invia e arriva a noi in forma anonima
+- [FEATURE] Il modulo parla la lingua dell'interfaccia (italiano o inglese)
+
 ## v1.2.23 — 2026-10-11 — Haiku 5.5
 
 - [FEATURE] Haiku 5.5 compare nel menu del modello predefinito, in "Plugin per peso" e nei costi stimati

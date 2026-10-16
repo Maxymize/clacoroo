@@ -2,6 +2,11 @@
 
 > English translation of [CHANGELOG.md](./CHANGELOG.md) (Italian, canonical). Updated in sync with each release.
 
+## v1.2.24 — 2026-10-16 — Suggestions from the Dashboard
+
+- [FEATURE] Bubble at the bottom right of the Dashboard to send suggestions or report problems: write, press Send and it reaches us anonymously
+- [FEATURE] The form follows the interface language (Italian or English)
+
 ## v1.2.23 — 2026-10-11 — Haiku 5.5
 
 - [FEATURE] Haiku 5.5 now shows up in the default model menu, in "Plugins by weight" and in estimated costs

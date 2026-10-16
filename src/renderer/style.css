@@ -5244,3 +5244,56 @@ body {
 .scope-warn { margin-top: 12px; padding: 10px 12px; border: 1px solid #f59e0b; border-radius: 8px; font-size: 12px; }
 .scope-warn p { margin: 6px 0; color: var(--text-muted); line-height: 1.5; }
 .scope-error { margin: 12px 0; padding: 10px 12px; border: 1px solid #ef4444; border-radius: 8px; font-size: 13px; }
+
+/* ── v1.2.24 — Nuvoletta suggerimenti (Dashboard) ─────────────────────── */
+.fb-root {
+  position: fixed; right: 24px; bottom: var(--fb-bottom, 20px);
+  z-index: 900;
+  display: flex; flex-direction: column; align-items: flex-end; gap: 10px;
+  -webkit-app-region: no-drag;
+}
+.fb-root[hidden] { display: none; }
+.fb-bubble {
+  width: 44px; height: 44px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--accent); color: #fff;
+  border: 0; cursor: pointer;
+  box-shadow: 0 4px 16px var(--accent-glow);
+  transition: transform .15s ease, background .15s ease;
+}
+.fb-bubble:hover { background: var(--accent3); transform: translateY(-1px); }
+.fb-bubble svg { width: 20px; height: 20px; }
+.fb-panel {
+  width: 320px;
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  padding: 14px;
+}
+.fb-panel[hidden] { display: none; }
+.fb-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.fb-title { font-weight: 600; font-size: 14px; }
+.fb-close {
+  background: none; border: 0; color: var(--text-muted); cursor: pointer;
+  width: 24px; height: 24px; padding: 0;
+  display: flex; align-items: center; justify-content: center; border-radius: var(--radius-sm);
+}
+.fb-close:hover { background: var(--surface2); color: var(--text); }
+.fb-close svg { width: 14px; height: 14px; }
+.fb-text {
+  width: 100%; resize: vertical; min-height: 96px; max-height: 240px;
+  background: var(--surface2); color: var(--text);
+  border: 1px solid var(--border2); border-radius: var(--radius-sm);
+  padding: 8px 10px; font: inherit; font-size: 13px; line-height: 1.45;
+  box-sizing: border-box;
+}
+.fb-text:focus { outline: none; border-color: var(--accent); }
+.fb-error { color: var(--red); font-size: 12px; margin-top: 6px; }
+.fb-error[hidden], .fb-form[hidden], .fb-thanks[hidden] { display: none; }
+.fb-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 10px; }
+.fb-hint { color: var(--text-dim); font-size: 11px; }
+.fb-send { flex: 0 0 auto; }
+.fb-thanks { padding: 14px 0 6px; text-align: center; }
+.fb-thanks-title { font-weight: 600; font-size: 15px; margin-bottom: 4px; color: var(--accent2); }
+.fb-thanks-body { color: var(--text-muted); font-size: 13px; }

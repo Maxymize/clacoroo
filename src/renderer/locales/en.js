@@ -634,6 +634,22 @@ window.LOCALES.en = {
 
   feedback: {
     button: 'Feedback',
+    tooltip:     'Suggestions and reports',
+    title:       'Tell us what you think',
+    placeholder: 'A feature you would like, or a problem you ran into…',
+    hint:        'Anonymous · Cmd/Ctrl+Enter',
+    send:        'Send',
+    sending:     'Sending…',
+    close:       'Close',
+    thanksTitle: 'Thank you!',
+    thanksBody:  'Your message arrived. We read every one.',
+    err: {
+      tooShort:  'Please write a few more words.',
+      tooLong:   'The message is too long.',
+      rateLimit: 'You just sent a message. Please try again in a moment.',
+      network:   'Cannot connect. Check your connection and try again.',
+      delivery:  'The message could not be delivered. Please try again later.',
+    },
   },
 
   // API key buttons & toast
