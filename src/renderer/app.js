@@ -46,6 +46,7 @@ const LUCIDE_ICONS = {
   'arrow-left':  '<path d="m12 19-7-7 7-7"/><path d="M19 12H5"/>',
   'x':           '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
   'message-circle': '<path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/>',
+  'star':        '<path d="M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z"/>',
   'send':        '<path d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z"/><path d="m21.854 2.147-10.94 10.939"/>',
   'check':       '<path d="M20 6 9 17l-5-5"/>',
   'stethoscope': '<path d="M11 2v2"/><path d="M5 2v2"/><path d="M5 3H4a2 2 0 0 0-2 2v4a6 6 0 0 0 12 0V5a2 2 0 0 0-2-2h-1"/><path d="M8 15a6 6 0 0 0 12 0v-3"/><circle cx="20" cy="10" r="2"/>',
@@ -665,6 +666,7 @@ async function init() {
     switchToSection(appState.lastSection);
   }
   if (!appState.onboardingShown) showOnboardingTour();
+  scheduleReviewPrompt();   // v1.2.25 — richiesta di recensione (review.js)
   // v1.0.09 — Soft auto-update: check all'avvio + ogni 24h se app rimane aperta
   scheduleUpdateCheck();
   // v1.1.9 — Notifiche soglia quota Claude: polling 10 min con dedup 12h

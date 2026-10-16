@@ -652,6 +652,28 @@ window.LOCALES.en = {
     },
   },
 
+  review: {
+    title:           'How is CLACOROO working out for you?',
+    subtitle:        'After some time using it, your opinion helps us improve it. It only takes a few seconds.',
+    starsLabel:      'Rating',
+    starN:           '{n} out of 5',
+    namePlaceholder: 'Your name (made up is fine, optional)',
+    textPlaceholder: 'What you like, what you would change… (optional)',
+    send:            'Send review',
+    sending:         'Sending…',
+    later:           'Not now',
+    close:           'Close',
+    starGithub:      'Star it on GitHub',
+    starThanks:      'Thank you so much! The CLACOROO page just opened: if you have not starred it yet, one click on the star at the top does it.',
+    thanksTitle:     'Thank you so much!',
+    thanksBody:      'Your review arrived and means a lot to us. We will not ask again.',
+    done:            'Close',
+    err: {
+      noStars: 'Pick 1 to 5 stars.',
+      network: 'Cannot send. Check your connection and try again.',
+    },
+  },
+
   // API key buttons & toast
   apikeyBtn: {
     testConnection: 'Test connection',

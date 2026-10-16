@@ -1,6 +1,6 @@
 {
   "name": "clacoroo",
-  "version": "1.2.24",
+  "version": "1.2.25",
   "description": "CLACOROO, the Claude Code Control Room: desktop app to see what eats your context window and quota, browse sessions, and manage plugins, marketplaces, skills, agents, MCP servers, hooks and permissions for Claude Code",
   "main": "src/main.js",
   "author": {

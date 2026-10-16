@@ -2,6 +2,12 @@
 
 > English translation of [CHANGELOG.md](./CHANGELOG.md) (Italian, canonical). Updated in sync with each release.
 
+## v1.2.25 — 2026-10-16 — Review request
+
+- [FEATURE] After a week of use a window appears to leave a review: stars, plus an optional name (made up is fine) and text
+- [FEATURE] From the same window you can open the CLACOROO GitHub page to give it a star
+- [IMPROVEMENT] "Not now" brings the window back after 15 days; once a review is sent it never appears again, not even after updates
+
 ## v1.2.24 — 2026-10-16 — Suggestions from the Dashboard
 
 - [FEATURE] Bubble at the bottom right of the Dashboard to send suggestions or report problems: write, press Send and it reaches us anonymously

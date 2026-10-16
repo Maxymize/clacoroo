@@ -2,6 +2,12 @@
 
 > Italiano (canonico). English translation: [CHANGELOG.en.md](./CHANGELOG.en.md) — allineato a ogni release.
 
+## v1.2.25 — 2026-10-16 — Richiesta di recensione
+
+- [FEATURE] Dopo una settimana di utilizzo compare una finestra per lasciare una recensione: stelle, nome (anche inventato) e testo facoltativi
+- [FEATURE] Dalla stessa finestra puoi aprire la pagina GitHub di CLACOROO per dare la stella
+- [IMPROVEMENT] Con "Non ora" la finestra torna dopo 15 giorni; una volta inviata la recensione non compare più, nemmeno dopo gli aggiornamenti
+
 ## v1.2.24 — 2026-10-16 — Suggerimenti dalla Dashboard
 
 - [FEATURE] Nuvoletta in basso a destra della Dashboard per mandare suggerimenti o segnalare problemi: scrivi, premi Invia e arriva a noi in forma anonima

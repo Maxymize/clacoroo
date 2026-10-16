@@ -657,6 +657,28 @@ window.LOCALES.it = {
     },
   },
 
+  review: {
+    title:           'Come ti sta andando con CLACOROO?',
+    subtitle:        'Dopo un po di utilizzo, il tuo parere ci aiuta a migliorarlo. Bastano pochi secondi.',
+    starsLabel:      'Valutazione',
+    starN:           '{n} su 5',
+    namePlaceholder: 'Il tuo nome (anche inventato, facoltativo)',
+    textPlaceholder: 'Cosa ti piace, cosa cambieresti… (facoltativo)',
+    send:            'Invia recensione',
+    sending:         'Invio…',
+    later:           'Non ora',
+    close:           'Chiudi',
+    starGithub:      'Dai una stella su GitHub',
+    starThanks:      'Grazie mille! Si è aperta la pagina di CLACOROO: se non hai già messo la stella, un clic sulla stella in alto la dà.',
+    thanksTitle:     'Grazie di cuore!',
+    thanksBody:      'La tua recensione è arrivata e per noi vale tantissimo. Non te la chiederemo più.',
+    done:            'Chiudi',
+    err: {
+      noStars: 'Scegli da 1 a 5 stelle.',
+      network: 'Non riesco a inviare. Controlla la connessione e riprova.',
+    },
+  },
+
   // API key buttons & toast
   apikeyBtn: {
     testConnection: 'Test connessione',

@@ -5297,3 +5297,31 @@ body {
 .fb-thanks { padding: 14px 0 6px; text-align: center; }
 .fb-thanks-title { font-weight: 600; font-size: 15px; margin-bottom: 4px; color: var(--accent2); }
 .fb-thanks-body { color: var(--text-muted); font-size: 13px; }
+
+/* ── v1.2.25 — Finestra recensione ────────────────────────────────────── */
+.rv-modal { max-width: 440px; position: relative; }
+.rv-x { position: absolute; top: 12px; right: 12px; }
+.rv-body { padding: 26px 26px 22px; display: flex; flex-direction: column; gap: 12px; }
+.rv-title { margin: 0; font-size: 18px; font-weight: 600; padding-right: 24px; }
+.rv-thanks-title { color: var(--accent2); }
+.rv-sub { margin: 0; color: var(--text-muted); font-size: 13px; line-height: 1.5; }
+.rv-stars { display: flex; gap: 4px; margin: 4px 0 2px; }
+.rv-star-pick { background: none; border: 0; padding: 2px; cursor: pointer; color: var(--text-dim); border-radius: var(--radius-sm); }
+.rv-star-pick svg { width: 30px; height: 30px; }
+.rv-star-pick.on { color: var(--yellow); }
+.rv-star-pick.on svg { fill: currentColor; }
+.rv-input {
+  width: 100%; box-sizing: border-box;
+  background: var(--surface2); color: var(--text);
+  border: 1px solid var(--border2); border-radius: var(--radius-sm);
+  padding: 8px 10px; font: inherit; font-size: 13px;
+}
+.rv-input:focus { outline: none; border-color: var(--accent); }
+.rv-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.rv-sep { height: 1px; background: var(--border); margin: 2px 0; }
+.rv-star { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+.rv-star-btn { gap: 6px; }
+.rv-star-btn svg { width: 14px; height: 14px; }
+.rv-star-thanks { font-size: 12px; color: var(--accent2); line-height: 1.45; }
+.rv-star-thanks[hidden] { display: none; }
+.rv-done { align-self: flex-end; }

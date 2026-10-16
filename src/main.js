@@ -95,6 +95,7 @@ const DOCTOR    = require('./lib/doctor');
 const PROJECTS  = require('./lib/projects');
 const SCOPE_LIB = require('./lib/scope');
 const FEEDBACK  = require('./lib/feedback');
+const REVIEW    = require('./lib/review');
 
 /* ── CONFIG PATHS ──────────────────────────────────────────────────────── */
 
@@ -1782,6 +1783,13 @@ ipcMain.handle('confirm-dialog', async (_e, { title, message, detail, buttons })
 // renderer blocca le chiamate esterne) e lascia al sito il recapito della mail.
 ipcMain.handle('feedback:send', async (_e, { message, lang } = {}) =>
   FEEDBACK.send({ message, lang, version: app.getVersion(), platform: process.platform }));
+
+// v1.2.25 — Richiesta di recensione (logica e stato in lib/review.js)
+ipcMain.handle('review:check', async () => REVIEW.check());
+ipcMain.handle('review:dismiss', async () => REVIEW.dismiss());
+ipcMain.handle('review:star-clicked', async () => REVIEW.starClicked());
+ipcMain.handle('review:submit', async (_e, { stars, name, text, lang } = {}) =>
+  REVIEW.submit({ stars, name, text, lang, version: app.getVersion(), platform: process.platform }));
 
 ipcMain.handle('open-external', async (_e, url) => {
   await shell.openExternal(url);

@@ -74,4 +74,4 @@ async function send({ message, lang, version, platform } = {}) {
   return res;
 }
 
-module.exports = { send, MIN_LEN, MAX_LEN };
+module.exports = { send, post, NO_REPLY, MIN_LEN, MAX_LEN };
